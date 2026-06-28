@@ -364,26 +364,30 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn filter_dynamic(
+    fn filter_dynamic<E>(
         &self,
-        predicate: ValueStream<Predicate<T>>,
+        predicate: rayx_reactive_primitives::ValueStream<Predicate<T>, E>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
         self.filter_with_state(predicate, |predicate, item| predicate(item))
     }
 
-    fn filter_with_state<S>(
+    fn filter_with_state<S, E>(
         &self,
-        state: ValueStream<S>,
+        state: rayx_reactive_primitives::ValueStream<S, E>,
         predicate: impl Fn(&S, &T) -> bool + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static,
         S: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
         let source = self.clone();
         let predicate = Arc::new(predicate);

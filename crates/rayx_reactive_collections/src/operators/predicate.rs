@@ -187,18 +187,25 @@ pub trait ListStreamExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
-    fn filter_dynamic(&self, predicate: ValueStream<Predicate<T>>) -> ChangeStream<ListChange<T>>
-    where
-        T: Clone + PartialEq + Send + Sync + 'static;
-
-    fn filter_with_state<S>(
+    fn filter_dynamic<E>(
         &self,
-        state: ValueStream<S>,
+        predicate: rayx_reactive_primitives::ValueStream<Predicate<T>, E>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn filter_with_state<S, E>(
+        &self,
+        state: rayx_reactive_primitives::ValueStream<S, E>,
         predicate: impl Fn(&S, &T) -> bool + Send + Sync + 'static,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
-        S: Clone + Send + Sync + 'static;
+        S: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn sort_by(
         &self,

@@ -86,3 +86,40 @@ fn cache_filter_with_state_preserves_incremental_source_changes()
     );
     Ok(())
 }
+
+#[test]
+fn filter_with_state_accepts_reactive_primitive_value_streams()
+-> Result<(), Box<dyn std::error::Error>> {
+    let cache = SourceCache::new(|row: &Row| row.id);
+    let cache_state = rayx_reactive_primitives::ValueStream::<u32>::from_reactive(|subscriber| {
+        subscriber(&10);
+        Ok(Subscription::empty())
+    });
+    let cache_view = Arc::new(Mutex::new(Vec::<Row>::new()));
+    let _cache_subscription = cache
+        .connect()
+        .filter_with_state(cache_state, |minimum, row| row.value >= *minimum)
+        .bind_to_vec(Arc::clone(&cache_view))?;
+
+    cache.edit(|cache| {
+        cache.add_or_update(Row { id: 1, value: 5 });
+        cache.add_or_update(Row { id: 2, value: 10 });
+    })?;
+    assert_eq!(&*lock_vec(&cache_view)?, &[Row { id: 2, value: 10 }]);
+
+    let list = SourceList::<Row>::default();
+    let list_state = rayx_reactive_primitives::ValueStream::<u32>::from_reactive(|subscriber| {
+        subscriber(&10);
+        Ok(Subscription::empty())
+    });
+    let list_view = Arc::new(Mutex::new(Vec::<Row>::new()));
+    let _list_subscription = list
+        .connect()
+        .filter_with_state(list_state, |minimum, row| row.value >= *minimum)
+        .bind_to_vec(Arc::clone(&list_view))?;
+
+    list.add_range([Row { id: 1, value: 5 }, Row { id: 2, value: 10 }])?;
+    assert_eq!(&*lock_vec(&list_view)?, &[Row { id: 2, value: 10 }]);
+
+    Ok(())
+}

@@ -63,23 +63,27 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
-    fn filter_dynamic(
+    fn filter_dynamic<E>(
         &self,
-        predicate: ValueStream<Predicate<T>>,
+        predicate: rayx_reactive_primitives::ValueStream<Predicate<T>, E>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn filter_with_state<S>(
+    fn filter_with_state<S, E>(
         &self,
-        state: ValueStream<S>,
+        state: rayx_reactive_primitives::ValueStream<S, E>,
         predicate: impl Fn(&S, &T) -> bool + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static,
-        S: Clone + Send + Sync + 'static;
+        S: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn transform<U>(
         &self,
