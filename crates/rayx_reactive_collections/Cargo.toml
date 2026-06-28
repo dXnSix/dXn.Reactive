@@ -1,0 +1,16 @@
+[package]
+name = "rayx_reactive_collections"
+description = "RayX observable collection sources, change sets, and DynamicData-style derived streams."
+version = "0.1.0"
+edition.workspace = true
+publish = false
+license.workspace = true
+
+[dependencies]
+futures.workspace = true
+rxrust.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
