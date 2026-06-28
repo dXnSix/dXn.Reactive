@@ -3,10 +3,7 @@ use std::sync::{Arc, Mutex};
 use rayx_reactive_primitives::{ReactiveError, Subscription, ValueStream};
 
 pub trait ReactiveValueStreamExt<T> {
-    fn filter(
-        &self,
-        predicate: impl Fn(&T) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<T>
+    fn filter(&self, predicate: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValueStream<T>
     where
         T: Clone + Send + Sync + 'static;
 
@@ -28,10 +25,7 @@ pub trait ReactiveValueStreamExt<T> {
 }
 
 impl<T> ReactiveValueStreamExt<T> for ValueStream<T> {
-    fn filter(
-        &self,
-        predicate: impl Fn(&T) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<T>
+    fn filter(&self, predicate: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValueStream<T>
     where
         T: Clone + Send + Sync + 'static,
     {

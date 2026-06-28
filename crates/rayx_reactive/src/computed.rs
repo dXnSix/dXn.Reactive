@@ -91,13 +91,14 @@ where
             first
                 .changes()
                 .subscribe(move |change| {
-                    let next = latest
-                        .lock()
-                        .map_err(|_| ReactiveError::Poisoned)
-                        .map(|mut latest| {
-                            latest.0 = change.current.clone();
-                            combine(&latest.0, &latest.1)
-                        });
+                    let next =
+                        latest
+                            .lock()
+                            .map_err(|_| ReactiveError::Poisoned)
+                            .map(|mut latest| {
+                                latest.0 = change.current.clone();
+                                combine(&latest.0, &latest.1)
+                            });
                     if let Ok(next) = next {
                         let _ = signal.replace(next);
                     }
@@ -112,13 +113,14 @@ where
             second
                 .changes()
                 .subscribe(move |change| {
-                    let next = latest
-                        .lock()
-                        .map_err(|_| ReactiveError::Poisoned)
-                        .map(|mut latest| {
-                            latest.1 = change.current.clone();
-                            combine(&latest.0, &latest.1)
-                        });
+                    let next =
+                        latest
+                            .lock()
+                            .map_err(|_| ReactiveError::Poisoned)
+                            .map(|mut latest| {
+                                latest.1 = change.current.clone();
+                                combine(&latest.0, &latest.1)
+                            });
                     if let Ok(next) = next {
                         let _ = signal.replace(next);
                     }

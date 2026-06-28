@@ -11,8 +11,12 @@ use crate::{
     ReactiveValueStreamExt, Signal, ViewModelActivator,
 };
 
-fn lock_vec<T>(value: &Arc<Mutex<Vec<T>>>) -> std::sync::MutexGuard<'_, Vec<T>> {
-    value.lock().unwrap()
+fn lock_vec<T>(
+    value: &Arc<Mutex<Vec<T>>>,
+) -> Result<std::sync::MutexGuard<'_, Vec<T>>, Box<dyn std::error::Error>> {
+    value
+        .lock()
+        .map_err(|_| std::io::Error::other("mutex poisoned").into())
 }
 
 #[test]
@@ -22,13 +26,18 @@ fn signal_values_emit_current_then_distinct_updates() -> Result<(), Box<dyn std:
     let values_for_subscriber = Arc::clone(&values);
 
     let _subscription = signal.values().subscribe(move |value| {
-        lock_vec(&values_for_subscriber).push(value.clone());
+        if let Ok(mut values) = values_for_subscriber.lock() {
+            values.push(value.clone());
+        }
     })?;
 
     assert!(signal.set("alpha".to_string())?.is_none());
     assert!(signal.set("beta".to_string())?.is_some());
 
-    assert_eq!(&*lock_vec(&values), &["alpha".to_string(), "beta".to_string()]);
+    assert_eq!(
+        &*lock_vec(&values)?,
+        &["alpha".to_string(), "beta".to_string()]
+    );
     Ok(())
 }
 
@@ -39,13 +48,15 @@ fn signal_changes_emit_previous_current_and_version() -> Result<(), Box<dyn std:
     let changes_for_subscriber = Arc::clone(&changes);
 
     let _subscription = signal.changes().subscribe(move |change| {
-        lock_vec(&changes_for_subscriber).push(change.clone());
+        if let Ok(mut changes) = changes_for_subscriber.lock() {
+            changes.push(change.clone());
+        }
     })?;
 
     signal.replace(2)?;
     signal.replace(3)?;
 
-    let changes = lock_vec(&changes);
+    let changes = lock_vec(&changes)?;
     assert_eq!(changes[0].previous, 1);
     assert_eq!(changes[0].current, 2);
     assert_eq!(changes[0].version, 1);
@@ -80,13 +91,17 @@ fn value_stream_extensions_filter_distinct_and_skip() -> Result<(), Box<dyn std:
         .skip(1)
         .filter(|value| *value >= 2)
         .distinct_until_changed()
-        .subscribe(move |value| lock_vec(&values_for_subscriber).push(*value))?;
+        .subscribe(move |value| {
+            if let Ok(mut values) = values_for_subscriber.lock() {
+                values.push(*value);
+            }
+        })?;
 
     signal.replace(2)?;
     signal.replace(2)?;
     signal.replace(3)?;
 
-    assert_eq!(&*lock_vec(&values), &[2, 3]);
+    assert_eq!(&*lock_vec(&values)?, &[2, 3]);
     Ok(())
 }
 
@@ -95,14 +110,16 @@ fn event_bus_stream_has_no_initial_value() -> Result<(), Box<dyn std::error::Err
     let bus = EventBus::new();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_for_subscriber = Arc::clone(&events);
-    let _subscription = bus
-        .stream()
-        .subscribe(move |event: &u32| lock_vec(&events_for_subscriber).push(*event))?;
+    let _subscription = bus.stream().subscribe(move |event: &u32| {
+        if let Ok(mut events) = events_for_subscriber.lock() {
+            events.push(*event);
+        }
+    })?;
 
-    assert!(lock_vec(&events).is_empty());
+    assert!(lock_vec(&events)?.is_empty());
     bus.emit(10)?;
     bus.emit(20)?;
-    assert_eq!(&*lock_vec(&events), &[10, 20]);
+    assert_eq!(&*lock_vec(&events)?, &[10, 20]);
     Ok(())
 }
 

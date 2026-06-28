@@ -67,7 +67,11 @@ where
         T: Send + 'static,
     {
         let change = {
-            let mut state = self.inner.state.lock().map_err(|_| ReactiveError::Poisoned)?;
+            let mut state = self
+                .inner
+                .state
+                .lock()
+                .map_err(|_| ReactiveError::Poisoned)?;
             state.version = state.version.wrapping_add(1).max(1);
             let change = SignalChange {
                 previous: state.value.clone(),
@@ -98,7 +102,11 @@ where
         T: Send + 'static,
     {
         let change = {
-            let mut state = self.inner.state.lock().map_err(|_| ReactiveError::Poisoned)?;
+            let mut state = self
+                .inner
+                .state
+                .lock()
+                .map_err(|_| ReactiveError::Poisoned)?;
             let previous = state.value.clone();
             update(&mut state.value);
             state.version = state.version.wrapping_add(1).max(1);
@@ -139,7 +147,11 @@ impl<T> ReadSignal<T> {
     }
 
     pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> Result<R> {
-        let state = self.inner.state.lock().map_err(|_| ReactiveError::Poisoned)?;
+        let state = self
+            .inner
+            .state
+            .lock()
+            .map_err(|_| ReactiveError::Poisoned)?;
         Ok(read(&state.value))
     }
 }

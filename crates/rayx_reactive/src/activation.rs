@@ -74,21 +74,17 @@ impl ViewModelActivator {
     }
 
     fn deactivate(&self) {
-        let bag = self
-            .state
-            .lock()
-            .ok()
-            .and_then(|mut state| {
-                if state.active_count > 0 {
-                    state.active_count -= 1;
-                }
+        let bag = self.state.lock().ok().and_then(|mut state| {
+            if state.active_count > 0 {
+                state.active_count -= 1;
+            }
 
-                if state.active_count == 0 {
-                    state.active_bag.take()
-                } else {
-                    None
-                }
-            });
+            if state.active_count == 0 {
+                state.active_bag.take()
+            } else {
+                None
+            }
+        });
 
         if let Some(bag) = bag {
             bag.dispose();

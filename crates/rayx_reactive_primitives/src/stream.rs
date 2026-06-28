@@ -14,7 +14,8 @@ pub enum ConnectionStatus {
 pub type ValueSubscriber<T> = Arc<dyn Fn(&T) + Send + Sync>;
 
 pub struct ValueStream<T, E = ReactiveError> {
-    subscribe: Arc<dyn Fn(ValueSubscriber<T>) -> std::result::Result<Subscription, E> + Send + Sync>,
+    subscribe:
+        Arc<dyn Fn(ValueSubscriber<T>) -> std::result::Result<Subscription, E> + Send + Sync>,
 }
 
 impl<T, E> Clone for ValueStream<T, E> {
@@ -27,10 +28,7 @@ impl<T, E> Clone for ValueStream<T, E> {
 
 impl<T> ValueStream<T, ReactiveError> {
     pub fn from_reactive(
-        subscribe: impl Fn(ValueSubscriber<T>) -> ReactiveResult<Subscription>
-        + Send
-        + Sync
-        + 'static,
+        subscribe: impl Fn(ValueSubscriber<T>) -> ReactiveResult<Subscription> + Send + Sync + 'static,
     ) -> Self {
         Self::new(subscribe)
     }
