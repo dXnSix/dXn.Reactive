@@ -302,7 +302,7 @@ where
         let changes = self.changes.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            changes.subscribe(move |batch| subscriber(batch))
+            Ok(changes.subscribe(move |batch| subscriber(batch))?)
         })
     }
 
@@ -310,7 +310,7 @@ where
         let preview = self.preview.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            preview.subscribe(move |batch| subscriber(batch))
+            Ok(preview.subscribe(move |batch| subscriber(batch))?)
         })
     }
 
@@ -405,9 +405,9 @@ where
             let count = source.count()?;
             subscriber(&count);
             let subscriber = Arc::clone(&subscriber);
-            source
+            Ok(source
                 .count_changed
-                .subscribe(move |count| subscriber(count))
+                .subscribe(move |count| subscriber(count))?)
         })
     }
 

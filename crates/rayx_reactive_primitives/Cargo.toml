@@ -1,0 +1,13 @@
+[package]
+name = "rayx_reactive_primitives"
+description = "Shared RayX reactive stream, subscription, and delivery primitives."
+version = "0.1.0"
+edition.workspace = true
+publish = false
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 futures.workspace = true
+rayx_reactive_primitives.workspace = true
 rxrust.workspace = true
 serde.workspace = true
 thiserror.workspace = true

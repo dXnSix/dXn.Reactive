@@ -10,4 +10,12 @@ pub enum CollectionError {
     NestedUpdate,
 }
 
+impl From<rayx_reactive_primitives::ReactiveError> for CollectionError {
+    fn from(error: rayx_reactive_primitives::ReactiveError) -> Self {
+        match error {
+            rayx_reactive_primitives::ReactiveError::Poisoned => Self::Poisoned,
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, CollectionError>;

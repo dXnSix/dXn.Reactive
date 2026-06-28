@@ -1,0 +1,16 @@
+[package]
+name = "rayx_reactive"
+description = "RayX scalar reactive state, signals, computed values, effects, commands, and GPUI bindings."
+version = "0.1.0"
+edition.workspace = true
+publish = false
+license.workspace = true
+
+[dependencies]
+futures.workspace = true
+gpux = { path = "../../gpux/crates/gpui" }
+rayx_reactive_primitives.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

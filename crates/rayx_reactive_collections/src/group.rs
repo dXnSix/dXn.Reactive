@@ -290,7 +290,7 @@ where
             state.history.push(batch.clone());
             batch
         };
-        self.inner.changes.enqueue(batch)
+        Ok(self.inner.changes.enqueue(batch)?)
     }
 
     fn connect_subscriber(
