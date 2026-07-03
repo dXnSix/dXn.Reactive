@@ -4,10 +4,11 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let order = Arc::new(Mutex::new(Vec::<K>::new()));
+        let state = Arc::new(Mutex::new(CacheRemoveKeyState::<K, T>::default()));
         self.subscribe(move |batch| {
-            if let (Ok(mut target), Ok(mut order)) = (target.lock(), order.lock()) {
-                apply_cache_changes_to_vec(&mut target, &mut order, &batch.changes);
+            if let (Ok(mut target), Ok(mut state)) = (target.lock(), state.lock()) {
+                let changes = state.apply(batch);
+                apply_list_changes(&mut target, &changes);
             }
         })
     }

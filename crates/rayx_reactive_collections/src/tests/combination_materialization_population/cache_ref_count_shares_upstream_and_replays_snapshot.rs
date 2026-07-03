@@ -249,6 +249,55 @@ fn cache_populate_into_preserves_incoming_stream_keys() -> Result<(), Box<dyn st
 }
 
 #[test]
+fn cache_bind_to_vec_uses_ordered_list_materialization_for_partial_clear()
+-> Result<(), Box<dyn std::error::Error>> {
+    type CacheBatchTrigger = Arc<dyn Fn(ChangeSet<CacheChange<u32, Row>>) + Send + Sync>;
+
+    let triggers = Arc::new(Mutex::new(Vec::<CacheBatchTrigger>::new()));
+    let triggers_for_source = Arc::clone(&triggers);
+    let stream = ChangeStream::new(move |subscriber: StreamSubscriber<CacheChange<u32, Row>>| {
+        let trigger: CacheBatchTrigger = Arc::new(move |batch| subscriber(&batch));
+        if let Ok(mut triggers) = triggers_for_source.lock() {
+            triggers.push(trigger);
+        }
+        Ok(Subscription::empty())
+    });
+
+    let view = Arc::new(Mutex::new(Vec::<Row>::new()));
+    let _subscription = stream.bind_to_vec(Arc::clone(&view))?;
+
+    {
+        let triggers = lock_vec(&triggers)?;
+        for trigger in triggers.iter() {
+            trigger(ChangeSet::new(
+                vec![
+                    CacheChange::Add {
+                        key: 1,
+                        current: Row { id: 1, value: 10 },
+                        current_index: Some(0),
+                    },
+                    CacheChange::Add {
+                        key: 2,
+                        current: Row { id: 2, value: 20 },
+                        current_index: Some(1),
+                    },
+                ],
+                1,
+            ));
+            trigger(ChangeSet::new(
+                vec![CacheChange::Clear {
+                    previous: vec![(1, Row { id: 1, value: 10 })],
+                }],
+                2,
+            ));
+        }
+    }
+
+    assert_eq!(&*lock_vec(&view)?, &[Row { id: 2, value: 20 }]);
+    Ok(())
+}
+
+#[test]
 fn stream_as_observable_list_materializes_queryable_readonly_view()
 -> Result<(), Box<dyn std::error::Error>> {
     let source = SourceList::new(vec![1_u32, 2, 3]);
@@ -269,6 +318,83 @@ fn stream_as_observable_list_materializes_queryable_readonly_view()
     assert_eq!(&*lock_vec(&first)?, &[2, 3, 4]);
     assert_eq!(&*lock_vec(&second)?, &[2, 3, 4]);
     assert_eq!(observable.len()?, 3);
+    Ok(())
+}
+
+#[test]
+fn cache_stream_as_observable_list_materializes_ordered_readonly_view()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = SourceCache::new(|row: &Row| row.id);
+    let observable: ObservableList<Row> = source.connect().as_observable_list()?;
+
+    source.edit(|cache| {
+        cache.add_or_update_key_at(1, Row { id: 1, value: 10 }, Some(0));
+        cache.add_or_update_key_at(2, Row { id: 2, value: 20 }, Some(1));
+        cache.add_or_update_key_at(3, Row { id: 3, value: 30 }, Some(2));
+    })?;
+    assert_eq!(
+        observable.items()?,
+        vec![
+            Row { id: 1, value: 10 },
+            Row { id: 2, value: 20 },
+            Row { id: 3, value: 30 },
+        ]
+    );
+
+    source.add_or_update_key_at(2, Row { id: 2, value: 22 }, Some(0))?;
+    assert_eq!(
+        observable.items()?,
+        vec![
+            Row { id: 2, value: 22 },
+            Row { id: 1, value: 10 },
+            Row { id: 3, value: 30 },
+        ]
+    );
+
+    source.refresh_key(&2)?;
+    assert_eq!(observable.items()?[0], Row { id: 2, value: 22 });
+
+    source.remove_key(&1)?;
+    assert_eq!(
+        observable.items()?,
+        vec![Row { id: 2, value: 22 }, Row { id: 3, value: 30 }]
+    );
+
+    source.clear()?;
+    assert!(observable.items()?.is_empty());
+    Ok(())
+}
+
+#[test]
+fn sorted_keyed_cache_stream_as_observable_list_preserves_sorted_order()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = SourceCache::new(|row: &Row| row.id);
+    let observable: ObservableList<Row> = source
+        .connect()
+        .sort_keyed_by_key(|row| row.value)
+        .as_observable_list()?;
+
+    source.edit(|cache| {
+        cache.add_or_update(Row { id: 1, value: 30 });
+        cache.add_or_update(Row { id: 2, value: 10 });
+        cache.add_or_update(Row { id: 3, value: 20 });
+    })?;
+    assert_eq!(
+        row_values(&Arc::new(Mutex::new(observable.items()?)))?,
+        vec![10, 20, 30]
+    );
+
+    source.add_or_update(Row { id: 1, value: 5 })?;
+    assert_eq!(
+        row_values(&Arc::new(Mutex::new(observable.items()?)))?,
+        vec![5, 10, 20]
+    );
+
+    source.remove_key(&2)?;
+    assert_eq!(
+        row_values(&Arc::new(Mutex::new(observable.items()?)))?,
+        vec![5, 20]
+    );
     Ok(())
 }
 

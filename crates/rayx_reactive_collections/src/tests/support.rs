@@ -7,9 +7,9 @@ pub(super) use std::time::{Duration, Instant};
 pub(super) use crate::{
     CacheAggregationExt, CacheArcStreamExt, CacheChange, CacheCombineExt, CacheExpireAfterExt,
     CacheForceTransform, CacheJoinExt, CacheLifecycleExt, CacheLimitExt, CacheStreamObservableExt,
-    CacheTreeExt, ChangeReason, ChangeSet, ChangeSetAdapterOptions, ChangeStream, Comparer,
-    ConnectionStatus, DynamicCacheCombineExt, DynamicListCombineExt, GroupSelector,
-    ImmutableCacheGroup, ImmutableListGroup, IndexAware, ItemValue, KeyedItemValue,
+    CacheStreamObservableListExt, CacheTreeExt, ChangeReason, ChangeSet, ChangeSetAdapterOptions,
+    ChangeStream, Comparer, ConnectionStatus, DynamicCacheCombineExt, DynamicListCombineExt,
+    GroupSelector, ImmutableCacheGroup, ImmutableListGroup, IndexAware, ItemValue, KeyedItemValue,
     KeyedPageChangeSet, ListAggregationExt, ListChange, ListChangeReason, ListCombineExt,
     ListDistinctExt, ListExpireAfterExt, ListItemChange, ListLifecycleExt, ListStreamExt,
     ListStreamObservableExt, ObservableCache, ObservableList, OptionalValueStreamCacheDiffExt,

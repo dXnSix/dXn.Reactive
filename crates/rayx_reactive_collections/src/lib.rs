@@ -76,8 +76,8 @@ pub mod prelude {
         observable_cache_from_changes,
     };
     pub use crate::observable_list::{
-        ListStreamObservableExt, ObservableList, SourceListObservableExt,
-        observable_list_from_changes,
+        CacheStreamObservableListExt, ListStreamObservableExt, ObservableList,
+        SourceListObservableExt, observable_list_from_changes,
     };
     pub use crate::operators::{
         CacheArcStreamExt, CacheForceTransform, CacheStreamExt, Comparer, GroupSelector,

@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{hash::Hash, sync::Arc};
 
-use crate::change::ListChange;
+use crate::change::{CacheChange, ListChange};
 use crate::error::Result;
 use crate::list::SourceList;
+use crate::operators::CacheStreamExt;
 use crate::populate::ListPopulateExt;
 use crate::stream::{ChangeStream, ValueStream};
 use crate::subscription::Subscription;
@@ -83,6 +84,83 @@ where
     fn as_observable_list(&self) -> Result<ObservableList<T>>;
 }
 
+pub trait CacheStreamObservableListExt<K, T>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    /// Materializes a keyed cache change stream into an ordered read-only list.
+    ///
+    /// This is the usual boundary between service-owned keyed truth and
+    /// ViewModel-owned UI projections: the service exposes `connect()`, the
+    /// ViewModel filters/sorts the keyed stream, and the UI receives a stable
+    /// ordered `ObservableList<T>`.
+    ///
+    /// ```
+    /// use rayx_reactive_collections::prelude::*;
+    ///
+    /// #[derive(Clone, Eq, PartialEq)]
+    /// struct Row {
+    ///     id: u64,
+    ///     name: String,
+    ///     score: i32,
+    /// }
+    ///
+    /// struct RowService {
+    ///     rows: SourceCache<u64, Row>,
+    /// }
+    ///
+    /// impl RowService {
+    ///     fn new() -> Self {
+    ///         Self {
+    ///             rows: SourceCache::new(|row: &Row| row.id),
+    ///         }
+    ///     }
+    ///
+    ///     fn connect(&self) -> ChangeStream<CacheChange<u64, Row>> {
+    ///         self.rows.connect()
+    ///     }
+    ///
+    ///     fn upsert(&self, row: Row) -> Result<()> {
+    ///         self.rows.add_or_update(row)?;
+    ///         Ok(())
+    ///     }
+    /// }
+    ///
+    /// struct RowsViewModel {
+    ///     visible_rows: ObservableList<Row>,
+    /// }
+    ///
+    /// impl RowsViewModel {
+    ///     fn new(service: &RowService) -> Result<Self> {
+    ///         let visible_rows = service
+    ///             .connect()
+    ///             .filter(|row| row.score > 0)
+    ///             .sort_keyed_by_key(|row| row.name.clone())
+    ///             .as_observable_list()?;
+    ///
+    ///         Ok(Self { visible_rows })
+    ///     }
+    /// }
+    ///
+    /// let service = RowService::new();
+    /// service.upsert(Row { id: 1, name: "Beta".into(), score: 10 })?;
+    /// service.upsert(Row { id: 2, name: "Alpha".into(), score: 20 })?;
+    ///
+    /// let view_model = RowsViewModel::new(&service)?;
+    /// let names = view_model
+    ///     .visible_rows
+    ///     .items()?
+    ///     .into_iter()
+    ///     .map(|row| row.name)
+    ///     .collect::<Vec<_>>();
+    ///
+    /// assert_eq!(names, ["Alpha", "Beta"]);
+    /// # Ok::<(), CollectionError>(())
+    /// ```
+    fn as_observable_list(&self) -> Result<ObservableList<T>>;
+}
+
 impl<T> SourceListObservableExt<T> for SourceList<T>
 where
     T: Clone + Send + Sync + 'static,
@@ -98,6 +176,16 @@ where
 {
     fn as_observable_list(&self) -> Result<ObservableList<T>> {
         ObservableList::from_stream(self)
+    }
+}
+
+impl<K, T> CacheStreamObservableListExt<K, T> for ChangeStream<CacheChange<K, T>>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn as_observable_list(&self) -> Result<ObservableList<T>> {
+        self.remove_key().as_observable_list()
     }
 }
 
