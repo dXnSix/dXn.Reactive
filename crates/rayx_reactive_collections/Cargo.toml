@@ -13,5 +13,12 @@ rxrust.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "keyed_sort"
+harness = false
+
 [lints]
 workspace = true

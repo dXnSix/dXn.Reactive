@@ -8,7 +8,6 @@ impl<K, T, U> Default for CacheInlineTransformState<K, T, U> {
         }
     }
 }
-
 impl<K, T, U> CacheInlineTransformState<K, T, U>
 where
     K: Clone + Eq + Hash,
@@ -168,7 +167,6 @@ where
         (!changes.is_empty()).then(|| ChangeSet::new(changes, self.version))
     }
 }
-
 struct ListSortState<T> {
     all: Vec<T>,
     sorted: Vec<T>,
@@ -370,7 +368,9 @@ where
 struct CacheSortState<K, T> {
     items: HashMap<K, T>,
     order: Vec<K>,
+    source_positions: HashMap<K, usize>,
     sorted: Vec<(K, T)>,
+    sorted_positions: HashMap<K, usize>,
     comparer: Option<Comparer<T>>,
     version: u64,
 }
@@ -380,10 +380,11 @@ impl<K, T> Default for CacheSortState<K, T> {
         Self {
             items: HashMap::new(),
             order: Vec::new(),
+            source_positions: HashMap::new(),
             sorted: Vec::new(),
+            sorted_positions: HashMap::new(),
             comparer: None,
             version: 0,
         }
     }
 }
-

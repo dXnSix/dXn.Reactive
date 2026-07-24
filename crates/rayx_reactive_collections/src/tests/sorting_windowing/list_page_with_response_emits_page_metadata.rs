@@ -365,6 +365,117 @@ fn cache_sort_keyed_by_emits_indexed_keyed_changes() -> Result<(), Box<dyn std::
 }
 
 #[test]
+fn cache_sort_keyed_sparse_batches_preserve_structured_changes_without_clear()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = SourceCache::new(|row: &Row| row.id);
+    let received = Arc::new(Mutex::new(Vec::<ChangeSet<CacheChange<u32, Row>>>::new()));
+    let received_for_subscriber = Arc::clone(&received);
+    let _subscription = source
+        .connect()
+        .sort_keyed_by(|left, right| left.value.cmp(&right.value))
+        .subscribe(move |batch| {
+            if let Ok(mut received) = received_for_subscriber.lock() {
+                received.push(batch.clone());
+            }
+        })?;
+
+    source.add_or_update(Row { id: 1, value: 10 })?;
+    source.add_or_update(Row { id: 2, value: 10 })?;
+    source.add_or_update(Row { id: 3, value: 10 })?;
+    source.add_or_update(Row { id: 4, value: 10 })?;
+    source.add_or_update(Row { id: 2, value: 5 })?;
+    source.refresh_key(&2)?;
+    source.move_key(&4, 0)?;
+    source.remove_key(&3)?;
+
+    let received = lock_vec(&received)?;
+    let changes = received
+        .iter()
+        .flat_map(|batch| batch.changes.iter())
+        .collect::<Vec<_>>();
+    assert!(
+        changes
+            .iter()
+            .any(|change| matches!(change, CacheChange::Add { .. }))
+    );
+    assert!(
+        changes
+            .iter()
+            .any(|change| matches!(change, CacheChange::Update { .. }))
+    );
+    assert!(
+        changes
+            .iter()
+            .any(|change| matches!(change, CacheChange::Refresh { .. }))
+    );
+    assert!(
+        changes
+            .iter()
+            .any(|change| matches!(change, CacheChange::Move { .. }))
+    );
+    assert!(
+        changes
+            .iter()
+            .any(|change| matches!(change, CacheChange::Remove { .. }))
+    );
+    assert!(
+        !changes
+            .iter()
+            .any(|change| matches!(change, CacheChange::Clear { .. }))
+    );
+    Ok(())
+}
+
+#[test]
+fn cache_sort_keyed_large_add_batch_is_stably_sorted_without_clear()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = SourceCache::new(|row: &Row| row.id);
+    let received = Arc::new(Mutex::new(Vec::<ChangeSet<CacheChange<u32, Row>>>::new()));
+    let received_for_subscriber = Arc::clone(&received);
+    let _subscription = source
+        .connect()
+        .sort_keyed_by(|left, right| left.value.cmp(&right.value))
+        .subscribe(move |batch| {
+            if let Ok(mut received) = received_for_subscriber.lock() {
+                received.push(batch.clone());
+            }
+        })?;
+
+    source.edit(|items| {
+        for id in 0..128 {
+            items.add_or_update(Row { id, value: id % 4 });
+        }
+    })?;
+
+    let received = lock_vec(&received)?;
+    let initial = received
+        .first()
+        .ok_or_else(|| std::io::Error::other("missing sorted cache batch"))?;
+    assert_eq!(initial.changes.len(), 128);
+    assert!(
+        initial
+            .changes
+            .iter()
+            .all(|change| matches!(change, CacheChange::Add { .. }))
+    );
+    let ids = initial
+        .changes
+        .iter()
+        .map(|change| match change {
+            CacheChange::Add { current, .. } => current.id,
+            _ => unreachable!("large add batches emit only additions"),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        ids,
+        (0..4)
+            .flat_map(|value| (0..128).filter(move |id| id % 4 == value))
+            .collect::<Vec<_>>()
+    );
+    Ok(())
+}
+
+#[test]
 fn cache_update_index_sets_indexes_from_sorted_keyed_order()
 -> Result<(), Box<dyn std::error::Error>> {
     let first = IndexedRow::new(1, 30);
