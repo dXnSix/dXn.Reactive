@@ -1,5 +1,57 @@
 use crate::tests::support::*;
 
+#[derive(Debug)]
+struct CloneCountedRow {
+    id: u32,
+    clones: Arc<AtomicUsize>,
+}
+
+impl Clone for CloneCountedRow {
+    fn clone(&self) -> Self {
+        self.clones.fetch_add(1, AtomicOrdering::SeqCst);
+        Self {
+            id: self.id,
+            clones: Arc::clone(&self.clones),
+        }
+    }
+}
+
+#[test]
+fn source_cache_watch_clones_only_the_requested_snapshot_item()
+-> Result<(), Box<dyn std::error::Error>> {
+    let clones = Arc::new(AtomicUsize::new(0));
+    let source = SourceCache::new(|row: &CloneCountedRow| row.id);
+    source.add_or_update_range((0..128).map(|id| CloneCountedRow {
+        id,
+        clones: Arc::clone(&clones),
+    }))?;
+    clones.store(0, AtomicOrdering::SeqCst);
+
+    let received = Arc::new(AtomicUsize::new(0));
+    let received_for_subscriber = Arc::clone(&received);
+    let _subscription = source.watch(64).subscribe(move |batch| {
+        assert!(batch.changes.iter().all(|change| match change {
+            CacheChange::Add { key, .. }
+            | CacheChange::Update { key, .. }
+            | CacheChange::Remove { key, .. }
+            | CacheChange::Refresh { key, .. }
+            | CacheChange::Move { key, .. } => *key == 64,
+            CacheChange::Clear { previous } => {
+                previous.len() == 1 && previous[0].0 == 64
+            }
+        }));
+        received_for_subscriber.fetch_add(batch.changes.len(), AtomicOrdering::SeqCst);
+    })?;
+
+    assert_eq!(received.load(AtomicOrdering::SeqCst), 1);
+    assert_eq!(
+        clones.load(AtomicOrdering::SeqCst),
+        1,
+        "keyed watch must not clone unrelated cache entries"
+    );
+    Ok(())
+}
+
 #[test]
 fn source_cache_equality_aware_upserts_suppress_noop_updates()
 -> Result<(), Box<dyn std::error::Error>> {
