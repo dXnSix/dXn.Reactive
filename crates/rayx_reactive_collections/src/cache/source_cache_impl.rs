@@ -317,18 +317,7 @@ where
     pub fn watch(&self, watch_key: K) -> ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
-            let watch_key_for_live = watch_key.clone();
-            source.connect().subscribe(move |batch| {
-                let changes = batch
-                    .changes
-                    .iter()
-                    .filter_map(|change| cache_change_for_key(change, &watch_key_for_live))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
-            })
+            source.connect_key_subscriber(watch_key.clone(), subscriber)
         })
     }
 
@@ -527,5 +516,115 @@ where
 
         Ok(subscription)
     }
+
+    fn connect_key_subscriber(
+        &self,
+        watch_key: K,
+        subscriber: StreamSubscriber<CacheChange<K, T>>,
+    ) -> Result<Subscription> {
+        let (snapshot, snapshot_version) = {
+            let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+            let snapshot = state
+                .items
+                .get(&watch_key)
+                .cloned()
+                .map(|current| CacheChange::Add {
+                    key: watch_key.clone(),
+                    current,
+                    current_index: state.order.iter().position(|key| key == &watch_key),
+                });
+            (snapshot, state.version)
+        };
+
+        let ready = Arc::new(AtomicBool::new(false));
+        let delivered_until = Arc::new(AtomicU64::new(snapshot_version));
+        let buffer = Arc::new(Mutex::new(Vec::<ChangeSet<CacheChange<K, T>>>::new()));
+
+        let live_subscriber = Arc::clone(&subscriber);
+        let live_ready = Arc::clone(&ready);
+        let live_delivered_until = Arc::clone(&delivered_until);
+        let live_buffer = Arc::clone(&buffer);
+        let live_watch_key = watch_key.clone();
+        let subscription = self.changes.subscribe(move |batch| {
+            let Some(batch) = change_set_for_key(batch, &live_watch_key) else {
+                return;
+            };
+            if batch.version <= live_delivered_until.load(Ordering::Acquire) {
+                return;
+            }
+            if live_ready.load(Ordering::Acquire) {
+                live_subscriber(&batch);
+                live_delivered_until.store(batch.version, Ordering::Release);
+                return;
+            }
+            if let Ok(mut buffer) = live_buffer.lock() {
+                if live_ready.load(Ordering::Acquire) {
+                    drop(buffer);
+                    live_subscriber(&batch);
+                    live_delivered_until.store(batch.version, Ordering::Release);
+                } else {
+                    buffer.push(batch);
+                }
+            }
+        })?;
+
+        let catch_up = {
+            let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+            state
+                .history
+                .iter()
+                .filter(|batch| batch.version > snapshot_version)
+                .filter_map(|batch| change_set_for_key(batch, &watch_key))
+                .collect::<Vec<_>>()
+        };
+
+        if let Some(snapshot) = snapshot {
+            subscriber(&ChangeSet::new(vec![snapshot], snapshot_version));
+        }
+
+        for batch in catch_up {
+            if batch.version > delivered_until.load(Ordering::Acquire) {
+                delivered_until.store(batch.version, Ordering::Release);
+                subscriber(&batch);
+            }
+        }
+
+        let buffered = {
+            let mut buffer = buffer.lock().map_err(|_| CollectionError::Poisoned)?;
+            ready.store(true, Ordering::Release);
+            mem::take(&mut *buffer)
+        };
+        for batch in buffered {
+            if batch.version > delivered_until.load(Ordering::Acquire) {
+                delivered_until.store(batch.version, Ordering::Release);
+                subscriber(&batch);
+            }
+        }
+
+        Ok(subscription)
+    }
 }
 
+fn change_set_for_key<K, T>(
+    batch: &ChangeSet<CacheChange<K, T>>,
+    watch_key: &K,
+) -> Option<ChangeSet<CacheChange<K, T>>>
+where
+    K: Clone + Eq,
+    T: Clone,
+{
+    let changes = batch
+        .changes
+        .iter()
+        .filter_map(|change| match change {
+            CacheChange::Clear { previous } => previous
+                .iter()
+                .find(|(key, _)| key == watch_key)
+                .map(|(key, item)| CacheChange::Clear {
+                    previous: vec![(key.clone(), item.clone())],
+                }),
+            change => cache_change_for_key(change, watch_key).cloned(),
+        })
+        .collect::<Vec<_>>();
+    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+}
