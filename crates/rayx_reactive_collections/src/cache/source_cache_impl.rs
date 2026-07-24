@@ -78,8 +78,11 @@ where
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .try_lock()
+            .map_err(|error| match error {
+                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
+                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
+            })?
             .items
             .get(key)
             .cloned())
@@ -444,7 +447,10 @@ where
         subscriber: StreamSubscriber<CacheChange<K, T>>,
     ) -> Result<Subscription> {
         let (snapshot, snapshot_version) = {
-            let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+            let state = self.state.try_lock().map_err(|error| match error {
+                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
+                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
+            })?;
             let snapshot = state
                 .order
                 .iter()
@@ -481,7 +487,7 @@ where
                 live_delivered_until.store(batch.version, Ordering::Release);
                 return;
             }
-            if let Ok(mut buffer) = live_buffer.lock() {
+            if let Ok(mut buffer) = live_buffer.try_lock() {
                 if live_ready.load(Ordering::Acquire) {
                     drop(buffer);
                     live_subscriber(batch);
@@ -493,7 +499,10 @@ where
         })?;
 
         let catch_up = {
-            let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+            let state = self.state.try_lock().map_err(|error| match error {
+                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
+                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
+            })?;
             state
                 .history
                 .iter()
@@ -514,7 +523,10 @@ where
         }
 
         let buffered = {
-            let mut buffer = buffer.lock().map_err(|_| CollectionError::Poisoned)?;
+            let mut buffer = buffer.try_lock().map_err(|error| match error {
+                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
+                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
+            })?;
             ready.store(true, Ordering::Release);
             mem::take(&mut *buffer)
         };
