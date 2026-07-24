@@ -20,5 +20,9 @@ criterion = "0.5.1"
 name = "keyed_sort"
 harness = false
 
+[[bench]]
+name = "live_group"
+harness = false
+
 [lints]
 workspace = true
