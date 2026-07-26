@@ -301,6 +301,14 @@ fn computed_drop_stops_source_tracking() -> Result<(), Box<dyn std::error::Error
 }
 
 #[test]
+fn gpui_notify_on_uses_a_unit_channel_without_a_sender_mutex() {
+    let source = include_str!("gpui.rs");
+
+    assert!(!source.contains("Arc::new(Mutex::new(tx))"));
+    assert!(!source.contains("self.bind_stream_value(stream, |_, _, cx| cx.notify())"));
+}
+
+#[test]
 fn value_stream_extensions_filter_distinct_and_skip() -> Result<(), Box<dyn std::error::Error>> {
     let signal = Signal::new(1_u32);
     let values = Arc::new(Mutex::new(Vec::new()));
