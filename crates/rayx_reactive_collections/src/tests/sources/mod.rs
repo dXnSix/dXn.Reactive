@@ -1,6 +1,10 @@
 mod list_edit_emits_one_range_coalesced_change_set;
+#[path = "../aggregation_diagnostics_diff/localized_list_diff.rs"]
+mod localized_list_diff;
+mod reactive_collections_fixture_contract;
 mod source_cache_equality_aware_upserts_suppress_noop_updates;
 mod source_cache_history_free;
 mod source_cache_keyed_delivery;
+mod source_list_history_free;
 mod source_list_limit_size_to_removes_oldest_items_and_emits_expired;
 mod source_list_switch_connects_latest_source;

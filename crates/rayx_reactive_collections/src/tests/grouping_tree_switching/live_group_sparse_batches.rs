@@ -1,7 +1,7 @@
 use crate::tests::support::*;
 
 #[test]
-fn live_group_sparse_middle_batches_touch_only_affected_members()
+fn live_group_history_free_sparse_middle_batches_touch_only_affected_members()
 -> Result<(), Box<dyn std::error::Error>> {
     let source = SourceCache::new(|row: &Row| row.id);
     let groups = Arc::new(Mutex::new(Vec::<RayCacheGroup<u32, u32, Row>>::new()));

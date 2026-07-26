@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
-use std::mem;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, TryLockError};
 
 use crate::change::{CacheChange, ChangeSet};
+use crate::connection::{StartupConnection, VersionedChangeSet};
 use crate::delivery::DeliveryQueue;
 use crate::error::{CollectionError, Result};
 use crate::stream::{ChangeStream, StreamSubscriber};
@@ -15,12 +14,11 @@ struct GroupCacheState<K, T> {
     items: HashMap<K, T>,
     order: Vec<K>,
     version: u64,
-    history: Vec<ChangeSet<CacheChange<K, T>>>,
 }
 
 struct RayCacheGroupInner<K, T> {
     state: Mutex<GroupCacheState<K, T>>,
-    changes: DeliveryQueue<ChangeSet<CacheChange<K, T>>>,
+    changes: DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
 }
 
 #[derive(Clone)]
@@ -65,7 +63,6 @@ where
                     items: HashMap::new(),
                     order: Vec::new(),
                     version: 0,
-                    history: Vec::new(),
                 }),
                 changes: DeliveryQueue::new(),
             }),
@@ -149,6 +146,44 @@ where
     pub fn connect(&self) -> ChangeStream<CacheChange<K, T>> {
         let group = self.clone();
         ChangeStream::new(move |subscriber| group.connect_subscriber(subscriber))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn connect_with_startup_hooks(
+        &self,
+        after_subscribe: Arc<dyn Fn() + Send + Sync>,
+        after_snapshot: Arc<dyn Fn() + Send + Sync>,
+    ) -> ChangeStream<CacheChange<K, T>> {
+        let group = self.clone();
+        ChangeStream::new(move |subscriber| {
+            let after_subscribe = Arc::clone(&after_subscribe);
+            let after_snapshot = Arc::clone(&after_snapshot);
+            group.connect_subscriber_with_hooks(
+                subscriber,
+                move || after_subscribe(),
+                move || after_snapshot(),
+            )
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_state_lock_held_for_test<R>(&self, action: impl FnOnce() -> R) -> R {
+        let _state = self
+            .inner
+            .state
+            .lock()
+            .expect("test cache group state lock");
+        action()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn poison_state_lock_for_test(&self) {
+        let inner = Arc::clone(&self.inner);
+        let _ = std::thread::spawn(move || {
+            let _state = inner.state.lock().expect("test cache group state lock");
+            panic!("intentional RayCacheGroup state poison");
+        })
+        .join();
     }
 
     pub(crate) fn add_or_update_pending(
@@ -286,23 +321,37 @@ where
                 .lock()
                 .map_err(|_| CollectionError::Poisoned)?;
             state.version = state.version.saturating_add(1);
-            let batch = ChangeSet::new(changes, state.version);
-            state.history.push(batch.clone());
-            batch
+            ChangeSet::new(changes, state.version)
         };
-        Ok(self.inner.changes.enqueue(batch)?)
+        Ok(self.inner.changes.enqueue(VersionedChangeSet::new(batch))?)
     }
 
     fn connect_subscriber(
         &self,
         subscriber: StreamSubscriber<CacheChange<K, T>>,
     ) -> Result<Subscription> {
+        self.connect_subscriber_with_hooks(subscriber, || {}, || {})
+    }
+
+    fn connect_subscriber_with_hooks(
+        &self,
+        subscriber: StreamSubscriber<CacheChange<K, T>>,
+        after_subscribe: impl FnOnce(),
+        after_snapshot: impl FnOnce(),
+    ) -> Result<Subscription> {
+        let startup = StartupConnection::new(Arc::clone(&subscriber));
+        let startup_for_changes = startup.clone();
+        let subscription = self
+            .inner
+            .changes
+            .subscribe(move |versioned| startup_for_changes.receive(versioned))?;
+        after_subscribe();
+
         let (snapshot, snapshot_version) = {
-            let state = self
-                .inner
-                .state
-                .lock()
-                .map_err(|_| CollectionError::Poisoned)?;
+            let state = self.inner.state.try_lock().map_err(|error| match error {
+                TryLockError::Poisoned(_) => CollectionError::Poisoned,
+                TryLockError::WouldBlock => CollectionError::NestedUpdate,
+            })?;
             let snapshot = state
                 .order
                 .iter()
@@ -321,73 +370,14 @@ where
                 .collect::<Vec<_>>();
             (snapshot, state.version)
         };
+        after_snapshot();
 
-        let ready = Arc::new(AtomicBool::new(false));
-        let delivered_until = Arc::new(AtomicU64::new(snapshot_version));
-        let buffer = Arc::new(Mutex::new(Vec::<ChangeSet<CacheChange<K, T>>>::new()));
-
-        let live_subscriber = Arc::clone(&subscriber);
-        let live_ready = Arc::clone(&ready);
-        let live_delivered_until = Arc::clone(&delivered_until);
-        let live_buffer = Arc::clone(&buffer);
-        let subscription = self.inner.changes.subscribe(move |batch| {
-            if batch.version <= live_delivered_until.load(Ordering::Acquire) {
-                return;
-            }
-            if live_ready.load(Ordering::Acquire) {
-                live_subscriber(batch);
-                live_delivered_until.store(batch.version, Ordering::Release);
-                return;
-            }
-            if let Ok(mut buffer) = live_buffer.lock() {
-                if live_ready.load(Ordering::Acquire) {
-                    drop(buffer);
-                    live_subscriber(batch);
-                    live_delivered_until.store(batch.version, Ordering::Release);
-                } else {
-                    buffer.push(batch.clone());
-                }
-            }
-        })?;
-
-        let catch_up = {
-            let state = self
-                .inner
-                .state
-                .lock()
-                .map_err(|_| CollectionError::Poisoned)?;
-            state
-                .history
-                .iter()
-                .filter(|batch| batch.version > snapshot_version)
-                .cloned()
-                .collect::<Vec<_>>()
-        };
-
-        if !snapshot.is_empty() {
-            subscriber(&ChangeSet::new(snapshot, snapshot_version));
-        }
-
-        for batch in catch_up {
-            if batch.version > delivered_until.load(Ordering::Acquire) {
-                delivered_until.store(batch.version, Ordering::Release);
-                subscriber(&batch);
-            }
-        }
-
-        let buffered = {
-            let mut buffer = buffer.lock().map_err(|_| CollectionError::Poisoned)?;
-            ready.store(true, Ordering::Release);
-            mem::take(&mut *buffer)
-        };
-        for batch in buffered {
-            if batch.version > delivered_until.load(Ordering::Acquire) {
-                delivered_until.store(batch.version, Ordering::Release);
-                subscriber(&batch);
-            }
-        }
-
-        Ok(subscription)
+        let snapshot = (!snapshot.is_empty()).then(|| ChangeSet::new(snapshot, snapshot_version));
+        startup.start(snapshot, snapshot_version)?;
+        Ok(Subscription::many(vec![
+            subscription,
+            startup.disposal_subscription(),
+        ]))
     }
 }
 

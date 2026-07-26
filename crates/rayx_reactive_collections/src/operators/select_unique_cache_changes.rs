@@ -180,13 +180,19 @@ pub(crate) fn diff_list_by<T: Clone>(
     new: &[T],
     are_items_equal: &dyn Fn(&T, &T) -> bool,
 ) -> Vec<ListChange<T>> {
-    if old.len() == new.len()
-        && old
+    if old.len() == new.len() {
+        return old
             .iter()
             .zip(new.iter())
-            .all(|(previous, current)| are_items_equal(previous, current))
-    {
-        return Vec::new();
+            .enumerate()
+            .filter_map(|(index, (previous, current))| {
+                (!are_items_equal(previous, current)).then(|| ListChange::Replace {
+                    index,
+                    old: previous.clone(),
+                    new: current.clone(),
+                })
+            })
+            .collect();
     }
     if old.is_empty() {
         return vec![ListChange::AddRange {
@@ -237,13 +243,139 @@ pub(crate) fn diff_list_by<T: Clone>(
             index: prefix,
             old: removed.to_vec(),
         }],
-        _ => vec![
-            ListChange::Clear { old: old.to_vec() },
-            ListChange::AddRange {
-                index: 0,
-                items: new.to_vec(),
-            },
-        ],
+        _ => bounded_middle_diff(removed, added, prefix, are_items_equal),
+    }
+}
+
+const LIST_DIFF_WORK_BUDGET: usize = 4_096;
+
+fn bounded_middle_diff<T: Clone>(
+    old: &[T],
+    new: &[T],
+    start_index: usize,
+    are_items_equal: &dyn Fn(&T, &T) -> bool,
+) -> Vec<ListChange<T>> {
+    let Some(work) = old.len().checked_mul(new.len()) else {
+        return replace_middle(old, new, start_index);
+    };
+    if work > LIST_DIFF_WORK_BUDGET {
+        return replace_middle(old, new, start_index);
+    }
+
+    let width = new.len() + 1;
+    let mut common = vec![0_usize; (old.len() + 1) * width];
+    for old_index in (0..old.len()).rev() {
+        for new_index in (0..new.len()).rev() {
+            let index = old_index * width + new_index;
+            common[index] = if are_items_equal(&old[old_index], &new[new_index]) {
+                common[(old_index + 1) * width + new_index + 1] + 1
+            } else {
+                common[(old_index + 1) * width + new_index]
+                    .max(common[old_index * width + new_index + 1])
+            };
+        }
+    }
+
+    let mut changes = Vec::new();
+    let mut old_index = 0;
+    let mut new_index = 0;
+    let mut target_index = start_index;
+    while old_index < old.len() || new_index < new.len() {
+        if old_index < old.len()
+            && new_index < new.len()
+            && are_items_equal(&old[old_index], &new[new_index])
+        {
+            old_index += 1;
+            new_index += 1;
+            target_index += 1;
+            continue;
+        }
+
+        let add_is_better = new_index < new.len()
+            && (old_index == old.len()
+                || common[old_index * width + new_index + 1]
+                    > common[(old_index + 1) * width + new_index]);
+        if add_is_better {
+            push_diff_add(
+                &mut changes,
+                target_index,
+                new[new_index].clone(),
+            );
+            new_index += 1;
+            target_index += 1;
+        } else {
+            push_diff_remove(
+                &mut changes,
+                target_index,
+                old[old_index].clone(),
+            );
+            old_index += 1;
+        }
+    }
+
+    changes
+}
+
+fn replace_middle<T: Clone>(old: &[T], new: &[T], index: usize) -> Vec<ListChange<T>> {
+    vec![
+        ListChange::RemoveRange {
+            index,
+            old: old.to_vec(),
+        },
+        ListChange::AddRange {
+            index,
+            items: new.to_vec(),
+        },
+    ]
+}
+
+fn push_diff_add<T: Clone>(changes: &mut Vec<ListChange<T>>, index: usize, item: T) {
+    let replacement = match changes.last() {
+        Some(ListChange::Add {
+            index: previous_index,
+            item: previous_item,
+        }) if previous_index.saturating_add(1) == index => Some(ListChange::AddRange {
+            index: *previous_index,
+            items: vec![previous_item.clone(), item.clone()],
+        }),
+        _ => None,
+    };
+    if let Some(replacement) = replacement {
+        let _ = changes.pop();
+        changes.push(replacement);
+        return;
+    }
+    match changes.last_mut() {
+        Some(ListChange::AddRange {
+            index: range_index,
+            items,
+        }) if range_index.saturating_add(items.len()) == index => items.push(item),
+        _ => changes.push(ListChange::Add { index, item }),
+    }
+}
+
+fn push_diff_remove<T: Clone>(changes: &mut Vec<ListChange<T>>, index: usize, old: T) {
+    let replacement = match changes.last() {
+        Some(ListChange::Remove {
+            index: previous_index,
+            old: previous_old,
+        }) if *previous_index == index => Some(ListChange::RemoveRange {
+            index,
+            old: vec![previous_old.clone(), old.clone()],
+        }),
+        _ => None,
+    };
+    if let Some(replacement) = replacement {
+        let _ = changes.pop();
+        changes.push(replacement);
+        return;
+    }
+    match changes.last_mut() {
+        Some(ListChange::RemoveRange {
+            index: range_index,
+            old: old_items,
+        }) if *range_index == index => old_items.push(old),
+        _ => changes.push(ListChange::Remove { index, old }),
     }
 }
 

@@ -32,5 +32,9 @@ harness = false
 name = "keyed_watch"
 harness = false
 
+[[bench]]
+name = "list_diff"
+harness = false
+
 [lints]
 workspace = true
