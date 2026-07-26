@@ -5,7 +5,7 @@ use rayx_reactive_primitives::{ReactiveError, Subscription, ValueStream};
 pub trait ReactiveValueStreamExt<T> {
     fn filter(&self, predicate: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValueStream<T>
     where
-        T: Clone + Send + Sync + 'static;
+        T: Send + Sync + 'static;
 
     fn filter_map<U>(
         &self,
@@ -21,13 +21,13 @@ pub trait ReactiveValueStreamExt<T> {
 
     fn skip(&self, count: usize) -> ValueStream<T>
     where
-        T: Clone + Send + Sync + 'static;
+        T: Send + Sync + 'static;
 }
 
 impl<T> ReactiveValueStreamExt<T> for ValueStream<T> {
     fn filter(&self, predicate: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValueStream<T>
     where
-        T: Clone + Send + Sync + 'static,
+        T: Send + Sync + 'static,
     {
         let source = self.clone();
         let predicate = Arc::new(predicate);
@@ -35,7 +35,7 @@ impl<T> ReactiveValueStreamExt<T> for ValueStream<T> {
             let predicate = Arc::clone(&predicate);
             source.subscribe(move |value| {
                 if predicate(value) {
-                    subscriber(&value.clone());
+                    subscriber(value);
                 }
             })
         })
@@ -67,7 +67,7 @@ impl<T> ReactiveValueStreamExt<T> for ValueStream<T> {
     {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
-            let latest = Arc::new(Mutex::new(None::<T>));
+            let latest = Mutex::new(None::<T>);
             source.subscribe(move |value| {
                 let should_emit = latest
                     .lock()
@@ -91,7 +91,7 @@ impl<T> ReactiveValueStreamExt<T> for ValueStream<T> {
 
     fn skip(&self, count: usize) -> ValueStream<T>
     where
-        T: Clone + Send + Sync + 'static,
+        T: Send + Sync + 'static,
     {
         if count == 0 {
             return self.clone();
@@ -99,7 +99,7 @@ impl<T> ReactiveValueStreamExt<T> for ValueStream<T> {
 
         let source = self.clone();
         ValueStream::new(move |subscriber| {
-            let remaining = Arc::new(Mutex::new(count));
+            let remaining = Mutex::new(count);
             source.subscribe(move |value| {
                 let should_skip = remaining
                     .lock()

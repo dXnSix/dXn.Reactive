@@ -46,11 +46,21 @@ impl<T> Signal<T> {
     }
 
     pub fn version(&self) -> Result<u64> {
-        self.read_only().version()
+        Ok(self
+            .inner
+            .state
+            .lock()
+            .map_err(|_| ReactiveError::Poisoned)?
+            .version)
     }
 
     pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> Result<R> {
-        self.read_only().read(read)
+        let state = self
+            .inner
+            .state
+            .lock()
+            .map_err(|_| ReactiveError::Poisoned)?;
+        Ok(read(&state.value))
     }
 }
 
@@ -142,14 +152,29 @@ where
     where
         T: Send + Sync + 'static,
     {
-        self.read_only().values()
+        let inner = Arc::clone(&self.inner);
+        ValueStream::new(move |subscriber| {
+            let subscriber_for_changes = Arc::clone(&subscriber);
+            let subscription = inner
+                .changes
+                .subscribe(move |change| subscriber_for_changes(&change.current))?;
+            let current = inner
+                .state
+                .lock()
+                .map_err(|_| ReactiveError::Poisoned)?
+                .value
+                .clone();
+            subscriber(&current);
+            Ok(subscription)
+        })
     }
 
     pub fn changes(&self) -> ValueStream<SignalChange<T>>
     where
         T: Send + Sync + 'static,
     {
-        self.read_only().changes()
+        let changes = self.inner.changes.clone();
+        ValueStream::new(move |subscriber| changes.subscribe(move |change| subscriber(change)))
     }
 }
 

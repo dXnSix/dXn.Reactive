@@ -21,6 +21,76 @@ fn lock_vec<T>(
         .map_err(|_| std::io::Error::other("mutex poisoned").into())
 }
 
+struct CloneCountingValue {
+    value: u32,
+    clone_count: Arc<AtomicUsize>,
+}
+
+impl Clone for CloneCountingValue {
+    fn clone(&self) -> Self {
+        self.clone_count.fetch_add(1, Ordering::SeqCst);
+        Self {
+            value: self.value,
+            clone_count: Arc::clone(&self.clone_count),
+        }
+    }
+}
+
+#[test]
+fn stream_filter_forwards_accepted_values_without_cloning() -> Result<(), Box<dyn std::error::Error>>
+{
+    let clone_count = Arc::new(AtomicUsize::new(0));
+    let source_value = CloneCountingValue {
+        value: 7,
+        clone_count: Arc::clone(&clone_count),
+    };
+    let source = crate::ValueStream::new(move |subscriber| {
+        subscriber(&source_value);
+        Ok(Subscription::empty())
+    });
+    let values = Arc::new(Mutex::new(Vec::new()));
+    let values_for_subscriber = Arc::clone(&values);
+
+    let _subscription = source
+        .filter(|value| value.value == 7)
+        .subscribe(move |value| {
+            if let Ok(mut values) = values_for_subscriber.lock() {
+                values.push(value.value);
+            }
+        })?;
+
+    assert_eq!(&*lock_vec(&values)?, &[7]);
+    assert_eq!(clone_count.load(Ordering::SeqCst), 0);
+    Ok(())
+}
+
+struct NonCloneStreamValue(u32);
+
+#[test]
+fn stream_filter_and_skip_accept_non_clone_values() -> Result<(), Box<dyn std::error::Error>> {
+    let first = NonCloneStreamValue(1);
+    let second = NonCloneStreamValue(2);
+    let source = crate::ValueStream::new(move |subscriber| {
+        subscriber(&first);
+        subscriber(&second);
+        Ok(Subscription::empty())
+    });
+    let values = Arc::new(Mutex::new(Vec::new()));
+    let values_for_subscriber = Arc::clone(&values);
+
+    let _subscription = source
+        .filter(|value| value.0 > 0)
+        .skip(1)
+        .subscribe(move |value| {
+            if let Ok(mut values) = values_for_subscriber.lock() {
+                values.push(value.0);
+            }
+        })?;
+
+    assert_eq!(&*lock_vec(&values)?, &[2]);
+    Ok(())
+}
+
 #[test]
 fn signal_values_emit_current_then_distinct_updates() -> Result<(), Box<dyn std::error::Error>> {
     let signal = Signal::new("alpha".to_string());

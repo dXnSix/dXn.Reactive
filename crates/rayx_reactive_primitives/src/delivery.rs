@@ -58,7 +58,7 @@ impl<T: Send + 'static> DeliveryQueue<T> {
     }
 }
 
-impl<T: Clone> DeliveryQueue<T> {
+impl<T> DeliveryQueue<T> {
     pub fn enqueue(&self, item: T) -> Result<()> {
         {
             let mut state = self.state.lock().map_err(|_| ReactiveError::Poisoned)?;
@@ -93,6 +93,82 @@ impl<T: Clone> DeliveryQueue<T> {
             }
         }
 
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use super::DeliveryQueue;
+
+    fn lock_values(
+        values: &Arc<Mutex<Vec<u32>>>,
+    ) -> Result<std::sync::MutexGuard<'_, Vec<u32>>, Box<dyn std::error::Error>> {
+        values
+            .lock()
+            .map_err(|_| std::io::Error::other("mutex poisoned").into())
+    }
+
+    #[test]
+    fn delivery_queue_preserves_fifo_reentrancy_and_duplicates()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let queue = Arc::new(DeliveryQueue::new());
+        let values = Arc::new(Mutex::new(Vec::new()));
+        let values_for_subscriber = Arc::clone(&values);
+        let queue_for_subscriber = Arc::clone(&queue);
+        let _subscription = queue.subscribe(move |value| {
+            if let Ok(mut values) = values_for_subscriber.lock() {
+                values.push(*value);
+            }
+            if *value == 1 {
+                let _ = queue_for_subscriber.enqueue(2);
+            }
+        })?;
+
+        queue.enqueue(1)?;
+        queue.enqueue(1)?;
+
+        assert_eq!(&*lock_values(&values)?, &[1, 2, 1, 2]);
+        Ok(())
+    }
+
+    #[test]
+    fn delivery_queue_stops_delivery_after_unsubscribe() -> Result<(), Box<dyn std::error::Error>> {
+        let queue = DeliveryQueue::new();
+        let values = Arc::new(Mutex::new(Vec::new()));
+        let values_for_subscriber = Arc::clone(&values);
+        let subscription = queue.subscribe(move |value| {
+            if let Ok(mut values) = values_for_subscriber.lock() {
+                values.push(*value);
+            }
+        })?;
+
+        queue.enqueue(1)?;
+        drop(subscription);
+        queue.enqueue(2)?;
+
+        assert_eq!(&*lock_values(&values)?, &[1]);
+        Ok(())
+    }
+
+    struct NonCloneValue(u32);
+
+    #[test]
+    fn delivery_queue_enqueues_non_clone_values() -> Result<(), Box<dyn std::error::Error>> {
+        let queue = DeliveryQueue::new();
+        let values = Arc::new(Mutex::new(Vec::new()));
+        let values_for_subscriber = Arc::clone(&values);
+        let _subscription = queue.subscribe(move |value: &NonCloneValue| {
+            if let Ok(mut values) = values_for_subscriber.lock() {
+                values.push(value.0);
+            }
+        })?;
+
+        queue.enqueue(NonCloneValue(7))?;
+
+        assert_eq!(&*lock_values(&values)?, &[7]);
         Ok(())
     }
 }
