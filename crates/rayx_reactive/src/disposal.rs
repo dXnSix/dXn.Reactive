@@ -1,5 +1,5 @@
 use std::sync::{
-    Arc, Mutex,
+    Mutex,
     atomic::{AtomicBool, Ordering},
 };
 
@@ -32,7 +32,7 @@ impl Drop for Disposable {
 }
 
 pub struct DisposeBag {
-    subscriptions: Arc<Mutex<Vec<Subscription>>>,
+    subscriptions: Mutex<Vec<Subscription>>,
     disposed: AtomicBool,
 }
 
@@ -45,7 +45,7 @@ impl Default for DisposeBag {
 impl DisposeBag {
     pub fn new() -> Self {
         Self {
-            subscriptions: Arc::new(Mutex::new(Vec::new())),
+            subscriptions: Mutex::new(Vec::new()),
             disposed: AtomicBool::new(false),
         }
     }

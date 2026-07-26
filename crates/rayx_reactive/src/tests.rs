@@ -1,6 +1,6 @@
 use std::sync::{
     Arc, Barrier, Mutex,
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::sync_channel,
 };
 use std::time::Duration;
@@ -309,6 +309,153 @@ fn activator_reference_counts_activation_scope() -> Result<(), Box<dyn std::erro
     drop(second);
     assert_eq!(disposed.load(Ordering::SeqCst), 1);
     Ok(())
+}
+
+#[test]
+fn lifecycle_reentrant_registration_completes_without_deadlock() {
+    let activator = Arc::new(ViewModelActivator::default());
+    let nested_calls = Arc::new(AtomicUsize::new(0));
+    let activator_for_registration = Arc::clone(&activator);
+    let nested_calls_for_registration = Arc::clone(&nested_calls);
+    let (result_sender, result_receiver) = sync_channel(1);
+
+    let activation = match activator.activate() {
+        Ok(activation) => activation,
+        Err(error) => panic!("initial activation failed: {error}"),
+    };
+
+    std::thread::spawn(move || {
+        let activator_for_nested_registration = Arc::clone(&activator_for_registration);
+        let result = activator_for_registration.when_activated(move |_| {
+            let nested_calls = Arc::clone(&nested_calls_for_registration);
+            activator_for_nested_registration.when_activated(move |_| {
+                nested_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+        });
+        let _ = result_sender.send(result.is_ok());
+    });
+
+    assert_eq!(
+        result_receiver.recv_timeout(Duration::from_millis(200)),
+        Ok(true)
+    );
+    assert_eq!(nested_calls.load(Ordering::SeqCst), 1);
+    drop(activation);
+}
+
+#[test]
+fn lifecycle_concurrent_tokens_share_one_generation_and_dispose_once()
+-> Result<(), Box<dyn std::error::Error>> {
+    let activator = Arc::new(ViewModelActivator::default());
+    let disposed = Arc::new(AtomicUsize::new(0));
+    let disposed_for_callback = Arc::clone(&disposed);
+    let barrier = Arc::new(Barrier::new(3));
+    let (token_sender, token_receiver) = sync_channel(2);
+
+    activator.when_activated(move |bag| {
+        let disposed = Arc::clone(&disposed_for_callback);
+        Subscription::new(move || {
+            disposed.fetch_add(1, Ordering::SeqCst);
+        })
+        .dispose_with(bag);
+        Ok(())
+    })?;
+
+    for _ in 0..2 {
+        let activator = Arc::clone(&activator);
+        let barrier = Arc::clone(&barrier);
+        let token_sender = token_sender.clone();
+        std::thread::spawn(move || {
+            barrier.wait();
+            let activation = match activator.activate() {
+                Ok(activation) => activation,
+                Err(error) => panic!("activation failed: {error}"),
+            };
+            if token_sender.send(activation).is_err() {
+                panic!("activation receiver dropped");
+            }
+        });
+    }
+
+    barrier.wait();
+    let first = token_receiver.recv_timeout(Duration::from_millis(200))?;
+    let second = token_receiver.recv_timeout(Duration::from_millis(200))?;
+    drop(first);
+    assert_eq!(disposed.load(Ordering::SeqCst), 0);
+    drop(second);
+    assert_eq!(disposed.load(Ordering::SeqCst), 1);
+    Ok(())
+}
+
+#[test]
+fn lifecycle_failed_generation_disposes_partial_work_and_can_reactivate()
+-> Result<(), Box<dyn std::error::Error>> {
+    let activator = ViewModelActivator::default();
+    let should_fail = Arc::new(AtomicBool::new(true));
+    let disposed = Arc::new(AtomicUsize::new(0));
+    let should_fail_for_callback = Arc::clone(&should_fail);
+    let disposed_for_callback = Arc::clone(&disposed);
+
+    activator.when_activated(move |bag| {
+        let disposed = Arc::clone(&disposed_for_callback);
+        Subscription::new(move || {
+            disposed.fetch_add(1, Ordering::SeqCst);
+        })
+        .dispose_with(bag);
+
+        if should_fail_for_callback.swap(false, Ordering::SeqCst) {
+            return Err(crate::ReactiveError::Poisoned);
+        }
+        Ok(())
+    })?;
+
+    match activator.activate() {
+        Err(crate::ReactiveError::Poisoned) => {}
+        Ok(_) => panic!("failing generation unexpectedly activated"),
+    }
+    assert_eq!(disposed.load(Ordering::SeqCst), 1);
+
+    let activation = activator.activate()?;
+    assert_eq!(disposed.load(Ordering::SeqCst), 1);
+    drop(activation);
+    assert_eq!(disposed.load(Ordering::SeqCst), 2);
+    Ok(())
+}
+
+#[test]
+fn lifecycle_dispose_bag_add_race_disposes_each_subscription_once() {
+    const SUBSCRIPTION_COUNT: usize = 8;
+
+    let bag = Arc::new(DisposeBag::new());
+    let disposed = Arc::new(AtomicUsize::new(0));
+    let barrier = Arc::new(Barrier::new(SUBSCRIPTION_COUNT + 1));
+    let mut workers = Vec::new();
+
+    for _ in 0..SUBSCRIPTION_COUNT {
+        let bag = Arc::clone(&bag);
+        let disposed = Arc::clone(&disposed);
+        let barrier = Arc::clone(&barrier);
+        workers.push(std::thread::spawn(move || {
+            barrier.wait();
+            Subscription::new(move || {
+                disposed.fetch_add(1, Ordering::SeqCst);
+            })
+            .dispose_with(&bag);
+        }));
+    }
+
+    barrier.wait();
+    bag.dispose();
+    bag.dispose();
+    for worker in workers {
+        if worker.join().is_err() {
+            panic!("dispose race worker panicked");
+        }
+    }
+
+    assert_eq!(disposed.load(Ordering::SeqCst), SUBSCRIPTION_COUNT);
+    assert!(bag.is_disposed());
 }
 
 #[test]
