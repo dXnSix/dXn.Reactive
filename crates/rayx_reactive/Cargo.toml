@@ -12,5 +12,12 @@ gpux = { path = "../../gpux/crates/gpui" }
 rayx_reactive_primitives.workspace = true
 thiserror.workspace = true
 
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "reactive_complexity"
+harness = false
+
 [lints]
 workspace = true

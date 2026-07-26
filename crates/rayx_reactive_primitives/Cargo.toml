@@ -9,5 +9,12 @@ license.workspace = true
 [dependencies]
 thiserror.workspace = true
 
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "delivery_complexity"
+harness = false
+
 [lints]
 workspace = true

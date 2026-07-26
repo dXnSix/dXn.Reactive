@@ -1,5 +1,5 @@
 use std::sync::{
-    Arc, Mutex,
+    Arc, Barrier, Mutex,
     atomic::{AtomicUsize, Ordering},
 };
 
@@ -38,6 +38,59 @@ fn signal_values_emit_current_then_distinct_updates() -> Result<(), Box<dyn std:
         &*lock_vec(&values)?,
         &["alpha".to_string(), "beta".to_string()]
     );
+    Ok(())
+}
+
+#[test]
+fn signal_values_deliver_the_snapshot_before_a_reentrant_change(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let signal = Signal::new(1_u32);
+    let values = Arc::new(Mutex::new(Vec::new()));
+    let values_for_subscriber = Arc::clone(&values);
+    let source = signal.clone();
+
+    let _subscription = signal.values().subscribe(move |value| {
+        if let Ok(mut values) = values_for_subscriber.lock() {
+            values.push(*value);
+        }
+        if *value == 1 {
+            let _ = source.replace(2);
+        }
+    })?;
+
+    assert_eq!(&*lock_vec(&values)?, &[1, 2]);
+    Ok(())
+}
+
+#[test]
+fn signal_concurrent_equal_sets_commit_once() -> Result<(), Box<dyn std::error::Error>> {
+    let signal = Signal::new(0_u32);
+    let barrier = Arc::new(Barrier::new(3));
+    let mut workers = Vec::new();
+
+    for _ in 0..2 {
+        let signal = signal.clone();
+        let barrier = Arc::clone(&barrier);
+        workers.push(std::thread::spawn(move || {
+            barrier.wait();
+            match signal.set(1) {
+                Ok(change) => change,
+                Err(error) => panic!("set failed: {error}"),
+            }
+        }));
+    }
+
+    barrier.wait();
+    let committed = workers
+        .into_iter()
+        .filter_map(|worker| match worker.join() {
+            Ok(change) => change,
+            Err(_) => panic!("worker panicked"),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(committed.len(), 1);
+    assert_eq!(committed[0].version, 1);
+    assert_eq!(signal.get()?, 1);
     Ok(())
 }
 

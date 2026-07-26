@@ -90,11 +90,28 @@ where
     where
         T: PartialEq + Send + 'static,
     {
-        if self.read(|current| *current == value)? {
-            return Ok(None);
-        }
+        let change = {
+            let mut state = self
+                .inner
+                .state
+                .lock()
+                .map_err(|_| ReactiveError::Poisoned)?;
+            if state.value == value {
+                return Ok(None);
+            }
 
-        self.replace(value).map(Some)
+            state.version = state.version.wrapping_add(1).max(1);
+            let change = SignalChange {
+                previous: state.value.clone(),
+                current: value.clone(),
+                version: state.version,
+            };
+            state.value = value;
+            change
+        };
+
+        self.inner.changes.enqueue(change.clone())?;
+        Ok(Some(change))
     }
 
     pub fn update(&self, update: impl FnOnce(&mut T)) -> Result<SignalChange<T>>
@@ -170,12 +187,14 @@ where
     {
         let signal = self.clone();
         ValueStream::new(move |subscriber| {
-            let current = signal.get()?;
-            subscriber(&current);
-            signal
+            let subscriber_for_changes = Arc::clone(&subscriber);
+            let subscription = signal
                 .inner
                 .changes
-                .subscribe(move |change| subscriber(&change.current))
+                .subscribe(move |change| subscriber_for_changes(&change.current))?;
+            let current = signal.get()?;
+            subscriber(&current);
+            Ok(subscription)
         })
     }
 
