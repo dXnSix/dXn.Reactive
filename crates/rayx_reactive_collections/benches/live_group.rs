@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used)]
+
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use rayx_reactive_collections::prelude::*;
 
@@ -5,7 +7,6 @@ use rayx_reactive_collections::prelude::*;
 struct Row {
     id: u32,
     group: u32,
-    value: u32,
 }
 
 fn live_group_touched_members(c: &mut Criterion) {
@@ -25,11 +26,7 @@ fn live_group_touched_members(c: &mut Criterion) {
                     source
                         .edit(|cache| {
                             for id in 0..count {
-                                cache.add_or_update(Row {
-                                    id,
-                                    group: id % 8,
-                                    value: id,
-                                });
+                                cache.add_or_update(Row { id, group: id % 8 });
                             }
                         })
                         .expect("seed source cache");
@@ -37,7 +34,6 @@ fn live_group_touched_members(c: &mut Criterion) {
                         .add_or_update(Row {
                             id: count / 2,
                             group: (count / 2) % 8,
-                            value: count,
                         })
                         .expect("update one member");
                     black_box(subscription);

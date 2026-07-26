@@ -5,19 +5,18 @@ pub(super) use std::sync::{
 pub(super) use std::time::{Duration, Instant};
 
 pub(super) use crate::{
-    CacheAggregationExt, CacheArcStreamExt, CacheChange, CacheCombineExt, CacheExpireAfterExt,
-    CacheForceTransform, CacheJoinExt, CacheLifecycleExt, CacheLimitExt, CacheStreamObservableExt,
+    CacheArcStreamExt, CacheChange, CacheCombineExt, CacheExpireAfterExt, CacheForceTransform,
+    CacheJoinExt, CacheLifecycleExt, CacheLimitExt, CacheStreamObservableExt,
     CacheStreamObservableListExt, CacheTreeExt, ChangeReason, ChangeSet, ChangeSetAdapterOptions,
     ChangeStream, Comparer, ConnectionStatus, DynamicCacheCombineExt, DynamicListCombineExt,
     GroupSelector, ImmutableCacheGroup, ImmutableListGroup, IndexAware, ItemValue, KeyedItemValue,
-    KeyedPageChangeSet, ListAggregationExt, ListChange, ListChangeReason, ListCombineExt,
-    ListDistinctExt, ListExpireAfterExt, ListItemChange, ListLifecycleExt, ListStreamExt,
-    ListStreamObservableExt, ObservableCache, ObservableList, OptionalValueStreamCacheDiffExt,
-    PageChangeSet, PageRequest, PageResponse, Predicate, RayCacheGroup, RayListGroup, SourceCache,
-    SourceCacheExpireAfterExt, SourceCacheLimitExt, SourceList, SourceListExpireAfterExt,
-    SourceListLimitExt, Subscription, TransformAsyncOptions, TransformError, TreeNode,
-    TreePredicate, ValueStream, ValueStreamCacheDiffExt, ValueStreamListDiffExt, VirtualChangeSet,
-    VirtualRequest, VirtualResponse,
+    KeyedPageChangeSet, ListChange, ListChangeReason, ListCombineExt, ListDistinctExt,
+    ListExpireAfterExt, ListItemChange, ListLifecycleExt, ListStreamExt, ListStreamObservableExt,
+    ObservableCache, ObservableList, PageChangeSet, PageRequest, PageResponse, Predicate,
+    RayCacheGroup, RayListGroup, SourceCache, SourceCacheExpireAfterExt, SourceCacheLimitExt,
+    SourceList, SourceListExpireAfterExt, SourceListLimitExt, Subscription, TransformAsyncOptions,
+    TransformError, TreeNode, TreePredicate, ValueStream, VirtualChangeSet, VirtualRequest,
+    VirtualResponse,
     distinct::CacheDistinctExt,
     factory::{create_cache_change_stream, create_list_change_stream},
     merge::{merge_cache_change_sets, merge_list_change_sets},
@@ -37,6 +36,12 @@ pub(super) use crate::{
     switch::{CacheSwitchExt, ListSwitchExt, SourceCacheSwitchExt, SourceListSwitchExt},
     true_for::{CacheTrueForExt, SourceCacheTrueForExt},
     type_filter::{AnyItem, CacheTypeFilterExt},
+};
+
+#[cfg(feature = "rayx_diagnostics")]
+pub(super) use crate::{
+    CacheAggregationExt, ListAggregationExt, OptionalValueStreamCacheDiffExt,
+    ValueStreamCacheDiffExt, ValueStreamListDiffExt,
 };
 
 #[cfg(feature = "rayx_diagnostics")]
@@ -257,6 +262,7 @@ where
         .ok_or_else(|| std::io::Error::other("missing trigger").into())
 }
 
+#[cfg(feature = "rayx_diagnostics")]
 pub(super) fn latest_trigger<K>(
     triggers: &Arc<Mutex<Vec<(K, Trigger)>>>,
     key: &K,

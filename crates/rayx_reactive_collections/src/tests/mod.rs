@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
 mod support;
 
 #[cfg(feature = "rayx_diagnostics")]

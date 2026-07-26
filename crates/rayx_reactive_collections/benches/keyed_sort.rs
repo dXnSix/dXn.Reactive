@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used)]
+
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use rayx_reactive_collections::prelude::*;
 use std::sync::{Arc, Mutex};
