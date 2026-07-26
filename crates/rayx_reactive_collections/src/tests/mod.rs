@@ -1,5 +1,6 @@
 mod support;
 
+#[cfg(feature = "rayx_diagnostics")]
 mod aggregation_diagnostics_diff;
 mod combination_materialization_population;
 mod grouping_tree_switching;

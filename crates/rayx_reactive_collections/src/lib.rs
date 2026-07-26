@@ -3,6 +3,7 @@ pub mod cache;
 pub mod change;
 pub mod combine;
 pub mod delivery;
+#[cfg(feature = "rayx_diagnostics")]
 pub mod diagnostics;
 pub mod diff;
 pub mod distinct;
@@ -44,6 +45,7 @@ pub mod prelude {
         CacheCombineExt, CombineOperator, DynamicCacheCombineExt, DynamicListCombineExt,
         ListCombineExt,
     };
+    #[cfg(feature = "rayx_diagnostics")]
     pub use crate::diagnostics::{
         CacheDiagnosticsExt, ChangeStatistics, ChangeSummary, ListDiagnosticsExt,
     };

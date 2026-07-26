@@ -18,7 +18,6 @@ pub(super) use crate::{
     SourceListLimitExt, Subscription, TransformAsyncOptions, TransformError, TreeNode,
     TreePredicate, ValueStream, ValueStreamCacheDiffExt, ValueStreamListDiffExt, VirtualChangeSet,
     VirtualRequest, VirtualResponse,
-    diagnostics::{CacheDiagnosticsExt, ChangeSummary, ListDiagnosticsExt},
     distinct::CacheDistinctExt,
     factory::{create_cache_change_stream, create_list_change_stream},
     merge::{merge_cache_change_sets, merge_list_change_sets},
@@ -39,6 +38,9 @@ pub(super) use crate::{
     true_for::{CacheTrueForExt, SourceCacheTrueForExt},
     type_filter::{AnyItem, CacheTypeFilterExt},
 };
+
+#[cfg(feature = "rayx_diagnostics")]
+pub(super) use crate::diagnostics::{CacheDiagnosticsExt, ChangeSummary, ListDiagnosticsExt};
 
 pub(super) fn lock_vec<T>(
     value: &Arc<Mutex<Vec<T>>>,
