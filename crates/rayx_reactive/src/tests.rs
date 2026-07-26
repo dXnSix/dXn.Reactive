@@ -1,7 +1,9 @@
 use std::sync::{
     Arc, Barrier, Mutex,
     atomic::{AtomicUsize, Ordering},
+    mpsc::sync_channel,
 };
+use std::time::Duration;
 
 use futures::executor::block_on;
 use rayx_reactive_primitives::Subscription;
@@ -42,8 +44,8 @@ fn signal_values_emit_current_then_distinct_updates() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn signal_values_deliver_the_snapshot_before_a_reentrant_change(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn signal_values_deliver_the_snapshot_before_a_reentrant_change()
+-> Result<(), Box<dyn std::error::Error>> {
     let signal = Signal::new(1_u32);
     let values = Arc::new(Mutex::new(Vec::new()));
     let values_for_subscriber = Arc::clone(&values);
@@ -131,6 +133,100 @@ fn computed_combine2_tracks_source_signals() -> Result<(), Box<dyn std::error::E
     first.set("Grace".to_string())?;
     last.set("Hopper".to_string())?;
     assert_eq!(full.get()?, "Grace Hopper");
+    Ok(())
+}
+
+#[test]
+fn computed_derive_reentrancy_returns_the_latest_value_without_deadlock() {
+    let source = Signal::new(1_u32);
+    let source_for_derive = source.clone();
+    let (result_sender, result_receiver) = sync_channel(1);
+
+    std::thread::spawn(move || {
+        let result = Computed::derive(source.read_only(), move |value| {
+            if *value == 1 {
+                let _ = source_for_derive.replace(2);
+            }
+            *value
+        })
+        .and_then(|computed| computed.get());
+        let _ = result_sender.send(result);
+    });
+
+    let result = result_receiver.recv_timeout(Duration::from_millis(200));
+    assert_eq!(result, Ok(Ok(2)));
+}
+
+#[test]
+fn computed_combine2_retains_a_source_change_during_construction()
+-> Result<(), Box<dyn std::error::Error>> {
+    let first = Signal::new(1_u32);
+    let second = Signal::new(10_u32);
+    let construction = Arc::new(Barrier::new(2));
+    let construction_for_combine = Arc::clone(&construction);
+    let combine_calls = Arc::new(AtomicUsize::new(0));
+    let combine_calls_for_combine = Arc::clone(&combine_calls);
+    let first_for_thread = first.read_only();
+    let second_for_thread = second.read_only();
+    let (computed_sender, computed_receiver) = sync_channel(1);
+
+    std::thread::spawn(move || {
+        let computed = Computed::combine2(first_for_thread, second_for_thread, move |a, b| {
+            if combine_calls_for_combine.fetch_add(1, Ordering::SeqCst) == 0 {
+                construction_for_combine.wait();
+                construction_for_combine.wait();
+            }
+            a + b
+        });
+        let _ = computed_sender.send(computed.and_then(|computed| computed.get()));
+    });
+
+    construction.wait();
+    second.replace(20)?;
+    construction.wait();
+
+    assert_eq!(
+        computed_receiver.recv_timeout(Duration::from_millis(200)),
+        Ok(Ok(21))
+    );
+    Ok(())
+}
+
+#[test]
+fn computed_combine2_reentrancy_tracks_the_other_source() -> Result<(), Box<dyn std::error::Error>>
+{
+    let first = Signal::new(1_u32);
+    let second = Signal::new(10_u32);
+    let second_for_combine = second.clone();
+    let (computed_sender, computed_receiver) = sync_channel(1);
+
+    std::thread::spawn(move || {
+        let computed = Computed::combine2(first.read_only(), second.read_only(), move |a, b| {
+            if *b == 10 {
+                let _ = second_for_combine.replace(20);
+            }
+            a + b
+        });
+        let _ = computed_sender.send(computed.and_then(|computed| computed.get()));
+    });
+
+    assert_eq!(
+        computed_receiver.recv_timeout(Duration::from_millis(200)),
+        Ok(Ok(21))
+    );
+    Ok(())
+}
+
+#[test]
+fn computed_drop_stops_source_tracking() -> Result<(), Box<dyn std::error::Error>> {
+    let source = Signal::new(1_u32);
+    let computed = Computed::derive(source.read_only(), |value| value * 2)?;
+    let output = computed.read_signal();
+
+    assert_eq!(output.get()?, 2);
+    drop(computed);
+    source.replace(2)?;
+    assert_eq!(output.get()?, 2);
     Ok(())
 }
 
