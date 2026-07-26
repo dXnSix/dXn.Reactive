@@ -2,6 +2,7 @@ pub mod aggregation;
 pub mod cache;
 pub mod change;
 pub mod combine;
+mod connection;
 pub mod delivery;
 #[cfg(feature = "rayx_diagnostics")]
 pub mod diagnostics;
@@ -12,6 +13,7 @@ pub mod expiration;
 pub mod factory;
 pub mod group;
 pub mod join;
+mod keyed_delivery;
 pub mod lifecycle;
 pub mod limit;
 pub mod list;

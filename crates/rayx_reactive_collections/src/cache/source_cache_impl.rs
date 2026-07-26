@@ -5,12 +5,19 @@ where
 {
     pub fn new(key_selector: impl Fn(&T) -> K + Send + Sync + 'static) -> Self {
         let changes = DeliveryQueue::new();
+        let keyed_changes = KeyedChangeHub::new();
         let rx_changes = Shared::subject::<ChangeSet<CacheChange<K, T>>, Infallible>();
         let rx_changes_for_bridge = rx_changes.clone();
         let bridge = changes
-            .subscribe(move |batch: &ChangeSet<CacheChange<K, T>>| {
+            .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
                 let mut rx_changes = rx_changes_for_bridge.clone();
-                rx_changes.next(batch.clone());
+                rx_changes.next(versioned.change_set().clone());
+            })
+            .unwrap_or_else(|_| Subscription::empty());
+        let keyed_changes_for_bridge = keyed_changes.clone();
+        let keyed_bridge = changes
+            .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
+                keyed_changes_for_bridge.publish(versioned);
             })
             .unwrap_or_else(|_| Subscription::empty());
 
@@ -19,17 +26,19 @@ where
             state: Arc::new(Mutex::new(CacheState {
                 items: HashMap::new(),
                 order: Vec::new(),
+                positions: HashMap::new(),
                 version: 0,
                 editing: false,
-                history: Vec::new(),
                 suspend_depth: 0,
                 suspended_changes: Vec::new(),
             })),
             changes,
+            keyed_changes,
             preview: DeliveryQueue::new(),
             count_changed: DeliveryQueue::new(),
             rx_changes,
             _rx_bridge: Arc::new(bridge),
+            _keyed_bridge: Arc::new(keyed_bridge),
         }
     }
 
@@ -125,6 +134,15 @@ where
             }
 
             state.editing = false;
+            if !changes.is_empty() {
+                state.positions = state
+                    .order
+                    .iter()
+                    .cloned()
+                    .enumerate()
+                    .map(|(index, key)| (key, index))
+                    .collect();
+            }
             let count_after = (count_before != state.items.len()).then_some(state.items.len());
             if changes.is_empty() {
                 (ChangeSet::empty(state.version), false, count_after)
@@ -135,7 +153,6 @@ where
                     state.suspended_changes.extend(batch.changes.clone());
                     (batch, false, count_after)
                 } else {
-                    state.history.push(batch.clone());
                     (batch, true, count_after)
                 }
             }
@@ -143,7 +160,7 @@ where
 
         if should_publish {
             self.preview.enqueue(batch.clone())?;
-            self.changes.enqueue(batch.clone())?;
+            self.changes.enqueue(VersionedChangeSet::new(batch.clone()))?;
         }
         if let Some(count_after) = count_after {
             self.count_changed.enqueue(count_after)?;
@@ -301,11 +318,60 @@ where
         ChangeStream::new(move |subscriber| source.connect_subscriber(subscriber))
     }
 
+    #[cfg(test)]
+    pub(crate) fn connect_with_startup_hooks(
+        &self,
+        after_subscribe: Arc<dyn Fn() + Send + Sync>,
+        after_snapshot: Arc<dyn Fn() + Send + Sync>,
+    ) -> ChangeStream<CacheChange<K, T>> {
+        let source = self.clone();
+        ChangeStream::new(move |subscriber| {
+            let after_subscribe = Arc::clone(&after_subscribe);
+            let after_snapshot = Arc::clone(&after_snapshot);
+            source.connect_subscriber_with_hooks(
+                subscriber,
+                move || after_subscribe(),
+                move || after_snapshot(),
+            )
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_state_lock_held_for_test<R>(&self, action: impl FnOnce() -> R) -> R {
+        let _state = self.state.lock().expect("test source state lock");
+        action()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn poison_state_lock_for_test(&self) {
+        let state = Arc::clone(&self.state);
+        let _ = std::thread::spawn(move || {
+            let _state = state.lock().expect("test source state lock");
+            panic!("intentional SourceCache state poison");
+        })
+        .join();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn keyed_delivery_snapshot_for_test(&self) -> Result<KeyedDeliverySnapshot> {
+        self.keyed_changes.snapshot()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_keyed_hub_lock_held_for_test<R>(
+        &self,
+        action: impl FnOnce() -> R,
+    ) -> R {
+        self.keyed_changes.with_registry_lock_held(action)
+    }
+
     pub fn changes(&self) -> ChangeStream<CacheChange<K, T>> {
         let changes = self.changes.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            Ok(changes.subscribe(move |batch| subscriber(batch))?)
+            Ok(changes.subscribe(move |versioned| {
+                subscriber(versioned.change_set())
+            })?)
         })
     }
 
@@ -356,34 +422,50 @@ where
         let source = self.clone();
         ValueStream::new(move |subscriber| {
             let watch_key = watch_key.clone();
-            if initial_none_when_missing && source.lookup(&watch_key)?.is_none() {
-                subscriber(&None);
-            }
-
             let last_value = Arc::new(Mutex::new(None::<Option<T>>));
-            source.watch(watch_key.clone()).subscribe(move |batch| {
-                for change in &batch.changes {
-                    let Some(next) = cache_optional_for_key(change, &watch_key) else {
-                        continue;
-                    };
-
-                    let should_emit = {
-                        let Ok(mut last_value) = last_value.lock() else {
-                            return;
-                        };
-                        if last_value.as_ref() == Some(&next) {
-                            false
-                        } else {
-                            *last_value = Some(next.clone());
-                            true
-                        }
-                    };
-
-                    if should_emit {
-                        subscriber(&next);
+            let last_value_for_changes = Arc::clone(&last_value);
+            let subscriber_for_changes = Arc::clone(&subscriber);
+            let missing_subscriber = initial_none_when_missing.then(|| {
+                let last_value = Arc::clone(&last_value);
+                let subscriber = Arc::clone(&subscriber);
+                Arc::new(move || {
+                    if let Ok(mut last_value) = last_value.lock() {
+                        *last_value = Some(None);
                     }
-                }
-            })
+                    subscriber(&None);
+                }) as Arc<dyn Fn() + Send + Sync>
+            });
+
+            source.connect_key_subscriber_with_absence(
+                watch_key.clone(),
+                Arc::new(move |batch| {
+                    for change in &batch.changes {
+                        if cache_change_for_key(change, &watch_key).is_none() {
+                            continue;
+                        }
+                        let Some(next) = cache_optional_for_key(change, &watch_key) else {
+                            continue;
+                        };
+
+                        let should_emit = {
+                            let Ok(mut last_value) = last_value_for_changes.lock() else {
+                                return;
+                            };
+                            if last_value.as_ref() == Some(&next) {
+                                false
+                            } else {
+                                *last_value = Some(next.clone());
+                                true
+                            }
+                        };
+
+                        if should_emit {
+                            subscriber_for_changes(&next);
+                        }
+                    }
+                }),
+                missing_subscriber,
+            )
         })
     }
 
@@ -422,12 +504,11 @@ where
                 return Ok(());
             }
             let batch = ChangeSet::new(mem::take(&mut state.suspended_changes), state.version);
-            state.history.push(batch.clone());
             batch
         };
 
         self.preview.enqueue(batch.clone())?;
-        self.changes.enqueue(batch)?;
+        self.changes.enqueue(VersionedChangeSet::new(batch))?;
         Ok(())
     }
 
@@ -435,6 +516,22 @@ where
         &self,
         subscriber: StreamSubscriber<CacheChange<K, T>>,
     ) -> Result<Subscription> {
+        self.connect_subscriber_with_hooks(subscriber, || {}, || {})
+    }
+
+    fn connect_subscriber_with_hooks(
+        &self,
+        subscriber: StreamSubscriber<CacheChange<K, T>>,
+        after_subscribe: impl FnOnce(),
+        after_snapshot: impl FnOnce(),
+    ) -> Result<Subscription> {
+        let startup = StartupConnection::new(Arc::clone(&subscriber));
+        let startup_for_changes = startup.clone();
+        let subscription = self
+            .changes
+            .subscribe(move |versioned| startup_for_changes.receive(versioned))?;
+        after_subscribe();
+
         let (snapshot, snapshot_version) = {
             let state = self.state.try_lock().map_err(|error| match error {
                 std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
@@ -458,75 +555,15 @@ where
                 .collect::<Vec<_>>();
             (snapshot, state.version)
         };
+        after_snapshot();
 
-        let ready = Arc::new(AtomicBool::new(false));
-        let delivered_until = Arc::new(AtomicU64::new(snapshot_version));
-        let buffer = Arc::new(Mutex::new(Vec::<ChangeSet<CacheChange<K, T>>>::new()));
-
-        let live_subscriber = Arc::clone(&subscriber);
-        let live_ready = Arc::clone(&ready);
-        let live_delivered_until = Arc::clone(&delivered_until);
-        let live_buffer = Arc::clone(&buffer);
-        let subscription = self.changes.subscribe(move |batch| {
-            if batch.version <= live_delivered_until.load(Ordering::Acquire) {
-                return;
-            }
-            if live_ready.load(Ordering::Acquire) {
-                live_subscriber(batch);
-                live_delivered_until.store(batch.version, Ordering::Release);
-                return;
-            }
-            if let Ok(mut buffer) = live_buffer.try_lock() {
-                if live_ready.load(Ordering::Acquire) {
-                    drop(buffer);
-                    live_subscriber(batch);
-                    live_delivered_until.store(batch.version, Ordering::Release);
-                } else {
-                    buffer.push(batch.clone());
-                }
-            }
-        })?;
-
-        let catch_up = {
-            let state = self.state.try_lock().map_err(|error| match error {
-                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
-            state
-                .history
-                .iter()
-                .filter(|batch| batch.version > snapshot_version)
-                .cloned()
-                .collect::<Vec<_>>()
-        };
-
-        if !snapshot.is_empty() {
-            subscriber(&ChangeSet::new(snapshot, snapshot_version));
-        }
-
-        for batch in catch_up {
-            if batch.version > delivered_until.load(Ordering::Acquire) {
-                delivered_until.store(batch.version, Ordering::Release);
-                subscriber(&batch);
-            }
-        }
-
-        let buffered = {
-            let mut buffer = buffer.try_lock().map_err(|error| match error {
-                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
-            ready.store(true, Ordering::Release);
-            mem::take(&mut *buffer)
-        };
-        for batch in buffered {
-            if batch.version > delivered_until.load(Ordering::Acquire) {
-                delivered_until.store(batch.version, Ordering::Release);
-                subscriber(&batch);
-            }
-        }
-
-        Ok(subscription)
+        let snapshot =
+            (!snapshot.is_empty()).then(|| ChangeSet::new(snapshot, snapshot_version));
+        startup.start(snapshot, snapshot_version)?;
+        Ok(Subscription::many(vec![
+            subscription,
+            startup.disposal_subscription(),
+        ]))
     }
 
     fn connect_key_subscriber(
@@ -534,8 +571,30 @@ where
         watch_key: K,
         subscriber: StreamSubscriber<CacheChange<K, T>>,
     ) -> Result<Subscription> {
+        self.connect_key_subscriber_with_absence(watch_key, subscriber, None)
+    }
+
+    fn connect_key_subscriber_with_absence(
+        &self,
+        watch_key: K,
+        subscriber: StreamSubscriber<CacheChange<K, T>>,
+        missing_subscriber: Option<Arc<dyn Fn() + Send + Sync>>,
+    ) -> Result<Subscription> {
+        let startup = StartupConnection::new(Arc::clone(&subscriber));
+        let startup_for_changes = startup.clone();
+        let subscription = self
+            .keyed_changes
+            .subscribe(watch_key.clone(), move |versioned| {
+                startup_for_changes.receive(versioned);
+            })?;
+
         let (snapshot, snapshot_version) = {
-            let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+            let state = self.state.try_lock().map_err(|error| match error {
+                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
+                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
+            })?;
+            #[cfg(any(test, feature = "rayx_diagnostics"))]
+            self.keyed_changes.note_setup_lookups();
             let snapshot = state
                 .items
                 .get(&watch_key)
@@ -543,100 +602,22 @@ where
                 .map(|current| CacheChange::Add {
                     key: watch_key.clone(),
                     current,
-                    current_index: state.order.iter().position(|key| key == &watch_key),
+                    current_index: state.positions.get(&watch_key).copied(),
                 });
             (snapshot, state.version)
         };
 
-        let ready = Arc::new(AtomicBool::new(false));
-        let delivered_until = Arc::new(AtomicU64::new(snapshot_version));
-        let buffer = Arc::new(Mutex::new(Vec::<ChangeSet<CacheChange<K, T>>>::new()));
-
-        let live_subscriber = Arc::clone(&subscriber);
-        let live_ready = Arc::clone(&ready);
-        let live_delivered_until = Arc::clone(&delivered_until);
-        let live_buffer = Arc::clone(&buffer);
-        let live_watch_key = watch_key.clone();
-        let subscription = self.changes.subscribe(move |batch| {
-            let Some(batch) = change_set_for_key(batch, &live_watch_key) else {
-                return;
-            };
-            if batch.version <= live_delivered_until.load(Ordering::Acquire) {
-                return;
-            }
-            if live_ready.load(Ordering::Acquire) {
-                live_subscriber(&batch);
-                live_delivered_until.store(batch.version, Ordering::Release);
-                return;
-            }
-            if let Ok(mut buffer) = live_buffer.lock() {
-                if live_ready.load(Ordering::Acquire) {
-                    drop(buffer);
-                    live_subscriber(&batch);
-                    live_delivered_until.store(batch.version, Ordering::Release);
-                } else {
-                    buffer.push(batch);
-                }
-            }
-        })?;
-
-        let catch_up = {
-            let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
-            state
-                .history
-                .iter()
-                .filter(|batch| batch.version > snapshot_version)
-                .filter_map(|batch| change_set_for_key(batch, &watch_key))
-                .collect::<Vec<_>>()
-        };
-
-        if let Some(snapshot) = snapshot {
-            subscriber(&ChangeSet::new(vec![snapshot], snapshot_version));
+        if snapshot.is_none()
+            && let Some(missing_subscriber) = missing_subscriber
+        {
+            missing_subscriber();
         }
-
-        for batch in catch_up {
-            if batch.version > delivered_until.load(Ordering::Acquire) {
-                delivered_until.store(batch.version, Ordering::Release);
-                subscriber(&batch);
-            }
-        }
-
-        let buffered = {
-            let mut buffer = buffer.lock().map_err(|_| CollectionError::Poisoned)?;
-            ready.store(true, Ordering::Release);
-            mem::take(&mut *buffer)
-        };
-        for batch in buffered {
-            if batch.version > delivered_until.load(Ordering::Acquire) {
-                delivered_until.store(batch.version, Ordering::Release);
-                subscriber(&batch);
-            }
-        }
-
-        Ok(subscription)
+        let snapshot =
+            snapshot.map(|change| ChangeSet::new(vec![change], snapshot_version));
+        startup.start(snapshot, snapshot_version)?;
+        Ok(Subscription::many(vec![
+            subscription,
+            startup.disposal_subscription(),
+        ]))
     }
-}
-
-fn change_set_for_key<K, T>(
-    batch: &ChangeSet<CacheChange<K, T>>,
-    watch_key: &K,
-) -> Option<ChangeSet<CacheChange<K, T>>>
-where
-    K: Clone + Eq,
-    T: Clone,
-{
-    let changes = batch
-        .changes
-        .iter()
-        .filter_map(|change| match change {
-            CacheChange::Clear { previous } => previous
-                .iter()
-                .find(|(key, _)| key == watch_key)
-                .map(|(key, item)| CacheChange::Clear {
-                    previous: vec![(key.clone(), item.clone())],
-                }),
-            change => cache_change_for_key(change, watch_key).cloned(),
-        })
-        .collect::<Vec<_>>();
-    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
 }

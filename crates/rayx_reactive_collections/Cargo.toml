@@ -28,5 +28,9 @@ harness = false
 name = "live_group"
 harness = false
 
+[[bench]]
+name = "keyed_watch"
+harness = false
+
 [lints]
 workspace = true

@@ -2,14 +2,17 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::hash::Hash;
 use std::mem;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, TryLockError};
 
 use rxrust::prelude::{ObservableFactory, Observer, Shared};
 
 use crate::change::{CacheChange, ChangeSet};
+use crate::connection::{StartupConnection, VersionedChangeSet};
 use crate::delivery::DeliveryQueue;
 use crate::error::{CollectionError, Result};
+use crate::keyed_delivery::KeyedChangeHub;
+#[cfg(test)]
+use crate::keyed_delivery::KeyedDeliverySnapshot;
 use crate::stream::{ChangeStream, StreamSubscriber, ValueStream};
 use crate::subscription::Subscription;
 
@@ -19,9 +22,9 @@ type CacheRx<K, T> =
 struct CacheState<K, T> {
     items: HashMap<K, T>,
     order: Vec<K>,
+    positions: HashMap<K, usize>,
     version: u64,
     editing: bool,
-    history: Vec<ChangeSet<CacheChange<K, T>>>,
     suspend_depth: usize,
     suspended_changes: Vec<CacheChange<K, T>>,
 }
@@ -30,10 +33,12 @@ struct CacheState<K, T> {
 pub struct SourceCache<K, T> {
     key_selector: Arc<dyn Fn(&T) -> K + Send + Sync>,
     state: Arc<Mutex<CacheState<K, T>>>,
-    changes: DeliveryQueue<ChangeSet<CacheChange<K, T>>>,
+    changes: DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
+    keyed_changes: KeyedChangeHub<K, T>,
     preview: DeliveryQueue<ChangeSet<CacheChange<K, T>>>,
     count_changed: DeliveryQueue<usize>,
     rx_changes: CacheRx<K, T>,
     _rx_bridge: Arc<Subscription>,
+    _keyed_bridge: Arc<Subscription>,
 }
 
