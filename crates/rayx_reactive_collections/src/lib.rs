@@ -50,6 +50,7 @@ pub mod prelude {
     #[cfg(feature = "rayx_diagnostics")]
     pub use crate::diagnostics::{
         CacheDiagnosticsExt, ChangeStatistics, ChangeSummary, ListDiagnosticsExt,
+        retained_implicit_batch_count,
     };
     pub use crate::diff::{
         OptionalValueStreamCacheDiffExt, ValueStreamCacheDiffExt, ValueStreamListDiffExt,

@@ -1,11 +1,32 @@
 use std::hash::Hash;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
 use crate::change::{CacheChange, ChangeSet, ListChange};
 use crate::stream::{ChangeStream, ValueStream};
+
+static RETAINED_IMPLICIT_STARTUP_BATCH_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+/// Returns the number of versioned change-set envelopes currently retained by
+/// in-flight collection startup connections.
+pub fn retained_implicit_batch_count() -> usize {
+    RETAINED_IMPLICIT_STARTUP_BATCH_COUNT.load(Ordering::Acquire)
+}
+
+pub(crate) fn retain_implicit_startup_batches(count: usize) {
+    RETAINED_IMPLICIT_STARTUP_BATCH_COUNT.fetch_add(count, Ordering::AcqRel);
+}
+
+pub(crate) fn release_implicit_startup_batches(count: usize) {
+    RETAINED_IMPLICIT_STARTUP_BATCH_COUNT
+        .fetch_update(Ordering::AcqRel, Ordering::Acquire, |current| {
+            current.checked_sub(count)
+        })
+        .expect("retained implicit startup-batch gauge underflow");
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChangeStatistics {
