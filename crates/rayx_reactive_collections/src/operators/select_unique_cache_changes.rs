@@ -185,12 +185,11 @@ pub(crate) fn diff_list_by<T: Clone>(
             .iter()
             .zip(new.iter())
             .enumerate()
-            .filter_map(|(index, (previous, current))| {
-                (!are_items_equal(previous, current)).then(|| ListChange::Replace {
-                    index,
-                    old: previous.clone(),
-                    new: current.clone(),
-                })
+            .filter(|(_, (previous, current))| !are_items_equal(previous, current))
+            .map(|(index, (previous, current))| ListChange::Replace {
+                index,
+                old: previous.clone(),
+                new: current.clone(),
             })
             .collect();
     }
@@ -296,19 +295,11 @@ fn bounded_middle_diff<T: Clone>(
                 || common[old_index * width + new_index + 1]
                     > common[(old_index + 1) * width + new_index]);
         if add_is_better {
-            push_diff_add(
-                &mut changes,
-                target_index,
-                new[new_index].clone(),
-            );
+            push_diff_add(&mut changes, target_index, new[new_index].clone());
             new_index += 1;
             target_index += 1;
         } else {
-            push_diff_remove(
-                &mut changes,
-                target_index,
-                old[old_index].clone(),
-            );
+            push_diff_remove(&mut changes, target_index, old[old_index].clone());
             old_index += 1;
         }
     }
@@ -421,4 +412,3 @@ impl<T, G> Default for LiveListGroupState<T, G> {
         }
     }
 }
-
