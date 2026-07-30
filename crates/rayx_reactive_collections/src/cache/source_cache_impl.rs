@@ -160,7 +160,8 @@ where
 
         if should_publish {
             self.preview.enqueue(batch.clone())?;
-            self.changes.enqueue(VersionedChangeSet::new(batch.clone()))?;
+            self.changes
+                .enqueue(VersionedChangeSet::new(batch.clone()))?;
         }
         if let Some(count_after) = count_after {
             self.count_changed.enqueue(count_after)?;
@@ -358,10 +359,7 @@ where
     }
 
     #[cfg(test)]
-    pub(crate) fn with_keyed_hub_lock_held_for_test<R>(
-        &self,
-        action: impl FnOnce() -> R,
-    ) -> R {
+    pub(crate) fn with_keyed_hub_lock_held_for_test<R>(&self, action: impl FnOnce() -> R) -> R {
         self.keyed_changes.with_registry_lock_held(action)
     }
 
@@ -369,9 +367,7 @@ where
         let changes = self.changes.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            Ok(changes.subscribe(move |versioned| {
-                subscriber(versioned.change_set())
-            })?)
+            Ok(changes.subscribe(move |versioned| subscriber(versioned.change_set()))?)
         })
     }
 
@@ -503,8 +499,7 @@ where
             if state.suspend_depth > 0 || state.suspended_changes.is_empty() {
                 return Ok(());
             }
-            let batch = ChangeSet::new(mem::take(&mut state.suspended_changes), state.version);
-            batch
+            ChangeSet::new(mem::take(&mut state.suspended_changes), state.version)
         };
 
         self.preview.enqueue(batch.clone())?;
@@ -557,8 +552,7 @@ where
         };
         after_snapshot();
 
-        let snapshot =
-            (!snapshot.is_empty()).then(|| ChangeSet::new(snapshot, snapshot_version));
+        let snapshot = (!snapshot.is_empty()).then(|| ChangeSet::new(snapshot, snapshot_version));
         startup.start(snapshot, snapshot_version)?;
         Ok(Subscription::many(vec![
             subscription,
@@ -612,8 +606,7 @@ where
         {
             missing_subscriber();
         }
-        let snapshot =
-            snapshot.map(|change| ChangeSet::new(vec![change], snapshot_version));
+        let snapshot = snapshot.map(|change| ChangeSet::new(vec![change], snapshot_version));
         startup.start(snapshot, snapshot_version)?;
         Ok(Subscription::many(vec![
             subscription,
