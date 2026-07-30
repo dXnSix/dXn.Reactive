@@ -302,9 +302,7 @@ where
         let changes = self.changes.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            Ok(changes.subscribe(move |versioned| {
-                subscriber(versioned.change_set())
-            })?)
+            Ok(changes.subscribe(move |versioned| subscriber(versioned.change_set()))?)
         })
     }
 
@@ -350,8 +348,7 @@ where
             if state.suspend_depth > 0 || state.suspended_changes.is_empty() {
                 return Ok(());
             }
-            let batch = ChangeSet::new(mem::take(&mut state.suspended_changes), state.version);
-            batch
+            ChangeSet::new(mem::take(&mut state.suspended_changes), state.version)
         };
 
         self.preview.enqueue(batch.clone())?;
@@ -437,4 +434,3 @@ pub struct ListUpdater<'a, T> {
     items: &'a mut Vec<T>,
     changes: &'a mut Vec<ListChange<T>>,
 }
-
