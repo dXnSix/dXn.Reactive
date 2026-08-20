@@ -17,15 +17,45 @@ pub fn retained_implicit_batch_count() -> usize {
 }
 
 pub(crate) fn retain_implicit_startup_batches(count: usize) {
-    RETAINED_IMPLICIT_STARTUP_BATCH_COUNT.fetch_add(count, Ordering::AcqRel);
+    retain_implicit_startup_batches_in(&RETAINED_IMPLICIT_STARTUP_BATCH_COUNT, count);
 }
 
 pub(crate) fn release_implicit_startup_batches(count: usize) {
-    RETAINED_IMPLICIT_STARTUP_BATCH_COUNT
-        .fetch_update(Ordering::AcqRel, Ordering::Acquire, |current| {
-            current.checked_sub(count)
-        })
-        .expect("retained implicit startup-batch gauge underflow");
+    release_implicit_startup_batches_in(&RETAINED_IMPLICIT_STARTUP_BATCH_COUNT, count);
+}
+
+fn retain_implicit_startup_batches_in(counter: &AtomicUsize, count: usize) {
+    counter.fetch_add(count, Ordering::AcqRel);
+}
+
+fn release_implicit_startup_batches_in(counter: &AtomicUsize, count: usize) {
+    let released = counter.fetch_update(Ordering::AcqRel, Ordering::Acquire, |current| {
+        current.checked_sub(count)
+    });
+    assert!(
+        released.is_ok(),
+        "retained implicit startup-batch gauge underflow"
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn retained_implicit_batch_gauge_balances_an_isolated_counter() {
+        let counter = AtomicUsize::new(0);
+
+        retain_implicit_startup_batches_in(&counter, 2);
+        assert_eq!(counter.load(Ordering::Acquire), 2);
+
+        release_implicit_startup_batches_in(&counter, 1);
+        assert_eq!(counter.load(Ordering::Acquire), 1);
+
+        release_implicit_startup_batches_in(&counter, 1);
+        assert_eq!(counter.load(Ordering::Acquire), 0);
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

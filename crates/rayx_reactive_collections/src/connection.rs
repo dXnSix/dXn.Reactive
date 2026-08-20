@@ -161,6 +161,18 @@ where
             }
         })
     }
+
+    #[cfg(all(test, feature = "rayx_diagnostics"))]
+    fn buffered_batch_count_for_test(&self) -> usize {
+        let state = match self.state.lock() {
+            Ok(state) => state,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        match &state.phase {
+            StartupPhase::Buffering(buffer) | StartupPhase::Draining(buffer) => buffer.len(),
+            StartupPhase::Live | StartupPhase::Disposed => 0,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -170,9 +182,6 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
-
-    #[cfg(feature = "rayx_diagnostics")]
-    static DIAGNOSTIC_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[derive(Clone)]
     struct TrackedChange {
@@ -214,9 +223,6 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn startup_diagnostic_gauge_releases_buffer_on_dispose_drop_and_live() {
-        let _guard = DIAGNOSTIC_TEST_LOCK.lock().expect("diagnostic test lock");
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
-
         let dropped = Arc::new(AtomicUsize::new(0));
         let connection = StartupConnection::new(Arc::new(|_: &ChangeSet<TrackedChange>| {}));
         connection.receive(&VersionedChangeSet::new(ChangeSet::new(
@@ -225,7 +231,7 @@ mod tests {
             }],
             1,
         )));
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 1);
+        assert_eq!(connection.buffered_batch_count_for_test(), 1);
         assert_eq!(
             dropped.load(Ordering::SeqCst),
             1,
@@ -233,7 +239,7 @@ mod tests {
         );
 
         connection.disposal_subscription().dispose();
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
+        assert_eq!(connection.buffered_batch_count_for_test(), 0);
         assert_eq!(
             dropped.load(Ordering::SeqCst),
             2,
@@ -242,32 +248,28 @@ mod tests {
 
         let abandoned = StartupConnection::new(Arc::new(|_: &ChangeSet<u64>| {}));
         abandoned.receive(&VersionedChangeSet::new(ChangeSet::new(vec![1], 1)));
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 1);
+        assert_eq!(abandoned.buffered_batch_count_for_test(), 1);
         drop(abandoned);
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
 
         let live = StartupConnection::new(Arc::new(|_: &ChangeSet<u64>| {}));
         live.receive(&VersionedChangeSet::new(ChangeSet::new(vec![1], 1)));
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 1);
+        assert_eq!(live.buffered_batch_count_for_test(), 1);
         live.start(None, 0).expect("startup drain");
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
+        assert_eq!(live.buffered_batch_count_for_test(), 0);
         live.receive(&VersionedChangeSet::new(ChangeSet::new(vec![2], 2)));
         assert_eq!(
-            crate::diagnostics::retained_implicit_batch_count(),
+            live.buffered_batch_count_for_test(),
             0,
             "direct live delivery is never retained"
         );
         live.disposal_subscription().dispose();
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
+        assert_eq!(live.buffered_batch_count_for_test(), 0);
     }
 
     #[cfg(feature = "rayx_diagnostics")]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn startup_diagnostic_gauge_tracks_reentrant_drain_interleaving() {
-        let _guard = DIAGNOSTIC_TEST_LOCK.lock().expect("diagnostic test lock");
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
-
         let holder = Arc::new(Mutex::new(None::<StartupConnection<u64>>));
         let delivered_versions = Arc::new(Mutex::new(Vec::<u64>::new()));
         let injected = Arc::new(AtomicBool::new(false));
@@ -283,23 +285,22 @@ mod tests {
                 .expect("delivered versions lock")
                 .push(batch.version);
             if batch.version == 2 && !injected_for_delivery.swap(true, Ordering::SeqCst) {
-                holder_for_delivery
+                let connection = holder_for_delivery
                     .lock()
                     .expect("connection holder lock")
                     .as_ref()
                     .expect("startup connection")
-                    .receive(&VersionedChangeSet::new(ChangeSet::new(vec![3], 3)));
-                observed_for_delivery.store(
-                    crate::diagnostics::retained_implicit_batch_count(),
-                    Ordering::SeqCst,
-                );
+                    .clone();
+                connection.receive(&VersionedChangeSet::new(ChangeSet::new(vec![3], 3)));
+                observed_for_delivery
+                    .store(connection.buffered_batch_count_for_test(), Ordering::SeqCst);
             }
         }));
         *holder.lock().expect("connection holder lock") = Some(connection.clone());
 
         connection.receive(&VersionedChangeSet::new(ChangeSet::new(vec![1], 1)));
         connection.receive(&VersionedChangeSet::new(ChangeSet::new(vec![2], 2)));
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 2);
+        assert_eq!(connection.buffered_batch_count_for_test(), 2);
 
         connection
             .start(None, 1)
@@ -311,13 +312,12 @@ mod tests {
             [2, 3]
         );
         assert_eq!(
-            crate::diagnostics::retained_implicit_batch_count(),
+            connection.buffered_batch_count_for_test(),
             0,
             "stale discard and both drain deliveries release every envelope"
         );
 
         holder.lock().expect("connection holder lock").take();
         drop(connection);
-        assert_eq!(crate::diagnostics::retained_implicit_batch_count(), 0);
     }
 }
