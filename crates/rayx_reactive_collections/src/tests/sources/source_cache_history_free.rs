@@ -19,6 +19,10 @@ struct RetainedItem {
     _probe: Arc<DropProbe>,
 }
 
+type RowBatch = ChangeSet<CacheChange<u32, Row>>;
+type SharedRowBatches = Arc<Mutex<Vec<RowBatch>>>;
+type VersionedRowValues = Vec<(u64, Vec<u32>)>;
+
 #[test]
 fn source_cache_history_free_releases_every_published_payload_after_removal()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -73,8 +77,8 @@ fn source_cache_history_free_keeps_current_payload_alive_until_removal()
 }
 
 fn cache_values(
-    batches: &Arc<Mutex<Vec<ChangeSet<CacheChange<u32, Row>>>>>,
-) -> Result<Vec<(u64, Vec<u32>)>, Box<dyn std::error::Error>> {
+    batches: &SharedRowBatches,
+) -> Result<VersionedRowValues, Box<dyn std::error::Error>> {
     Ok(lock_vec(batches)?
         .iter()
         .map(|batch| {

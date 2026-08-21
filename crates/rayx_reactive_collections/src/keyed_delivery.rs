@@ -28,7 +28,7 @@ struct KeyedDeliveryMetrics {
     setup_position_lookups: AtomicUsize,
 }
 
-#[cfg(any(test, feature = "rayx_diagnostics"))]
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct KeyedDeliverySnapshot {
     pub(crate) partitioned_batches: usize,
