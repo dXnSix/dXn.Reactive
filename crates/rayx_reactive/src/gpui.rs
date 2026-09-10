@@ -63,7 +63,7 @@ where
                 }
                 // A notification raised outside any window update does not
                 // schedule a frame on every platform (WASM keeps the last one).
-                let _ = cx.update(|cx| cx.refresh_windows());
+                cx.update(|cx| cx.refresh_windows());
             }
         });
 
@@ -85,7 +85,7 @@ where
                 if this.update(cx, |_, cx| cx.notify()).is_err() {
                     break;
                 }
-                let _ = cx.update(|cx| cx.refresh_windows());
+                cx.update(|cx| cx.refresh_windows());
             }
         });
 
