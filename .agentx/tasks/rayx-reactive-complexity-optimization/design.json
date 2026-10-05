@@ -1,0 +1,1194 @@
+{
+  "schemaVersion": 4,
+  "epicId": "rayx-reactive-complexity-optimization",
+  "currentState": {
+    "summary": "Signal separates state mutation from DeliveryQueue forwarding but set performs equality before the mutation lock and values snapshots before subscribing. Computed invokes combine while holding its latest-pair mutex and has construction windows. ViewModelActivator invokes active registration callbacks under its state mutex. DisposeBag, stream operators, DeliveryQueue bounds, and GPUI sender transport retain redundant ownership or clone work. Test Suite now exists and supersedes the old epic's Lab runtime plan.",
+    "codeAnchors": [
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive/src/signal.rs",
+        "symbol": "SignalInner",
+        "reason": "Signal state, versions, delivery, and current values subscription."
+      },
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive/src/computed.rs",
+        "symbol": "Computed",
+        "reason": "Derived and combined signal construction."
+      },
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive/src/activation.rs",
+        "symbol": "ViewModelActivator",
+        "reason": "Activation callbacks and active bag lifecycle."
+      },
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive/src/disposal.rs",
+        "symbol": "DisposeBag",
+        "reason": "Subscription ownership and idempotent disposal."
+      },
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive/src/stream_ext.rs",
+        "symbol": "ReactiveValueStreamExt",
+        "reason": "Scalar stream operators."
+      },
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive/src/gpui.rs",
+        "symbol": "ReactiveContextExt",
+        "reason": "Foreground binding transport."
+      },
+      {
+        "repositoryId": "main",
+        "path": "crates/rayx/rayx_reactive_primitives/src/delivery.rs",
+        "symbol": "DeliveryQueue",
+        "reason": "Neutral FIFO reentrant delivery shared with collections."
+      },
+      {
+        "repositoryId": "main",
+        "path": "apps/test_suite/src/pages/media_query.rs",
+        "symbol": "page",
+        "reason": "Current exclusive diagnostic page pattern."
+      },
+      {
+        "repositoryId": "main",
+        "path": "tools-node/test_suite/rayx-media-query.spec.ts",
+        "symbol": "media-query fixture reports the active production snapshot",
+        "reason": "Current Test Suite Playwright proof pattern."
+      }
+    ],
+    "constraints": [
+      "Current source and tests outrank the migrated V3 epic.",
+      "All public APIs remain available even without current call sites.",
+      "Callbacks do not execute under internal coordinator mutexes except public read and update closures.",
+      "apps/test_suite and tools-node/test_suite exclusively own app-hosted runtime validation.",
+      "DeliveryQueue remains neutral and shared by scalar state and collections."
+    ]
+  },
+  "responsibilities": [
+    {
+      "id": "RESP-001",
+      "owner": "Reactive public contract fixtures",
+      "owns": [
+        "Direct and umbrella compile coverage",
+        "Baseline public item inventory"
+      ],
+      "doesNotOwn": [
+        "Production reactive behavior",
+        "Runtime diagnostics"
+      ],
+      "stateOwned": [],
+      "invariants": [
+        "Every baseline public item compiles after the epic."
+      ],
+      "dependencies": [
+        "rayx_reactive",
+        "rayx_reactive_primitives",
+        "rayx umbrella"
+      ],
+      "dependents": [
+        "Final compatibility audit"
+      ],
+      "lifecycle": "Test-only compile fixtures retained permanently.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/lib.rs",
+          "symbol": "prelude",
+          "reason": "Primary scalar public facade."
+        }
+      ]
+    },
+    {
+      "id": "RESP-002",
+      "owner": "rayx_reactive::signal::SignalInner",
+      "owns": [
+        "Signal value/version commit",
+        "Ordered change delivery",
+        "Lossless values subscription startup"
+      ],
+      "doesNotOwn": [
+        "Computed derivation policy",
+        "GPUI scheduling"
+      ],
+      "stateOwned": [
+        "Current value",
+        "Nonzero version",
+        "Private pending delivery and values handshake state"
+      ],
+      "invariants": [
+        "One atomic equality/mutation/version decision.",
+        "No committed post-baseline value is lost."
+      ],
+      "dependencies": [
+        "DeliveryQueue"
+      ],
+      "dependents": [
+        "Computed",
+        "GPUI bindings",
+        "Library consumers"
+      ],
+      "lifecycle": "Shared Arc owner for Signal and ReadSignal handles.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/signal.rs",
+          "symbol": "SignalInner",
+          "reason": "Existing primary owner."
+        }
+      ]
+    },
+    {
+      "id": "RESP-003",
+      "owner": "rayx_reactive::computed::Computed",
+      "owns": [
+        "Derived output Signal",
+        "Source subscription ownership",
+        "Latest pair coordination"
+      ],
+      "doesNotOwn": [
+        "Source Signal commits",
+        "General stream operators"
+      ],
+      "stateOwned": [
+        "DisposeBag subscriptions",
+        "Latest combined source values"
+      ],
+      "invariants": [
+        "User derive/combine code runs outside internal mutexes.",
+        "Drop stops source tracking."
+      ],
+      "dependencies": [
+        "RESP-002",
+        "DisposeBag"
+      ],
+      "dependents": [
+        "Computed consumers"
+      ],
+      "lifecycle": "Owned value that ends tracking on drop.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/computed.rs",
+          "symbol": "Computed",
+          "reason": "Existing primary owner."
+        }
+      ]
+    },
+    {
+      "id": "RESP-004",
+      "owner": "rayx_reactive::activation::ViewModelActivator",
+      "owns": [
+        "Activation callback registry",
+        "Generation reference count",
+        "Active DisposeBag lifecycle"
+      ],
+      "doesNotOwn": [
+        "Individual subscription behavior",
+        "View rendering"
+      ],
+      "stateOwned": [
+        "Callbacks",
+        "Active generation identity/count/bag"
+      ],
+      "invariants": [
+        "Callbacks run outside activator mutex.",
+        "Each generation disposes exactly once."
+      ],
+      "dependencies": [
+        "DisposeBag"
+      ],
+      "dependents": [
+        "ActivatableViewModel",
+        "ActivationToken"
+      ],
+      "lifecycle": "Cloneable activator with token-scoped generations.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/activation.rs",
+          "symbol": "ActivationState",
+          "reason": "Existing activation state owner."
+        }
+      ]
+    },
+    {
+      "id": "RESP-005",
+      "owner": "rayx_reactive::stream_ext::ReactiveValueStreamExt",
+      "owns": [
+        "filter/filter_map/distinct/skip composition",
+        "Per-subscription operator state"
+      ],
+      "doesNotOwn": [
+        "Source delivery",
+        "Collection-specific operators"
+      ],
+      "stateOwned": [
+        "Distinct latest value",
+        "Skip remaining count"
+      ],
+      "invariants": [
+        "Accepted references are not cloned by filter.",
+        "Operator order and duplicates remain stable."
+      ],
+      "dependencies": [
+        "ValueStream",
+        "Subscription"
+      ],
+      "dependents": [
+        "Scalar stream consumers"
+      ],
+      "lifecycle": "Extension-created ValueStream with state per subscription.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/stream_ext.rs",
+          "symbol": "ReactiveValueStreamExt",
+          "reason": "Existing operator owner."
+        }
+      ]
+    },
+    {
+      "id": "RESP-006",
+      "owner": "rayx_reactive_primitives::delivery::DeliveryQueue",
+      "owns": [
+        "Neutral subscriber registry",
+        "FIFO reentrant pending queue",
+        "Subscriber snapshot fanout"
+      ],
+      "doesNotOwn": [
+        "Signal versions",
+        "Collection change semantics"
+      ],
+      "stateOwned": [
+        "Subscribers",
+        "Pending emissions",
+        "Drain state"
+      ],
+      "invariants": [
+        "Reentrant enqueue remains FIFO.",
+        "Fanout remains O(emissions × subscriber snapshot size)."
+      ],
+      "dependencies": [
+        "Subscription"
+      ],
+      "dependents": [
+        "Signal",
+        "EventBus",
+        "Reactive collections"
+      ],
+      "lifecycle": "Shared neutral queue with subscription-scoped removal.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive_primitives/src/delivery.rs",
+          "symbol": "DeliveryQueue",
+          "reason": "Existing neutral delivery owner."
+        }
+      ]
+    },
+    {
+      "id": "RESP-007",
+      "owner": "rayx_reactive::gpui::ReactiveContextExt",
+      "owns": [
+        "Subscriber-thread to GPUI foreground transport",
+        "Binding task/subscription lifetime",
+        "Unit-only notify path"
+      ],
+      "doesNotOwn": [
+        "Signal commits",
+        "GPUI entity business behavior"
+      ],
+      "stateOwned": [
+        "mpsc sender/receiver",
+        "GpuiBinding subscription and task"
+      ],
+      "invariants": [
+        "Entity APIs run only on the foreground task.",
+        "Value application remains ordered and lossless."
+      ],
+      "dependencies": [
+        "ValueStream",
+        "futures mpsc",
+        "gpux Context"
+      ],
+      "dependents": [
+        "RayX GPUI entities"
+      ],
+      "lifecycle": "Binding-owned subscription plus foreground task.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/gpui.rs",
+          "symbol": "ReactiveContextExt",
+          "reason": "Existing GPUI boundary."
+        }
+      ]
+    },
+    {
+      "id": "RESP-008",
+      "owner": "apps/test_suite reactive-state fixture",
+      "owns": [
+        "Bounded public-API diagnostic state",
+        "Native DevKit/MCP proof surface",
+        "WASM Playwright interaction surface"
+      ],
+      "doesNotOwn": [
+        "Reactive implementation internals",
+        "Production Lab examples"
+      ],
+      "stateOwned": [
+        "Fixture entity state",
+        "Bounded WASM diagnostic snapshot"
+      ],
+      "invariants": [
+        "Only public reactive APIs are consumed.",
+        "No diagnostic code enters apps/lab."
+      ],
+      "dependencies": [
+        "rayx public prelude",
+        "Test Suite routes"
+      ],
+      "dependents": [
+        "Native and WASM validators"
+      ],
+      "lifecycle": "Feature-gated diagnostic route and Playwright spec.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "apps/test_suite/src/pages/mod.rs",
+          "symbol": "render",
+          "reason": "Existing diagnostic page composition owner."
+        }
+      ]
+    },
+    {
+      "id": "RESP-009",
+      "owner": "Reactive optimization convergence records",
+      "owns": [
+        "Final evidence routing",
+        "RayX reactive guidance",
+        "Durable AgentX state/rules"
+      ],
+      "doesNotOwn": [
+        "Production implementation",
+        "Unproven performance claims"
+      ],
+      "stateOwned": [],
+      "invariants": [
+        "Guidance changes only after final evidence.",
+        "Task specs remain separate from durable memory."
+      ],
+      "dependencies": [
+        "AgentX evidence",
+        "RayX skill references"
+      ],
+      "dependents": [
+        "Future reactive maintainers"
+      ],
+      "lifecycle": "Final implementation task after all behavior gates.",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": ".codex/skills/rayx/references/reactive-state.md",
+          "symbol": "Reactive State",
+          "reason": "Current RayX reactive guidance hub."
+        }
+      ]
+    }
+  ],
+  "dependencyRules": [
+    {
+      "from": "rayx_reactive",
+      "to": "rayx_reactive_primitives",
+      "rule": "allowed",
+      "rationale": "Scalar state consumes the neutral stream, delivery, error, and subscription primitives."
+    },
+    {
+      "from": "rayx_reactive",
+      "to": "rayx_reactive_collections",
+      "rule": "forbidden",
+      "rationale": "The established crate split keeps scalar state independent from collection behavior."
+    },
+    {
+      "from": "rayx_reactive_primitives",
+      "to": "gpux",
+      "rule": "forbidden",
+      "rationale": "Neutral primitives remain reusable by scalar and collection crates without UI coupling."
+    },
+    {
+      "from": "apps/test_suite",
+      "to": "rayx public APIs",
+      "rule": "allowed",
+      "rationale": "The exclusive diagnostic app proves consumer-visible behavior."
+    },
+    {
+      "from": "apps/lab",
+      "to": "agent runtime diagnostics",
+      "rule": "forbidden",
+      "rationale": "Lab remains an immaculate production example and demonstration app."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DES-001",
+      "title": "Freeze the public surface and measurement contract",
+      "requirementIds": [
+        "REQ-NF-001",
+        "REQ-NF-002"
+      ],
+      "responsibilityIds": [
+        "RESP-001"
+      ],
+      "decision": "Commit direct-crate and rayx-umbrella compile fixtures for every current public item before production edits. Add Criterion 0.5.1 only as a dev dependency and capture the exact benchmark matrix before the first reactive source change.",
+      "rationale": "Compatibility fixtures enforce the user's no-deletion decision, while a saved identical-command baseline prevents unsupported timing claims.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/lib.rs",
+            "symbol": "prelude",
+            "reason": "Public scalar exports."
+          },
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive_primitives/src/lib.rs",
+            "symbol": "prelude",
+            "reason": "Public neutral exports."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Rely on rustdoc or current call sites alone",
+          "reason": "That does not compile every public item and violates the explicit future-usability constraint."
+        }
+      ],
+      "affectedSurfaces": [
+        "Reactive/primitives public API integration fixtures",
+        "RayX umbrella fixture",
+        "Reactive benchmark files",
+        "Reactive Cargo manifests"
+      ],
+      "controlFlow": [
+        "Inventory current public items.",
+        "Commit compile fixtures.",
+        "Run fixtures on the baseline revision.",
+        "Capture Criterion baseline before production edits."
+      ],
+      "dataFlow": [
+        "Public exports -> compile fixtures -> contract evidence.",
+        "Representative operations -> Criterion groups -> saved baseline evidence."
+      ],
+      "interfaces": [
+        "Existing public APIs remain unchanged.",
+        "Criterion is dev-only."
+      ],
+      "failureHandling": [
+        "A fixture failure blocks implementation.",
+        "A noisy benchmark receives one twice-duration rerun; a second failure blocks."
+      ],
+      "concurrencyAndTransactions": [
+        "No production concurrency change occurs in this decision."
+      ],
+      "compatibilityAndMigration": [
+        "Fixtures compile the existing signatures without aliases or shims.",
+        "No public API is added."
+      ],
+      "observability": [
+        "Fixture item inventory and content-addressed benchmark output are recorded as task evidence."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "contract-before-after fixture proof",
+        "baseline-target Criterion proof"
+      ]
+    },
+    {
+      "id": "DES-002",
+      "title": "Use one Signal commit boundary and a version-aware values handshake",
+      "requirementIds": [
+        "REQ-F-001",
+        "REQ-NF-003"
+      ],
+      "responsibilityIds": [
+        "RESP-002"
+      ],
+      "decision": "Keep equality, mutation, version assignment, and enqueue ownership under one Signal state commit boundary. Drain committed changes after releasing state. Register values against a captured value/version before the synchronous snapshot, buffer later versions during that callback, then deliver them in order without duplicate baseline delivery.",
+      "rationale": "The direct state owner already owns value and version; extending that owner is smaller and safer than adding a scheduler or alternate stream type.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/signal.rs",
+            "symbol": "SignalState",
+            "reason": "Existing atomic value/version owner."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Subscribe after reading the snapshot",
+          "reason": "This is the simplest current flow, but it preserves the lost-update window."
+        },
+        {
+          "alternative": "Add a global executor",
+          "reason": "That adds scheduling semantics and complexity outside the existing Signal owner."
+        }
+      ],
+      "affectedSurfaces": [
+        "signal.rs",
+        "focused Signal tests"
+      ],
+      "controlFlow": [
+        "Acquire Signal state.",
+        "Apply equality and mutation once.",
+        "Assign the next version and register pending delivery.",
+        "Release state.",
+        "Deliver callbacks in commit order.",
+        "For values, install the baseline gate before the synchronous snapshot and drain post-baseline versions afterward."
+      ],
+      "dataFlow": [
+        "SignalState value/version -> SignalChange -> DeliveryQueue.",
+        "Captured value/version + buffered later changes -> values subscriber."
+      ],
+      "interfaces": [
+        "Public Signal, ReadSignal, SignalChange, and ValueStream signatures remain unchanged.",
+        "Only private state and subscription plumbing change."
+      ],
+      "failureHandling": [
+        "Poisoning returns ReactiveError::Poisoned.",
+        "A subscriber callback cannot retain the coordinator lock."
+      ],
+      "concurrencyAndTransactions": [
+        "One commit boundary serializes version assignment.",
+        "Reentrant callbacks enqueue after lock release.",
+        "No transaction crosses user code."
+      ],
+      "compatibilityAndMigration": [
+        "All existing Signal methods and payloads remain available.",
+        "Version wrap retains the existing nonzero rule."
+      ],
+      "observability": [
+        "Version sequences and callback traces are test evidence; no production telemetry is added."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "Concurrent equal set, ordered concurrent/reentrant changes, values reentrant startup, and legacy Signal behavior tests."
+      ]
+    },
+    {
+      "id": "DES-003",
+      "title": "Build Computed from versioned source snapshots without locked user code",
+      "requirementIds": [
+        "REQ-F-002",
+        "REQ-NF-003"
+      ],
+      "responsibilityIds": [
+        "RESP-002",
+        "RESP-003"
+      ],
+      "decision": "Reuse the private version-aware Signal handshake for derive and combine2 construction. Clone the latest values under the Computed-owned mutex, release it, invoke user code, then replace the output Signal. Track source versions so construction skips only the captured baselines and retains every later commit.",
+      "rationale": "This reuses the Signal invariant instead of introducing a second startup protocol and keeps user closures outside coordinator locks.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/computed.rs",
+            "symbol": "combine2",
+            "reason": "Current latest-pair mutex and locked combine call."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Keep combine inside the latest-pair mutex",
+          "reason": "It is direct but deadlocks when user code reenters either source."
+        }
+      ],
+      "affectedSurfaces": [
+        "computed.rs",
+        "focused Computed tests",
+        "private signal subscription support"
+      ],
+      "controlFlow": [
+        "Capture source value/version.",
+        "Compute initial output outside source locks.",
+        "Install version-aware subscriptions.",
+        "On change, update and clone latest inputs under the private mutex.",
+        "Release the mutex, invoke user code, and replace output."
+      ],
+      "dataFlow": [
+        "ReadSignal snapshots/changes -> latest input state -> user closure -> output Signal."
+      ],
+      "interfaces": [
+        "Computed public methods and bounds remain source-compatible.",
+        "Private Signal handshake is crate-owned."
+      ],
+      "failureHandling": [
+        "Existing setup errors return Result.",
+        "Failed output replacement retains existing callback error handling."
+      ],
+      "concurrencyAndTransactions": [
+        "Source callbacks serialize only latest-state copying.",
+        "User code and output delivery run outside the latest-state mutex."
+      ],
+      "compatibilityAndMigration": [
+        "Existing values, changes, read_signal, derive, and combine2 surfaces remain unchanged."
+      ],
+      "observability": [
+        "Timeout traces and version sequences are test evidence."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "Reentrant derive/combine2 tests, construction-race tests, drop-owned subscription characterization."
+      ]
+    },
+    {
+      "id": "DES-004",
+      "title": "Use activation generation identity and dispose outside locks",
+      "requirementIds": [
+        "REQ-F-003",
+        "REQ-NF-003"
+      ],
+      "responsibilityIds": [
+        "RESP-004"
+      ],
+      "decision": "Publish one active generation bag and identity under the activator mutex, snapshot callbacks, release the mutex, then invoke callbacks. Tokens reference the generation they joined. Failure detaches only that generation and disposes outside the mutex. Store DisposeBag subscriptions directly in its mutex without an internal Arc.",
+      "rationale": "Generation identity resolves the failure-versus-reactivation race while preserving the public reference-counted token contract.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/activation.rs",
+            "symbol": "ActivationState",
+            "reason": "Current count/bag owner."
+          },
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/disposal.rs",
+            "symbol": "DisposeBag",
+            "reason": "Current redundant Arc-owned mutex."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Clone callbacks and keep count without generation identity",
+          "reason": "It is smaller but cannot distinguish a failed generation from a later reactivation race."
+        }
+      ],
+      "affectedSurfaces": [
+        "activation.rs",
+        "disposal.rs",
+        "focused lifecycle tests"
+      ],
+      "controlFlow": [
+        "Reserve or join a generation under lock.",
+        "Snapshot callbacks and bag.",
+        "Release lock.",
+        "Invoke callbacks.",
+        "On failure, detach only the matching generation and dispose outside lock.",
+        "On final matching token drop, detach and dispose once."
+      ],
+      "dataFlow": [
+        "Callback registry + generation state -> callback bag -> Subscription disposal."
+      ],
+      "interfaces": [
+        "ViewModelActivator, ActivatableViewModel, ActivationToken, DisposeBag, Disposable, and DisposeWith remain unchanged."
+      ],
+      "failureHandling": [
+        "Callback error disposes partial work and returns the original error.",
+        "Poisoning retains ReactiveError."
+      ],
+      "concurrencyAndTransactions": [
+        "Generation count changes under one mutex.",
+        "Callbacks and disposal execute outside it.",
+        "DisposeBag keeps its own direct mutex and atomic disposed flag."
+      ],
+      "compatibilityAndMigration": [
+        "No public lifecycle surface changes.",
+        "A later generation is isolated from an earlier failed token."
+      ],
+      "observability": [
+        "Callback counts and disposal counts are recorded by tests."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "Reentrant registration, concurrent activation, failure recovery, add/dispose race, and exactly-once disposal tests."
+      ]
+    },
+    {
+      "id": "DES-005",
+      "title": "Remove only mechanically proven stream and delivery overhead",
+      "requirementIds": [
+        "REQ-F-004",
+        "REQ-NF-002",
+        "REQ-NF-003"
+      ],
+      "responsibilityIds": [
+        "RESP-005",
+        "RESP-006"
+      ],
+      "decision": "Forward accepted filter values by their existing reference, remove filter and skip Clone bounds, own distinct and skip mutexes directly, remove DeliveryQueue::enqueue's unused Clone bound, retain filter_map and the subscriber-snapshot FIFO fanout algorithm, and make Signal forwarding direct.",
+      "rationale": "Each change has direct clone-count, compile, or ownership evidence and avoids a speculative delivery redesign.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/stream_ext.rs",
+            "symbol": "filter",
+            "reason": "Accepted values are cloned unnecessarily."
+          },
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive_primitives/src/delivery.rs",
+            "symbol": "enqueue",
+            "reason": "Clone is not used by the enqueue body."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Replace DeliveryQueue with a channel or lock-free queue",
+          "reason": "No evidence justifies new scheduling, allocation, or dependency semantics."
+        }
+      ],
+      "affectedSurfaces": [
+        "stream_ext.rs",
+        "signal.rs forwarding methods",
+        "delivery.rs",
+        "focused tests and benchmarks"
+      ],
+      "controlFlow": [
+        "Subscribe using existing ValueStream.",
+        "Apply the existing predicate/state transition.",
+        "Forward the borrowed accepted payload.",
+        "Retain DeliveryQueue subscriber snapshots and FIFO reentrant drain."
+      ],
+      "dataFlow": [
+        "Source &T -> operator -> subscriber &T.",
+        "Enqueued T -> pending FIFO -> subscriber snapshots."
+      ],
+      "interfaces": [
+        "Public method names remain unchanged.",
+        "Relaxed generic bounds are source-compatible."
+      ],
+      "failureHandling": [
+        "Poison behavior and unsubscribe cleanup remain unchanged."
+      ],
+      "concurrencyAndTransactions": [
+        "Per-subscription state uses one directly owned mutex.",
+        "DeliveryQueue remains the sole fanout coordinator."
+      ],
+      "compatibilityAndMigration": [
+        "Ordering, duplicates, equality, errors, and lifetimes remain characterized.",
+        "No alternate queue is introduced."
+      ],
+      "observability": [
+        "Clone counters, non-Clone compile/run tests, FIFO traces, and Criterion fanout groups provide evidence."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "Exact clone/non-Clone tests, behavior characterization, and baseline-target benchmarks."
+      ]
+    },
+    {
+      "id": "DES-006",
+      "title": "Own GPUI senders directly and notify through unit",
+      "requirementIds": [
+        "REQ-F-005",
+        "REQ-NF-002",
+        "REQ-NF-003"
+      ],
+      "responsibilityIds": [
+        "RESP-007"
+      ],
+      "decision": "Capture futures::channel::mpsc::UnboundedSender<V> directly in bind_stream_value. Implement notify_on with a unit channel so it neither clones nor transports V. Preserve the unbounded receive loop, foreground Context update, update-error termination, and GpuiBinding ownership.",
+      "rationale": "The sender already supports shared sends through the existing callback ownership; Arc<Mutex> and notification payload transport enforce no additional invariant.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/gpui.rs",
+            "symbol": "bind_stream_value",
+            "reason": "Current redundant sender Arc/Mutex and payload clone path."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Keep Arc<Mutex<UnboundedSender<V>>>",
+          "reason": "It is the current simplest-looking wrapper but adds locking without owning a required invariant."
+        }
+      ],
+      "affectedSurfaces": [
+        "gpui.rs",
+        "focused GPUI binding tests"
+      ],
+      "controlFlow": [
+        "Subscribe and send each value or unit.",
+        "Receive in order on the foreground task.",
+        "Update or notify the entity.",
+        "Stop on entity update failure or binding teardown."
+      ],
+      "dataFlow": [
+        "ValueStream payload -> direct sender -> foreground callback.",
+        "ValueStream event -> unit sender -> foreground notify."
+      ],
+      "interfaces": [
+        "ReactiveContextExt and GpuiBinding public signatures remain available.",
+        "notify_on drops only its unnecessary Clone bound."
+      ],
+      "failureHandling": [
+        "Subscription setup returns existing Result.",
+        "Send failure is ignored after receiver teardown.",
+        "Entity update failure ends the task."
+      ],
+      "concurrencyAndTransactions": [
+        "No sender mutex exists.",
+        "The single receiver retains order.",
+        "No batching or backpressure is added."
+      ],
+      "compatibilityAndMigration": [
+        "Public ordered lossless semantics remain unchanged.",
+        "No new public API is introduced."
+      ],
+      "observability": [
+        "Clone counter and Test Suite ordered applied-value diagnostics provide evidence."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "Focused unit/clone tests plus native and WASM Test Suite interaction."
+      ]
+    },
+    {
+      "id": "DES-007",
+      "title": "Converge through the exclusive Test Suite and unchanged final gates",
+      "requirementIds": [
+        "REQ-F-005",
+        "REQ-NF-001",
+        "REQ-NF-002",
+        "REQ-NF-003",
+        "REQ-NF-004"
+      ],
+      "responsibilityIds": [
+        "RESP-007",
+        "RESP-008"
+      ],
+      "decision": "Add a feature-gated /runtime/reactive-state Test Suite route and tools-node/test_suite/rayx-reactive-state.spec.ts. The fixture consumes public APIs and publishes a bounded snapshot. Final convergence reruns the unchanged API fixtures, benchmarks, downstream tests, native DevKit/MCP route inspection, headed WASM/WebGPU Playwright, static validation, and simplicity audit on one revision.",
+      "rationale": "The repository now mandates Test Suite for all app-hosted validation, and one public consumer proves the cross-layer binding contract without contaminating Lab.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "apps/test_suite/src/routes.rs",
+            "symbol": "TEST_ROUTES",
+            "reason": "Exclusive diagnostic route registry."
+          },
+          {
+            "repositoryId": "main",
+            "path": "tools-node/test_suite/rayx-media-query.spec.ts",
+            "symbol": "media-query fixture reports the active production snapshot",
+            "reason": "Neighboring bounded public-API Playwright pattern."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Keep the V3 Lab diagnostic fixture",
+          "reason": "Repository policy forbids Lab as an agent testing or diagnostics target."
+        }
+      ],
+      "affectedSurfaces": [
+        "apps/test_suite reactive-state page/route/render registration",
+        "tools-node/test_suite reactive spec",
+        "final validation evidence"
+      ],
+      "controlFlow": [
+        "Construct a Test Suite entity from public Signal, Computed, activation, and GPUI binding APIs.",
+        "Interact through the route.",
+        "Publish bounded ordered values, computed value, notify count, activation/disposal count, and teardown state.",
+        "Inspect native state through DevKit/MCP.",
+        "Assert the same public behavior in headed WASM/WebGPU.",
+        "Run final convergence commands."
+      ],
+      "dataFlow": [
+        "Public reactive state -> GPUI fixture entity -> bounded diagnostics -> DevKit/MCP or Playwright assertions."
+      ],
+      "interfaces": [
+        "No public library API is added for diagnostics.",
+        "The Test Suite route is diagnostic-only."
+      ],
+      "failureHandling": [
+        "Runtime errors or missing diagnostics fail the task.",
+        "Convergence does not repair outside the owning task scope."
+      ],
+      "concurrencyAndTransactions": [
+        "Fixture interactions execute on GPUI foreground paths.",
+        "The public library concurrency invariants are already proven by focused tests."
+      ],
+      "compatibilityAndMigration": [
+        "apps/lab and tools-node/lab remain untouched.",
+        "Direct and umbrella fixtures remain unchanged through final convergence."
+      ],
+      "observability": [
+        "Bounded snapshots omit arbitrary user payloads and report only counts, versions, scalar test values, and lifecycle flags."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "Native DevKit/MCP inspection, headed WASM/WebGPU Playwright, focused/broad tests, Criterion comparison, clippy, rustdoc, source guard, and AgentX audits."
+      ]
+    },
+    {
+      "id": "DES-008",
+      "title": "Update only evidence-backed reactive guidance and memory",
+      "requirementIds": [
+        "REQ-NF-004"
+      ],
+      "responsibilityIds": [
+        "RESP-009"
+      ],
+      "decision": "After final implementation evidence passes, update the narrow RayX reactive reference pages and runtime/reactive-state AgentX state, knowledge, rules, or hypotheses that materially changed. Run the RayX skill and AgentX memory audits.",
+      "rationale": "Guidance must describe proven final source rather than planned mechanics or speculative results.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": ".codex/skills/rayx/references/reactive-state.md",
+            "symbol": "Reactive State",
+            "reason": "Reactive skill routing hub."
+          },
+          {
+            "repositoryId": "main",
+            "path": ".agentx/memory/knowledge/runtime/reactive-state/state.md",
+            "symbol": "Current Technical Shape",
+            "reason": "Durable reactive state owner."
+          }
+        ]
+      },
+      "alternativesRejected": [
+        {
+          "alternative": "Copy the implementation plan into memory",
+          "reason": "Task plans are transient and would pollute durable source-backed guidance."
+        }
+      ],
+      "affectedSurfaces": [
+        "Narrow RayX reactive reference pages",
+        "runtime/reactive-state memory",
+        "AgentX audit evidence"
+      ],
+      "controlFlow": [
+        "Read final source and evidence.",
+        "Update only changed durable guidance.",
+        "Run skill and memory audits.",
+        "Record evidence and finish the epic."
+      ],
+      "dataFlow": [
+        "Final source/evidence -> guidance/memory statements -> future AgentX routing."
+      ],
+      "interfaces": [
+        "No production API change.",
+        "Task specs remain under .agentx/tasks and are not copied into memory."
+      ],
+      "failureHandling": [
+        "An audit failure blocks completion.",
+        "Unproven claims are omitted."
+      ],
+      "concurrencyAndTransactions": [
+        "No runtime concurrency is introduced."
+      ],
+      "compatibilityAndMigration": [
+        "Documentation reflects the existing public surface and proven internal guarantees."
+      ],
+      "observability": [
+        "Audit outputs and links to final source evidence are recorded."
+      ],
+      "securityAndPrivacy": [
+        "Generic values remain in-process; no persistence, network, credential, user identity, or new diagnostic payload boundary is introduced."
+      ],
+      "validation": [
+        "docs and static-analysis profiles plus AgentX memory audit."
+      ]
+    }
+  ],
+  "minimalDesign": {
+    "existingMechanismsReused": [
+      "SignalState value/version mutex and existing DeliveryQueue.",
+      "ValueStream and Subscription public contracts.",
+      "DisposeBag ownership of Computed subscriptions.",
+      "futures unbounded mpsc and gpux foreground Context task.",
+      "apps/test_suite route/page/snapshot and tools-node/test_suite Playwright patterns.",
+      "Existing cargo, xtask, AgentX, and memory audit tooling."
+    ],
+    "codeExpectedToBeDeletedOrReplaced": [
+      "Signal equality check outside the mutation commit boundary.",
+      "Signal values snapshot-then-subscribe startup gap.",
+      "Computed user combine execution under the latest-pair mutex.",
+      "Activator callback execution under the activator mutex.",
+      "DisposeBag's internal Arc<Mutex<Vec<Subscription>>> ownership.",
+      "filter accepted-payload clone, filter/skip/DeliveryQueue unused Clone bounds, and nested operator mutex Arc ownership.",
+      "GPUI Arc<Mutex<UnboundedSender<_>>> and notify_on payload transport."
+    ],
+    "newAbstractions": [],
+    "newDependencies": [
+      {
+        "name": "criterion 0.5.1 dev dependency",
+        "designIds": [
+          "DES-001"
+        ],
+        "reason": "Records reproducible before/after benchmark evidence without entering production dependency graphs.",
+        "whyStandardOrExistingMechanismsAreInsufficient": "The repository has no reactive benchmark harness or stable statistical comparison command."
+      }
+    ],
+    "newPublicApi": []
+  },
+  "testingStrategy": {
+    "profiles": [
+      {
+        "profile": "unit",
+        "scope": "Signal, Computed, activation, disposal, streams, delivery, and GPUI focused behavior",
+        "commandOrMethod": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+        "assertion": "Focused correctness, reentrancy, clone, generic-bound, and lifecycle tests MUST pass."
+      },
+      {
+        "profile": "regression",
+        "scope": "Current reactive semantics",
+        "commandOrMethod": "Run existing tests unchanged beside new regressions.",
+        "assertion": "Ordering, duplicates, equality, errors, and lifetimes MUST remain stable."
+      },
+      {
+        "profile": "behavior-preservation",
+        "scope": "Public behavior before and after refactors",
+        "commandOrMethod": "Characterization tests and unchanged compile fixtures",
+        "assertion": "Only explicit losslessness and lock-safety corrections differ."
+      },
+      {
+        "profile": "contract",
+        "scope": "Every current public item",
+        "commandOrMethod": "Direct crate and rayx umbrella compile fixtures",
+        "assertion": "Every baseline public item MUST compile unchanged."
+      },
+      {
+        "profile": "performance",
+        "scope": "Representative reactive hot paths and direct operation counts",
+        "commandOrMethod": "Criterion saved baseline/final plus clone counters and non-Clone compile tests",
+        "assertion": "The bounded regression and exact-operation targets MUST pass."
+      },
+      {
+        "profile": "integration",
+        "scope": "Collections, umbrella, PropertyGrid, and Test Suite consumers",
+        "commandOrMethod": "Package-scoped cargo tests and Test Suite build/runtime",
+        "assertion": "Downstream consumers MUST remain compatible."
+      },
+      {
+        "profile": "runtime",
+        "scope": "Native and WASM Test Suite reactive fixture",
+        "commandOrMethod": "DevKit/MCP inspection and headed WASM/WebGPU xtask",
+        "assertion": "The fixture MUST complete without crash or runtime error."
+      },
+      {
+        "profile": "interaction",
+        "scope": "Reactive Test Suite controls and teardown",
+        "commandOrMethod": "tools-node/test_suite/rayx-reactive-state.spec.ts",
+        "assertion": "Applied values, computed output, notifications, activation, disposal, and teardown MUST match diagnostics."
+      },
+      {
+        "profile": "static-analysis",
+        "scope": "Touched Rust, manifests, API exports, AgentX artifacts, and memory",
+        "commandOrMethod": "fmt, clippy, rustdoc, rg audit, schema validation, strict audit, and memory audit",
+        "assertion": "Zero static, schema, contract, public-deletion, or audit errors remain."
+      },
+      {
+        "profile": "architecture",
+        "scope": "Responsibility, dependency, callback, and ownership boundaries",
+        "commandOrMethod": "AgentX sprint design-quality audit plus source review",
+        "assertion": "Declared owners and dependency rules MUST match the final diff."
+      },
+      {
+        "profile": "docs",
+        "scope": "Reactive RayX guidance and AgentX memory",
+        "commandOrMethod": "RayX skill audit and python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+        "assertion": "Guidance MUST match proven final source."
+      }
+    ]
+  },
+  "rollout": [
+    "Implement and commit one audited sprint checkpoint at a time.",
+    "Retain public compile fixtures and benchmarks after the epic.",
+    "Do not gate the internal fixes behind a feature flag because no public behavior fork is introduced.",
+    "Block convergence when a required target fails; do not hide a failure with a compatibility shim or out-of-scope repair."
+  ],
+  "alternatives": [
+    {
+      "alternative": "Delete unused public APIs during optimization",
+      "advantages": [
+        "Smaller immediate surface."
+      ],
+      "disadvantages": [
+        "Violates the explicit user decision.",
+        "Destroys future usability evidence for a new library."
+      ],
+      "reasonRejected": "Every current public API must remain available."
+    },
+    {
+      "alternative": "Redesign around a scheduler, batching layer, or lock-free queue",
+      "advantages": [
+        "Potential throughput experimentation."
+      ],
+      "disadvantages": [
+        "Adds semantics, states, dependencies, and validation scope without measured need."
+      ],
+      "reasonRejected": "Direct ownership and correctness fixes address the identified issues with less complexity."
+    },
+    {
+      "alternative": "Use Lab for the runtime story",
+      "advantages": [
+        "The V3 epic already named Lab story files."
+      ],
+      "disadvantages": [
+        "Violates the exclusive Test Suite boundary.",
+        "Pollutes the canonical production example with diagnostics."
+      ],
+      "reasonRejected": "All agent runtime validation belongs in apps/test_suite."
+    },
+    {
+      "alternative": "Apply only micro-optimizations and ignore startup races",
+      "advantages": [
+        "Smaller diff."
+      ],
+      "disadvantages": [
+        "Leaves lost-update and deadlock risks in the exact paths being optimized."
+      ],
+      "reasonRejected": "Correctness invariants are prerequisites for meaningful complexity optimization."
+    }
+  ],
+  "migration": {
+    "sourceVersion": 3,
+    "reviewRequired": false
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 4,
+  "epicId": "rayx-reactive-complexity-optimization",
+  "primaryRepositoryId": "main",
+  "repositories": [
+    {
+      "id": "main",
+      "path": "C:/Users/dinko/.codex/worktrees/beaf/RayX",
+      "role": "primary",
+      "required": true,
+      "baselineHead": "ff098cccd74d7fd446e978cf97b6d7a3edc1ca33",
+      "ownedScope": [
+        ".agentx/tasks/rayx-reactive-complexity-optimization/**",
+        "crates/rayx/rayx_reactive/**",
+        "crates/rayx/rayx_reactive_primitives/**",
+        "crates/rayx/rayx_reactive_collections/**",
+        "crates/rayx/rayx/**",
+        "crates/rayx/rayx_components/rayx_components_propertygrid/**",
+        "apps/test_suite/**",
+        "tools-node/test_suite/rayx-reactive-state.spec.ts",
+        ".codex/skills/rayx/references/reactive-state-*.md",
+        ".agentx/memory/knowledge/runtime/reactive-state/**",
+        ".agentx/memory/knowledge/runtime/INDEX.md",
+        ".agentx/memory/knowledge/runtime/state.md",
+        ".agentx/memory/knowledge/INDEX.md"
+      ]
+    }
+  ]
+}

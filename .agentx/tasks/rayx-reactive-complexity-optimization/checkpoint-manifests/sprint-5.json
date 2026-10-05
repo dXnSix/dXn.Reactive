@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 4,
+  "epicId": "rayx-reactive-complexity-optimization",
+  "sprint": 5,
+  "auditSha256": "200629f640f77188e2d4ceaf4097b8997ca87cb01bd5b4bdc9ee6b690e0fed2a",
+  "evidenceSha256": "fb06ec8792baa346eb97760f9181cbe526e79a40d7168fcad15e645ec570cbfc",
+  "repositories": [
+    {
+      "id": "main",
+      "path": "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX",
+      "baselineHead": "d79e4d6ded1961c578aeb8a773485b17809c263e",
+      "resultHead": "f0da9b89e4c1ecb3da5963275e677115c45efdeb",
+      "commits": [
+        "f0da9b89e4c1ecb3da5963275e677115c45efdeb"
+      ],
+      "statusHash": "75a5eb57071116fbf903be85fc51be86bfc18bfdfa7420b6de7aab24d91b1c92",
+      "sprintOwnedPaths": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\apps\\test_suite\\Cargo.toml",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\apps\\test_suite\\src\\pages\\mod.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\apps\\test_suite\\src\\pages\\reactive_state.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\apps\\test_suite\\src\\routes.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\gpui.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\tools-node\\test_suite\\rayx-reactive-state.spec.ts"
+      ],
+      "unrelatedDirtyPaths": [
+        " M .agentx/tasks/rayx-reactive-complexity-optimization/sprint-audits/sprint-5.json"
+      ],
+      "rollbackCommand": "git -C \"C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\" revert --no-commit d79e4d6ded1961c578aeb8a773485b17809c263e..f0da9b89e4c1ecb3da5963275e677115c45efdeb"
+    }
+  ],
+  "generatedAt": "2026-07-26T17:07:35Z"
+}

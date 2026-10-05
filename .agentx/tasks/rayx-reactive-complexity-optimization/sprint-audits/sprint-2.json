@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 4,
+  "generatorVersion": "4.0",
+  "epicId": "rayx-reactive-complexity-optimization",
+  "sprint": 2,
+  "status": "passed",
+  "headBeforeCommit": "907177592b6e63eba021478d4248197b46e3d57a",
+  "filesReviewed": [
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\computed.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs"
+  ],
+  "conformance": [
+    {
+      "requirementId": "REQ-F-002",
+      "taskIds": [
+        "sprint-2-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-002-1",
+        "AC-F-002-2",
+        "AC-F-002-3",
+        "AC-F-002-4",
+        "AC-NF-003-2"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-002-1",
+        "AC-F-002-2",
+        "AC-F-002-3",
+        "AC-F-002-4",
+        "AC-NF-003-2"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\computed.rs"
+      ],
+      "testLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs"
+      ],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    },
+    {
+      "requirementId": "REQ-NF-003",
+      "taskIds": [
+        "sprint-2-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-002-1",
+        "AC-F-002-2",
+        "AC-F-002-3",
+        "AC-F-002-4",
+        "AC-NF-003-2"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-002-1",
+        "AC-F-002-2",
+        "AC-F-002-3",
+        "AC-F-002-4",
+        "AC-NF-003-2"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\computed.rs"
+      ],
+      "testLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs"
+      ],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    }
+  ],
+  "designQuality": {
+    "declaredWritePaths": [
+      "main:crates/rayx/rayx_reactive/src/computed.rs",
+      "main:crates/rayx/rayx_reactive/src/tests.rs",
+      "main:crates/rayx/rayx_reactive/src/tests/computed.rs"
+    ],
+    "actualChangedPaths": [
+      "main:crates/rayx/rayx_reactive/src/computed.rs",
+      "main:crates/rayx/rayx_reactive/src/tests.rs"
+    ],
+    "unexpectedChangedPaths": [],
+    "responsibilityIds": [
+      "RESP-002",
+      "RESP-003"
+    ],
+    "newAbstractions": [],
+    "newDependencies": [],
+    "newPublicApi": [],
+    "unapprovedDesignAdditions": [],
+    "result": "pass",
+    "reason": "Actual changed paths stay within declared task scopes; declared responsibilities and explicitly allowed design additions are recorded for semantic review."
+  },
+  "commands": [
+    {
+      "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+      "exitCode": 0,
+      "assertion": "Both reactive crate test suites MUST pass.",
+      "stdoutHash": "1baf8b6570cd42aa113504ec6ef5eb7d4512400b3039661b287997d90c32fb14",
+      "stderrHash": "8a98fcf68a68121bf15e9ed2794ad8bc0dae273adc7c0f60153a9fb546b18c62",
+      "failureOutputTail": ""
+    },
+    {
+      "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+      "exitCode": 0,
+      "assertion": "All-target reactive clippy MUST pass with warnings denied.",
+      "stdoutHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrHash": "5a98124ec862935b7871f29f50e2f8500bb7f484065a46c249739acf8120ba21",
+      "failureOutputTail": ""
+    }
+  ],
+  "defects": [],
+  "repairs": [],
+  "reauditCount": 0,
+  "residualRisks": [],
+  "generatedAt": "2026-07-26T15:53:38Z"
+}

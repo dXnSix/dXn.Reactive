@@ -1,0 +1,1211 @@
+{
+  "schemaVersion": 4,
+  "epicId": "rayx-reactive-complexity-optimization",
+  "title": "RayX Reactive Complexity, Concurrency, and Allocation Optimization",
+  "scope": {
+    "problem": "The new rayx_reactive and rayx_reactive_primitives crates expose a broad API that must remain available, while current Signal, Computed, activation, stream, delivery, and GPUI paths contain correctness-sensitive startup gaps plus avoidable locking, cloning, Arc ownership, and payload transport.",
+    "outcome": "Both reactive crates retain their complete public surface, deterministic concurrent and reentrant behavior is proven, redundant work is removed by direct operation evidence, and apps/test_suite proves the final public API on native and headed WASM/WebGPU runtimes.",
+    "inScope": [
+      "Preserve every current public item in rayx_reactive, rayx_reactive_primitives, the rayx::reactive module, and the RayX prelude.",
+      "Make Signal mutation and values subscription lossless and version ordered under concurrent and reentrant use.",
+      "Make Computed construction lossless while user derivation closures execute outside internal coordinator mutexes.",
+      "Make activation callbacks lock-safe and simplify DisposeBag ownership without changing its API.",
+      "Remove directly proven redundant clone, Arc, mutex, and Clone-bound work from stream operators, DeliveryQueue, Signal forwarding, and GPUI bindings.",
+      "Record before/after Criterion evidence and exact clone/non-Clone evidence.",
+      "Add a public-API reactive fixture to apps/test_suite with native DevKit/MCP and headed WASM/WebGPU Playwright proof.",
+      "Update narrow RayX skill guidance and durable AgentX reactive-state memory after implementation evidence exists."
+    ],
+    "outOfScope": [
+      "Deleting, renaming, hiding, deprecating, or replacing any current public API because it lacks present call sites.",
+      "Adding derive macros, batching, coalescing, backpressure, caches, custom allocators, unsafe code, or a new concurrency framework.",
+      "Changing EventBus, Command, AsyncCommand, Effect, or reactive collection semantics beyond downstream regression validation.",
+      "Using apps/lab or tools-node/lab for diagnostics, runtime proof, automation, probes, fixtures, or performance measurement.",
+      "Adopting behavior from an external implementation."
+    ]
+  },
+  "constraints": {
+    "compatibility": [
+      "All current direct-crate and umbrella-crate reactive imports MUST remain source-compatible.",
+      "Ordering, duplicates, equality suppression, errors, subscription lifetime, and side effects MUST remain unchanged except for the explicit losslessness and lock-safety corrections."
+    ],
+    "publicApi": [
+      "No current public type, trait, method, function, alias, module export, or prelude export is deleted, renamed, hidden, deprecated, or replaced.",
+      "Lack of current call sites is not evidence that a public API is removable.",
+      "No new public API is introduced unless a later explicit user decision changes this epic."
+    ],
+    "dependencies": [
+      "rayx_reactive MUST continue depending on rayx_reactive_primitives and MUST NOT depend on rayx_reactive_collections.",
+      "No production dependency is added; Criterion 0.5.1 is the only planned dev-dependency addition."
+    ],
+    "data": [
+      "No persisted schema, protocol, network payload, file format, or migration is introduced.",
+      "SignalChange previous/current/version payload semantics remain stable."
+    ],
+    "operations": [
+      "apps/test_suite is the exclusive application for native, WASM, Android, DevKit/MCP, Playwright, diagnostics, probes, and performance validation.",
+      "Playwright specifications MUST live under tools-node/test_suite.",
+      "apps/lab and tools-node/lab are forbidden diagnostic and automation targets."
+    ]
+  },
+  "actors": [
+    {
+      "id": "reactive-library-consumer",
+      "description": "Application, ViewModel, component, and downstream crate code that consumes the public reactive API."
+    },
+    {
+      "id": "reactive-maintainer",
+      "description": "A coding agent or maintainer implementing and validating the internal optimization without public API deletion."
+    },
+    {
+      "id": "test-suite-runtime",
+      "description": "The exclusive RayX diagnostic application that proves public reactive behavior across native and WASM runtimes."
+    }
+  ],
+  "functionalRequirements": [
+    {
+      "id": "REQ-F-001",
+      "title": "Linearizable signal mutation and subscription",
+      "statement": "Signal mutation and values subscription MUST form one ordered versioned contract: equal concurrent set calls commit at most one transition, committed mutations deliver in version order, and a values subscriber receives one synchronous snapshot followed by every later committed version.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/signal.rs",
+            "symbol": "SignalInner",
+            "reason": "Current state, version assignment, DeliveryQueue forwarding, and values startup are owned here."
+          }
+        ]
+      },
+      "behavior": {
+        "trigger": "A caller invokes set, replace, update, changes, or values on shared Signal handles.",
+        "inputs": [
+          "The current value/version, a replacement value or update closure, and current subscribers."
+        ],
+        "outputs": [
+          "The existing Result and SignalChange values plus ordered subscriber callbacks."
+        ],
+        "stateChanges": [
+          "A successful mutation commits one value and one monotonically advanced nonzero version.",
+          "values installs a subscriber and emits one synchronous current snapshot."
+        ],
+        "invariants": [
+          "Equality suppression and mutation are one atomic decision.",
+          "Callbacks run without the Signal state coordinator mutex.",
+          "No committed version after the subscriber baseline is lost or duplicated."
+        ],
+        "errors": [
+          "A poisoned internal mutex returns ReactiveError::Poisoned through the existing Result surface."
+        ],
+        "edgeCases": [
+          "Concurrent equal set calls.",
+          "Reentrant mutation from the synchronous values callback.",
+          "Version wrap preserves the existing nonzero version rule.",
+          "Zero subscribers."
+        ]
+      },
+      "coverage": {
+        "happyPath": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the happyPath contract."
+        },
+        "invalidInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The typed Rust API has no parser or untyped input boundary; poisoned synchronization remains the existing ReactiveError path."
+        },
+        "emptyInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no collection or text input; zero subscribers remains a normal no-op."
+        },
+        "boundaryValues": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the boundaryValues contract."
+        },
+        "authorization": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The in-process reactive library has no identity, permission, or authorization boundary."
+        },
+        "cancellation": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The synchronous operation has no async cancellation boundary; subscription drop is covered as cleanup."
+        },
+        "retryAndIdempotency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "Equal set calls form the observable no-op and idempotency contract."
+        },
+        "concurrency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the concurrency contract."
+        },
+        "partialFailure": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The operation is atomic or reports the existing ReactiveError without a partial external commit."
+        },
+        "cleanupAndRollback": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "Dropped subscriptions MUST stop callbacks without retained pending delivery."
+        },
+        "compatibility": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the compatibility contract."
+        },
+        "observability": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-001-1",
+            "AC-F-001-2",
+            "AC-F-001-3",
+            "AC-F-001-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the observability contract."
+        },
+        "securityAndPrivacy": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The generic in-process values introduce no credential, persistence, network, or privacy boundary."
+        },
+        "accessibility": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The library behavior has no rendered semantics or assistive-technology surface."
+        }
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-F-001-1",
+          "statement": "A deterministic concurrent-equal-set regression records exactly one committed SignalChange and one version increment."
+        },
+        {
+          "id": "AC-F-001-2",
+          "statement": "Controlled concurrent and reentrant mutations deliver strictly increasing SignalChange versions without loss, duplication, or inversion."
+        },
+        {
+          "id": "AC-F-001-3",
+          "statement": "A values subscriber that mutates the source during its synchronous initial callback observes the original snapshot first and the reentrant committed value second."
+        },
+        {
+          "id": "AC-F-001-4",
+          "statement": "Existing set suppression, replace/update emission, changes payload, read, get, version, read_only, From, and clone behavior tests pass unchanged."
+        }
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "id": "REQ-F-002",
+      "title": "Lossless and reentrant computed values",
+      "statement": "Computed::derive and Computed::combine2 MUST return a value based on the latest source versions observed during construction, process every later source version, and invoke user closures outside internal source and latest-state mutexes.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/computed.rs",
+            "symbol": "Computed",
+            "reason": "Current derive/combine startup, latest-pair mutex, and DisposeBag ownership are implemented here."
+          }
+        ]
+      },
+      "behavior": {
+        "trigger": "A caller constructs Computed::derive or Computed::combine2 and later mutates a source Signal.",
+        "inputs": [
+          "One or two ReadSignal sources and a user derivation or combination closure."
+        ],
+        "outputs": [
+          "A Computed value whose values and changes retain the existing public semantics."
+        ],
+        "stateChanges": [
+          "Construction captures source versions and installs owned subscriptions.",
+          "Later source versions update the computed Signal exactly through the existing output surface."
+        ],
+        "invariants": [
+          "User code executes outside internal source and latest-value mutexes.",
+          "Construction does not lose versions committed after its baseline.",
+          "Dropping Computed drops its source subscriptions."
+        ],
+        "errors": [
+          "Existing source or subscription errors are returned through ReactiveError.",
+          "Failed internal output replacement is not converted into a public API change."
+        ],
+        "edgeCases": [
+          "Derive reenters its source.",
+          "combine2 mutates the other source.",
+          "Both sources change during construction.",
+          "Computed drops during later source activity."
+        ]
+      },
+      "coverage": {
+        "happyPath": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-002-1",
+            "AC-F-002-2",
+            "AC-F-002-3",
+            "AC-F-002-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the happyPath contract."
+        },
+        "invalidInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The typed Rust API has no parser or untyped input boundary; poisoned synchronization remains the existing ReactiveError path."
+        },
+        "emptyInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no collection or text input; zero subscribers remains a normal no-op."
+        },
+        "boundaryValues": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-002-1",
+            "AC-F-002-2",
+            "AC-F-002-3",
+            "AC-F-002-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the boundaryValues contract."
+        },
+        "authorization": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The in-process reactive library has no identity, permission, or authorization boundary."
+        },
+        "cancellation": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The synchronous operation has no async cancellation boundary; subscription drop is covered as cleanup."
+        },
+        "retryAndIdempotency": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no retry protocol; repeated operations retain the existing public semantics."
+        },
+        "concurrency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-002-1",
+            "AC-F-002-2",
+            "AC-F-002-3",
+            "AC-F-002-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the concurrency contract."
+        },
+        "partialFailure": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The operation is atomic or reports the existing ReactiveError without a partial external commit."
+        },
+        "cleanupAndRollback": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-002-1",
+            "AC-F-002-2",
+            "AC-F-002-3",
+            "AC-F-002-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the cleanupAndRollback contract."
+        },
+        "compatibility": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-002-1",
+            "AC-F-002-2",
+            "AC-F-002-3",
+            "AC-F-002-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the compatibility contract."
+        },
+        "observability": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-002-1",
+            "AC-F-002-2",
+            "AC-F-002-3",
+            "AC-F-002-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the observability contract."
+        },
+        "securityAndPrivacy": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The generic in-process values introduce no credential, persistence, network, or privacy boundary."
+        },
+        "accessibility": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The library behavior has no rendered semantics or assistive-technology surface."
+        }
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-F-002-1",
+          "statement": "A timeout-bounded regression proves derive can reenter its source without deadlock and construction returns the latest resulting value."
+        },
+        {
+          "id": "AC-F-002-2",
+          "statement": "A timeout-bounded regression proves combine2 can mutate the other source from the combine closure without deadlock."
+        },
+        {
+          "id": "AC-F-002-3",
+          "statement": "Controlled construction races prove derive and combine2 retain every source version committed after their captured baseline."
+        },
+        {
+          "id": "AC-F-002-4",
+          "statement": "Existing computed values, changes, source tracking, and drop-owned subscription behavior remain intact."
+        }
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "id": "REQ-F-003",
+      "title": "Lock-safe activation and disposal",
+      "statement": "ViewModelActivator and DisposeBag MUST preserve their complete public surface while activation callbacks execute outside activator locks, concurrent activation scopes dispose exactly once, failed activation leaves no live scope, and DisposeBag stores subscriptions without a redundant internal Arc.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/activation.rs",
+            "symbol": "ViewModelActivator",
+            "reason": "Current callback registration, active count, failure cleanup, and active bag lifecycle are implemented here."
+          }
+        ]
+      },
+      "behavior": {
+        "trigger": "A caller registers when_activated callbacks, activates one or more tokens, drops tokens, or disposes a DisposeBag.",
+        "inputs": [
+          "Activation callbacks, ActivationToken lifetimes, Subscription values, and callback Results."
+        ],
+        "outputs": [
+          "The existing Result, ActivationToken, disposed subscriptions, and is_disposed state."
+        ],
+        "stateChanges": [
+          "First activation creates one generation bag.",
+          "Concurrent tokens share the generation count.",
+          "Final token drop or callback failure detaches and disposes the generation once."
+        ],
+        "invariants": [
+          "Activation callbacks execute without the activator state mutex.",
+          "DisposeBag disposal is idempotent.",
+          "A failed generation cannot dispose a later generation."
+        ],
+        "errors": [
+          "A callback error disposes partial work and returns the original error.",
+          "Poisoning follows the existing ReactiveError behavior."
+        ],
+        "edgeCases": [
+          "Registration while active.",
+          "Reentrant registration.",
+          "Concurrent first activation.",
+          "Add versus dispose race.",
+          "Add after dispose."
+        ]
+      },
+      "coverage": {
+        "happyPath": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the happyPath contract."
+        },
+        "invalidInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The typed Rust API has no parser or untyped input boundary; poisoned synchronization remains the existing ReactiveError path."
+        },
+        "emptyInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no collection or text input; zero subscribers remains a normal no-op."
+        },
+        "boundaryValues": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the boundaryValues contract."
+        },
+        "authorization": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The in-process reactive library has no identity, permission, or authorization boundary."
+        },
+        "cancellation": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The synchronous operation has no async cancellation boundary; subscription drop is covered as cleanup."
+        },
+        "retryAndIdempotency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "dispose and repeated activation lifecycle operations have explicit idempotence behavior."
+        },
+        "concurrency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the concurrency contract."
+        },
+        "partialFailure": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "Callback failure has explicit rollback and later-reactivation behavior."
+        },
+        "cleanupAndRollback": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the cleanupAndRollback contract."
+        },
+        "compatibility": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the compatibility contract."
+        },
+        "observability": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-003-1",
+            "AC-F-003-2",
+            "AC-F-003-3",
+            "AC-F-003-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the observability contract."
+        },
+        "securityAndPrivacy": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The generic in-process values introduce no credential, persistence, network, or privacy boundary."
+        },
+        "accessibility": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The library behavior has no rendered semantics or assistive-technology surface."
+        }
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-F-003-1",
+          "statement": "Reentrant when_activated registration and activation complete within a bounded timeout and invoke each applicable callback exactly once per activation generation."
+        },
+        {
+          "id": "AC-F-003-2",
+          "statement": "Concurrent activation-token tests prove one active bag, reference-counted lifetime, and exactly one final disposal."
+        },
+        {
+          "id": "AC-F-003-3",
+          "statement": "Failure-path tests prove a callback error disposes partial work, resets activation state, and permits a later clean activation."
+        },
+        {
+          "id": "AC-F-003-4",
+          "statement": "DisposeBag idempotence, add/dispose race, add-after-dispose, drop, Disposable, and DisposeWith tests pass with no internal Arc around the subscription mutex."
+        }
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "id": "REQ-F-004",
+      "title": "Source-compatible stream and delivery work reduction",
+      "statement": "ReactiveValueStreamExt, Signal forwarding methods, DisposeBag, and DeliveryQueue MUST remove the identified unnecessary clone, Arc, mutex, and Clone-bound work without changing ordering, duplicates, errors, subscription lifetime, or any public API name.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/stream_ext.rs",
+            "symbol": "ReactiveValueStreamExt",
+            "reason": "Current filter, filter_map, distinct_until_changed, and skip implementations expose the repeated work targeted here."
+          }
+        ]
+      },
+      "behavior": {
+        "trigger": "A caller subscribes through filter, filter_map, distinct_until_changed, skip, Signal forwarding, or DeliveryQueue.",
+        "inputs": [
+          "Generic payload references, predicates, mappers, skip counts, equality, and subscriber lifetimes."
+        ],
+        "outputs": [
+          "The same accepted values, order, duplicates, and Subscription behavior as the current public contract."
+        ],
+        "stateChanges": [
+          "Per-subscription distinct and skip state changes directly under one mutex.",
+          "DeliveryQueue retains FIFO pending emissions and subscriber ownership."
+        ],
+        "invariants": [
+          "filter forwards accepted values without a payload clone.",
+          "filter and skip accept non-Clone payloads.",
+          "DeliveryQueue remains FIFO and reentrant-safe with O(emissions × subscriber snapshot size) fanout."
+        ],
+        "errors": [
+          "Existing poisoned-lock and subscription errors retain their current behavior."
+        ],
+        "edgeCases": [
+          "skip(0).",
+          "No subscribers.",
+          "Duplicate values.",
+          "Reentrant enqueue.",
+          "Unsubscribe during delivery.",
+          "Non-Clone payloads."
+        ]
+      },
+      "coverage": {
+        "happyPath": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the happyPath contract."
+        },
+        "invalidInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The typed Rust API has no parser or untyped input boundary; poisoned synchronization remains the existing ReactiveError path."
+        },
+        "emptyInput": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the emptyInput contract."
+        },
+        "boundaryValues": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the boundaryValues contract."
+        },
+        "authorization": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The in-process reactive library has no identity, permission, or authorization boundary."
+        },
+        "cancellation": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The synchronous operation has no async cancellation boundary; subscription drop is covered as cleanup."
+        },
+        "retryAndIdempotency": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no retry protocol; repeated operations retain the existing public semantics."
+        },
+        "concurrency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the concurrency contract."
+        },
+        "partialFailure": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The operation is atomic or reports the existing ReactiveError without a partial external commit."
+        },
+        "cleanupAndRollback": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the cleanupAndRollback contract."
+        },
+        "compatibility": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the compatibility contract."
+        },
+        "observability": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-004-1",
+            "AC-F-004-2",
+            "AC-F-004-3",
+            "AC-F-004-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the observability contract."
+        },
+        "securityAndPrivacy": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The generic in-process values introduce no credential, persistence, network, or privacy boundary."
+        },
+        "accessibility": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The library behavior has no rendered semantics or assistive-technology surface."
+        }
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-F-004-1",
+          "statement": "A clone-counting test records zero payload clones for accepted filter emissions while preserving the same values."
+        },
+        {
+          "id": "AC-F-004-2",
+          "statement": "Compile-and-run tests use non-Clone payloads with filter, skip, and DeliveryQueue::enqueue."
+        },
+        {
+          "id": "AC-F-004-3",
+          "statement": "Distinct, skip, filter_map, FIFO, reentrant enqueue, duplicate, and unsubscribe characterization tests remain green."
+        },
+        {
+          "id": "AC-F-004-4",
+          "statement": "Source review and tests prove direct Mutex ownership for per-subscription state and DisposeBag plus direct Signal forwarding without temporary read-only handles."
+        }
+      ],
+      "validationProfiles": [
+        "unit",
+        "performance",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "id": "REQ-F-005",
+      "title": "Lean lossless GPUI transport",
+      "statement": "ReactiveContextExt MUST preserve lossless ordered foreground delivery while bind_stream_value owns the futures unbounded sender directly, notify_on transports unit notifications without cloning payloads, and apps/test_suite proves binding lifetime and UI notification behavior.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "crates/rayx/rayx_reactive/src/gpui.rs",
+            "symbol": "ReactiveContextExt",
+            "reason": "Current sender wrapping, payload cloning, foreground task, and GpuiBinding lifetime are implemented here."
+          }
+        ]
+      },
+      "behavior": {
+        "trigger": "A GPUI entity binds or notifies from a ValueStream and the stream emits values.",
+        "inputs": [
+          "A ValueStream, entity Context, on_value callback, payloads, and binding lifetime."
+        ],
+        "outputs": [
+          "Ordered foreground entity updates or notifications through the existing GpuiBinding API."
+        ],
+        "stateChanges": [
+          "The binding owns one subscription and one foreground receive task.",
+          "Dropping the binding ends its subscription lifetime."
+        ],
+        "invariants": [
+          "bind_stream_value preserves one ordered foreground application per received value.",
+          "notify_on transports unit and performs zero payload clones.",
+          "No GPUI entity API is called from the subscriber thread."
+        ],
+        "errors": [
+          "Subscription setup errors retain ReactiveError.",
+          "Entity update failure terminates the receive loop without retry."
+        ],
+        "edgeCases": [
+          "Rapid ordered emissions.",
+          "Binding drop.",
+          "Entity update failure.",
+          "Clone-tracked payload notification."
+        ]
+      },
+      "coverage": {
+        "happyPath": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the happyPath contract."
+        },
+        "invalidInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The typed Rust API has no parser or untyped input boundary; poisoned synchronization remains the existing ReactiveError path."
+        },
+        "emptyInput": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no collection or text input; zero subscribers remains a normal no-op."
+        },
+        "boundaryValues": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the boundaryValues contract."
+        },
+        "authorization": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The in-process reactive library has no identity, permission, or authorization boundary."
+        },
+        "cancellation": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "GpuiBinding drop is the existing cancellation and cleanup boundary."
+        },
+        "retryAndIdempotency": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The behavior has no retry protocol; repeated operations retain the existing public semantics."
+        },
+        "concurrency": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the concurrency contract."
+        },
+        "partialFailure": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "Entity update failure has an explicit receive-loop termination contract."
+        },
+        "cleanupAndRollback": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the cleanupAndRollback contract."
+        },
+        "compatibility": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the compatibility contract."
+        },
+        "observability": {
+          "status": "required",
+          "acceptanceCriteriaIds": [
+            "AC-F-005-1",
+            "AC-F-005-2",
+            "AC-F-005-3",
+            "AC-F-005-4"
+          ],
+          "rationale": "The acceptance criteria directly prove the observability contract."
+        },
+        "securityAndPrivacy": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The generic in-process values introduce no credential, persistence, network, or privacy boundary."
+        },
+        "accessibility": {
+          "status": "not-applicable",
+          "acceptanceCriteriaIds": [],
+          "rationale": "The library behavior has no rendered semantics or assistive-technology surface."
+        }
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-F-005-1",
+          "statement": "The GPUI binding implementation contains no Arc<Mutex<UnboundedSender<_>>> and preserves ordered value application."
+        },
+        {
+          "id": "AC-F-005-2",
+          "statement": "A clone-tracked notify_on proof records zero payload clones attributable to notification transport."
+        },
+        {
+          "id": "AC-F-005-3",
+          "statement": "Native DevKit/MCP and headed WASM/WebGPU interaction with the Test Suite reactive-state fixture prove ordered applied values, computed output, notifications, activation disposal, and clean binding teardown without runtime errors."
+        },
+        {
+          "id": "AC-F-005-4",
+          "statement": "Lossless unbounded ordering remains documented and GPUI coalescing or backpressure remains explicitly deferred."
+        }
+      ],
+      "validationProfiles": [
+        "unit",
+        "runtime",
+        "interaction",
+        "regression",
+        "performance"
+      ]
+    }
+  ],
+  "nonFunctionalRequirements": [
+    {
+      "id": "REQ-NF-001",
+      "title": "Complete public API preservation",
+      "statement": "Every existing public rayx_reactive and rayx_reactive_primitives item plus rayx umbrella exports MUST remain available; current lack of call sites MUST NOT justify deletion or deprecation.",
+      "provenance": {
+        "basis": "user-decision",
+        "evidence": [],
+        "userDecision": "Do not delete any API even when it is not used yet because this new library's future API usage is unknown."
+      },
+      "qualityContract": {
+        "attribute": "compatibility",
+        "metric": "Share of baseline public items that compile through direct crates and the rayx umbrella after optimization",
+        "workload": "Every public type, trait, method, function, alias, module export, and prelude export discovered before Sprint 1 implementation",
+        "baseline": "100 percent of items present at repository commit ff098cccd74d7fd446e978cf97b6d7a3edc1ca33",
+        "target": "100 percent compile unchanged with zero deletion, rename, hiding, or deprecation",
+        "measurement": "Committed direct-crate and umbrella compile fixtures plus final export diff audit",
+        "environment": "Rust 1.95.0 workspace on the implementation revision"
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-NF-001-1",
+          "statement": "Pre-change compile fixtures cover every public item and pass before internal implementation changes."
+        },
+        {
+          "id": "AC-NF-001-2",
+          "statement": "A final export audit reports zero deleted, renamed, hidden, deprecated, or replaced reactive public items."
+        },
+        {
+          "id": "AC-NF-001-3",
+          "statement": "rayx, rayx_reactive_collections, and rayx_components_propertygrid compile and test against the final reactive crates."
+        }
+      ],
+      "validationProfiles": [
+        "contract",
+        "integration",
+        "static-analysis"
+      ]
+    },
+    {
+      "id": "REQ-NF-002",
+      "title": "Evidence-backed complexity and performance",
+      "statement": "The epic MUST record pre-change and final Criterion evidence for representative signal, computed, stream, and delivery paths, exact clone and non-Clone evidence for removed work, and no unsupported performance claim.",
+      "provenance": {
+        "basis": "explicit-requirement",
+        "evidence": [],
+        "userDecision": "Perform complexity optimization after deep research and retain evidence-backed usability."
+      },
+      "qualityContract": {
+        "attribute": "performance",
+        "metric": "Median Criterion time plus exact clone counts and compile support for non-Clone payloads",
+        "workload": "Signal mutation/subscription, derive/combine2, filter/distinct/skip, DeliveryQueue fanout at 1, 32, and 256 subscribers, and GPUI notification transport",
+        "baseline": "Identical Criterion command and direct-operation tests captured before the first production source edit",
+        "target": "Each optimized case has no median regression greater than 10 percent; filter and notify_on each record zero payload clones; filter, skip, and DeliveryQueue compile and run with non-Clone payloads",
+        "measurement": "Criterion 0.5.1 saved baseline/final comparison plus exact unit instrumentation; one twice-duration rerun resolves a noisy timing failure",
+        "environment": "Same machine, toolchain, profile, command, and implementation revision for each comparison pair"
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-NF-002-1",
+          "statement": "Baseline evidence is captured at the recorded implementation baseline before reactive production source changes."
+        },
+        {
+          "id": "AC-NF-002-2",
+          "statement": "Final identical-command Criterion evidence satisfies the 10 percent median regression gate or one twice-duration rerun gate."
+        },
+        {
+          "id": "AC-NF-002-3",
+          "statement": "Exact tests prove zero filter payload clones and successful non-Clone filter, skip, and DeliveryQueue usage."
+        },
+        {
+          "id": "AC-NF-002-4",
+          "statement": "Exact tests prove zero notify_on payload clones."
+        },
+        {
+          "id": "AC-NF-002-5",
+          "statement": "The final report contains zero unmeasured throughput, allocation, locking, or asymptotic claims."
+        }
+      ],
+      "validationProfiles": [
+        "performance",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "id": "REQ-NF-003",
+      "title": "Simple lock and ownership discipline",
+      "statement": "The final implementation MUST use the smallest direct ownership model that enforces the proven contracts, keep user callbacks outside internal coordinator mutexes except public read and update closures, and introduce no unsafe code or speculative abstraction.",
+      "provenance": {
+        "basis": "agentx-default",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "AGENTS.md",
+            "symbol": "Non-negotiable simplicity rules",
+            "reason": "Repository engineering rules require direct ownership, root-cause fixes, and evidence-backed performance."
+          }
+        ]
+      },
+      "qualityContract": {
+        "attribute": "maintainability",
+        "metric": "Timeout failures, undeclared abstractions, new unsafe blocks, new production dependencies, and redundant Arc/Mutex/Clone ownership points in touched paths",
+        "workload": "All reentrancy regressions plus a final source review of touched reactive and primitive modules",
+        "baseline": "Current source has zero unsafe blocks and zero planned production dependency additions, with the redundant ownership points named by DES-002 through DES-006",
+        "target": "Zero timeout failures, zero unsafe blocks, zero new production dependencies, zero undeclared abstractions, and all named redundant ownership points removed",
+        "measurement": "Focused timeout tests, cargo clippy, manifest diff, rg-based source review, and AgentX design-quality audit",
+        "environment": "Rust 1.95.0 all-target crate validation on the final implementation revision"
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-NF-003-1",
+          "statement": "Signal reentrancy regressions complete within their bounded timeouts."
+        },
+        {
+          "id": "AC-NF-003-2",
+          "statement": "Computed reentrancy regressions complete within their bounded timeouts."
+        },
+        {
+          "id": "AC-NF-003-3",
+          "statement": "Activation reentrancy regressions complete within their bounded timeouts."
+        },
+        {
+          "id": "AC-NF-003-4",
+          "statement": "Stream and delivery review reports no redundant Arc, Mutex, Clone bound, branch, or forwarding helper in the optimized paths."
+        },
+        {
+          "id": "AC-NF-003-5",
+          "statement": "GPUI review reports direct sender ownership and unit-only notification transport."
+        },
+        {
+          "id": "AC-NF-003-6",
+          "statement": "Final review reports zero unsafe blocks, production dependencies, speculative caches, batching layers, concurrency frameworks, compatibility shims, or undeclared abstractions."
+        }
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "architecture",
+        "static-analysis"
+      ]
+    },
+    {
+      "id": "REQ-NF-004",
+      "title": "Cross-crate and cross-runtime proof",
+      "statement": "The final revision MUST pass focused and broad Rust validation, downstream consumers, native Test Suite DevKit/MCP proof, headed WASM/WebGPU Playwright proof, AgentX audits, and evidence-backed guidance updates.",
+      "provenance": {
+        "basis": "repository-pattern",
+        "evidence": [
+          {
+            "repositoryId": "main",
+            "path": "AGENTS.md",
+            "symbol": "TESTING AND DIAGNOSTICS APPLICATION BOUNDARY",
+            "reason": "Repository policy makes apps/test_suite the exclusive application validation surface."
+          }
+        ]
+      },
+      "qualityContract": {
+        "attribute": "operations",
+        "metric": "Failed required commands, runtime crashes, DevKit/MCP errors, Playwright assertion failures, stale AgentX contracts, and memory audit errors",
+        "workload": "Both reactive crates, downstream collections/umbrella/PropertyGrid consumers, one native Test Suite reactive route, one headed WASM/WebGPU Playwright specification, and all AgentX task artifacts",
+        "baseline": "The V3 epic references forbidden Lab validation and has no Test Suite reactive fixture",
+        "target": "Zero failed required commands, crashes, runtime errors, stale contracts, schema errors, strict-audit errors, or memory-audit errors",
+        "measurement": "Named cargo, xtask, DevKit/MCP, Playwright, agentx_task.py, and memory-audit commands",
+        "environment": "Repository toolchain with apps/test_suite and tools-node/test_suite on native host and headed Chromium WebGPU"
+      },
+      "acceptanceCriteria": [
+        {
+          "id": "AC-NF-004-1",
+          "statement": "cargo fmt, targeted clippy, reactive and downstream tests, rustdoc, and the source guard pass on the final revision."
+        },
+        {
+          "id": "AC-NF-004-2",
+          "statement": "Native Test Suite DevKit/MCP and headed WASM/WebGPU Playwright prove the reactive-state fixture without crash or error."
+        },
+        {
+          "id": "AC-NF-004-3",
+          "statement": "RayX reactive skill guidance and AgentX reactive-state memory match the final proven implementation."
+        },
+        {
+          "id": "AC-NF-004-4",
+          "statement": "AgentX schema validation, strict task audit, sprint audits, checkpoint verification, and memory audit report zero errors."
+        }
+      ],
+      "validationProfiles": [
+        "integration",
+        "runtime",
+        "interaction",
+        "docs",
+        "static-analysis"
+      ]
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "ASM-001",
+      "statement": "The internal implementation can change freely when every current public surface and observable behavior remains preserved.",
+      "basis": "bounded-assumption",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/lib.rs",
+          "symbol": "prelude",
+          "reason": "The public facade is explicit and supports a compile-fixture compatibility gate."
+        }
+      ],
+      "revalidationTrigger": "A required correctness fix proves impossible without a public signature or semantic change."
+    },
+    {
+      "id": "ASM-002",
+      "statement": "Criterion 0.5.1 is acceptable as a dev-only dependency for the requested optimization evidence.",
+      "basis": "agentx-default",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/Cargo.toml",
+          "symbol": "dev-dependencies",
+          "reason": "The crate currently has no benchmark dependency and production dependency policy forbids adding one."
+        }
+      ],
+      "revalidationTrigger": "The repository adopts another benchmark harness before Sprint 1 starts."
+    },
+    {
+      "id": "ASM-003",
+      "statement": "Lossless unbounded GPUI transport remains the contract; batching, coalescing, and backpressure stay deferred.",
+      "basis": "repository-pattern",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "crates/rayx/rayx_reactive/src/gpui.rs",
+          "symbol": "bind_stream_value",
+          "reason": "The current public binding forwards every received value through futures unbounded mpsc."
+        }
+      ],
+      "revalidationTrigger": "Measured runtime evidence demonstrates unbounded transport is unsafe for the representative workload."
+    },
+    {
+      "id": "ASM-004",
+      "statement": "The Test Suite reactive fixture remains diagnostic-only and consumes only public reactive APIs.",
+      "basis": "repository-pattern",
+      "evidence": [
+        {
+          "repositoryId": "main",
+          "path": "apps/test_suite/src/pages/media_query.rs",
+          "symbol": "page",
+          "reason": "Existing Test Suite pages publish bounded diagnostic snapshots from production APIs."
+        }
+      ],
+      "revalidationTrigger": "The fixture requires crate-private access to prove a required acceptance criterion."
+    }
+  ],
+  "risks": [
+    "A subscription handshake that is correct for simple concurrency can still fail under reentrant initial callbacks; the controlled regression is mandatory.",
+    "Activation failure can race a later generation; generation identity and exactly-once disposal evidence are mandatory.",
+    "Criterion noise can obscure a regression; only one predefined twice-duration rerun is accepted.",
+    "An overly broad final repair can cross sprint ownership; convergence blocks and routes repairs back to the owning task."
+  ],
+  "deferredNonGoals": [
+    "Reactive derive macros and broader API sugar.",
+    "Stream backpressure, batching, coalescing, caches, pooling, custom allocation, SIMD, and unsafe code.",
+    "A combined scalar and SourceList/SourceCache demonstration beyond the focused scalar Test Suite fixture.",
+    "Android runtime proof because the internal optimization is target-agnostic and the required observable slice is explicitly native plus WASM; Android remains a later validation expansion."
+  ],
+  "migration": {
+    "sourceVersion": 3,
+    "reviewRequired": false
+  }
+}

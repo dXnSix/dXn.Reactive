@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 4,
+  "epicId": "rayx-reactive-complexity-optimization",
+  "sprint": 4,
+  "auditSha256": "d5dfe511c23d1fc24f01aea3fa351117cd085630b84b7a20ade72cfaba013fb9",
+  "evidenceSha256": "82582e289774934629bfb75e22bec2967faf22ecfd85df952cb2250bd0b999e2",
+  "repositories": [
+    {
+      "id": "main",
+      "path": "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX",
+      "baselineHead": "26167bd333d1496ea39f589b8efa697e5196f24a",
+      "resultHead": "0dfa8fb174213fda69c53b82b86abefef6b9a5ba",
+      "commits": [
+        "0dfa8fb174213fda69c53b82b86abefef6b9a5ba"
+      ],
+      "statusHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sprintOwnedPaths": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\stream_ext.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\delivery-queue-fanout\\enqueue\\256\\change\\estimates.json",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\stream-operators\\filter-distinct-skip\\256\\change\\estimates.json"
+      ],
+      "unrelatedDirtyPaths": [],
+      "rollbackCommand": "git -C \"C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\" revert --no-commit 26167bd333d1496ea39f589b8efa697e5196f24a..0dfa8fb174213fda69c53b82b86abefef6b9a5ba"
+    }
+  ],
+  "generatedAt": "2026-07-26T16:19:48Z"
+}

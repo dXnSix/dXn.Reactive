@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 4,
+  "generatorVersion": "4.0",
+  "epicId": "rayx-reactive-complexity-optimization",
+  "sprint": 1,
+  "status": "passed",
+  "headBeforeCommit": "fe28319c98aeeadf2d7caf7f46fe0aff0552368e",
+  "filesReviewed": [
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx\\tests\\public_api.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs"
+  ],
+  "conformance": [
+    {
+      "requirementId": "REQ-F-001",
+      "taskIds": [
+        "sprint-1-task-3"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-001-1",
+        "AC-F-001-2",
+        "AC-F-001-3",
+        "AC-F-001-4",
+        "AC-NF-003-1"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-001-1",
+        "AC-F-001-2",
+        "AC-F-001-3",
+        "AC-F-001-4",
+        "AC-NF-003-1"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs"
+      ],
+      "testLocations": [],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    },
+    {
+      "requirementId": "REQ-NF-001",
+      "taskIds": [
+        "sprint-1-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-NF-001-1"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-NF-001-1"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx\\tests\\public_api.rs"
+      ],
+      "testLocations": [],
+      "evidenceProfiles": [
+        "contract",
+        "integration",
+        "static-analysis"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    },
+    {
+      "requirementId": "REQ-NF-002",
+      "taskIds": [
+        "sprint-1-task-2"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-NF-002-1"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-NF-002-1"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs"
+      ],
+      "testLocations": [],
+      "evidenceProfiles": [
+        "behavior-preservation",
+        "performance"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    },
+    {
+      "requirementId": "REQ-NF-003",
+      "taskIds": [
+        "sprint-1-task-3"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-001-1",
+        "AC-F-001-2",
+        "AC-F-001-3",
+        "AC-F-001-4",
+        "AC-NF-003-1"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-001-1",
+        "AC-F-001-2",
+        "AC-F-001-3",
+        "AC-F-001-4",
+        "AC-NF-003-1"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs"
+      ],
+      "testLocations": [],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    }
+  ],
+  "designQuality": {
+    "declaredWritePaths": [
+      "main:crates/rayx/rayx/tests/public_api.rs",
+      "main:crates/rayx/rayx_reactive/Cargo.toml",
+      "main:crates/rayx/rayx_reactive/benches/reactive_complexity.rs",
+      "main:crates/rayx/rayx_reactive/src/signal.rs",
+      "main:crates/rayx/rayx_reactive/src/tests.rs",
+      "main:crates/rayx/rayx_reactive/src/tests/signal.rs",
+      "main:crates/rayx/rayx_reactive/tests/public_api.rs",
+      "main:crates/rayx/rayx_reactive_primitives/Cargo.toml",
+      "main:crates/rayx/rayx_reactive_primitives/benches/delivery_complexity.rs",
+      "main:crates/rayx/rayx_reactive_primitives/tests/public_api.rs"
+    ],
+    "actualChangedPaths": [],
+    "unexpectedChangedPaths": [],
+    "responsibilityIds": [
+      "RESP-001",
+      "RESP-002"
+    ],
+    "newAbstractions": [],
+    "newDependencies": [
+      "criterion 0.5.1 dev dependency"
+    ],
+    "newPublicApi": [],
+    "unapprovedDesignAdditions": [],
+    "result": "pass",
+    "reason": "Actual changed paths stay within declared task scopes; declared responsibilities and explicitly allowed design additions are recorded for semantic review."
+  },
+  "commands": [
+    {
+      "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+      "exitCode": 0,
+      "assertion": "Public fixtures and Signal behavior MUST pass.",
+      "stdoutHash": "3d97196f6d3329c7451599636823abd830dede3098dc2c74539a8a8f266ca345",
+      "stderrHash": "c5fd6c4a36cbb5a9d05d5ac028da6956140b69c0499d37a12f582ed159e6ef92",
+      "failureOutputTail": ""
+    },
+    {
+      "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+      "exitCode": 0,
+      "assertion": "Affected all-target clippy MUST pass.",
+      "stdoutHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrHash": "cbad3e526dd89d5bff8a3fc4552fe58586db996b923a31cb8e637eef6e98bd9a",
+      "failureOutputTail": ""
+    }
+  ],
+  "defects": [],
+  "repairs": [],
+  "reauditCount": 2,
+  "residualRisks": [],
+  "generatedAt": "2026-07-26T15:35:42Z"
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 4,
+  "sourceVersion": 3,
+  "targetVersion": 4,
+  "taskDir": "D:\\Work\\projects\\RayX\\RayX\\.agentx\\tasks\\rayx-reactive-complexity-optimization",
+  "dryRun": false,
+  "beforeHashes": {
+    "design.json": "94f851a394b663450fda73e8611fc9bdb33cbf591063bf97e18e50ef0f270374",
+    "implementation-plan.json": "c59e3d8f9e601571d8ac7d82507e667fdde840cf895c37249de38d57d848781f",
+    "repositories.json": "4a1790ccf997567a698fafa5a32b302027b977fc34b073b59c5212a956054ca4",
+    "requirements.json": "c13dd51db50979371c4bfc71e173873ca43464e812db1198a77dc70a6b8d2c90",
+    "resume.json": "4aebbd66569df1512f235f6721141140a84053aa573f979ad6f66a11dfb3a7fe",
+    "state.json": "6d8be1026c7b1de7ad8e952d43f731b3a89f5d79245d284d80ab225b23a645be",
+    "task-contracts.json": "4094b2db26b16762695182622f59be23aafd2789a70c68347db1fde126c07263"
+  },
+  "afterHashes": {
+    "requirements.json": "97f0053fb1a35deabc1f3216e6c51d1b3c67ae1de819e6c80acb1215f9b6de6e",
+    "design.json": "8eb63b803412aa8c63614b8678f3134f5bbbcc2b269a2a67ef74137b81b34428",
+    "implementation-plan.json": "7d5782961feaddd1379c3b90e60db4c9f2039ed5cb5b70ea502068268930ff07",
+    "state.json": "045f647a867c4b9da1ad9a3f6a4c0e31cf5c7b3a1e883b201276bc696929f162",
+    "task-contracts.json": "95768f33b93145692d04a029eb330f00fe83ca21be2b540ca6e6a66df6297a86",
+    "repositories.json": "c0e9df6b371deb7275d26b48590efc12cda5a12f6f3df090dba6ff10cb85bc87"
+  },
+  "changedFiles": [
+    "design.json",
+    "implementation-plan.json",
+    "repositories.json",
+    "requirements.json",
+    "state.json",
+    "task-contracts.json"
+  ],
+  "archivedFiles": [],
+  "reviewRequired": true,
+  "migratedAt": "2026-07-26T14:34:15Z"
+}

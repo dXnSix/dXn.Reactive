@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 4,
+  "generatorVersion": "4.0",
+  "epicId": "rayx-reactive-complexity-optimization",
+  "sprint": 4,
+  "status": "passed",
+  "headBeforeCommit": "26167bd333d1496ea39f589b8efa697e5196f24a",
+  "filesReviewed": [
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\stream_ext.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\delivery-queue-fanout\\enqueue\\256\\change\\estimates.json",
+    "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\stream-operators\\filter-distinct-skip\\256\\change\\estimates.json"
+  ],
+  "conformance": [
+    {
+      "requirementId": "REQ-F-004",
+      "taskIds": [
+        "sprint-4-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4",
+        "AC-NF-002-3",
+        "AC-NF-003-4"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4",
+        "AC-NF-002-3",
+        "AC-NF-003-4"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\stream_ext.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\delivery-queue-fanout\\enqueue\\256\\change\\estimates.json",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\stream-operators\\filter-distinct-skip\\256\\change\\estimates.json"
+      ],
+      "testLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs"
+      ],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "performance",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    },
+    {
+      "requirementId": "REQ-NF-002",
+      "taskIds": [
+        "sprint-4-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4",
+        "AC-NF-002-3",
+        "AC-NF-003-4"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4",
+        "AC-NF-002-3",
+        "AC-NF-003-4"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\stream_ext.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\delivery-queue-fanout\\enqueue\\256\\change\\estimates.json",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\stream-operators\\filter-distinct-skip\\256\\change\\estimates.json"
+      ],
+      "testLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs"
+      ],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "performance",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    },
+    {
+      "requirementId": "REQ-NF-003",
+      "taskIds": [
+        "sprint-4-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4",
+        "AC-NF-002-3",
+        "AC-NF-003-4"
+      ],
+      "evidenceAcceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4",
+        "AC-NF-002-3",
+        "AC-NF-003-4"
+      ],
+      "missingAcceptanceCriteriaIds": [],
+      "implementationLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\benches\\reactive_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\signal.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\stream_ext.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\benches\\delivery_complexity.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\delivery-queue-fanout\\enqueue\\256\\change\\estimates.json",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\target\\criterion\\stream-operators\\filter-distinct-skip\\256\\change\\estimates.json"
+      ],
+      "testLocations": [
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive\\src\\tests.rs",
+        "C:\\Users\\dinko\\.codex\\worktrees\\beaf\\RayX\\crates\\rayx\\rayx_reactive_primitives\\src\\delivery.rs"
+      ],
+      "evidenceProfiles": [
+        "architecture",
+        "behavior-preservation",
+        "performance",
+        "regression",
+        "static-analysis",
+        "unit"
+      ],
+      "missingProfiles": [],
+      "result": "pass",
+      "reason": "All mapped tasks are done with fresh profile-complete evidence."
+    }
+  ],
+  "designQuality": {
+    "declaredWritePaths": [
+      "main:crates/rayx/rayx_reactive/src/signal.rs",
+      "main:crates/rayx/rayx_reactive/src/stream_ext.rs",
+      "main:crates/rayx/rayx_reactive/src/tests.rs",
+      "main:crates/rayx/rayx_reactive/src/tests/stream_ext.rs",
+      "main:crates/rayx/rayx_reactive_primitives/src/delivery.rs",
+      "main:crates/rayx/rayx_reactive_primitives/src/tests/delivery.rs"
+    ],
+    "actualChangedPaths": [
+      "main:crates/rayx/rayx_reactive/src/signal.rs",
+      "main:crates/rayx/rayx_reactive/src/stream_ext.rs",
+      "main:crates/rayx/rayx_reactive/src/tests.rs",
+      "main:crates/rayx/rayx_reactive_primitives/src/delivery.rs"
+    ],
+    "unexpectedChangedPaths": [],
+    "responsibilityIds": [
+      "RESP-005",
+      "RESP-006"
+    ],
+    "newAbstractions": [],
+    "newDependencies": [],
+    "newPublicApi": [],
+    "unapprovedDesignAdditions": [],
+    "result": "pass",
+    "reason": "Actual changed paths stay within declared task scopes; declared responsibilities and explicitly allowed design additions are recorded for semantic review."
+  },
+  "commands": [
+    {
+      "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+      "effectiveCommand": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+      "exitCode": 0,
+      "assertion": "Both reactive crate test suites MUST pass.",
+      "stdoutHash": "643c52b8be39631e28780ff09821aebf6cb6b68dd6d8c4f1e2023235e1395cfb",
+      "stderrHash": "a93f21ec59c7ae95505fdc84e552ec80f2fd02d921ea4db7c072e74845890901",
+      "failureOutputTail": ""
+    },
+    {
+      "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+      "effectiveCommand": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+      "exitCode": 0,
+      "assertion": "All-target reactive clippy MUST pass with warnings denied.",
+      "stdoutHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrHash": "132d8f9813fd0518ff77c1a062a2e99512c1239c3e418eef63423374de32ac3b",
+      "failureOutputTail": ""
+    },
+    {
+      "command": "cargo bench -p rayx_reactive -p rayx_reactive_primitives -- --baseline reactive-pre-optimization",
+      "effectiveCommand": "cargo bench -p rayx_reactive -p rayx_reactive_primitives --bench reactive_complexity --bench delivery_complexity -- --baseline reactive-pre-optimization",
+      "exitCode": 0,
+      "assertion": "Stream and delivery benchmark cases MUST satisfy the bounded regression gate.",
+      "stdoutHash": "30eab7638ba9960743b2263cb325b72aee55b4c205f4c0c588169fd00740ddd3",
+      "stderrHash": "57c35441859973fc26fd4e81ad010f04e4a97edd53cea9b5263f5426ce6fda93",
+      "failureOutputTail": ""
+    }
+  ],
+  "defects": [],
+  "repairs": [],
+  "reauditCount": 1,
+  "residualRisks": [],
+  "generatedAt": "2026-07-26T16:19:41Z"
+}

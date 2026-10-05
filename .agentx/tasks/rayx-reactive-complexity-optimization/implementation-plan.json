@@ -1,0 +1,1850 @@
+{
+  "schemaVersion": 4,
+  "epicId": "rayx-reactive-complexity-optimization",
+  "title": "RayX Reactive Complexity Optimization Implementation Plan",
+  "executionPolicy": {
+    "defaultMode": "sequential",
+    "subagentsRequireExplicitUserAuthorization": true,
+    "coordinatorOwnsTaskCompletion": true,
+    "maxParallelSprints": 3,
+    "leaseDurationSeconds": 1800,
+    "maxAttempts": 3
+  },
+  "sprints": [
+    {
+      "id": "sprint-1",
+      "number": 1,
+      "title": "Public contract, measured baseline, and lossless Signal slice",
+      "dependencies": [],
+      "parallelization": {
+        "mode": "sequential",
+        "rationale": "This smallest observable slice freezes the API and evidence contract, then proves corrected Signal ordering and subscription behavior before dependent work.",
+        "disjointOwnedScopes": []
+      },
+      "groups": [
+        {
+          "id": "group-1-1",
+          "title": "Freeze contracts and deliver ordered Signal behavior",
+          "dependencies": [],
+          "tasks": [
+            {
+              "id": "sprint-1-task-1",
+              "title": "Commit the complete reactive public contract",
+              "action": "MUST add direct rayx_reactive, rayx_reactive_primitives, and rayx umbrella compile fixtures that exercise every current public item before production source edits.",
+              "kind": "api",
+              "requirementIds": [
+                "REQ-NF-001"
+              ],
+              "designIds": [
+                "DES-001"
+              ],
+              "dependencies": [],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/tests/public_api.rs",
+                  "crates/rayx/rayx_reactive_primitives/tests/public_api.rs",
+                  "crates/rayx/rayx/tests/public_api.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-001"
+                ],
+                "symbols": [
+                  "rayx_reactive::prelude",
+                  "rayx_reactive_primitives::prelude",
+                  "rayx::reactive"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-NF-001-1"
+              ],
+              "proofMode": "contract-before-after",
+              "proofObligations": [
+                "Every public item present at the implementation baseline MUST compile through a permanent fixture.",
+                "The fixture MUST pass before and after every production optimization task."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Existing crate preludes, module exports, and neighboring compile-test conventions."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Test-only fixture helpers with no production visibility.",
+                  "criterion 0.5.1 dev dependency"
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "contract",
+                  "integration",
+                  "static-analysis"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+                    "assertion": "The command MUST satisfy the contract obligations assigned to this task.",
+                    "validationProfile": "contract"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+                    "assertion": "The command MUST satisfy the contract obligations assigned to this task.",
+                    "validationProfile": "contract"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+                    "assertion": "The command MUST satisfy the integration obligations assigned to this task.",
+                    "validationProfile": "integration"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+                    "assertion": "Direct and umbrella public contract suites MUST pass."
+                  }
+                ]
+              },
+              "status": "done"
+            },
+            {
+              "id": "sprint-1-task-2",
+              "title": "Capture the pre-change complexity benchmark baseline",
+              "action": "MUST add the Criterion reactive complexity matrix and capture its saved pre-change baseline before any reactive production source edit.",
+              "kind": "performance",
+              "requirementIds": [
+                "REQ-NF-002"
+              ],
+              "designIds": [
+                "DES-001"
+              ],
+              "dependencies": [
+                "sprint-1-task-1"
+              ],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/Cargo.toml",
+                  "crates/rayx/rayx_reactive/benches/reactive_complexity.rs",
+                  "crates/rayx/rayx_reactive_primitives/Cargo.toml",
+                  "crates/rayx/rayx_reactive_primitives/benches/delivery_complexity.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-001"
+                ],
+                "symbols": [
+                  "Criterion benchmark groups"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-NF-002-1"
+              ],
+              "proofMode": "baseline-target",
+              "proofObligations": [
+                "The baseline MUST cover Signal, Computed, stream operators, and DeliveryQueue fanout at 1, 32, and 256 subscribers.",
+                "The saved baseline MUST identify the exact repository commit, toolchain, command, and environment."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Existing public operations and Criterion 0.5.1 as a dev-only dependency."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "criterion 0.5.1 dev dependency",
+                  "Two crate-local benchmark files"
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "performance",
+                  "behavior-preservation"
+                ],
+                "red": [
+                  {
+                    "command": "cargo bench -p rayx_reactive -p rayx_reactive_primitives --no-run",
+                    "assertion": "The pre-benchmark command MUST establish that no complete reactive matrix exists before this task.",
+                    "validationProfile": "performance"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo bench -p rayx_reactive -p rayx_reactive_primitives --bench reactive_complexity --bench delivery_complexity -- --save-baseline reactive-pre-optimization",
+                    "assertion": "The command MUST satisfy the performance obligations assigned to this task.",
+                    "validationProfile": "performance"
+                  },
+                  {
+                    "command": "cargo bench -p rayx_reactive -p rayx_reactive_primitives --bench reactive_complexity --bench delivery_complexity -- --save-baseline reactive-pre-optimization",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+                    "assertion": "Adding benchmark-only code MUST preserve both crate test suites."
+                  }
+                ]
+              },
+              "status": "done"
+            },
+            {
+              "id": "sprint-1-task-3",
+              "title": "Implement ordered atomic Signal mutation and lossless values",
+              "action": "MUST implement atomic equality, mutation, version assignment, ordered post-lock delivery, and a lossless reentrant values startup handshake while preserving every public Signal API.",
+              "kind": "bugfix",
+              "requirementIds": [
+                "REQ-F-001",
+                "REQ-NF-003"
+              ],
+              "designIds": [
+                "DES-002"
+              ],
+              "dependencies": [
+                "sprint-1-task-2"
+              ],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/src/signal.rs",
+                  "crates/rayx/rayx_reactive/src/tests/signal.rs",
+                  "crates/rayx/rayx_reactive/src/tests.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-002"
+                ],
+                "symbols": [
+                  "Signal",
+                  "ReadSignal",
+                  "SignalInner",
+                  "SignalState",
+                  "SignalChange"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-F-001-1",
+                "AC-F-001-2",
+                "AC-F-001-3",
+                "AC-F-001-4",
+                "AC-NF-003-1"
+              ],
+              "proofMode": "red-green",
+              "proofObligations": [
+                "Concurrent equal set MUST commit once.",
+                "Committed versions MUST deliver in order under concurrent and reentrant mutation.",
+                "values MUST emit one synchronous baseline followed by every later committed version.",
+                "Public Signal fixtures MUST remain unchanged."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "SignalState value/version ownership and DeliveryQueue."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Private Signal state fields and crate-private subscription plumbing required by DES-002."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "unit",
+                  "regression",
+                  "behavior-preservation",
+                  "architecture",
+                  "static-analysis"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive signal_ -- --nocapture",
+                    "assertion": "The new Signal regressions MUST fail against the pre-fix implementation.",
+                    "validationProfile": "unit"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive signal -- --nocapture",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive signal -- --nocapture",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive signal -- --nocapture",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive signal -- --nocapture",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive signal -- --nocapture",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+                    "assertion": "Both reactive crate test suites MUST pass."
+                  },
+                  {
+                    "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+                    "assertion": "All-target reactive clippy MUST pass with warnings denied."
+                  }
+                ]
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "exitContract": {
+        "requirementIds": [
+          "REQ-F-001",
+          "REQ-NF-001",
+          "REQ-NF-002",
+          "REQ-NF-003"
+        ],
+        "broadValidation": [
+          {
+            "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx",
+            "assertion": "Public fixtures and Signal behavior MUST pass."
+          },
+          {
+            "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+            "assertion": "Affected all-target clippy MUST pass."
+          }
+        ],
+        "auditFocus": [
+          "Public inventory is complete.",
+          "Baseline predates production edits.",
+          "Signal versions and values startup are lossless.",
+          "All acceptance evidence is fresh."
+        ],
+        "designQualityFocus": [
+          "No public item changed.",
+          "One Signal owner retains value/version/handshake state.",
+          "No callback runs under the coordinator lock.",
+          "Criterion remains dev-only."
+        ],
+        "commitScope": [
+          "feat(reactive): make signal mutation and values delivery lossless"
+        ]
+      }
+    },
+    {
+      "id": "sprint-2",
+      "number": 2,
+      "title": "Lossless reentrant Computed values",
+      "dependencies": [
+        "sprint-1"
+      ],
+      "parallelization": {
+        "mode": "parallel",
+        "rationale": "Computed is a complete disjoint vertical slice after the Signal handshake exists and can overlap Sprints 3 and 4 only with explicit user authorization.",
+        "disjointOwnedScopes": [
+          "crates/rayx/rayx_reactive/src/computed.rs",
+          "crates/rayx/rayx_reactive/src/tests/computed.rs",
+          "crates/rayx/rayx_reactive/src/tests.rs"
+        ]
+      },
+      "groups": [
+        {
+          "id": "group-2-1",
+          "title": "Deliver reentrant Computed construction",
+          "dependencies": [],
+          "tasks": [
+            {
+              "id": "sprint-2-task-1",
+              "title": "Implement lossless reentrant Computed construction",
+              "action": "MUST implement version-aware derive and combine2 construction with user closures outside internal mutexes and preserve output and drop-owned subscription behavior.",
+              "kind": "bugfix",
+              "requirementIds": [
+                "REQ-F-002",
+                "REQ-NF-003"
+              ],
+              "designIds": [
+                "DES-003"
+              ],
+              "dependencies": [],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/src/computed.rs",
+                  "crates/rayx/rayx_reactive/src/tests/computed.rs",
+                  "crates/rayx/rayx_reactive/src/tests.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-002",
+                  "RESP-003"
+                ],
+                "symbols": [
+                  "Computed",
+                  "Signal private versioned subscription"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-F-002-1",
+                "AC-F-002-2",
+                "AC-F-002-3",
+                "AC-F-002-4",
+                "AC-NF-003-2"
+              ],
+              "proofMode": "red-green",
+              "proofObligations": [
+                "derive and combine2 reentrancy MUST complete within bounded timeouts.",
+                "Construction races MUST retain post-baseline source versions.",
+                "Dropping Computed MUST stop tracking."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "DES-002 private Signal handshake and existing DisposeBag ownership."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Private latest-version bookkeeping inside Computed."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "unit",
+                  "regression",
+                  "behavior-preservation",
+                  "architecture",
+                  "static-analysis"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive computed_ -- --nocapture",
+                    "assertion": "The new Computed regressions MUST fail or time out against the pre-fix implementation.",
+                    "validationProfile": "unit"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive computed -- --nocapture",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive computed -- --nocapture",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive computed -- --nocapture",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive computed -- --nocapture",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive computed -- --nocapture",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+                    "assertion": "Both reactive crate test suites MUST pass."
+                  },
+                  {
+                    "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+                    "assertion": "All-target reactive clippy MUST pass with warnings denied."
+                  }
+                ]
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "exitContract": {
+        "requirementIds": [
+          "REQ-F-002",
+          "REQ-NF-003"
+        ],
+        "broadValidation": [
+          {
+            "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+            "assertion": "Both reactive crate test suites MUST pass."
+          },
+          {
+            "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+            "assertion": "All-target reactive clippy MUST pass with warnings denied."
+          }
+        ],
+        "auditFocus": [
+          "derive/combine closures run outside locks.",
+          "Construction races retain post-baseline versions.",
+          "Drop ends source tracking."
+        ],
+        "designQualityFocus": [
+          "Computed reuses the Signal handshake.",
+          "No second subscription protocol or public abstraction is added."
+        ],
+        "commitScope": [
+          "fix(reactive): make computed construction lossless and reentrant"
+        ]
+      }
+    },
+    {
+      "id": "sprint-3",
+      "number": 3,
+      "title": "Activation generations and direct disposal ownership",
+      "dependencies": [
+        "sprint-1"
+      ],
+      "parallelization": {
+        "mode": "parallel",
+        "rationale": "Activation/disposal is a complete disjoint lifecycle slice after the shared public contract and can overlap Sprints 2 and 4 only with explicit user authorization.",
+        "disjointOwnedScopes": [
+          "crates/rayx/rayx_reactive/src/activation.rs",
+          "crates/rayx/rayx_reactive/src/disposal.rs",
+          "crates/rayx/rayx_reactive/src/tests/activation.rs",
+          "crates/rayx/rayx_reactive/src/tests/disposal.rs",
+          "crates/rayx/rayx_reactive/src/tests.rs"
+        ]
+      },
+      "groups": [
+        {
+          "id": "group-3-1",
+          "title": "Deliver lock-safe activation and disposal",
+          "dependencies": [],
+          "tasks": [
+            {
+              "id": "sprint-3-task-1",
+              "title": "Implement activation generations and direct DisposeBag ownership",
+              "action": "MUST run activation callbacks and disposal outside activator locks, isolate failed generations, preserve reference-counted activation, and remove DisposeBag's redundant internal Arc.",
+              "kind": "bugfix",
+              "requirementIds": [
+                "REQ-F-003",
+                "REQ-NF-003"
+              ],
+              "designIds": [
+                "DES-004"
+              ],
+              "dependencies": [],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/src/activation.rs",
+                  "crates/rayx/rayx_reactive/src/disposal.rs",
+                  "crates/rayx/rayx_reactive/src/tests/activation.rs",
+                  "crates/rayx/rayx_reactive/src/tests/disposal.rs",
+                  "crates/rayx/rayx_reactive/src/tests.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-004"
+                ],
+                "symbols": [
+                  "ViewModelActivator",
+                  "ActivationState",
+                  "ActivationToken",
+                  "DisposeBag",
+                  "Disposable",
+                  "DisposeWith"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-F-003-1",
+                "AC-F-003-2",
+                "AC-F-003-3",
+                "AC-F-003-4",
+                "AC-NF-003-3"
+              ],
+              "proofMode": "red-green",
+              "proofObligations": [
+                "Reentrant registration MUST not deadlock.",
+                "Concurrent tokens MUST share and dispose one generation exactly once.",
+                "Failed activation MUST not affect a later generation.",
+                "DisposeBag races and idempotence MUST remain correct."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Existing activation count, callback registry, DisposeBag, Subscription drop, and AtomicBool."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Private activation generation identity and direct mutex ownership."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "unit",
+                  "regression",
+                  "behavior-preservation",
+                  "architecture",
+                  "static-analysis"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive lifecycle_ -- --nocapture",
+                    "assertion": "The new lifecycle regressions MUST fail or time out against the pre-fix implementation.",
+                    "validationProfile": "unit"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive -- --nocapture",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -- --nocapture",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -- --nocapture",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -- --nocapture",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -- --nocapture",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+                    "assertion": "Both reactive crate test suites MUST pass."
+                  },
+                  {
+                    "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+                    "assertion": "All-target reactive clippy MUST pass with warnings denied."
+                  }
+                ]
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "exitContract": {
+        "requirementIds": [
+          "REQ-F-003",
+          "REQ-NF-003"
+        ],
+        "broadValidation": [
+          {
+            "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+            "assertion": "Both reactive crate test suites MUST pass."
+          },
+          {
+            "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+            "assertion": "All-target reactive clippy MUST pass with warnings denied."
+          }
+        ],
+        "auditFocus": [
+          "Callbacks execute outside locks.",
+          "Generation failure cannot affect reactivation.",
+          "Disposal is exactly once."
+        ],
+        "designQualityFocus": [
+          "ViewModelActivator remains the sole lifecycle owner.",
+          "DisposeBag owns one direct mutex without a forwarding layer."
+        ],
+        "commitScope": [
+          "fix(reactive): make activation generations lock safe"
+        ]
+      }
+    },
+    {
+      "id": "sprint-4",
+      "number": 4,
+      "title": "Stream and delivery mechanical work reduction",
+      "dependencies": [
+        "sprint-1"
+      ],
+      "parallelization": {
+        "mode": "parallel",
+        "rationale": "Stream/delivery is a complete disjoint optimization slice after the baseline and can overlap Sprints 2 and 3 only with explicit user authorization.",
+        "disjointOwnedScopes": [
+          "crates/rayx/rayx_reactive/src/stream_ext.rs",
+          "crates/rayx/rayx_reactive/src/signal.rs",
+          "crates/rayx/rayx_reactive/src/tests/stream_ext.rs",
+          "crates/rayx/rayx_reactive/src/tests.rs",
+          "crates/rayx/rayx_reactive_primitives/src/delivery.rs",
+          "crates/rayx/rayx_reactive_primitives/src/tests/delivery.rs"
+        ]
+      },
+      "groups": [
+        {
+          "id": "group-4-1",
+          "title": "Remove exact stream and delivery overhead",
+          "dependencies": [],
+          "tasks": [
+            {
+              "id": "sprint-4-task-1",
+              "title": "Remove proven stream and delivery work",
+              "action": "MUST remove the accepted filter clone, unused filter/skip/DeliveryQueue Clone bounds, nested per-subscription Arc ownership, redundant Signal forwarding handles, and no other delivery behavior.",
+              "kind": "performance",
+              "requirementIds": [
+                "REQ-F-004",
+                "REQ-NF-002",
+                "REQ-NF-003"
+              ],
+              "designIds": [
+                "DES-005"
+              ],
+              "dependencies": [],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/src/stream_ext.rs",
+                  "crates/rayx/rayx_reactive/src/signal.rs",
+                  "crates/rayx/rayx_reactive/src/tests/stream_ext.rs",
+                  "crates/rayx/rayx_reactive/src/tests.rs",
+                  "crates/rayx/rayx_reactive_primitives/src/delivery.rs",
+                  "crates/rayx/rayx_reactive_primitives/src/tests/delivery.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-005",
+                  "RESP-006"
+                ],
+                "symbols": [
+                  "ReactiveValueStreamExt",
+                  "DeliveryQueue",
+                  "Signal forwarding methods"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-F-004-1",
+                "AC-F-004-2",
+                "AC-F-004-3",
+                "AC-F-004-4",
+                "AC-NF-002-3",
+                "AC-NF-003-4"
+              ],
+              "proofMode": "baseline-target",
+              "proofObligations": [
+                "filter MUST clone accepted payloads zero times.",
+                "filter, skip, and DeliveryQueue MUST compile and run with non-Clone payloads.",
+                "FIFO, reentrancy, duplicates, and unsubscribe behavior MUST remain unchanged.",
+                "Representative benchmark medians MUST satisfy the regression gate."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Existing ValueStream composition, Mutex, DeliveryQueue subscriber snapshots, and FIFO drain."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Clone-counting test payload and non-Clone test payload."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "unit",
+                  "performance",
+                  "behavior-preservation",
+                  "regression",
+                  "architecture",
+                  "static-analysis"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive stream_ -- --nocapture",
+                    "assertion": "The exact clone and generic-bound targets MUST fail against the pre-optimization implementation.",
+                    "validationProfile": "performance"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -- --nocapture",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -- --nocapture",
+                    "assertion": "The command MUST satisfy the performance obligations assigned to this task.",
+                    "validationProfile": "performance"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -- --nocapture",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -- --nocapture",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -- --nocapture",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -- --nocapture",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+                    "assertion": "Both reactive crate test suites MUST pass."
+                  },
+                  {
+                    "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+                    "assertion": "All-target reactive clippy MUST pass with warnings denied."
+                  },
+                  {
+                    "command": "cargo bench -p rayx_reactive -p rayx_reactive_primitives -- --baseline reactive-pre-optimization",
+                    "assertion": "Stream and delivery benchmark medians MUST satisfy the bounded regression gate."
+                  }
+                ]
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "exitContract": {
+        "requirementIds": [
+          "REQ-F-004",
+          "REQ-NF-002",
+          "REQ-NF-003"
+        ],
+        "broadValidation": [
+          {
+            "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+            "assertion": "Both reactive crate test suites MUST pass."
+          },
+          {
+            "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+            "assertion": "All-target reactive clippy MUST pass with warnings denied."
+          },
+          {
+            "command": "cargo bench -p rayx_reactive -p rayx_reactive_primitives -- --baseline reactive-pre-optimization",
+            "assertion": "Stream and delivery benchmark cases MUST satisfy the bounded regression gate."
+          }
+        ],
+        "auditFocus": [
+          "Exact clone and non-Clone obligations pass.",
+          "FIFO/reentrant/unsubscribe semantics remain unchanged.",
+          "Benchmark evidence is comparable."
+        ],
+        "designQualityFocus": [
+          "No delivery redesign or new dependency exists.",
+          "Direct Mutex ownership replaces redundant Arc ownership only where proven."
+        ],
+        "commitScope": [
+          "perf(reactive): remove redundant stream and delivery work"
+        ]
+      }
+    },
+    {
+      "id": "sprint-5",
+      "number": 5,
+      "title": "Lean GPUI transport and real Test Suite proof",
+      "dependencies": [
+        "sprint-2",
+        "sprint-3",
+        "sprint-4"
+      ],
+      "parallelization": {
+        "mode": "sequential",
+        "rationale": "The GPUI implementation and its public-runtime proof share one ordered vertical slice after all reactive owners converge.",
+        "disjointOwnedScopes": []
+      },
+      "groups": [
+        {
+          "id": "group-5-1",
+          "title": "Deliver direct GPUI transport and exclusive Test Suite proof",
+          "dependencies": [],
+          "tasks": [
+            {
+              "id": "sprint-5-task-1",
+              "title": "Implement direct GPUI sender ownership and unit notifications",
+              "action": "MUST remove the GPUI sender Arc/Mutex, make notify_on transport unit with zero payload clones, and preserve ordered foreground delivery and binding teardown.",
+              "kind": "performance",
+              "requirementIds": [
+                "REQ-F-005",
+                "REQ-NF-002",
+                "REQ-NF-003"
+              ],
+              "designIds": [
+                "DES-006"
+              ],
+              "dependencies": [],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "crates/rayx/rayx_reactive/src/gpui.rs",
+                  "crates/rayx/rayx_reactive/src/tests/gpui.rs",
+                  "crates/rayx/rayx_reactive/src/tests.rs"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-007"
+                ],
+                "symbols": [
+                  "ReactiveContextExt",
+                  "GpuiBinding"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-F-005-1",
+                "AC-F-005-2",
+                "AC-F-005-4",
+                "AC-NF-002-4",
+                "AC-NF-003-5"
+              ],
+              "proofMode": "baseline-target",
+              "proofObligations": [
+                "notify_on MUST clone payloads zero times.",
+                "bind_stream_value MUST apply values in order on the GPUI foreground task.",
+                "Dropping GpuiBinding MUST end delivery.",
+                "The implementation MUST contain no Arc<Mutex<UnboundedSender<_>>>."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "futures unbounded mpsc, ValueStream subscription, gpux Context spawn/update, and GpuiBinding ownership."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Private unit notification channel path."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "unit",
+                  "runtime",
+                  "interaction",
+                  "regression",
+                  "performance",
+                  "behavior-preservation",
+                  "architecture",
+                  "static-analysis"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive gpui_ -- --nocapture",
+                    "assertion": "The clone-count target MUST fail against the pre-optimization implementation.",
+                    "validationProfile": "performance"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the runtime obligations assigned to this task.",
+                    "validationProfile": "runtime"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the interaction obligations assigned to this task.",
+                    "validationProfile": "interaction"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the performance obligations assigned to this task.",
+                    "validationProfile": "performance"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive gpui -- --nocapture",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+                    "assertion": "Both reactive crate test suites MUST pass."
+                  },
+                  {
+                    "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives --all-targets -- -D warnings",
+                    "assertion": "All-target reactive clippy MUST pass with warnings denied."
+                  }
+                ]
+              },
+              "status": "done"
+            },
+            {
+              "id": "sprint-5-task-2",
+              "title": "Add the Test Suite reactive-state runtime proof",
+              "action": "MUST add a feature-gated Test Suite reactive-state route that consumes public APIs and prove ordered values, computed output, notifications, activation disposal, and teardown through native DevKit/MCP and headed WASM/WebGPU Playwright.",
+              "kind": "integration",
+              "requirementIds": [
+                "REQ-F-005",
+                "REQ-NF-004"
+              ],
+              "designIds": [
+                "DES-007"
+              ],
+              "dependencies": [
+                "sprint-5-task-1"
+              ],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  "apps/test_suite/Cargo.toml",
+                  "apps/test_suite/src/routes.rs",
+                  "apps/test_suite/src/pages/mod.rs",
+                  "apps/test_suite/src/pages/reactive_state.rs",
+                  "tools-node/test_suite/rayx-reactive-state.spec.ts"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-008"
+                ],
+                "symbols": [
+                  "RUNTIME_REACTIVE_STATE",
+                  "reactive_state::page"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-F-005-3",
+                "AC-NF-004-2"
+              ],
+              "proofMode": "red-green",
+              "proofObligations": [
+                "The fixture MUST consume public reactive APIs only.",
+                "Native DevKit/MCP MUST expose the bounded final diagnostic state without runtime errors.",
+                "Headed WASM/WebGPU interaction MUST prove ordered values, computed output, notify count, activation/disposal, and clean teardown.",
+                "No Lab file or Lab automation surface is touched."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Existing Test Suite route/page/render registration, bounded WASM snapshot pattern, and Playwright harness."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "One feature-gated Test Suite page",
+                  "One Test Suite route constant",
+                  "One tools-node/test_suite Playwright specification"
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "unit",
+                  "integration",
+                  "runtime",
+                  "interaction",
+                  "regression",
+                  "performance",
+                  "docs",
+                  "static-analysis",
+                  "contract"
+                ],
+                "red": [
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The missing Test Suite reactive route or diagnostics MUST fail before the fixture is implemented.",
+                    "validationProfile": "interaction"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the integration obligations assigned to this task.",
+                    "validationProfile": "integration"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the runtime obligations assigned to this task.",
+                    "validationProfile": "runtime"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the interaction obligations assigned to this task.",
+                    "validationProfile": "interaction"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the performance obligations assigned to this task.",
+                    "validationProfile": "performance"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the docs obligations assigned to this task.",
+                    "validationProfile": "docs"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "The command MUST satisfy the contract obligations assigned to this task.",
+                    "validationProfile": "contract"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo check -p rayx_test_suite --no-default-features --features rayx_diagnostics",
+                    "assertion": "The diagnostic Test Suite graph MUST compile."
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite run host --debug",
+                    "assertion": "Native Test Suite MUST launch for DevKit/MCP inspection without a runtime crash."
+                  }
+                ]
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "exitContract": {
+        "requirementIds": [
+          "REQ-F-005",
+          "REQ-NF-002",
+          "REQ-NF-003",
+          "REQ-NF-004"
+        ],
+        "broadValidation": [
+          {
+            "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives",
+            "assertion": "Focused reactive tests MUST pass."
+          },
+          {
+            "command": "cargo check -p rayx_test_suite --no-default-features --features rayx_diagnostics",
+            "assertion": "The Test Suite diagnostic graph MUST compile."
+          },
+          {
+            "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+            "assertion": "Headed WASM/WebGPU reactive interaction MUST pass."
+          }
+        ],
+        "auditFocus": [
+          "GPUI sender ownership and clone counts match the contract.",
+          "Test Suite proves public behavior.",
+          "Native DevKit/MCP evidence is recorded.",
+          "Lab remains untouched."
+        ],
+        "designQualityFocus": [
+          "ReactiveContextExt remains the sole foreground bridge.",
+          "Diagnostics stay bounded and Test Suite-owned.",
+          "No diagnostic public API is added."
+        ],
+        "commitScope": [
+          "perf(reactive): streamline gpui bindings with test-suite proof"
+        ]
+      }
+    },
+    {
+      "id": "sprint-6",
+      "number": 6,
+      "title": "Compatibility, performance, runtime, and guidance convergence",
+      "dependencies": [
+        "sprint-5"
+      ],
+      "parallelization": {
+        "mode": "sequential",
+        "rationale": "Final evidence and documentation depend on every implementation slice and remain coordinator-owned.",
+        "disjointOwnedScopes": []
+      },
+      "groups": [
+        {
+          "id": "group-6-1",
+          "title": "Prove the final revision and update durable guidance",
+          "dependencies": [],
+          "tasks": [
+            {
+              "id": "sprint-6-task-1",
+              "title": "Run final compatibility, performance, downstream, runtime, and simplicity convergence",
+              "action": "MUST run the unchanged public fixtures, identical final benchmark matrix, reactive and downstream tests, native Test Suite DevKit/MCP proof, headed WASM/WebGPU proof, formatting, clippy, rustdoc, source guard, API diff, and design-quality audit on one final revision.",
+              "kind": "api",
+              "requirementIds": [
+                "REQ-NF-001",
+                "REQ-NF-002",
+                "REQ-NF-003",
+                "REQ-NF-004"
+              ],
+              "designIds": [
+                "DES-007"
+              ],
+              "dependencies": [],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/evidence.jsonl",
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/run-events.jsonl",
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/sprint-6-audit.json",
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/checkpoint-manifests/**",
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/validation-artifacts/**"
+                ],
+                "generatedPaths": [
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/sprint-6-audit.json",
+                  ".agentx/tasks/rayx-reactive-complexity-optimization/checkpoint-manifests/**"
+                ],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-001",
+                  "RESP-002",
+                  "RESP-003",
+                  "RESP-004",
+                  "RESP-005",
+                  "RESP-006",
+                  "RESP-007",
+                  "RESP-008"
+                ],
+                "symbols": [
+                  "Final convergence evidence"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-NF-001-2",
+                "AC-NF-001-3",
+                "AC-NF-002-2",
+                "AC-NF-002-5",
+                "AC-NF-003-6",
+                "AC-NF-004-1"
+              ],
+              "proofMode": "contract-before-after",
+              "proofObligations": [
+                "Every baseline public item MUST compile with zero deletion or deprecation.",
+                "All benchmark cases MUST satisfy the 10 percent gate or one twice-duration rerun.",
+                "All focused, downstream, native, WASM, static, and architecture gates MUST pass on one revision.",
+                "The final report MUST contain only measured complexity and performance claims."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Permanent compile fixtures, Criterion matrix, Test Suite fixture, cargo/xtask validation, and AgentX evidence tooling."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Content-addressed validation artifacts and generated sprint audit/checkpoint manifest."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "contract",
+                  "integration",
+                  "static-analysis",
+                  "performance",
+                  "behavior-preservation",
+                  "unit",
+                  "regression",
+                  "architecture",
+                  "runtime",
+                  "interaction",
+                  "docs"
+                ],
+                "red": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The final contract command establishes the before/after comparison surface and MUST remain green.",
+                    "validationProfile": "contract"
+                  }
+                ],
+                "green": [
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the contract obligations assigned to this task.",
+                    "validationProfile": "contract"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the integration obligations assigned to this task.",
+                    "validationProfile": "integration"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the performance obligations assigned to this task.",
+                    "validationProfile": "performance"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the behavior-preservation obligations assigned to this task.",
+                    "validationProfile": "behavior-preservation"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the unit obligations assigned to this task.",
+                    "validationProfile": "unit"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the regression obligations assigned to this task.",
+                    "validationProfile": "regression"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the runtime obligations assigned to this task.",
+                    "validationProfile": "runtime"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the interaction obligations assigned to this task.",
+                    "validationProfile": "interaction"
+                  },
+                  {
+                    "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx -p rayx_reactive_collections -p rayx_components_propertygrid",
+                    "assertion": "The command MUST satisfy the docs obligations assigned to this task.",
+                    "validationProfile": "docs"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "cargo fmt --all --check",
+                    "assertion": "Workspace Rust formatting MUST pass."
+                  },
+                  {
+                    "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives -p rayx_reactive_collections -p rayx -p rayx_components_propertygrid --all-targets -- -D warnings",
+                    "assertion": "Affected all-target clippy MUST pass with warnings denied."
+                  },
+                  {
+                    "command": "cargo doc -p rayx_reactive -p rayx_reactive_primitives -p rayx --no-deps",
+                    "assertion": "Reactive and umbrella rustdoc MUST build."
+                  },
+                  {
+                    "command": "cargo run -p xtask -- check-source-guard",
+                    "assertion": "The repository source guard MUST pass."
+                  },
+                  {
+                    "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+                    "assertion": "Headed WASM/WebGPU reactive interaction MUST pass."
+                  }
+                ]
+              },
+              "status": "done"
+            },
+            {
+              "id": "sprint-6-task-2",
+              "title": "Converge reactive guidance and AgentX records",
+              "action": "MUST update only the narrow RayX reactive guidance and durable AgentX reactive-state records changed by final evidence, then run skill, task, and memory audits before epic completion.",
+              "kind": "docs",
+              "requirementIds": [
+                "REQ-NF-004"
+              ],
+              "designIds": [
+                "DES-008"
+              ],
+              "dependencies": [
+                "sprint-6-task-1"
+              ],
+              "repositoryIds": [
+                "main"
+              ],
+              "scope": {
+                "writePaths": [
+                  ".codex/skills/rayx/references/reactive-state-signals.md",
+                  ".codex/skills/rayx/references/reactive-state-streams.md",
+                  ".codex/skills/rayx/references/reactive-state-lifecycle.md",
+                  ".codex/skills/rayx/references/reactive-state-gpui-bindings.md",
+                  ".codex/skills/rayx/references/reactive-state-performance.md",
+                  ".agentx/memory/knowledge/runtime/reactive-state/**",
+                  ".agentx/memory/knowledge/runtime/INDEX.md",
+                  ".agentx/memory/knowledge/runtime/state.md",
+                  ".agentx/memory/knowledge/INDEX.md"
+                ],
+                "generatedPaths": [],
+                "forbiddenPaths": [
+                  "apps/lab/**",
+                  "tools-node/lab/**"
+                ],
+                "responsibilityIds": [
+                  "RESP-009"
+                ],
+                "symbols": [
+                  "Reactive skill references",
+                  "Reactive AgentX memory"
+                ]
+              },
+              "acceptanceCriteriaIds": [
+                "AC-NF-004-3",
+                "AC-NF-004-4"
+              ],
+              "proofMode": "static-validation",
+              "proofObligations": [
+                "Every changed guidance statement MUST cite final source or evidence.",
+                "No speculative or incomplete result enters durable memory.",
+                "RayX skill, AgentX strict task, checkpoint, and memory audits MUST report zero errors."
+              ],
+              "implementationConstraints": {
+                "reuse": [
+                  "Existing RayX reactive skill routing and AgentX runtime/reactive-state taxonomy."
+                ],
+                "prohibitedAdditions": [
+                  "Public API deletion, rename, hiding, deprecation, or compatibility alias.",
+                  "Undeclared public API, production dependency, unsafe block, cache, batching layer, concurrency framework, provider, factory, proxy, or speculative extension point.",
+                  "Agent-authored runtime diagnostics, probes, fixtures, automation, or performance hooks in apps/lab or tools-node/lab."
+                ],
+                "allowedAdditions": [
+                  "Evidence-backed edits to existing guidance and memory files only."
+                ]
+              },
+              "validation": {
+                "profiles": [
+                  "integration",
+                  "runtime",
+                  "interaction",
+                  "docs",
+                  "static-analysis",
+                  "architecture"
+                ],
+                "red": [],
+                "green": [
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The command MUST satisfy the integration obligations assigned to this task.",
+                    "validationProfile": "integration"
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The command MUST satisfy the runtime obligations assigned to this task.",
+                    "validationProfile": "runtime"
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The command MUST satisfy the interaction obligations assigned to this task.",
+                    "validationProfile": "interaction"
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The command MUST satisfy the docs obligations assigned to this task.",
+                    "validationProfile": "docs"
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The command MUST satisfy the static-analysis obligations assigned to this task.",
+                    "validationProfile": "static-analysis"
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The command MUST satisfy the architecture obligations assigned to this task.",
+                    "validationProfile": "architecture"
+                  }
+                ],
+                "broad": [
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/agentx_task.py validate-schemas --task-dir .agentx/tasks/rayx-reactive-complexity-optimization",
+                    "assertion": "AgentX V4 schemas MUST pass."
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/agentx_task.py audit --task-dir .agentx/tasks/rayx-reactive-complexity-optimization --strict",
+                    "assertion": "The strict AgentX semantic audit MUST pass."
+                  },
+                  {
+                    "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+                    "assertion": "The repository memory audit MUST pass."
+                  }
+                ]
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "exitContract": {
+        "requirementIds": [
+          "REQ-NF-001",
+          "REQ-NF-002",
+          "REQ-NF-003",
+          "REQ-NF-004"
+        ],
+        "broadValidation": [
+          {
+            "command": "cargo fmt --all --check",
+            "assertion": "Workspace formatting MUST pass."
+          },
+          {
+            "command": "cargo test -p rayx_reactive -p rayx_reactive_primitives -p rayx_reactive_collections -p rayx -p rayx_components_propertygrid",
+            "assertion": "Focused and downstream tests MUST pass."
+          },
+          {
+            "command": "cargo clippy -p rayx_reactive -p rayx_reactive_primitives -p rayx_reactive_collections -p rayx -p rayx_components_propertygrid --all-targets -- -D warnings",
+            "assertion": "Affected clippy MUST pass with warnings denied."
+          },
+          {
+            "command": "cargo run -p xtask -- app apps/test_suite test wasm --headed --webgpu --no-default-features --features rayx_diagnostics --playwright-test test_suite/rayx-reactive-state.spec.ts",
+            "assertion": "Final headed WASM/WebGPU proof MUST pass."
+          },
+          {
+            "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/agentx_task.py audit --task-dir .agentx/tasks/rayx-reactive-complexity-optimization --strict",
+            "assertion": "Strict AgentX audit MUST pass."
+          },
+          {
+            "command": "python C:/Users/dinko/.codex/skills/agentx/scripts/audit_agentx_memory.py",
+            "assertion": "Memory audit MUST pass."
+          }
+        ],
+        "auditFocus": [
+          "Every requirement and acceptance criterion has current evidence.",
+          "API and benchmark before/after proofs match.",
+          "Native and WASM runtime proofs pass.",
+          "Checkpoint verification passes."
+        ],
+        "designQualityFocus": [
+          "Zero public deletion, unsafe, production dependency, speculative abstraction, Lab diagnostic change, or unsupported performance claim remains.",
+          "Guidance matches final source only."
+        ],
+        "commitScope": [
+          "docs(reactive): finalize optimization evidence and guidance"
+        ]
+      }
+    }
+  ],
+  "specificationTraceability": [
+    {
+      "requirementId": "REQ-F-001",
+      "designIds": [
+        "DES-002"
+      ],
+      "taskIds": [
+        "sprint-1-task-3"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-001-1",
+        "AC-F-001-2",
+        "AC-F-001-3",
+        "AC-F-001-4"
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "requirementId": "REQ-F-002",
+      "designIds": [
+        "DES-003"
+      ],
+      "taskIds": [
+        "sprint-2-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-002-1",
+        "AC-F-002-2",
+        "AC-F-002-3",
+        "AC-F-002-4"
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "requirementId": "REQ-F-003",
+      "designIds": [
+        "DES-004"
+      ],
+      "taskIds": [
+        "sprint-3-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-003-1",
+        "AC-F-003-2",
+        "AC-F-003-3",
+        "AC-F-003-4"
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "requirementId": "REQ-F-004",
+      "designIds": [
+        "DES-005"
+      ],
+      "taskIds": [
+        "sprint-4-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-004-1",
+        "AC-F-004-2",
+        "AC-F-004-3",
+        "AC-F-004-4"
+      ],
+      "validationProfiles": [
+        "unit",
+        "performance",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "requirementId": "REQ-F-005",
+      "designIds": [
+        "DES-006",
+        "DES-007"
+      ],
+      "taskIds": [
+        "sprint-5-task-1",
+        "sprint-5-task-2"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-F-005-1",
+        "AC-F-005-2",
+        "AC-F-005-3",
+        "AC-F-005-4"
+      ],
+      "validationProfiles": [
+        "unit",
+        "runtime",
+        "interaction",
+        "regression",
+        "performance"
+      ]
+    },
+    {
+      "requirementId": "REQ-NF-001",
+      "designIds": [
+        "DES-001",
+        "DES-007"
+      ],
+      "taskIds": [
+        "sprint-1-task-1",
+        "sprint-6-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-NF-001-1",
+        "AC-NF-001-2",
+        "AC-NF-001-3"
+      ],
+      "validationProfiles": [
+        "contract",
+        "integration",
+        "static-analysis"
+      ]
+    },
+    {
+      "requirementId": "REQ-NF-002",
+      "designIds": [
+        "DES-001",
+        "DES-005",
+        "DES-006",
+        "DES-007"
+      ],
+      "taskIds": [
+        "sprint-1-task-2",
+        "sprint-4-task-1",
+        "sprint-5-task-1",
+        "sprint-6-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-NF-002-1",
+        "AC-NF-002-2",
+        "AC-NF-002-3",
+        "AC-NF-002-4",
+        "AC-NF-002-5"
+      ],
+      "validationProfiles": [
+        "performance",
+        "behavior-preservation"
+      ]
+    },
+    {
+      "requirementId": "REQ-NF-003",
+      "designIds": [
+        "DES-002",
+        "DES-003",
+        "DES-004",
+        "DES-005",
+        "DES-006",
+        "DES-007"
+      ],
+      "taskIds": [
+        "sprint-1-task-3",
+        "sprint-2-task-1",
+        "sprint-3-task-1",
+        "sprint-4-task-1",
+        "sprint-5-task-1",
+        "sprint-6-task-1"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-NF-003-1",
+        "AC-NF-003-2",
+        "AC-NF-003-3",
+        "AC-NF-003-4",
+        "AC-NF-003-5",
+        "AC-NF-003-6"
+      ],
+      "validationProfiles": [
+        "unit",
+        "regression",
+        "architecture",
+        "static-analysis"
+      ]
+    },
+    {
+      "requirementId": "REQ-NF-004",
+      "designIds": [
+        "DES-007",
+        "DES-008"
+      ],
+      "taskIds": [
+        "sprint-5-task-2",
+        "sprint-6-task-1",
+        "sprint-6-task-2"
+      ],
+      "acceptanceCriteriaIds": [
+        "AC-NF-004-1",
+        "AC-NF-004-2",
+        "AC-NF-004-3",
+        "AC-NF-004-4"
+      ],
+      "validationProfiles": [
+        "integration",
+        "runtime",
+        "interaction",
+        "docs",
+        "static-analysis"
+      ]
+    }
+  ],
+  "migration": {
+    "sourceVersion": 3,
+    "reviewRequired": false
+  }
+}
