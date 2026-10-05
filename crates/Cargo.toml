@@ -1,7 +1,7 @@
 [package]
 name = "rayx_reactive"
 description = "Reactive state: signals, computed values, effects, commands, event streams, and DynamicData-style observable collections."
-readme = "../../README.md"
+readme = "../README.md"
 keywords = ["reactive", "signals", "observable", "collections", "mvvm"]
 categories = ["gui", "data-structures", "asynchronous"]
 version.workspace = true

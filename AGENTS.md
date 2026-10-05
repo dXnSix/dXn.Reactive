@@ -1,6 +1,6 @@
 # RayX.Reactive contributor guidance
 
-UI-neutral reactive state (`crates/rayx_reactive`): scalar signals/commands at the crate root,
+UI-neutral reactive state (the `rayx_reactive` crate in `crates/`): scalar signals/commands at the crate root,
 stream primitives in `primitives`, observable collections in `collections`. The crate must not
 depend on RayX, gpux or any UI framework; GPUI bindings belong to RayX (`rayx::reactive`).
 
