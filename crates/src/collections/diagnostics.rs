@@ -29,6 +29,9 @@ fn retain_implicit_startup_batches_in(counter: &AtomicUsize, count: usize) {
 }
 
 fn release_implicit_startup_batches_in(counter: &AtomicUsize, count: usize) {
+    // `fetch_update` is deprecated in favor of `try_update` on newer toolchains, but the crate's
+    // minimum supported Rust (`rust-version`) predates `try_update`.
+    #[allow(deprecated)]
     let released = counter.fetch_update(Ordering::AcqRel, Ordering::Acquire, |current| {
         current.checked_sub(count)
     });
