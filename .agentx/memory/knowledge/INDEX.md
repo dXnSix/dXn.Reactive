@@ -31,3 +31,4 @@ Current source, tests, and manifests establish behavior. This tree records durab
 - [Crate manifest](../../../crates/Cargo.toml)
 - [Crate root](../../../crates/src/lib.rs)
 - [Contributor guidance](../../../AGENTS.md)
+- [rayx-reactive skill](../../../.claude/skills/rayx-reactive/SKILL.md)

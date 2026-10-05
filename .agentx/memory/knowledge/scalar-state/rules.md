@@ -18,4 +18,5 @@ agentx:
 - Use `Signal<T>` for scalar/current-value component or ViewModel state; use `SourceList`/`SourceCache` for large mutable collections and structured deltas.
 - Run signal mutation callbacks outside the signal mutex and preserve the `values()` subscribe-before-baseline handshake.
 - Run `ViewModelActivator` callbacks outside its state lock and keep generation-aware token disposal.
+- Use the `rayx-reactive` skill (`.claude/skills/rayx-reactive/`) for API usage patterns after reading current source.
 - Preserve the complete public surface: reactive optimization work must not delete, rename, or hide public items just because they lack current call sites.

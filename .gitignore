@@ -1,2 +1,6 @@
 /target
 /artifacts-temp
+
+# Agent skills and project Claude config are tracked; per-user settings are not
+!/.claude/
+/.claude/settings.local.json
