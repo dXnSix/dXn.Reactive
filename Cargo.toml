@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = ["crates/rayx_reactive"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rayx-ui/RayX.Reactive"
+homepage = "https://github.com/rayx-ui/RayX.Reactive"
+
+[workspace.dependencies]
+futures = "0.3.31"
+rxrust = "=1.0.0-rc.5"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "allow"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
