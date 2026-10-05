@@ -1,6 +1,7 @@
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use rayx_reactive_primitives::{ReactiveError, Result};
+use crate::primitives::{ReactiveError, Result};
 
 use crate::disposal::{DisposeBag, DisposeWith};
 use crate::signal::{ReadSignal, Signal, SignalChange};
@@ -22,18 +23,237 @@ where
         self.signal.read_only()
     }
 
-    pub fn values(&self) -> rayx_reactive_primitives::ValueStream<T>
+    pub fn values(&self) -> crate::primitives::ValueStream<T>
     where
         T: Send + Sync + 'static,
     {
         self.signal.values()
     }
 
-    pub fn changes(&self) -> rayx_reactive_primitives::ValueStream<SignalChange<T>>
+    pub fn changes(&self) -> crate::primitives::ValueStream<SignalChange<T>>
     where
         T: Send + Sync + 'static,
     {
         self.signal.changes()
+    }
+}
+
+#[derive(Clone)]
+struct VersionedValue<T> {
+    value: T,
+    version: u64,
+}
+
+fn snapshot<S>(source: &ReadSignal<S>) -> Result<VersionedValue<S>>
+where
+    S: Clone,
+{
+    loop {
+        let version = source.version()?;
+        let value = source.get()?;
+        if source.version()? == version {
+            return Ok(VersionedValue { value, version });
+        }
+    }
+}
+
+struct DeriveState<S> {
+    baseline: Option<u64>,
+    pending: VecDeque<VersionedValue<S>>,
+    processing: bool,
+}
+
+impl<S> DeriveState<S> {
+    fn new() -> Self {
+        Self {
+            baseline: None,
+            pending: VecDeque::new(),
+            processing: false,
+        }
+    }
+
+    fn push_change(&mut self, change: &SignalChange<S>) -> bool
+    where
+        S: Clone,
+    {
+        if self
+            .baseline
+            .is_none_or(|baseline| change.version > baseline)
+        {
+            self.pending.push_back(VersionedValue {
+                value: change.current.clone(),
+                version: change.version,
+            });
+        }
+        self.start_processing()
+    }
+
+    fn initialize(&mut self, baseline: VersionedValue<S>) -> bool {
+        self.baseline = Some(baseline.version);
+        self.pending
+            .retain(|change| change.version > baseline.version);
+        self.pending.push_front(baseline);
+        self.start_processing()
+    }
+
+    fn start_processing(&mut self) -> bool {
+        if self.processing || self.pending.is_empty() {
+            false
+        } else {
+            self.processing = true;
+            true
+        }
+    }
+}
+
+fn drain_derive<S, T>(
+    state: &Arc<Mutex<DeriveState<S>>>,
+    signal: &Signal<T>,
+    derive: &(impl Fn(&S) -> T + ?Sized),
+) where
+    S: Clone,
+    T: Clone + Send + 'static,
+{
+    loop {
+        let next = match state.lock() {
+            Ok(mut state) => match state.pending.pop_front() {
+                Some(next) => next,
+                None => {
+                    state.processing = false;
+                    return;
+                }
+            },
+            Err(_) => return,
+        };
+
+        let _ = signal.replace(derive(&next.value));
+    }
+}
+
+enum CombineChange<A, B> {
+    Initial,
+    First(VersionedValue<A>),
+    Second(VersionedValue<B>),
+}
+
+struct CombineState<A, B> {
+    first: Option<VersionedValue<A>>,
+    second: Option<VersionedValue<B>>,
+    pending: VecDeque<CombineChange<A, B>>,
+    processing: bool,
+}
+
+impl<A, B> CombineState<A, B> {
+    fn new() -> Self {
+        Self {
+            first: None,
+            second: None,
+            pending: VecDeque::new(),
+            processing: false,
+        }
+    }
+
+    fn push_first(&mut self, change: &SignalChange<A>) -> bool
+    where
+        A: Clone,
+    {
+        if self
+            .first
+            .as_ref()
+            .is_none_or(|first| change.version > first.version)
+        {
+            self.pending.push_back(CombineChange::First(VersionedValue {
+                value: change.current.clone(),
+                version: change.version,
+            }));
+        }
+        self.start_processing()
+    }
+
+    fn push_second(&mut self, change: &SignalChange<B>) -> bool
+    where
+        B: Clone,
+    {
+        if self
+            .second
+            .as_ref()
+            .is_none_or(|second| change.version > second.version)
+        {
+            self.pending
+                .push_back(CombineChange::Second(VersionedValue {
+                    value: change.current.clone(),
+                    version: change.version,
+                }));
+        }
+        self.start_processing()
+    }
+
+    fn initialize(&mut self, first: VersionedValue<A>, second: VersionedValue<B>) -> bool {
+        self.pending.retain(|change| match change {
+            CombineChange::Initial => false,
+            CombineChange::First(change) => change.version > first.version,
+            CombineChange::Second(change) => change.version > second.version,
+        });
+        self.first = Some(first);
+        self.second = Some(second);
+        self.pending.push_front(CombineChange::Initial);
+        self.start_processing()
+    }
+
+    fn start_processing(&mut self) -> bool {
+        if self.first.is_none()
+            || self.second.is_none()
+            || self.processing
+            || self.pending.is_empty()
+        {
+            false
+        } else {
+            self.processing = true;
+            true
+        }
+    }
+
+    fn next(&mut self) -> Option<(A, B)>
+    where
+        A: Clone,
+        B: Clone,
+    {
+        let change = self.pending.pop_front()?;
+        match change {
+            CombineChange::Initial => {}
+            CombineChange::First(first) => self.first = Some(first),
+            CombineChange::Second(second) => self.second = Some(second),
+        }
+
+        match (&self.first, &self.second) {
+            (Some(first), Some(second)) => Some((first.value.clone(), second.value.clone())),
+            _ => None,
+        }
+    }
+}
+
+fn drain_combine<A, B, T>(
+    state: &Arc<Mutex<CombineState<A, B>>>,
+    signal: &Signal<T>,
+    combine: &(impl Fn(&A, &B) -> T + ?Sized),
+) where
+    A: Clone,
+    B: Clone,
+    T: Clone + Send + 'static,
+{
+    loop {
+        let next = match state.lock() {
+            Ok(mut state) => match state.next() {
+                Some(next) => next,
+                None => {
+                    state.processing = false;
+                    return;
+                }
+            },
+            Err(_) => return,
+        };
+
+        let _ = signal.replace(combine(&next.0, &next.1));
     }
 }
 
@@ -49,17 +269,37 @@ where
         S: Clone + Send + Sync + 'static,
     {
         let derive = Arc::new(derive);
-        let initial = source.read(|value| derive(value))?;
-        let signal = Signal::new(initial);
+        let initial = snapshot(&source)?;
+        let signal = Signal::new(derive(&initial.value));
         let subscriptions = DisposeBag::new();
-        let signal_for_source = signal.clone();
-        let derive_for_source = Arc::clone(&derive);
-        source
-            .changes()
-            .subscribe(move |change| {
-                let _ = signal_for_source.replace(derive_for_source(&change.current));
-            })?
-            .dispose_with(&subscriptions);
+        let state = Arc::new(Mutex::new(DeriveState::new()));
+
+        {
+            let state = Arc::clone(&state);
+            let signal = signal.clone();
+            let derive = Arc::clone(&derive);
+            source
+                .changes()
+                .subscribe(move |change| {
+                    let should_drain = state
+                        .lock()
+                        .map(|mut state| state.push_change(change))
+                        .unwrap_or(false);
+                    if should_drain {
+                        drain_derive(&state, &signal, derive.as_ref());
+                    }
+                })?
+                .dispose_with(&subscriptions);
+        }
+
+        let baseline = snapshot(&source)?;
+        let should_drain = state
+            .lock()
+            .map(|mut state| state.initialize(baseline))
+            .map_err(|_| ReactiveError::Poisoned)?;
+        if should_drain {
+            drain_derive(&state, &signal, derive.as_ref());
+        }
 
         Ok(Self {
             signal,
@@ -76,56 +316,57 @@ where
         A: Clone + Send + Sync + 'static,
         B: Clone + Send + Sync + 'static,
     {
-        let first_value = first.get()?;
-        let second_value = second.get()?;
         let combine = Arc::new(combine);
-        let initial = combine(&first_value, &second_value);
-        let latest = Arc::new(Mutex::new((first_value, second_value)));
-        let signal = Signal::new(initial);
+        let initial_first = snapshot(&first)?;
+        let initial_second = snapshot(&second)?;
+        let signal = Signal::new(combine(&initial_first.value, &initial_second.value));
         let subscriptions = DisposeBag::new();
+        let state = Arc::new(Mutex::new(CombineState::new()));
 
         {
-            let latest = Arc::clone(&latest);
+            let state = Arc::clone(&state);
             let signal = signal.clone();
             let combine = Arc::clone(&combine);
             first
                 .changes()
                 .subscribe(move |change| {
-                    let next =
-                        latest
-                            .lock()
-                            .map_err(|_| ReactiveError::Poisoned)
-                            .map(|mut latest| {
-                                latest.0 = change.current.clone();
-                                combine(&latest.0, &latest.1)
-                            });
-                    if let Ok(next) = next {
-                        let _ = signal.replace(next);
+                    let should_drain = state
+                        .lock()
+                        .map(|mut state| state.push_first(change))
+                        .unwrap_or(false);
+                    if should_drain {
+                        drain_combine(&state, &signal, combine.as_ref());
                     }
                 })?
                 .dispose_with(&subscriptions);
         }
 
         {
-            let latest = Arc::clone(&latest);
+            let state = Arc::clone(&state);
             let signal = signal.clone();
             let combine = Arc::clone(&combine);
             second
                 .changes()
                 .subscribe(move |change| {
-                    let next =
-                        latest
-                            .lock()
-                            .map_err(|_| ReactiveError::Poisoned)
-                            .map(|mut latest| {
-                                latest.1 = change.current.clone();
-                                combine(&latest.0, &latest.1)
-                            });
-                    if let Ok(next) = next {
-                        let _ = signal.replace(next);
+                    let should_drain = state
+                        .lock()
+                        .map(|mut state| state.push_second(change))
+                        .unwrap_or(false);
+                    if should_drain {
+                        drain_combine(&state, &signal, combine.as_ref());
                     }
                 })?
                 .dispose_with(&subscriptions);
+        }
+
+        let latest_first = snapshot(&first)?;
+        let latest_second = snapshot(&second)?;
+        let should_drain = state
+            .lock()
+            .map(|mut state| state.initialize(latest_first, latest_second))
+            .map_err(|_| ReactiveError::Poisoned)?;
+        if should_drain {
+            drain_combine(&state, &signal, combine.as_ref());
         }
 
         Ok(Self {

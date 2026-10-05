@@ -1,9 +1,9 @@
 use std::future::Future;
 use std::sync::Arc;
 
+use crate::primitives::ReactiveError;
 use futures::FutureExt;
 use futures::future::BoxFuture;
-use rayx_reactive_primitives::ReactiveError;
 
 use crate::signal::{ReadSignal, Signal};
 

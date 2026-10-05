@@ -11,20 +11,8 @@ impl ActivatableViewModel for TestViewModel {
     }
 }
 
-fn requires_reactive_context_ext<T>()
-where
-    for<'a> gpux::Context<'a, T>: ReactiveContextExt<T>,
-    T: 'static,
-{
-}
-
-fn accepts_gpui_binding(_: Option<GpuiBinding>) {}
-
 #[test]
 fn direct_public_api_remains_available() -> Result<()> {
-    requires_reactive_context_ext::<u32>();
-    accepts_gpui_binding(None);
-
     let signal = Signal::new(1_u32);
     let read: ReadSignal<u32> = signal.read_only();
     let _: SignalChange<u32> = signal.replace(2)?;

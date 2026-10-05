@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use rayx_reactive_primitives::{DeliveryQueue, ReactiveError, Result, ValueStream};
+use crate::primitives::{DeliveryQueue, ReactiveError, Result, ValueStream};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SignalChange<T> {
@@ -46,11 +46,21 @@ impl<T> Signal<T> {
     }
 
     pub fn version(&self) -> Result<u64> {
-        self.read_only().version()
+        Ok(self
+            .inner
+            .state
+            .lock()
+            .map_err(|_| ReactiveError::Poisoned)?
+            .version)
     }
 
     pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> Result<R> {
-        self.read_only().read(read)
+        let state = self
+            .inner
+            .state
+            .lock()
+            .map_err(|_| ReactiveError::Poisoned)?;
+        Ok(read(&state.value))
     }
 }
 
@@ -90,11 +100,28 @@ where
     where
         T: PartialEq + Send + 'static,
     {
-        if self.read(|current| *current == value)? {
-            return Ok(None);
-        }
+        let change = {
+            let mut state = self
+                .inner
+                .state
+                .lock()
+                .map_err(|_| ReactiveError::Poisoned)?;
+            if state.value == value {
+                return Ok(None);
+            }
 
-        self.replace(value).map(Some)
+            state.version = state.version.wrapping_add(1).max(1);
+            let change = SignalChange {
+                previous: state.value.clone(),
+                current: value.clone(),
+                version: state.version,
+            };
+            state.value = value;
+            change
+        };
+
+        self.inner.changes.enqueue(change.clone())?;
+        Ok(Some(change))
     }
 
     pub fn update(&self, update: impl FnOnce(&mut T)) -> Result<SignalChange<T>>
@@ -125,14 +152,29 @@ where
     where
         T: Send + Sync + 'static,
     {
-        self.read_only().values()
+        let inner = Arc::clone(&self.inner);
+        ValueStream::new(move |subscriber| {
+            let subscriber_for_changes = Arc::clone(&subscriber);
+            let subscription = inner
+                .changes
+                .subscribe(move |change| subscriber_for_changes(&change.current))?;
+            let current = inner
+                .state
+                .lock()
+                .map_err(|_| ReactiveError::Poisoned)?
+                .value
+                .clone();
+            subscriber(&current);
+            Ok(subscription)
+        })
     }
 
     pub fn changes(&self) -> ValueStream<SignalChange<T>>
     where
         T: Send + Sync + 'static,
     {
-        self.read_only().changes()
+        let changes = self.inner.changes.clone();
+        ValueStream::new(move |subscriber| changes.subscribe(move |change| subscriber(change)))
     }
 }
 
@@ -170,12 +212,14 @@ where
     {
         let signal = self.clone();
         ValueStream::new(move |subscriber| {
-            let current = signal.get()?;
-            subscriber(&current);
-            signal
+            let subscriber_for_changes = Arc::clone(&subscriber);
+            let subscription = signal
                 .inner
                 .changes
-                .subscribe(move |change| subscriber(&change.current))
+                .subscribe(move |change| subscriber_for_changes(&change.current))?;
+            let current = signal.get()?;
+            subscriber(&current);
+            Ok(subscription)
         })
     }
 

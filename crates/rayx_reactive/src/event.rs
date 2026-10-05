@@ -1,4 +1,4 @@
-use rayx_reactive_primitives::{DeliveryQueue, Result, Subscription, ValueStream};
+use crate::primitives::{DeliveryQueue, Result, Subscription, ValueStream};
 
 #[derive(Clone)]
 pub struct EventBus<T> {

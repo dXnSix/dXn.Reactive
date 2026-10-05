@@ -1,4 +1,4 @@
-use rayx_reactive_primitives::{Result, Subscription, ValueStream};
+use crate::primitives::{Result, Subscription, ValueStream};
 
 pub struct Effect {
     _subscription: Subscription,
