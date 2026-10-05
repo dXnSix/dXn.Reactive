@@ -5,6 +5,7 @@ mod support;
 #[cfg(feature = "diagnostics")]
 mod aggregation_diagnostics_diff;
 mod combination_materialization_population;
+mod connect_late_delivery;
 mod grouping_tree_switching;
 mod joins;
 mod lifecycle_observables;

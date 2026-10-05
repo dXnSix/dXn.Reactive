@@ -28,7 +28,12 @@ impl<C> VersionedChangeSet<C> {
 enum StartupPhase<C> {
     Buffering(VecDeque<VersionedChangeSet<C>>),
     Draining(VecDeque<VersionedChangeSet<C>>),
-    Live,
+    /// Forwarding live batches. A batch at or below the snapshot version was committed
+    /// before the snapshot and can still arrive late (queued behind an in-progress delivery,
+    /// or enqueued by another thread after its commit), so it is dropped here as well.
+    Live {
+        snapshot_version: u64,
+    },
     Disposed,
 }
 
@@ -41,7 +46,7 @@ impl<C> Drop for StartupState<C> {
     fn drop(&mut self) {
         let retained = match &self.phase {
             StartupPhase::Buffering(buffer) | StartupPhase::Draining(buffer) => buffer.len(),
-            StartupPhase::Live | StartupPhase::Disposed => 0,
+            StartupPhase::Live { .. } | StartupPhase::Disposed => 0,
         };
         crate::collections::diagnostics::release_implicit_startup_batches(retained);
     }
@@ -86,7 +91,7 @@ where
                     crate::collections::diagnostics::retain_implicit_startup_batches(1);
                     false
                 }
-                StartupPhase::Live => true,
+                StartupPhase::Live { snapshot_version } => versioned.version() > *snapshot_version,
                 StartupPhase::Disposed => false,
             }
         };
@@ -110,7 +115,7 @@ where
                 let mut state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
                 let buffer = match &mut state.phase {
                     StartupPhase::Buffering(buffer) | StartupPhase::Draining(buffer) => buffer,
-                    StartupPhase::Live | StartupPhase::Disposed => return Ok(()),
+                    StartupPhase::Live { .. } | StartupPhase::Disposed => return Ok(()),
                 };
 
                 while buffer
@@ -130,7 +135,7 @@ where
                         Some(versioned.change_set)
                     }
                     None => {
-                        state.phase = StartupPhase::Live;
+                        state.phase = StartupPhase::Live { snapshot_version };
                         None
                     }
                 }
@@ -153,7 +158,7 @@ where
                         StartupPhase::Buffering(buffer) | StartupPhase::Draining(buffer) => {
                             buffer.len()
                         }
-                        StartupPhase::Live | StartupPhase::Disposed => 0,
+                        StartupPhase::Live { .. } | StartupPhase::Disposed => 0,
                     };
                     crate::collections::diagnostics::release_implicit_startup_batches(retained);
                 }
@@ -170,7 +175,7 @@ where
         };
         match &state.phase {
             StartupPhase::Buffering(buffer) | StartupPhase::Draining(buffer) => buffer.len(),
-            StartupPhase::Live | StartupPhase::Disposed => 0,
+            StartupPhase::Live { .. } | StartupPhase::Disposed => 0,
         }
     }
 }
