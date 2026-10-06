@@ -53,6 +53,22 @@ where
         self.source.version()
     }
 
+    pub fn get(&self, index: usize) -> Result<Option<T>> {
+        self.source.get(index)
+    }
+
+    pub fn contains(&self, item: &T) -> Result<bool>
+    where
+        T: PartialEq,
+    {
+        self.source.contains(item)
+    }
+
+    /// Runs `read` against the items without cloning them.
+    pub fn read<R>(&self, read: impl FnOnce(&[T]) -> R) -> Result<R> {
+        self.source.read(read)
+    }
+
     pub fn connect(&self) -> ChangeStream<ListChange<T>> {
         self.source.connect()
     }

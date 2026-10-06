@@ -67,7 +67,17 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
                     .changes
                     .iter()
                     .filter_map(|change| cache_change_for_key(change, &watch_key))
-                    .cloned()
+                    .map(|change| match change {
+                        // Only the watched key's part of a clear.
+                        CacheChange::Clear { previous } => CacheChange::Clear {
+                            previous: previous
+                                .iter()
+                                .filter(|(key, _)| key == &watch_key)
+                                .cloned()
+                                .collect(),
+                        },
+                        change => change.clone(),
+                    })
                     .collect::<Vec<_>>();
                 if !changes.is_empty() {
                     subscriber(&ChangeSet::new(changes, batch.version));
@@ -85,10 +95,8 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         ValueStream::new(move |subscriber| {
             let watch_key = watch_key.clone();
             source.watch(watch_key.clone()).subscribe(move |batch| {
-                for change in &batch.changes {
-                    if let Some(value) = cache_value_for_key(change, &watch_key) {
-                        subscriber(value);
-                    }
+                if let Some(value) = last_value_for_key(&batch.changes, &watch_key) {
+                    subscriber(value);
                 }
             })
         })
@@ -104,26 +112,22 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let watch_key = watch_key.clone();
             let last_value = Arc::new(Mutex::new(None::<Option<T>>));
             source.watch(watch_key.clone()).subscribe(move |batch| {
-                for change in &batch.changes {
-                    let Some(next) = cache_optional_for_key(change, &watch_key) else {
-                        continue;
+                let Some(next) = last_optional_for_key(&batch.changes, &watch_key) else {
+                    return;
+                };
+                let should_emit = {
+                    let Ok(mut last_value) = last_value.lock() else {
+                        return;
                     };
-
-                    let should_emit = {
-                        let Ok(mut last_value) = last_value.lock() else {
-                            return;
-                        };
-                        if last_value.as_ref() == Some(&next) {
-                            false
-                        } else {
-                            *last_value = Some(next.clone());
-                            true
-                        }
-                    };
-
-                    if should_emit {
-                        subscriber(&next);
+                    if last_value.as_ref() == Some(&next) {
+                        false
+                    } else {
+                        *last_value = Some(next.clone());
+                        true
                     }
+                };
+                if should_emit {
+                    subscriber(&next);
                 }
             })
         })

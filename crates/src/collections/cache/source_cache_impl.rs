@@ -21,38 +21,104 @@ where
             })
             .unwrap_or_else(|_| Subscription::empty());
 
+        let state = Arc::new(SourceLock::new(CacheState {
+            items: HashMap::new(),
+            order: Vec::new(),
+            positions: HashMap::new(),
+            version: 0,
+            editing: false,
+            suspend_depth: 0,
+            suspended: Vec::new(),
+        }));
+        let preview = DeliveryQueue::new();
+        let count_changed = DeliveryQueue::new();
+        let pending_resumes = Arc::new(AtomicUsize::new(0));
+        {
+            let weak_state = Arc::downgrade(&state);
+            let pending_resumes = Arc::clone(&pending_resumes);
+            let (preview, changes, count_changed) =
+                (preview.clone(), changes.clone(), count_changed.clone());
+            state.set_release_hook(Box::new(move || {
+                if let Some(state) = weak_state.upgrade() {
+                    apply_deferred_resumes(
+                        &state,
+                        &pending_resumes,
+                        &preview,
+                        &changes,
+                        &count_changed,
+                    );
+                }
+            }));
+        }
+
         Self {
             key_selector: Arc::new(key_selector),
-            state: Arc::new(Mutex::new(CacheState {
-                items: HashMap::new(),
-                order: Vec::new(),
-                positions: HashMap::new(),
-                version: 0,
-                editing: false,
-                suspend_depth: 0,
-                suspended_changes: Vec::new(),
-            })),
+            state,
             changes,
             keyed_changes,
-            preview: DeliveryQueue::new(),
-            count_changed: DeliveryQueue::new(),
+            preview,
+            count_changed,
+            pending_resumes,
             rx_changes,
             _rx_bridge: Arc::new(bridge),
             _keyed_bridge: Arc::new(keyed_bridge),
         }
     }
 
+    /// Creates a cache holding `items`.
+    pub fn from_items(
+        key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
+        items: impl IntoIterator<Item = T>,
+    ) -> Self {
+        let cache = Self::new(key_selector);
+        {
+            // A new cache has no subscribers and no other handles: nothing to publish.
+            if let Ok(mut state) = cache.state.lock() {
+                let CacheState { items: map, order, .. } = &mut *state;
+                let mut changes = Vec::new();
+                let mut updater = CacheUpdater {
+                    key_selector: Arc::clone(&cache.key_selector),
+                    items: map,
+                    order,
+                    changes: &mut changes,
+                };
+                updater.add_or_update_range(items);
+                state.positions = state
+                    .order
+                    .iter()
+                    .cloned()
+                    .enumerate()
+                    .map(|(index, key)| (key, index))
+                    .collect();
+            }
+        }
+        cache
+    }
+
+    pub fn contains_key(&self, key: &K) -> Result<bool> {
+        Ok(self.state.lock()?.items.contains_key(key))
+    }
+
+    /// Runs `read` against the cache without cloning items. The state stays locked while
+    /// `read` runs: accessing this source from inside it returns `NestedUpdate`.
+    pub fn read<R>(&self, read: impl FnOnce(&CacheView<'_, K, T>) -> R) -> Result<R> {
+        let state = self.state.lock()?;
+        Ok(read(&CacheView {
+            items: &state.items,
+            order: &state.order,
+        }))
+    }
+
     pub fn count(&self) -> Result<usize> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .lock()?
             .items
             .len())
     }
 
     pub fn items(&self) -> Result<Vec<T>> {
-        let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+        let state = self.state.lock()?;
         Ok(state
             .order
             .iter()
@@ -63,14 +129,13 @@ where
     pub fn keys(&self) -> Result<Vec<K>> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .lock()?
             .order
             .clone())
     }
 
     pub fn key_values(&self) -> Result<Vec<(K, T)>> {
-        let state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+        let state = self.state.lock()?;
         Ok(state
             .order
             .iter()
@@ -87,11 +152,7 @@ where
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
         Ok(self
             .state
-            .try_lock()
-            .map_err(|error| match error {
-                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?
+            .lock()?
             .items
             .get(key)
             .cloned())
@@ -100,8 +161,7 @@ where
     pub fn version(&self) -> Result<u64> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .lock()?
             .version)
     }
 
@@ -109,12 +169,8 @@ where
         &self,
         edit: impl FnOnce(&mut CacheUpdater<'_, K, T>),
     ) -> Result<ChangeSet<CacheChange<K, T>>> {
-        let (batch, should_publish, count_after) = {
-            let mut state = match self.state.try_lock() {
-                Ok(state) => state,
-                Err(TryLockError::Poisoned(_)) => return Err(CollectionError::Poisoned),
-                Err(TryLockError::WouldBlock) => return Err(CollectionError::NestedUpdate),
-            };
+        let batch = {
+            let mut state = self.state.lock()?;
             if state.editing {
                 return Err(CollectionError::NestedUpdate);
             }
@@ -143,30 +199,27 @@ where
                     .map(|(index, key)| (key, index))
                     .collect();
             }
-            let count_after = (count_before != state.items.len()).then_some(state.items.len());
             if changes.is_empty() {
-                (ChangeSet::empty(state.version), false, count_after)
+                ChangeSet::empty(state.version)
             } else {
                 state.version = state.version.saturating_add(1);
                 let batch = ChangeSet::new(changes, state.version);
+                // Pushed while the state is locked, delivered after unlocking: delivery
+                // order equals commit order across threads.
                 if state.suspend_depth > 0 {
-                    state.suspended_changes.extend(batch.changes.clone());
-                    (batch, false, count_after)
+                    state.suspended.push((batch.version, batch.changes.clone()));
                 } else {
-                    (batch, true, count_after)
+                    self.preview.push(batch.clone())?;
+                    self.changes.push(VersionedChangeSet::new(batch.clone()))?;
                 }
+                if count_before != state.items.len() {
+                    self.count_changed.push((state.version, state.items.len()))?;
+                }
+                batch
             }
         };
 
-        if should_publish {
-            self.preview.enqueue(batch.clone())?;
-            self.changes
-                .enqueue(VersionedChangeSet::new(batch.clone()))?;
-        }
-        if let Some(count_after) = count_after {
-            self.count_changed.enqueue(count_after)?;
-        }
-
+        self.deliver()?;
         Ok(batch)
     }
 
@@ -391,10 +444,8 @@ where
         ValueStream::new(move |subscriber| {
             let watch_key = watch_key.clone();
             source.watch(watch_key.clone()).subscribe(move |batch| {
-                for change in &batch.changes {
-                    if let Some(value) = cache_value_for_key(change, &watch_key) {
-                        subscriber(value);
-                    }
+                if let Some(value) = last_value_for_key(&batch.changes, &watch_key) {
+                    subscriber(value);
                 }
             })
         })
@@ -435,29 +486,22 @@ where
             source.connect_key_subscriber_with_absence(
                 watch_key.clone(),
                 Arc::new(move |batch| {
-                    for change in &batch.changes {
-                        if cache_change_for_key(change, &watch_key).is_none() {
-                            continue;
-                        }
-                        let Some(next) = cache_optional_for_key(change, &watch_key) else {
-                            continue;
+                    let Some(next) = last_optional_for_key(&batch.changes, &watch_key) else {
+                        return;
+                    };
+                    let should_emit = {
+                        let Ok(mut last_value) = last_value_for_changes.lock() else {
+                            return;
                         };
-
-                        let should_emit = {
-                            let Ok(mut last_value) = last_value_for_changes.lock() else {
-                                return;
-                            };
-                            if last_value.as_ref() == Some(&next) {
-                                false
-                            } else {
-                                *last_value = Some(next.clone());
-                                true
-                            }
-                        };
-
-                        if should_emit {
-                            subscriber_for_changes(&next);
+                        if last_value.as_ref() == Some(&next) {
+                            false
+                        } else {
+                            *last_value = Some(next.clone());
+                            true
                         }
+                    };
+                    if should_emit {
+                        subscriber_for_changes(&next);
                     }
                 }),
                 missing_subscriber,
@@ -469,20 +513,34 @@ where
         self.rx_changes.clone()
     }
 
+    /// The current count, then every change of it. Registers for changes before reading
+    /// the baseline, so counts changed during the initial callback or concurrently are
+    /// reported and the last reported count equals `count()`.
     pub fn count_changed(&self) -> ValueStream<usize> {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
-            let count = source.count()?;
-            subscriber(&count);
-            let subscriber = Arc::clone(&subscriber);
-            Ok(source
-                .count_changed
-                .subscribe(move |count| subscriber(count))?)
+            let baseline_source = source.clone();
+            subscribe_versioned_value(
+                &source.count_changed,
+                move || {
+                    let state = baseline_source.state.lock()?;
+                    Ok((state.version, state.items.len()))
+                },
+                subscriber,
+            )
         })
     }
 
+    /// Delivers what edits pushed (preview first, then changes, then counts).
+    fn deliver(&self) -> Result<()> {
+        self.preview.drain()?;
+        self.changes.drain()?;
+        self.count_changed.drain()?;
+        Ok(())
+    }
+
     pub fn suspend_notifications(&self) -> Result<CacheNotificationSuspension<K, T>> {
-        let mut state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+        let mut state = self.state.lock()?;
         state.suspend_depth = state.suspend_depth.saturating_add(1);
         Ok(CacheNotificationSuspension {
             source: Some(self.clone()),
@@ -490,21 +548,38 @@ where
     }
 
     fn resume_notifications(&self) -> Result<()> {
-        let batch = {
-            let mut state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
-            if state.suspend_depth == 0 {
+        let mut state = match self.state.lock() {
+            Ok(state) => state,
+            Err(CollectionError::NestedUpdate | CollectionError::Contended) => {
+                // Dropped inside the source's own edit, or while another thread holds it under
+                // the non-blocking policy: the resume is applied when the lock is released.
+                self.pending_resumes.fetch_add(1, AtomicOrdering::SeqCst);
+                apply_deferred_resumes(
+                    &self.state,
+                    &self.pending_resumes,
+                    &self.preview,
+                    &self.changes,
+                    &self.count_changed,
+                );
                 return Ok(());
             }
-            state.suspend_depth -= 1;
-            if state.suspend_depth > 0 || state.suspended_changes.is_empty() {
-                return Ok(());
-            }
-            ChangeSet::new(mem::take(&mut state.suspended_changes), state.version)
+            Err(error) => return Err(error),
         };
-
-        self.preview.enqueue(batch.clone())?;
-        self.changes.enqueue(VersionedChangeSet::new(batch))?;
-        Ok(())
+        if state.suspend_depth == 0 {
+            return Ok(());
+        }
+        state.suspend_depth -= 1;
+        if state.suspend_depth > 0 || state.suspended.is_empty() {
+            return Ok(());
+        }
+        // One public batch; connections and keyed watches that subscribed during the
+        // suspension drop the segments their snapshot already covers.
+        let versioned =
+            VersionedChangeSet::segmented(mem::take(&mut state.suspended), state.version);
+        self.preview.push(versioned.change_set().clone())?;
+        self.changes.push(versioned)?;
+        drop(state);
+        self.deliver()
     }
 
     fn connect_subscriber(
@@ -528,10 +603,7 @@ where
         after_subscribe();
 
         let (snapshot, snapshot_version) = {
-            let state = self.state.try_lock().map_err(|error| match error {
-                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
+            let state = self.state.lock()?;
             let snapshot = state
                 .order
                 .iter()
@@ -583,10 +655,7 @@ where
             })?;
 
         let (snapshot, snapshot_version) = {
-            let state = self.state.try_lock().map_err(|error| match error {
-                std::sync::TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                std::sync::TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
+            let state = self.state.lock()?;
             #[cfg(any(test, feature = "diagnostics"))]
             self.keyed_changes.note_setup_lookups();
             let snapshot = state
@@ -613,4 +682,43 @@ where
             startup.disposal_subscription(),
         ]))
     }
+}
+
+/// Applies resumes that could not take the state lock (re-entry, or contention under the
+/// non-blocking policy) without ever blocking: whoever holds the lock applies them when it
+/// releases it.
+fn apply_deferred_resumes<K, T>(
+    state: &SourceLock<CacheState<K, T>>,
+    pending: &AtomicUsize,
+    preview: &DeliveryQueue<ChangeSet<CacheChange<K, T>>>,
+    changes: &DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
+    count_changed: &DeliveryQueue<(u64, usize)>,
+) where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    let guard = state.try_lock_now().or_else(|| {
+        // Request the holder's help, then try once more: if the lock is still held, its
+        // holder sees the request when it releases.
+        state.request_release();
+        state.try_lock_now()
+    });
+    let Some(mut guard) = guard else {
+        return;
+    };
+    let resumes = pending.swap(0, AtomicOrdering::SeqCst);
+    if resumes == 0 {
+        return;
+    }
+    guard.suspend_depth = guard.suspend_depth.saturating_sub(resumes);
+    if guard.suspend_depth == 0 && !guard.suspended.is_empty() {
+        let version = guard.version;
+        let versioned = VersionedChangeSet::segmented(std::mem::take(&mut guard.suspended), version);
+        let _ = preview.push(versioned.change_set().clone());
+        let _ = changes.push(versioned);
+    }
+    drop(guard);
+    let _ = preview.drain();
+    let _ = changes.drain();
+    let _ = count_changed.drain();
 }

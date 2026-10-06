@@ -25,6 +25,69 @@ pub struct CacheUpdater<'a, K, T> {
     changes: &'a mut Vec<CacheChange<K, T>>,
 }
 
+/// Reads inside an edit see the changes already made in the same edit, so a
+/// read-modify-write inside one `edit` is atomic.
+impl<K, T> CacheUpdater<'_, K, T>
+where
+    K: Eq + Hash,
+{
+    pub fn lookup(&self, key: &K) -> Option<&T> {
+        self.items.get(key)
+    }
+
+    pub fn contains_key(&self, key: &K) -> bool {
+        self.items.contains_key(key)
+    }
+
+    pub fn count(&self) -> usize {
+        self.items.len()
+    }
+
+    /// Keys in cache order.
+    pub fn keys(&self) -> &[K] {
+        self.order
+    }
+}
+
+/// A read-only view of a cache's state, passed to `read`.
+pub struct CacheView<'a, K, T> {
+    items: &'a HashMap<K, T>,
+    order: &'a [K],
+}
+
+impl<K, T> CacheView<'_, K, T>
+where
+    K: Eq + Hash,
+{
+    pub fn lookup(&self, key: &K) -> Option<&T> {
+        self.items.get(key)
+    }
+
+    pub fn contains_key(&self, key: &K) -> bool {
+        self.items.contains_key(key)
+    }
+
+    pub fn count(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    /// Keys in cache order.
+    pub fn keys(&self) -> &[K] {
+        self.order
+    }
+
+    /// Key/item pairs in cache order.
+    pub fn iter(&self) -> impl Iterator<Item = (&K, &T)> {
+        self.order
+            .iter()
+            .filter_map(|key| self.items.get(key).map(|item| (key, item)))
+    }
+}
+
 impl<K, T> CacheUpdater<'_, K, T>
 where
     K: Clone + Eq + Hash,
@@ -292,26 +355,6 @@ where
     }
 }
 
-fn cache_change_for_key<'a, K, T>(
-    change: &'a CacheChange<K, T>,
-    watch_key: &K,
-) -> Option<&'a CacheChange<K, T>>
-where
-    K: Eq,
-{
-    match change {
-        CacheChange::Add { key, .. }
-        | CacheChange::Update { key, .. }
-        | CacheChange::Remove { key, .. }
-        | CacheChange::Refresh { key, .. }
-        | CacheChange::Move { key, .. } => (key == watch_key).then_some(change),
-        CacheChange::Clear { previous } => previous
-            .iter()
-            .any(|(key, _)| key == watch_key)
-            .then_some(change),
-    }
-}
-
 fn cache_value_for_key<'a, K, T>(change: &'a CacheChange<K, T>, watch_key: &K) -> Option<&'a T>
 where
     K: Eq,
@@ -335,6 +378,30 @@ where
         | CacheChange::Refresh { .. }
         | CacheChange::Move { .. } => None,
     }
+}
+
+/// The value the last change for `watch_key` in `changes` carries (the removed item for a
+/// removal): one value per batch, reflecting the key's final state in it.
+fn last_value_for_key<'a, K, T>(changes: &'a [CacheChange<K, T>], watch_key: &K) -> Option<&'a T>
+where
+    K: Eq,
+{
+    changes
+        .iter()
+        .rev()
+        .find_map(|change| cache_value_for_key(change, watch_key))
+}
+
+/// The key's presence after the last change for it in `changes`.
+fn last_optional_for_key<K, T>(changes: &[CacheChange<K, T>], watch_key: &K) -> Option<Option<T>>
+where
+    K: Eq,
+    T: Clone,
+{
+    changes
+        .iter()
+        .rev()
+        .find_map(|change| cache_optional_for_key(change, watch_key))
 }
 
 fn cache_optional_for_key<K, T>(change: &CacheChange<K, T>, watch_key: &K) -> Option<Option<T>>

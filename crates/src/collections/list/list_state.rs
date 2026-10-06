@@ -1,11 +1,15 @@
+use crate::collections::source_lock::SourceLock;
 use std::convert::Infallible;
 use std::mem;
-use std::sync::{Arc, Mutex, TryLockError};
+use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
+use std::sync::Arc;
 
 use rxrust::prelude::{ObservableFactory, Observer, Shared};
 
 use crate::collections::change::{ChangeSet, ListChange};
-use crate::collections::connection::{StartupConnection, VersionedChangeSet};
+use crate::collections::connection::{
+    StartupConnection, VersionedChangeSet, subscribe_versioned_value,
+};
 use crate::collections::delivery::DeliveryQueue;
 use crate::collections::error::{CollectionError, Result};
 use crate::collections::stream::{ChangeStream, StreamSubscriber, ValueStream};
@@ -18,15 +22,18 @@ struct ListState<T> {
     version: u64,
     editing: bool,
     suspend_depth: usize,
-    suspended_changes: Vec<ListChange<T>>,
+    /// Edits committed while notifications are suspended, as `(version, changes)`.
+    suspended: Vec<(u64, Vec<ListChange<T>>)>,
 }
 
 #[derive(Clone)]
 pub struct SourceList<T> {
-    state: Arc<Mutex<ListState<T>>>,
+    state: Arc<SourceLock<ListState<T>>>,
     changes: DeliveryQueue<VersionedChangeSet<ListChange<T>>>,
     preview: DeliveryQueue<ChangeSet<ListChange<T>>>,
-    count_changed: DeliveryQueue<usize>,
+    count_changed: DeliveryQueue<(u64, usize)>,
+    /// Suspension guards dropped while the state was locked, applied on release.
+    pending_resumes: Arc<AtomicUsize>,
     rx_changes: ListRx<T>,
     _rx_bridge: Arc<Subscription>,
 }
@@ -45,18 +52,40 @@ where
                 rx_changes.next(versioned.change_set().clone());
             })
             .unwrap_or_else(|_| Subscription::empty());
+        let state = Arc::new(SourceLock::new(ListState {
+            items,
+            version: 0,
+            editing: false,
+            suspend_depth: 0,
+            suspended: Vec::new(),
+        }));
+        let preview = DeliveryQueue::new();
+        let count_changed = DeliveryQueue::new();
+        let pending_resumes = Arc::new(AtomicUsize::new(0));
+        {
+            let weak_state = Arc::downgrade(&state);
+            let pending_resumes = Arc::clone(&pending_resumes);
+            let (preview, changes, count_changed) =
+                (preview.clone(), changes.clone(), count_changed.clone());
+            state.set_release_hook(Box::new(move || {
+                if let Some(state) = weak_state.upgrade() {
+                    apply_deferred_resumes(
+                        &state,
+                        &pending_resumes,
+                        &preview,
+                        &changes,
+                        &count_changed,
+                    );
+                }
+            }));
+        }
 
         Self {
-            state: Arc::new(Mutex::new(ListState {
-                items,
-                version: 0,
-                editing: false,
-                suspend_depth: 0,
-                suspended_changes: Vec::new(),
-            })),
+            state,
             changes,
-            preview: DeliveryQueue::new(),
-            count_changed: DeliveryQueue::new(),
+            preview,
+            count_changed,
+            pending_resumes,
             rx_changes,
             _rx_bridge: Arc::new(bridge),
         }
@@ -65,8 +94,7 @@ where
     pub fn items(&self) -> Result<Vec<T>> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .lock()?
             .items
             .clone())
     }
@@ -74,8 +102,7 @@ where
     pub fn len(&self) -> Result<usize> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .lock()?
             .items
             .len())
     }
@@ -84,11 +111,28 @@ where
         Ok(self.len()? == 0)
     }
 
+    /// Clones the item at `index`.
+    pub fn get(&self, index: usize) -> Result<Option<T>> {
+        Ok(self.state.lock()?.items.get(index).cloned())
+    }
+
+    pub fn contains(&self, item: &T) -> Result<bool>
+    where
+        T: PartialEq,
+    {
+        Ok(self.state.lock()?.items.contains(item))
+    }
+
+    /// Runs `read` against the items without cloning them. The state stays locked while
+    /// `read` runs: accessing this source from inside it returns `NestedUpdate`.
+    pub fn read<R>(&self, read: impl FnOnce(&[T]) -> R) -> Result<R> {
+        Ok(read(&self.state.lock()?.items))
+    }
+
     pub fn version(&self) -> Result<u64> {
         Ok(self
             .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
+            .lock()?
             .version)
     }
 
@@ -96,12 +140,8 @@ where
         &self,
         edit: impl FnOnce(&mut ListUpdater<'_, T>),
     ) -> Result<ChangeSet<ListChange<T>>> {
-        let (batch, should_publish, count_after) = {
-            let mut state = match self.state.try_lock() {
-                Ok(state) => state,
-                Err(TryLockError::Poisoned(_)) => return Err(CollectionError::Poisoned),
-                Err(TryLockError::WouldBlock) => return Err(CollectionError::NestedUpdate),
-            };
+        let batch = {
+            let mut state = self.state.lock()?;
             if state.editing {
                 return Err(CollectionError::NestedUpdate);
             }
@@ -118,30 +158,27 @@ where
             }
 
             state.editing = false;
-            let count_after = (count_before != state.items.len()).then_some(state.items.len());
             if changes.is_empty() {
-                (ChangeSet::empty(state.version), false, count_after)
+                ChangeSet::empty(state.version)
             } else {
                 state.version = state.version.saturating_add(1);
                 let batch = ChangeSet::new(changes, state.version);
+                // Pushed while the state is locked, delivered after unlocking: delivery
+                // order equals commit order across threads.
                 if state.suspend_depth > 0 {
-                    state.suspended_changes.extend(batch.changes.clone());
-                    (batch, false, count_after)
+                    state.suspended.push((batch.version, batch.changes.clone()));
                 } else {
-                    (batch, true, count_after)
+                    self.preview.push(batch.clone())?;
+                    self.changes.push(VersionedChangeSet::new(batch.clone()))?;
                 }
+                if count_before != state.items.len() {
+                    self.count_changed.push((state.version, state.items.len()))?;
+                }
+                batch
             }
         };
 
-        if should_publish {
-            self.preview.enqueue(batch.clone())?;
-            self.changes
-                .enqueue(VersionedChangeSet::new(batch.clone()))?;
-        }
-        if let Some(count_after) = count_after {
-            self.count_changed.enqueue(count_after)?;
-        }
-
+        self.deliver()?;
         Ok(batch)
     }
 
@@ -318,20 +355,34 @@ where
         self.rx_changes.clone()
     }
 
+    /// The current count, then every change of it. Registers for changes before reading
+    /// the baseline, so counts changed during the initial callback or concurrently are
+    /// reported and the last reported count equals `len()`.
     pub fn count_changed(&self) -> ValueStream<usize> {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
-            let count = source.len()?;
-            subscriber(&count);
-            let subscriber = Arc::clone(&subscriber);
-            Ok(source
-                .count_changed
-                .subscribe(move |count| subscriber(count))?)
+            let baseline_source = source.clone();
+            subscribe_versioned_value(
+                &source.count_changed,
+                move || {
+                    let state = baseline_source.state.lock()?;
+                    Ok((state.version, state.items.len()))
+                },
+                subscriber,
+            )
         })
     }
 
+    /// Delivers what edits pushed (preview first, then changes, then counts).
+    fn deliver(&self) -> Result<()> {
+        self.preview.drain()?;
+        self.changes.drain()?;
+        self.count_changed.drain()?;
+        Ok(())
+    }
+
     pub fn suspend_notifications(&self) -> Result<ListNotificationSuspension<T>> {
-        let mut state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
+        let mut state = self.state.lock()?;
         state.suspend_depth = state.suspend_depth.saturating_add(1);
         Ok(ListNotificationSuspension {
             source: Some(self.clone()),
@@ -339,21 +390,38 @@ where
     }
 
     fn resume_notifications(&self) -> Result<()> {
-        let batch = {
-            let mut state = self.state.lock().map_err(|_| CollectionError::Poisoned)?;
-            if state.suspend_depth == 0 {
+        let mut state = match self.state.lock() {
+            Ok(state) => state,
+            Err(CollectionError::NestedUpdate | CollectionError::Contended) => {
+                // Dropped inside the source's own edit, or while another thread holds it under
+                // the non-blocking policy: the resume is applied when the lock is released.
+                self.pending_resumes.fetch_add(1, AtomicOrdering::SeqCst);
+                apply_deferred_resumes(
+                    &self.state,
+                    &self.pending_resumes,
+                    &self.preview,
+                    &self.changes,
+                    &self.count_changed,
+                );
                 return Ok(());
             }
-            state.suspend_depth -= 1;
-            if state.suspend_depth > 0 || state.suspended_changes.is_empty() {
-                return Ok(());
-            }
-            ChangeSet::new(mem::take(&mut state.suspended_changes), state.version)
+            Err(error) => return Err(error),
         };
-
-        self.preview.enqueue(batch.clone())?;
-        self.changes.enqueue(VersionedChangeSet::new(batch))?;
-        Ok(())
+        if state.suspend_depth == 0 {
+            return Ok(());
+        }
+        state.suspend_depth -= 1;
+        if state.suspend_depth > 0 || state.suspended.is_empty() {
+            return Ok(());
+        }
+        // One public batch; connections that subscribed during the suspension drop the
+        // segments their snapshot already covers.
+        let versioned =
+            VersionedChangeSet::segmented(mem::take(&mut state.suspended), state.version);
+        self.preview.push(versioned.change_set().clone())?;
+        self.changes.push(versioned)?;
+        drop(state);
+        self.deliver()
     }
 
     fn connect_subscriber(
@@ -377,10 +445,7 @@ where
         after_subscribe();
 
         let (snapshot, snapshot_version) = {
-            let state = self.state.try_lock().map_err(|error| match error {
-                TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
+            let state = self.state.lock()?;
             (state.items.clone(), state.version)
         };
         after_snapshot();
@@ -433,4 +498,62 @@ where
 pub struct ListUpdater<'a, T> {
     items: &'a mut Vec<T>,
     changes: &'a mut Vec<ListChange<T>>,
+}
+
+/// Reads inside an edit see the changes already made in the same edit, so a
+/// read-modify-write inside one `edit` is atomic.
+impl<T> ListUpdater<'_, T> {
+    pub fn items(&self) -> &[T] {
+        self.items
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.items.get(index)
+    }
+}
+
+/// Applies resumes that could not take the state lock (re-entry, or contention under the
+/// non-blocking policy) without ever blocking: whoever holds the lock applies them when it
+/// releases it.
+fn apply_deferred_resumes<T>(
+    state: &SourceLock<ListState<T>>,
+    pending: &AtomicUsize,
+    preview: &DeliveryQueue<ChangeSet<ListChange<T>>>,
+    changes: &DeliveryQueue<VersionedChangeSet<ListChange<T>>>,
+    count_changed: &DeliveryQueue<(u64, usize)>,
+) where
+    T: Clone + Send + Sync + 'static,
+{
+    let guard = state.try_lock_now().or_else(|| {
+        // Request the holder's help, then try once more: if the lock is still held, its
+        // holder sees the request when it releases.
+        state.request_release();
+        state.try_lock_now()
+    });
+    let Some(mut guard) = guard else {
+        return;
+    };
+    let resumes = pending.swap(0, AtomicOrdering::SeqCst);
+    if resumes == 0 {
+        return;
+    }
+    guard.suspend_depth = guard.suspend_depth.saturating_sub(resumes);
+    if guard.suspend_depth == 0 && !guard.suspended.is_empty() {
+        let version = guard.version;
+        let versioned = VersionedChangeSet::segmented(std::mem::take(&mut guard.suspended), version);
+        let _ = preview.push(versioned.change_set().clone());
+        let _ = changes.push(versioned);
+    }
+    drop(guard);
+    let _ = preview.drain();
+    let _ = changes.drain();
+    let _ = count_changed.drain();
 }

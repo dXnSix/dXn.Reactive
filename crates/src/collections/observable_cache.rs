@@ -58,6 +58,18 @@ where
         self.source.key_values()
     }
 
+    pub fn contains_key(&self, key: &K) -> Result<bool> {
+        self.source.contains_key(key)
+    }
+
+    /// Runs `read` against the cache without cloning items.
+    pub fn read<R>(
+        &self,
+        read: impl FnOnce(&crate::collections::cache::CacheView<'_, K, T>) -> R,
+    ) -> Result<R> {
+        self.source.read(read)
+    }
+
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
         self.source.lookup(key)
     }

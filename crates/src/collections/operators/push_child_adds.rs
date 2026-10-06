@@ -374,6 +374,30 @@ where
     }
 }
 
+/// The value the last change for `watch_key` in `changes` carries (the removed item for a
+/// removal): one value per batch, reflecting the key's final state in it.
+fn last_value_for_key<'a, K, T>(changes: &'a [CacheChange<K, T>], watch_key: &K) -> Option<&'a T>
+where
+    K: Eq,
+{
+    changes
+        .iter()
+        .rev()
+        .find_map(|change| cache_value_for_key(change, watch_key))
+}
+
+/// The key's presence after the last change for it in `changes`.
+fn last_optional_for_key<K, T>(changes: &[CacheChange<K, T>], watch_key: &K) -> Option<Option<T>>
+where
+    K: Eq,
+    T: Clone,
+{
+    changes
+        .iter()
+        .rev()
+        .find_map(|change| cache_optional_for_key(change, watch_key))
+}
+
 fn cache_optional_for_key<K, T>(change: &CacheChange<K, T>, watch_key: &K) -> Option<Option<T>>
 where
     K: Eq,
