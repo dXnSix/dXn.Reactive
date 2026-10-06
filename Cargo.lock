@@ -506,6 +506,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayx_reactive_doc_examples"
+version = "0.0.0"
+dependencies = [
+ "futures",
+ "rayx_reactive",
+ "rxrust",
+]
+
+[[package]]
 name = "rclite"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

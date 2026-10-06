@@ -1,0 +1,15 @@
+[package]
+name = "rayx_reactive_doc_examples"
+description = "Compiles and runs every Rust example in README.md and docs/*.md as a test."
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dev-dependencies]
+futures.workspace = true
+rayx_reactive = { path = "../crates", features = ["diagnostics"] }
+rxrust.workspace = true
