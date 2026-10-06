@@ -3,6 +3,9 @@ mod error;
 mod stream;
 mod subscription;
 
+#[cfg(test)]
+mod tests;
+
 pub mod prelude {
     pub use crate::primitives::delivery::DeliveryQueue;
     pub use crate::primitives::error::{ReactiveError, Result};

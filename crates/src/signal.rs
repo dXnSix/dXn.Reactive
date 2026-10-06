@@ -89,10 +89,11 @@ where
                 version: state.version,
             };
             state.value = value;
+            self.inner.changes.push(change.clone())?;
             change
         };
 
-        self.inner.changes.enqueue(change.clone())?;
+        self.inner.changes.drain()?;
         Ok(change)
     }
 
@@ -117,10 +118,11 @@ where
                 version: state.version,
             };
             state.value = value;
+            self.inner.changes.push(change.clone())?;
             change
         };
 
-        self.inner.changes.enqueue(change.clone())?;
+        self.inner.changes.drain()?;
         Ok(Some(change))
     }
 
@@ -137,14 +139,16 @@ where
             let previous = state.value.clone();
             update(&mut state.value);
             state.version = state.version.wrapping_add(1).max(1);
-            SignalChange {
+            let change = SignalChange {
                 previous,
                 current: state.value.clone(),
                 version: state.version,
-            }
+            };
+            self.inner.changes.push(change.clone())?;
+            change
         };
 
-        self.inner.changes.enqueue(change.clone())?;
+        self.inner.changes.drain()?;
         Ok(change)
     }
 

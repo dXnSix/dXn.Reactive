@@ -28,7 +28,8 @@ where
     T: Clone + Send + Sync + 'static,
 {
     pub fn emit(&self, event: T) -> Result<()> {
-        self.events.enqueue(event)
+        self.events.push(event)?;
+        self.events.drain()
     }
 
     pub fn stream(&self) -> EventStream<T> {
