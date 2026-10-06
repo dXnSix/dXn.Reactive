@@ -58,18 +58,30 @@ own queues to watch the backlog.
   one writer thread a subscriber sees every change exactly once, in order. Two current exceptions
   are listed under [Known issues](README.md#known-issues): concurrent writers on several threads,
   and connecting while notifications are suspended.
-- `Signal::values()` registers for changes *before* reading the baseline, so no change is lost. If
-  another thread writes during the subscription, though, the baseline and the concurrent change are
-  delivered on different threads, so the subscriber can see a value twice or the baseline after
-  the newer value. Establish long-lived subscriptions before handing signals to other threads, or
-  re-read with `get()` when exactness matters.
+- `Signal::values()` registers for changes *before* reading the baseline, so no change is lost, and
+  routes the baseline and live changes through one per-subscriber queue that drops anything older
+  than what the subscriber already received. When another thread writes during the subscription,
+  the subscriber never sees an older value after a newer one, and the last value it sees is the
+  signal's current value.
 
 ## Signals under concurrency
 
-Signal writes take a blocking lock, so concurrent writers never fail. `set` is an atomic
-compare-and-write: when several threads `set` the same value at once, exactly one commits and
-publishes. Read-modify-write sequences such as `let v = s.get()?; s.set(v + 1)?` are **not**
-atomic across threads; use `update(|v| …)`, which runs under the lock.
+Signal writes take a blocking lock, so concurrent writers never fail, and their changes are
+delivered in commit order. `set` is an atomic compare-and-write: when several threads `set` the
+same value at once, exactly one commits and publishes. Read-modify-write sequences such as
+`let v = s.get()?; s.set(v + 1)?` are **not** atomic across threads; use `update(|v| …)`, which
+runs under the lock.
+
+`Computed` values stay consistent under concurrent input writes: input changes are processed by
+one thread at a time, a value is published only if no input moved on while it was evaluated (so it
+never mixes versions), publications follow the inputs' version order, and `get()` recomputes when
+an input moved on, so it is fresh even while another thread is still delivering the write.
+
+`get()`, `read()` and `version()` wait for the signal's lock. Code that must never block, such as a
+browser main thread while workers write, uses `try_get()` / `try_read(…)`: they return `Ok(None)`
+when another thread holds the lock, and the caller retries on the next frame. On a `Computed`'s
+read signal they return the last published value without recomputing (recomputing would read the
+inputs' locks).
 
 ## Sources under contention
 
@@ -243,8 +255,9 @@ The crate is pure Rust on `std` with no platform-specific code or system depende
 On `wasm32-unknown-unknown`, `std::thread::spawn`, `std::time::Instant::now` and
 `std::time::SystemTime::now` panic at runtime. Everything that does not touch them works:
 
-**Works:** signals, `Computed`, effects, disposal, activation, commands (`AsyncCommand` on a wasm
-executor such as `wasm-bindgen-futures`), event buses, all synchronous collection operators
+**Works:** signals (use `try_get`/`try_read` on the main thread when workers write the same
+signal), `Computed`, effects, disposal, activation, commands (`AsyncCommand` on a wasm executor
+such as `wasm-bindgen-futures`), event buses, all synchronous collection operators
 (sources, filters, synchronous transforms, sorting, paging, virtualization, grouping, joins,
 combiners, trees, aggregation, lifecycle operators other than the ones below, materialization,
 `switch`, `ref_count`, snapshot diffing, size limits).

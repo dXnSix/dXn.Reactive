@@ -101,8 +101,4 @@ these in mind:
   indexed updates that move a key later (`add_or_update_key_at`).
 - **Expiration.** The `*_with_polling` expiration variants never expire items; stream-level
   `expire_after` can desynchronize downstream after the first expiry.
-- **Commands.** Dropping an in-flight `AsyncCommand::execute()` future leaves the state `Running`;
-  overlapping executions can report a wrong state.
-- **Computed.** Diamond-shaped dependencies (one signal feeding a `Computed` through two paths)
-  can publish an intermediate value combining old and new inputs.
 - **Page and window totals** can go stale ([chapter 10](10-sorting-paging-virtualization.md#response-metadata)).

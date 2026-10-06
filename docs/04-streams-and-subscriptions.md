@@ -140,6 +140,34 @@ When a derivation is expensive and has several consumers, compute it once: store
 two initial emissions. Reserve `start_with` for streams that do not replay state, such as
 `changes()` or an event stream.
 
+`start_with` subscribes to its source *before* it emits the initial value, and always emits the
+initial value first: an upstream value arriving on another thread waits until the initial callback
+has returned. A write that the subscriber makes while handling the initial value is therefore
+delivered, not lost; on the same thread it arrives *nested* inside the initial callback:
+
+```rust
+use rayx_reactive::prelude::*;
+use std::sync::{Arc, Mutex};
+
+let signal = Signal::new(1);
+let writer = signal.clone();
+let seen = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&seen);
+
+let _subscription = signal
+    .changes()
+    .map(|change| change.current)
+    .start_with(0)
+    .subscribe(move |value| {
+        sink.lock().unwrap().push(*value);
+        if *value == 0 {
+            writer.set(5).unwrap(); // reacting to the initial value
+        }
+    })?;
+
+assert_eq!(*seen.lock().unwrap(), [0, 5]);
+```
+
 ## Writing your own streams
 
 `ValueStream::new` takes the setup closure directly. It receives the subscriber and returns the
