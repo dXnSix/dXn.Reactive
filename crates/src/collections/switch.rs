@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
@@ -35,31 +36,44 @@ pub trait SourceCacheSwitchExt<K, T> {
         T: Clone + Send + Sync + 'static;
 }
 
-impl<T> ListSwitchExt<T> for ValueStream<ChangeStream<ListChange<T>>> {
+impl<T, E> ListSwitchExt<T> for crate::primitives::ValueStream<ChangeStream<ListChange<T>>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn switch(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
     {
-        switch_list_streams(self.clone())
+        switch_list_streams(self.err_into::<CollectionError>())
     }
 }
 
-impl<K, T> CacheSwitchExt<K, T> for ValueStream<ChangeStream<CacheChange<K, T>>> {
+impl<K, T, E> CacheSwitchExt<K, T>
+    for crate::primitives::ValueStream<ChangeStream<CacheChange<K, T>>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn switch(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        switch_cache_streams(self.clone())
+        switch_cache_streams(self.err_into::<CollectionError>())
     }
 }
 
-impl<T> SourceListSwitchExt<T> for ValueStream<SourceList<T>> {
+impl<T, E> SourceListSwitchExt<T> for crate::primitives::ValueStream<SourceList<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn switch(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
     {
-        let sources = self.clone();
+        let sources = self.err_into::<CollectionError>();
         let streams = ValueStream::new(move |subscriber| {
             sources.subscribe(move |source| {
                 let stream = source.connect();
@@ -70,13 +84,17 @@ impl<T> SourceListSwitchExt<T> for ValueStream<SourceList<T>> {
     }
 }
 
-impl<K, T> SourceCacheSwitchExt<K, T> for ValueStream<SourceCache<K, T>> {
+impl<K, T, E> SourceCacheSwitchExt<K, T> for crate::primitives::ValueStream<SourceCache<K, T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn switch(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let sources = self.clone();
+        let sources = self.err_into::<CollectionError>();
         let streams = ValueStream::new(move |subscriber| {
             sources.subscribe(move |source| {
                 let stream = source.connect();

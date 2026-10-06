@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
@@ -11,100 +12,148 @@ type TrueForSelector<K, T, U> = Arc<dyn Fn(&T, &K) -> ValueStream<U> + Send + Sy
 type TrueForCondition<T, U> = Arc<dyn Fn(&T, &U) -> bool + Send + Sync>;
 
 pub trait CacheTrueForExt<K, T> {
-    fn true_for_all<U>(
+    fn true_for_all<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn true_for_all_value<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn true_for_any<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn true_for_any_value<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-}
-
-pub trait SourceCacheTrueForExt<K, T> {
-    fn true_for_all<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn true_for_all_value<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn true_for_any<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn true_for_any_value<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
-        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
-    ) -> ValueStream<bool>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-}
-
-impl<K, T> CacheTrueForExt<K, T> for ChangeStream<CacheChange<K, T>> {
-    fn true_for_all<U>(
-        &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn true_for_all_value<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn true_for_any<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn true_for_any_value<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+}
+
+pub trait SourceCacheTrueForExt<K, T> {
+    fn true_for_all<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn true_for_all_value<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn true_for_any<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn true_for_any_value<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+}
+
+impl<K, T> CacheTrueForExt<K, T> for ChangeStream<CacheChange<K, T>> {
+    fn true_for_all<U, E>(
+        &self,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
+        equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
+    ) -> ValueStream<bool>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         true_for_cache_stream(
             self.clone(),
             Some(true),
@@ -114,32 +163,48 @@ impl<K, T> CacheTrueForExt<K, T> for ChangeStream<CacheChange<K, T>> {
         )
     }
 
-    fn true_for_all_value<U>(
+    fn true_for_all_value<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let equality_condition = Arc::new(equality_condition);
-        self.true_for_all(observable_selector, move |_, value| {
+        self.true_for_all::<_, CollectionError>(observable_selector, move |_, value| {
             equality_condition(value)
         })
     }
 
-    fn true_for_any<U>(
+    fn true_for_any<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         true_for_cache_stream(
             self.clone(),
             Some(false),
@@ -149,34 +214,50 @@ impl<K, T> CacheTrueForExt<K, T> for ChangeStream<CacheChange<K, T>> {
         )
     }
 
-    fn true_for_any_value<U>(
+    fn true_for_any_value<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let equality_condition = Arc::new(equality_condition);
-        self.true_for_any(observable_selector, move |_, value| {
+        self.true_for_any::<_, CollectionError>(observable_selector, move |_, value| {
             equality_condition(value)
         })
     }
 }
 
 impl<K, T> SourceCacheTrueForExt<K, T> for SourceCache<K, T> {
-    fn true_for_all<U>(
+    fn true_for_all<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let initial = self.count().map(|count| count == 0).unwrap_or(false);
         true_for_cache_stream(
             self.connect(),
@@ -187,32 +268,48 @@ impl<K, T> SourceCacheTrueForExt<K, T> for SourceCache<K, T> {
         )
     }
 
-    fn true_for_all_value<U>(
+    fn true_for_all_value<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let equality_condition = Arc::new(equality_condition);
-        SourceCacheTrueForExt::true_for_all(self, observable_selector, move |_, value| {
+        SourceCacheTrueForExt::true_for_all::<_, CollectionError>(self, observable_selector, move |_, value| {
             equality_condition(value)
         })
     }
 
-    fn true_for_any<U>(
+    fn true_for_any<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&T, &U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         true_for_cache_stream(
             self.connect(),
             Some(false),
@@ -222,18 +319,26 @@ impl<K, T> SourceCacheTrueForExt<K, T> for SourceCache<K, T> {
         )
     }
 
-    fn true_for_any_value<U>(
+    fn true_for_any_value<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
         equality_condition: impl Fn(&U) -> bool + Send + Sync + 'static,
     ) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let equality_condition = Arc::new(equality_condition);
-        SourceCacheTrueForExt::true_for_any(self, observable_selector, move |_, value| {
+        SourceCacheTrueForExt::true_for_any::<_, CollectionError>(self, observable_selector, move |_, value| {
             equality_condition(value)
         })
     }
@@ -373,4 +478,3 @@ impl<K, T, U> Default for TrueForState<K, T, U> {
         }
     }
 }
-

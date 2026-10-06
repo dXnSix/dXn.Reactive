@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
@@ -262,12 +263,16 @@ impl<K, T> CacheSideEffectExt<K, T> for ChangeStream<CacheChange<K, T>> {
     }
 }
 
-impl<T> ListBufferExt<T> for ValueStream<Vec<ChangeSet<ListChange<T>>>> {
+impl<T, E> ListBufferExt<T> for crate::primitives::ValueStream<Vec<ChangeSet<ListChange<T>>>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn flatten_buffer_result(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         ChangeStream::new(move |subscriber| {
             source.subscribe(move |updates| {
                 if let Some(batch) = flatten_buffer(updates) {
@@ -278,13 +283,18 @@ impl<T> ListBufferExt<T> for ValueStream<Vec<ChangeSet<ListChange<T>>>> {
     }
 }
 
-impl<K, T> CacheBufferExt<K, T> for ValueStream<Vec<ChangeSet<CacheChange<K, T>>>> {
+impl<K, T, E> CacheBufferExt<K, T>
+    for crate::primitives::ValueStream<Vec<ChangeSet<CacheChange<K, T>>>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn flatten_buffer_result(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         ChangeStream::new(move |subscriber| {
             source.subscribe(move |updates| {
                 if let Some(batch) = flatten_buffer(updates) {

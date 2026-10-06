@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 impl<C> ChangeStream<C>
 where
     C: Clone + Send + Sync + 'static,
@@ -219,34 +220,62 @@ where
         })
     }
 
-    pub fn batch_if(&self, pause_if_true: ValueStream<bool>, initial_pause_state: bool) -> Self {
+    pub fn batch_if<E>(
+        &self,
+        pause_if_true: crate::primitives::ValueStream<bool, E>,
+        initial_pause_state: bool,
+    ) -> Self
+    where
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
+        let pause_if_true = pause_if_true.err_into::<CollectionError>();
         self.batch_if_core(pause_if_true, initial_pause_state, None)
     }
 
-    pub fn buffer_if(&self, pause_if_true: ValueStream<bool>, initial_pause_state: bool) -> Self {
-        self.batch_if(pause_if_true, initial_pause_state)
+    pub fn buffer_if<E>(
+        &self,
+        pause_if_true: crate::primitives::ValueStream<bool, E>,
+        initial_pause_state: bool,
+    ) -> Self
+    where
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
+        let pause_if_true = pause_if_true.err_into::<CollectionError>();
+        self.batch_if::<CollectionError>(pause_if_true, initial_pause_state)
     }
 
-    pub fn batch_if_with_timeout(
+    pub fn batch_if_with_timeout<E>(
         &self,
-        pause_if_true: ValueStream<bool>,
+        pause_if_true: crate::primitives::ValueStream<bool, E>,
         initial_pause_state: bool,
         timeout: Duration,
-    ) -> Self {
+    ) -> Self
+    where
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
+        let pause_if_true = pause_if_true.err_into::<CollectionError>();
         if timeout.is_zero() {
-            return self.batch_if(pause_if_true, initial_pause_state);
+            return self.batch_if::<CollectionError>(pause_if_true, initial_pause_state);
         }
 
         self.batch_if_core(pause_if_true, initial_pause_state, Some(timeout))
     }
 
-    pub fn buffer_if_with_timeout(
+    pub fn buffer_if_with_timeout<E>(
         &self,
-        pause_if_true: ValueStream<bool>,
+        pause_if_true: crate::primitives::ValueStream<bool, E>,
         initial_pause_state: bool,
         timeout: Duration,
-    ) -> Self {
-        self.batch_if_with_timeout(pause_if_true, initial_pause_state, timeout)
+    ) -> Self
+    where
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
+        let pause_if_true = pause_if_true.err_into::<CollectionError>();
+        self.batch_if_with_timeout::<CollectionError>(pause_if_true, initial_pause_state, timeout)
     }
 
     fn batch_if_core(
@@ -438,4 +467,3 @@ impl<C> Default for InitialBufferState<C> {
         }
     }
 }
-

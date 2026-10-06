@@ -230,25 +230,36 @@ pub trait ListStreamExt<T> {
         T: Clone + PartialEq + Send + Sync + 'static,
         S: Ord + Send + Sync + 'static;
 
-    fn sort_dynamic(&self, comparers: ValueStream<Comparer<T>>) -> ChangeStream<ListChange<T>>
+    fn sort_dynamic<E>(
+        &self,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+    ) -> ChangeStream<ListChange<T>>
     where
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_with_resort(
+    fn sort_with_resort<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        resort: ValueStream<()>,
+        resort: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ListChange<T>>
     where
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_dynamic_with_resort(
+    fn sort_dynamic_with_resort<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        resort: ValueStream<()>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        resort: crate::primitives::ValueStream<(), E2>,
     ) -> ChangeStream<ListChange<T>>
     where
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
     fn page(&self, request: PageRequest) -> ChangeStream<ListChange<T>>
     where
@@ -258,16 +269,23 @@ pub trait ListStreamExt<T> {
     where
         T: Clone + PartialEq + Send + Sync + 'static;
 
-    fn page_dynamic(&self, requests: ValueStream<PageRequest>) -> ChangeStream<ListChange<T>>
-    where
-        T: Clone + PartialEq + Send + Sync + 'static;
-
-    fn page_dynamic_with_response(
+    fn page_dynamic<E>(
         &self,
-        requests: ValueStream<PageRequest>,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn page_dynamic_with_response<E>(
+        &self,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
     ) -> ValueStream<PageChangeSet<T>>
     where
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn top(&self, number_of_items: usize) -> ChangeStream<ListChange<T>>
     where
@@ -285,19 +303,23 @@ pub trait ListStreamExt<T> {
     where
         T: Clone + PartialEq + Send + Sync + 'static;
 
-    fn virtualize_dynamic(
+    fn virtualize_dynamic<E>(
         &self,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ChangeStream<ListChange<T>>
     where
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn virtualize_dynamic_with_response(
+    fn virtualize_dynamic_with_response<E>(
         &self,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ValueStream<VirtualChangeSet<T>>
     where
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn group_by<G>(
         &self,
@@ -315,14 +337,16 @@ pub trait ListStreamExt<T> {
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static;
 
-    fn group_with_regrouper<G>(
+    fn group_with_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ListGroupChange<T, G>>
     where
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn group_immutable<G>(
         &self,
@@ -332,14 +356,16 @@ pub trait ListStreamExt<T> {
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static;
 
-    fn group_immutable_with_regrouper<G>(
+    fn group_immutable_with_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ImmutableListGroupChange<T, G>>
     where
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn where_reasons_are(
         &self,
@@ -363,4 +389,3 @@ pub trait ListStreamExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 }
-

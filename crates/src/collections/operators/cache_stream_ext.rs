@@ -185,17 +185,19 @@ pub trait CacheStreamExt<K, T> {
         U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static;
 
-    fn transform_async_with_previous_forced<U, Fut>(
+    fn transform_async_with_previous_forced<U, Fut, E>(
         &self,
         transform: impl Fn(T, Option<T>, K) -> Fut + Send + Sync + 'static,
-        force_transform: ValueStream<CacheForceTransform<K, T>>,
+        force_transform: crate::primitives::ValueStream<CacheForceTransform<K, T>, E>,
         options: TransformAsyncOptions,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
-        Fut: Future<Output = U> + Send + 'static;
+        Fut: Future<Output = U> + Send + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn transform_safe_async<U, E, Fut>(
         &self,
@@ -234,11 +236,11 @@ pub trait CacheStreamExt<K, T> {
         E: Send + Sync + 'static,
         Fut: Future<Output = std::result::Result<U, E>> + Send + 'static;
 
-    fn transform_safe_async_with_previous_forced<U, E, Fut>(
+    fn transform_safe_async_with_previous_forced<U, E, Fut, StreamError>(
         &self,
         transform: impl Fn(T, Option<T>, K) -> Fut + Send + Sync + 'static,
         on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
-        force_transform: ValueStream<CacheForceTransform<K, T>>,
+        force_transform: crate::primitives::ValueStream<CacheForceTransform<K, T>, StreamError>,
         options: TransformAsyncOptions,
     ) -> ChangeStream<CacheChange<K, U>>
     where
@@ -246,7 +248,9 @@ pub trait CacheStreamExt<K, T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
         E: Send + Sync + 'static,
-        Fut: Future<Output = std::result::Result<U, E>> + Send + 'static;
+        Fut: Future<Output = std::result::Result<U, E>> + Send + 'static,
+        StreamError: Send + Sync + 'static,
+        CollectionError: From<StreamError>;
 
     fn transform_on_refresh<U>(
         &self,
@@ -288,71 +292,83 @@ pub trait CacheStreamExt<K, T> {
         U: Clone + Send + Sync + 'static,
         E: Send + Sync + 'static;
 
-    fn transform_with_forced<U>(
+    fn transform_with_forced<U, E>(
         &self,
         transform: impl Fn(&T) -> U + Send + Sync + 'static,
-        force_transform: ValueStream<CacheForceTransform<K, T>>,
-    ) -> ChangeStream<CacheChange<K, U>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn transform_with_previous_forced<U>(
-        &self,
-        transform: impl Fn(&T, Option<&T>, &K) -> U + Send + Sync + 'static,
-        force_transform: ValueStream<CacheForceTransform<K, T>>,
-    ) -> ChangeStream<CacheChange<K, U>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
-
-    fn transform_safe_with_forced<U, E>(
-        &self,
-        transform: impl Fn(&T) -> std::result::Result<U, E> + Send + Sync + 'static,
-        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
-        force_transform: ValueStream<CacheForceTransform<K, T>>,
+        force_transform: crate::primitives::ValueStream<CacheForceTransform<K, T>, E>,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
-        E: Send + Sync + 'static;
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn transform_safe_with_previous_forced<U, E>(
+    fn transform_with_previous_forced<U, E>(
+        &self,
+        transform: impl Fn(&T, Option<&T>, &K) -> U + Send + Sync + 'static,
+        force_transform: crate::primitives::ValueStream<CacheForceTransform<K, T>, E>,
+    ) -> ChangeStream<CacheChange<K, U>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn transform_safe_with_forced<U, E, StreamError>(
+        &self,
+        transform: impl Fn(&T) -> std::result::Result<U, E> + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        force_transform: crate::primitives::ValueStream<CacheForceTransform<K, T>, StreamError>,
+    ) -> ChangeStream<CacheChange<K, U>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        StreamError: Send + Sync + 'static,
+        CollectionError: From<StreamError>;
+
+    fn transform_safe_with_previous_forced<U, E, StreamError>(
         &self,
         transform: impl Fn(&T, Option<&T>, &K) -> std::result::Result<U, E> + Send + Sync + 'static,
         on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
-        force_transform: ValueStream<CacheForceTransform<K, T>>,
+        force_transform: crate::primitives::ValueStream<CacheForceTransform<K, T>, StreamError>,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
-        E: Send + Sync + 'static;
+        E: Send + Sync + 'static,
+        StreamError: Send + Sync + 'static,
+        CollectionError: From<StreamError>;
 
-    fn transform_with_forced_all<U>(
+    fn transform_with_forced_all<U, E>(
         &self,
         transform: impl Fn(&T) -> U + Send + Sync + 'static,
-        force_transform: ValueStream<()>,
+        force_transform: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn transform_safe_with_forced_all<U, E>(
+    fn transform_safe_with_forced_all<U, E, StreamError>(
         &self,
         transform: impl Fn(&T) -> std::result::Result<U, E> + Send + Sync + 'static,
         on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
-        force_transform: ValueStream<()>,
+        force_transform: crate::primitives::ValueStream<(), StreamError>,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
-        E: Send + Sync + 'static;
+        E: Send + Sync + 'static,
+        StreamError: Send + Sync + 'static,
+        CollectionError: From<StreamError>;
 
     fn transform_inline<U>(
         &self,
@@ -465,31 +481,39 @@ pub trait CacheStreamExt<K, T> {
         T: Clone + PartialEq + Send + Sync + 'static,
         S: Ord + Send + Sync + 'static;
 
-    fn sort_keyed_dynamic(
+    fn sort_keyed_dynamic<E>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_keyed_with_resort(
+    fn sort_keyed_with_resort<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        resort: ValueStream<()>,
+        resort: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_keyed_dynamic_with_resort(
+    fn sort_keyed_dynamic_with_resort<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        resort: ValueStream<()>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        resort: crate::primitives::ValueStream<(), E2>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
     fn update_index(&self) -> ChangeStream<CacheChange<K, T>>
     where
@@ -504,28 +528,39 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
-    fn sort_dynamic(&self, comparers: ValueStream<Comparer<T>>) -> ChangeStream<ListChange<T>>
+    fn sort_dynamic<E>(
+        &self,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+    ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_with_resort(
+    fn sort_with_resort<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        resort: ValueStream<()>,
+        resort: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_dynamic_with_resort(
+    fn sort_dynamic_with_resort<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        resort: ValueStream<()>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        resort: crate::primitives::ValueStream<(), E2>,
     ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
     fn sort_and_page_by(
         &self,
@@ -536,41 +571,53 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
-    fn sort_and_page_dynamic_by(
+    fn sort_and_page_dynamic_by<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        requests: ValueStream<PageRequest>,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
     ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_and_page_dynamic(
+    fn sort_and_page_dynamic<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        requests: ValueStream<PageRequest>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        requests: crate::primitives::ValueStream<PageRequest, E2>,
     ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
-    fn sort_and_page_dynamic_with_response_by(
+    fn sort_and_page_dynamic_with_response_by<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        requests: ValueStream<PageRequest>,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
     ) -> ValueStream<PageChangeSet<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_and_page_dynamic_with_response(
+    fn sort_and_page_dynamic_with_response<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        requests: ValueStream<PageRequest>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        requests: crate::primitives::ValueStream<PageRequest, E2>,
     ) -> ValueStream<PageChangeSet<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
     fn sort_and_virtualize_by(
         &self,
@@ -581,41 +628,53 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
-    fn sort_and_virtualize_dynamic_by(
+    fn sort_and_virtualize_dynamic_by<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_and_virtualize_dynamic(
+    fn sort_and_virtualize_dynamic<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        requests: ValueStream<VirtualRequest>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E2>,
     ) -> ChangeStream<ListChange<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
-    fn sort_and_virtualize_dynamic_with_response_by(
+    fn sort_and_virtualize_dynamic_with_response_by<E>(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ValueStream<VirtualChangeSet<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn sort_and_virtualize_dynamic_with_response(
+    fn sort_and_virtualize_dynamic_with_response<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        requests: ValueStream<VirtualRequest>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E2>,
     ) -> ValueStream<VirtualChangeSet<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
     fn page_keyed(&self, request: PageRequest) -> ChangeStream<CacheChange<K, T>>
     where
@@ -630,21 +689,25 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
-    fn page_keyed_dynamic(
+    fn page_keyed_dynamic<E>(
         &self,
-        requests: ValueStream<PageRequest>,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn page_keyed_dynamic_with_response(
+    fn page_keyed_dynamic_with_response<E>(
         &self,
-        requests: ValueStream<PageRequest>,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
     ) -> ValueStream<KeyedPageChangeSet<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn top_keyed(&self, number_of_items: usize) -> ChangeStream<CacheChange<K, T>>
     where
@@ -664,21 +727,25 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
-    fn virtualize_keyed_dynamic(
+    fn virtualize_keyed_dynamic<E>(
         &self,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn virtualize_keyed_dynamic_with_response(
+    fn virtualize_keyed_dynamic_with_response<E>(
         &self,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ValueStream<KeyedVirtualChangeSet<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static;
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn group_by<G>(
         &self,
@@ -707,25 +774,29 @@ pub trait CacheStreamExt<K, T> {
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static;
 
-    fn group_with_regrouper<G>(
+    fn group_with_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn group_with_key_and_regrouper<G>(
+    fn group_with_key_and_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T, &K) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn group_immutable<G>(
         &self,
@@ -745,44 +816,54 @@ pub trait CacheStreamExt<K, T> {
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static;
 
-    fn group_immutable_with_regrouper<G>(
+    fn group_immutable_with_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ImmutableCacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn group_immutable_with_key_and_regrouper<G>(
+    fn group_immutable_with_key_and_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T, &K) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ImmutableCacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn group_dynamic<G>(
+    fn group_dynamic<G, E>(
         &self,
-        group_selectors: ValueStream<GroupSelector<K, T, G>>,
+        group_selectors: crate::primitives::ValueStream<GroupSelector<K, T, G>, E>,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn group_dynamic_with_regrouper<G>(
+    fn group_dynamic_with_regrouper<G, E, E2>(
         &self,
-        group_selectors: ValueStream<GroupSelector<K, T, G>>,
-        regrouper: ValueStream<()>,
+        group_selectors: crate::primitives::ValueStream<GroupSelector<K, T, G>, E>,
+        regrouper: crate::primitives::ValueStream<(), E2>,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>;
 
     fn transform_many<ChildKey, Child, Children>(
         &self,
@@ -939,4 +1020,3 @@ pub trait CacheStreamExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 }
-

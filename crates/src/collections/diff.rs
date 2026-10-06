@@ -1,10 +1,11 @@
+use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::operators::{apply_list_changes, diff_list_by};
-use crate::collections::stream::{ChangeStream, ValueStream};
+use crate::collections::stream::ChangeStream;
 
 pub trait ValueStreamCacheDiffExt<T> {
     fn edit_diff<K>(
@@ -38,7 +39,11 @@ pub trait ValueStreamListDiffExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
-impl<T> ValueStreamListDiffExt<T> for ValueStream<Vec<T>> {
+impl<T, E> ValueStreamListDiffExt<T> for crate::primitives::ValueStream<Vec<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn edit_diff_list(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
@@ -53,7 +58,7 @@ impl<T> ValueStreamListDiffExt<T> for ValueStream<Vec<T>> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let are_items_equal = Arc::new(are_items_equal);
         ChangeStream::new(move |subscriber| {
             let state = Arc::new(Mutex::new(ListSnapshotDiffState::<T>::default()));
@@ -73,7 +78,11 @@ impl<T> ValueStreamListDiffExt<T> for ValueStream<Vec<T>> {
     }
 }
 
-impl<T> ValueStreamCacheDiffExt<T> for ValueStream<Vec<T>> {
+impl<T, E> ValueStreamCacheDiffExt<T> for crate::primitives::ValueStream<Vec<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn edit_diff<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -94,7 +103,7 @@ impl<T> ValueStreamCacheDiffExt<T> for ValueStream<Vec<T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = Arc::new(key_selector);
         let are_items_equal = Arc::new(are_items_equal);
         ChangeStream::new(move |subscriber| {
@@ -172,7 +181,11 @@ pub trait OptionalValueStreamCacheDiffExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
-impl<T> OptionalValueStreamCacheDiffExt<T> for ValueStream<Option<T>> {
+impl<T, E> OptionalValueStreamCacheDiffExt<T> for crate::primitives::ValueStream<Option<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn edit_diff_optional<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -193,7 +206,7 @@ impl<T> OptionalValueStreamCacheDiffExt<T> for ValueStream<Option<T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = Arc::new(key_selector);
         let are_items_equal = Arc::new(are_items_equal);
         ChangeStream::new(move |subscriber| {

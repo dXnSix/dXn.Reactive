@@ -10,6 +10,7 @@ mod grouping_tree_switching;
 mod joins;
 mod lifecycle_observables;
 mod limits_expiration_streams;
+mod operator_input_interop;
 mod side_effects_options_bridges;
 mod sorting_windowing;
 mod sources;

@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -57,134 +58,192 @@ where
 }
 
 pub trait CacheLifecycleExt<K, T> {
-    fn filter_on_observable(
+    fn filter_on_observable<E>(
         &self,
-        filter: impl Fn(&T, &K) -> ValueStream<bool> + Send + Sync + 'static,
-    ) -> ChangeStream<CacheChange<K, T>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static;
-
-    fn auto_refresh<S>(
-        &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        filter: impl Fn(&T, &K) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        S: Send + Sync + 'static;
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn auto_refresh_buffered<S>(
+    fn auto_refresh<S, E>(
         &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn auto_refresh_buffered<S, E>(
+        &self,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        S: Send + Sync + 'static;
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn transform_on_observable<U>(
+    fn transform_on_observable<U, E>(
         &self,
-        transform_factory: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        transform_factory: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static;
+        U: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn group_on_observable<G>(
+    fn group_on_observable<G, E>(
         &self,
-        group_selector: impl Fn(&T, &K) -> ValueStream<G> + Send + Sync + 'static,
+        group_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<G, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many<U>(
+    fn merge_many<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many_items<U>(
+    fn merge_many_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many_keyed_items<U>(
+    fn merge_many_keyed_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_value_changed<U>(
+    fn when_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_value_changed_with_initial<U>(
+    fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_item_value_changed<U>(
+    fn when_item_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_item_value_changed_with_initial<U>(
+    fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_keyed_value_changed<U>(
+    fn when_keyed_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_keyed_value_changed_with_initial<U>(
+    fn when_keyed_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn merge_many_list_change_sets<U>(
         &self,
@@ -337,14 +396,19 @@ pub trait CacheLifecycleExt<K, T> {
 }
 
 impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
-    fn filter_on_observable(
+    fn filter_on_observable<E>(
         &self,
-        filter: impl Fn(&T, &K) -> ValueStream<bool> + Send + Sync + 'static,
+        filter: impl Fn(&T, &K) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let filter = move |argument_0: &T, argument_1: &K| {
+            filter(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let filter: CacheFilterFactory<K, T> = Arc::new(filter);
         ChangeStream::new(move |subscriber| {
@@ -380,15 +444,20 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn auto_refresh<S>(
+    fn auto_refresh<S, E>(
         &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let reevaluator = move |argument_0: &T, argument_1: &K| {
+            reevaluator(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let reevaluator: CacheRefreshFactory<K, T, S> = Arc::new(reevaluator);
         ChangeStream::new(move |subscriber| {
@@ -422,18 +491,23 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn auto_refresh_buffered<S>(
+    fn auto_refresh_buffered<S, E>(
         &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let reevaluator = move |argument_0: &T, argument_1: &K| {
+            reevaluator(argument_0, argument_1).err_into::<CollectionError>()
+        };
         if buffer.is_zero() {
-            return self.auto_refresh(reevaluator);
+            return self.auto_refresh::<_, CollectionError>(reevaluator);
         }
 
         let source = self.clone();
@@ -474,15 +548,23 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn transform_on_observable<U>(
+    fn transform_on_observable<U, E>(
         &self,
-        transform_factory: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        transform_factory: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let transform_factory = move |argument_0: &T, argument_1: &K| {
+            transform_factory(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let transform_factory: CacheTransformFactory<K, T, U> = Arc::new(transform_factory);
         ChangeStream::new(move |subscriber| {
@@ -520,15 +602,23 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn merge_many<U>(
+    fn merge_many<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
         ValueStream::new(move |subscriber| {
@@ -544,63 +634,95 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn when_value_changed<U>(
+    fn when_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many(observable_selector)
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        self.merge_many::<_, CollectionError>(observable_selector)
     }
 
-    fn when_value_changed_with_initial<U>(
+    fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let current_value = Arc::new(current_value);
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             observable_selector(item, key).start_with(current_value(item, key))
         })
     }
 
-    fn merge_many_items<U>(
+    fn merge_many_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let item_for_value = item.clone();
             observable_selector(item, key)
                 .map(move |value| ItemValue::new(item_for_value.clone(), value.clone()))
         })
     }
 
-    fn merge_many_keyed_items<U>(
+    fn merge_many_keyed_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let item_for_value = item.clone();
             let key_for_value = key.clone();
             observable_selector(item, key).map(move |value| {
@@ -609,31 +731,47 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn when_item_value_changed<U>(
+    fn when_item_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many_items(observable_selector)
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        self.merge_many_items::<_, CollectionError>(observable_selector)
     }
 
-    fn when_item_value_changed_with_initial<U>(
+    fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let current_value = Arc::new(current_value);
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let initial = ItemValue::new(item.clone(), current_value(item, key));
             let item_for_value = item.clone();
             observable_selector(item, key)
@@ -642,31 +780,47 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn when_keyed_value_changed<U>(
+    fn when_keyed_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many_keyed_items(observable_selector)
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        self.merge_many_keyed_items::<_, CollectionError>(observable_selector)
     }
 
-    fn when_keyed_value_changed_with_initial<U>(
+    fn when_keyed_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let current_value = Arc::new(current_value);
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let initial = KeyedItemValue::new(key.clone(), item.clone(), current_value(item, key));
             let item_for_value = item.clone();
             let key_for_value = key.clone();
@@ -682,15 +836,20 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn group_on_observable<G>(
+    fn group_on_observable<G, E>(
         &self,
-        group_selector: impl Fn(&T, &K) -> ValueStream<G> + Send + Sync + 'static,
+        group_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<G, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let group_selector = move |argument_0: &T, argument_1: &K| {
+            group_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let group_selector: CacheGroupFactory<K, T, G> = Arc::new(group_selector);
         ChangeStream::new(move |subscriber| {

@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
@@ -32,71 +33,87 @@ where
 }
 
 pub trait ListLifecycleExt<T> {
-    fn filter_on_observable(
+    fn filter_on_observable<E>(
         &self,
-        filter: impl Fn(&T) -> ValueStream<bool> + Send + Sync + 'static,
-    ) -> ChangeStream<ListChange<T>>
-    where
-        T: Clone + Send + Sync + 'static;
-
-    fn auto_refresh<S>(
-        &self,
-        reevaluator: impl Fn(&T) -> ValueStream<S> + Send + Sync + 'static,
+        filter: impl Fn(&T) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
-        S: Send + Sync + 'static;
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn auto_refresh_buffered<S>(
+    fn auto_refresh<S, E>(
         &self,
-        reevaluator: impl Fn(&T) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    fn auto_refresh_buffered<S, E>(
+        &self,
+        reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
-        S: Send + Sync + 'static;
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many<U>(
+    fn merge_many<U, E>(
         &self,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_value_changed<U>(
+    fn when_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_value_changed_with_initial<U>(
+    fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_item_value_changed<U>(
+    fn when_item_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_item_value_changed_with_initial<U>(
+    fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn merge_many_list_change_sets<U>(
         &self,
@@ -174,13 +191,16 @@ pub trait ListLifecycleExt<T> {
 }
 
 impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
-    fn filter_on_observable(
+    fn filter_on_observable<E>(
         &self,
-        filter: impl Fn(&T) -> ValueStream<bool> + Send + Sync + 'static,
+        filter: impl Fn(&T) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let filter = move |argument_0: &T| filter(argument_0).err_into::<CollectionError>();
         let source = self.clone();
         let filter: ListFilterFactory<T> = Arc::new(filter);
         ChangeStream::new(move |subscriber| {
@@ -216,14 +236,18 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         })
     }
 
-    fn auto_refresh<S>(
+    fn auto_refresh<S, E>(
         &self,
-        reevaluator: impl Fn(&T) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
         S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let reevaluator =
+            move |argument_0: &T| reevaluator(argument_0).err_into::<CollectionError>();
         let source = self.clone();
         let reevaluator: ListRefreshFactory<T, S> = Arc::new(reevaluator);
         ChangeStream::new(move |subscriber| {
@@ -257,17 +281,21 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         })
     }
 
-    fn auto_refresh_buffered<S>(
+    fn auto_refresh_buffered<S, E>(
         &self,
-        reevaluator: impl Fn(&T) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
         S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let reevaluator =
+            move |argument_0: &T| reevaluator(argument_0).err_into::<CollectionError>();
         if buffer.is_zero() {
-            return self.auto_refresh(reevaluator);
+            return self.auto_refresh::<_, CollectionError>(reevaluator);
         }
 
         let source = self.clone();
@@ -308,14 +336,18 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         })
     }
 
-    fn merge_many<U>(
+    fn merge_many<U, E>(
         &self,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector =
+            move |argument_0: &T| observable_selector(argument_0).err_into::<CollectionError>();
         let source = self.clone();
         let observable_selector: ListValueStreamFactory<T, U> = Arc::new(observable_selector);
         ValueStream::new(move |subscriber| {
@@ -331,59 +363,77 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         })
     }
 
-    fn when_value_changed<U>(
+    fn when_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many(observable_selector)
+        let observable_selector =
+            move |argument_0: &T| observable_selector(argument_0).err_into::<CollectionError>();
+        self.merge_many::<_, CollectionError>(observable_selector)
     }
 
-    fn when_value_changed_with_initial<U>(
+    fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector =
+            move |argument_0: &T| observable_selector(argument_0).err_into::<CollectionError>();
         let current_value = Arc::new(current_value);
         let observable_selector: ListValueStreamFactory<T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item| observable_selector(item).start_with(current_value(item)))
+        self.merge_many::<_, CollectionError>(move |item| {
+            observable_selector(item).start_with(current_value(item))
+        })
     }
 
-    fn when_item_value_changed<U>(
+    fn when_item_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector =
+            move |argument_0: &T| observable_selector(argument_0).err_into::<CollectionError>();
         let observable_selector: ListValueStreamFactory<T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item| {
+        self.merge_many::<_, CollectionError>(move |item| {
             let item_for_value = item.clone();
             observable_selector(item)
                 .map(move |value| ItemValue::new(item_for_value.clone(), value.clone()))
         })
     }
 
-    fn when_item_value_changed_with_initial<U>(
+    fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector =
+            move |argument_0: &T| observable_selector(argument_0).err_into::<CollectionError>();
         let current_value = Arc::new(current_value);
         let observable_selector: ListValueStreamFactory<T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item| {
+        self.merge_many::<_, CollectionError>(move |item| {
             let initial = ItemValue::new(item.clone(), current_value(item));
             let item_for_value = item.clone();
             observable_selector(item)

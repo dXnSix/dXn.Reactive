@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,7 +9,7 @@ use crate::collections::error::Result;
 use crate::collections::expiration::{SourceCacheExpireAfterExt, SourceListExpireAfterExt};
 use crate::collections::limit::{SourceCacheLimitExt, SourceListLimitExt};
 use crate::collections::list::{ListUpdater, SourceList};
-use crate::collections::stream::{ChangeStream, ValueStream};
+use crate::collections::stream::ChangeStream;
 use crate::collections::subscription::Subscription;
 
 pub type ExpirationSelector<T> = Arc<dyn Fn(&T) -> Option<Duration> + Send + Sync>;
@@ -95,25 +96,45 @@ pub trait CachePopulateExt<K, T> {
 }
 
 pub trait SourceListPopulateFromExt<T> {
-    fn populate_from(&self, source: &ValueStream<T>) -> Result<Subscription>
+    fn populate_from<E>(
+        &self,
+        source: &crate::primitives::ValueStream<T, E>,
+    ) -> Result<Subscription>
     where
-        T: Clone + Send + Sync + 'static;
+        T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn populate_from_batches(&self, source: &ValueStream<Vec<T>>) -> Result<Subscription>
+    fn populate_from_batches<E>(
+        &self,
+        source: &crate::primitives::ValueStream<Vec<T>, E>,
+    ) -> Result<Subscription>
     where
-        T: Clone + Send + Sync + 'static;
+        T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 }
 
 pub trait SourceCachePopulateFromExt<K, T> {
-    fn populate_from(&self, source: &ValueStream<T>) -> Result<Subscription>
+    fn populate_from<E>(
+        &self,
+        source: &crate::primitives::ValueStream<T, E>,
+    ) -> Result<Subscription>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static;
+        T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn populate_from_batches(&self, source: &ValueStream<Vec<T>>) -> Result<Subscription>
+    fn populate_from_batches<E>(
+        &self,
+        source: &crate::primitives::ValueStream<Vec<T>, E>,
+    ) -> Result<Subscription>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static;
+        T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 }
 
 pub trait ValueStreamListChangeSetExt<T> {
@@ -206,20 +227,32 @@ impl<K, T> CachePopulateExt<K, T> for ChangeStream<CacheChange<K, T>> {
 }
 
 impl<T> SourceListPopulateFromExt<T> for SourceList<T> {
-    fn populate_from(&self, source: &ValueStream<T>) -> Result<Subscription>
+    fn populate_from<E>(
+        &self,
+        source: &crate::primitives::ValueStream<T, E>,
+    ) -> Result<Subscription>
     where
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let source = &source.err_into::<CollectionError>();
         let destination = self.clone();
         source.subscribe(move |item| {
             let _ = destination.push(item.clone());
         })
     }
 
-    fn populate_from_batches(&self, source: &ValueStream<Vec<T>>) -> Result<Subscription>
+    fn populate_from_batches<E>(
+        &self,
+        source: &crate::primitives::ValueStream<Vec<T>, E>,
+    ) -> Result<Subscription>
     where
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let source = &source.err_into::<CollectionError>();
         let destination = self.clone();
         source.subscribe(move |items| {
             let _ = destination.add_range(items.clone());
@@ -228,22 +261,34 @@ impl<T> SourceListPopulateFromExt<T> for SourceList<T> {
 }
 
 impl<K, T> SourceCachePopulateFromExt<K, T> for SourceCache<K, T> {
-    fn populate_from(&self, source: &ValueStream<T>) -> Result<Subscription>
+    fn populate_from<E>(
+        &self,
+        source: &crate::primitives::ValueStream<T, E>,
+    ) -> Result<Subscription>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let source = &source.err_into::<CollectionError>();
         let destination = self.clone();
         source.subscribe(move |item| {
             let _ = destination.add_or_update(item.clone());
         })
     }
 
-    fn populate_from_batches(&self, source: &ValueStream<Vec<T>>) -> Result<Subscription>
+    fn populate_from_batches<E>(
+        &self,
+        source: &crate::primitives::ValueStream<Vec<T>, E>,
+    ) -> Result<Subscription>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let source = &source.err_into::<CollectionError>();
         let destination = self.clone();
         source.subscribe(move |items| {
             let _ = destination.add_or_update_range(items.clone());
@@ -251,12 +296,16 @@ impl<K, T> SourceCachePopulateFromExt<K, T> for SourceCache<K, T> {
     }
 }
 
-impl<T> ValueStreamListChangeSetExt<T> for ValueStream<T> {
+impl<T, E> ValueStreamListChangeSetExt<T> for crate::primitives::ValueStream<T, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn to_list_change_set(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         ChangeStream::new(move |subscriber| {
             let backing = SourceList::<T>::default();
             let output = backing
@@ -277,7 +326,7 @@ impl<T> ValueStreamListChangeSetExt<T> for ValueStream<T> {
     where
         T: Clone + PartialEq + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         ChangeStream::new(move |subscriber| {
             let backing = SourceList::<T>::default();
             let mut subscriptions = Vec::new();
@@ -296,12 +345,16 @@ impl<T> ValueStreamListChangeSetExt<T> for ValueStream<T> {
     }
 }
 
-impl<T> ValueStreamListBatchChangeSetExt<T> for ValueStream<Vec<T>> {
+impl<T, E> ValueStreamListBatchChangeSetExt<T> for crate::primitives::ValueStream<Vec<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn to_list_change_set_batches(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         ChangeStream::new(move |subscriber| {
             let backing = SourceList::<T>::default();
             let output = backing
@@ -322,7 +375,7 @@ impl<T> ValueStreamListBatchChangeSetExt<T> for ValueStream<Vec<T>> {
     where
         T: Clone + PartialEq + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         ChangeStream::new(move |subscriber| {
             let backing = SourceList::<T>::default();
             let mut subscriptions = Vec::new();
@@ -341,7 +394,11 @@ impl<T> ValueStreamListBatchChangeSetExt<T> for ValueStream<Vec<T>> {
     }
 }
 
-impl<T> ValueStreamCacheChangeSetExt<T> for ValueStream<T> {
+impl<T, E> ValueStreamCacheChangeSetExt<T> for crate::primitives::ValueStream<T, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn to_cache_change_set<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -350,7 +407,7 @@ impl<T> ValueStreamCacheChangeSetExt<T> for ValueStream<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = std::sync::Arc::new(key_selector);
         ChangeStream::new(move |subscriber| {
             let key_selector_for_cache = std::sync::Arc::clone(&key_selector);
@@ -375,7 +432,7 @@ impl<T> ValueStreamCacheChangeSetExt<T> for ValueStream<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = Arc::new(key_selector);
         ChangeStream::new(move |subscriber| {
             let key_selector_for_cache = Arc::clone(&key_selector);
@@ -395,4 +452,3 @@ impl<T> ValueStreamCacheChangeSetExt<T> for ValueStream<T> {
         })
     }
 }
-

@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
@@ -18,14 +19,16 @@ pub trait CacheTreeExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
-    fn transform_to_tree_with_predicate(
+    fn transform_to_tree_with_predicate<E>(
         &self,
         pivot_on: impl Fn(&T) -> K + Send + Sync + 'static,
-        predicates: ValueStream<TreePredicate<K, T>>,
+        predicates: crate::primitives::ValueStream<TreePredicate<K, T>, E>,
     ) -> ChangeStream<CacheChange<K, TreeNode<K, T>>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static;
+        T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 }
 
 impl<K, T> CacheTreeExt<K, T> for ChangeStream<CacheChange<K, T>> {
@@ -42,18 +45,21 @@ impl<K, T> CacheTreeExt<K, T> for ChangeStream<CacheChange<K, T>> {
             subscriber(&root_predicate);
             Ok(Subscription::empty())
         });
-        self.transform_to_tree_with_predicate(pivot_on, predicates)
+        self.transform_to_tree_with_predicate::<CollectionError>(pivot_on, predicates)
     }
 
-    fn transform_to_tree_with_predicate(
+    fn transform_to_tree_with_predicate<E>(
         &self,
         pivot_on: impl Fn(&T) -> K + Send + Sync + 'static,
-        predicates: ValueStream<TreePredicate<K, T>>,
+        predicates: crate::primitives::ValueStream<TreePredicate<K, T>, E>,
     ) -> ChangeStream<CacheChange<K, TreeNode<K, T>>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let predicates = predicates.err_into::<CollectionError>();
         let source = self.clone();
         let pivot_on = Arc::new(pivot_on);
         ChangeStream::new(move |subscriber| {

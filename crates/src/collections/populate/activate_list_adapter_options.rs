@@ -1,4 +1,8 @@
-impl<T> ValueStreamCacheBatchChangeSetExt<T> for ValueStream<Vec<T>> {
+impl<T, E> ValueStreamCacheBatchChangeSetExt<T> for crate::primitives::ValueStream<Vec<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn to_cache_change_set_batches<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -7,7 +11,7 @@ impl<T> ValueStreamCacheBatchChangeSetExt<T> for ValueStream<Vec<T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = std::sync::Arc::new(key_selector);
         ChangeStream::new(move |subscriber| {
             let key_selector_for_cache = std::sync::Arc::clone(&key_selector);
@@ -32,7 +36,7 @@ impl<T> ValueStreamCacheBatchChangeSetExt<T> for ValueStream<Vec<T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = Arc::new(key_selector);
         ChangeStream::new(move |subscriber| {
             let key_selector_for_cache = Arc::clone(&key_selector);

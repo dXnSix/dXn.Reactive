@@ -1,3 +1,4 @@
+use crate::collections::error::CollectionError;
 pub trait CacheAggregationExt<K, T> {
     fn query_when_changed(&self) -> ValueStream<CacheQuery<K, T>>
     where
@@ -13,25 +14,35 @@ pub trait CacheAggregationExt<K, T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static;
 
-    fn query_when_changed_on<V>(
+    fn query_when_changed_on<V, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<CacheQuery<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        V: Send + Sync + 'static;
+        V: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn query_when_changed_on_with<V, U>(
+    fn query_when_changed_on_with<V, U, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
         selector: impl Fn(&CacheQuery<K, T>) -> U + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         V: Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
     fn to_collection(&self) -> ValueStream<Vec<T>>
     where
@@ -158,15 +169,23 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn query_when_changed_on<V>(
+    fn query_when_changed_on<V, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<CacheQuery<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         V: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let item_changed_trigger = move |argument_0: &T, argument_1: &K| {
+            item_changed_trigger(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let item_changed_trigger = Arc::new(item_changed_trigger);
         ValueStream::new(move |subscriber| {
@@ -223,9 +242,12 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn query_when_changed_on_with<V, U>(
+    fn query_when_changed_on_with<V, U, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
         selector: impl Fn(&CacheQuery<K, T>) -> U + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
@@ -233,8 +255,13 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         T: Clone + Send + Sync + 'static,
         V: Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        let queries = self.query_when_changed_on(item_changed_trigger);
+        let item_changed_trigger = move |argument_0: &T, argument_1: &K| {
+            item_changed_trigger(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        let queries = self.query_when_changed_on::<_, CollectionError>(item_changed_trigger);
         let selector = Arc::new(selector);
         ValueStream::new(move |subscriber| {
             let selector = Arc::clone(&selector);
@@ -433,4 +460,3 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         distinct_values(values)
     }
 }
-
