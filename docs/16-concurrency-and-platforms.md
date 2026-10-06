@@ -25,23 +25,30 @@ subscriber might take.
 ### Draining threads
 
 Each delivery queue drains on whichever thread starts the drain. If thread A is delivering a batch
-and thread B publishes to the same queue, B enqueues its item and returns immediately; **A**
-delivers B's item when it finishes the current one. Delivery therefore stays FIFO and
-non-recursive, but a subscriber can observe a value published by another thread while running on
-the first thread.
+and thread B publishes to the same queue, B queues its item and returns immediately; **A**
+delivers B's item when it finishes the current one. Delivery therefore stays FIFO, non-recursive
+and non-overlapping, but a subscriber can observe a value published by another thread while running
+on the first thread. A steady flood of writes from other threads can keep A delivering for a long
+time: give hot signals and sources a single writer, and use `DeliveryQueue::pending_len()` on your
+own queues to watch the backlog.
 
 ## Ordering guarantees
 
-- **Per queue, FIFO.** Each signal, event bus and source delivers its items in the order they were
-  enqueued. With a single writer thread that is commit order. With several writer threads it is
-  currently *not* guaranteed: a writer can commit first and enqueue second, so batches can arrive out
-  of version order (see [Known issues](README.md#known-issues)).
+- **Per queue, commit order.** Signals and event buses push each change while they still hold their
+  state lock and deliver it after releasing it, so subscribers see changes in commit (version)
+  order even with several writer threads. Collection sources currently deliver in enqueue order,
+  which can differ from version order with several writer threads (see
+  [Known issues](README.md#known-issues)).
 - **Batches are atomic.** A subscriber sees a whole change set or nothing, never part of one.
 - **Re-entrant writes are queued, not recursive.** A write made by a subscriber is delivered after
   the current item has reached every subscriber.
-- **No order between subscribers.** Subscribers of the same queue all receive every item, but in an
-  unspecified order relative to one another. Do not let one subscriber depend on another having
-  already run.
+- **Subscription order between subscribers.** Subscribers of the same queue are invoked one at a
+  time, in the order they subscribed. Prefer not to rely on it across independently written
+  components, but it is deterministic.
+- **Disposal stops delivery immediately on the delivering thread.** A subscription disposed on the
+  thread that is delivering (for example by another subscriber) is not invoked again, not even for
+  the item in flight. Disposal from another thread does not block and does not wait for a call that
+  is already running.
 - **No global order between different sources.** Two signals written by two threads can be observed
   in either order by a subscriber of both.
 
@@ -179,14 +186,16 @@ between; serialize such sequences yourself.
 
 ## Panics
 
-- A panic inside a subscriber propagates to the thread that published.
+- A panic inside a subscriber propagates to the thread draining that delivery queue: the
+  publishing thread, or another publisher's thread that is already draining it.
 - A panic while a lock is held poisons it, and later operations on that signal or source return
   `Poisoned`.
-- **A subscriber panic stalls its delivery queue.** If the panic unwinds through a delivery that is
-  later caught (with `catch_unwind`, or a thread pool that survives task panics), that signal,
-  event bus or source keeps committing writes but **never notifies any subscriber again**,
-  including new ones. Treat subscriber panics as fatal for the affected state, and keep subscriber
-  code panic-free: handle `Result`s, avoid `unwrap` on fallible paths, and validate indexes.
+- **A subscriber panic does not stall delivery.** If the panic unwinds through a delivery and is
+  caught (with `catch_unwind`, or a thread pool that survives task panics), the signal, event bus or
+  source keeps working: items queued behind the panicking one, and later ones, are delivered to
+  every live subscriber, including new ones, by the next publication. The subscribers after the
+  panicking one miss only the item that panicked. Keep subscriber code panic-free anyway: handle
+  `Result`s, avoid `unwrap` on fallible paths, and validate indexes.
 
 ## Worker threads and timers
 

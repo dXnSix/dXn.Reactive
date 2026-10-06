@@ -91,8 +91,6 @@ these in mind:
   ([chapter 16](16-concurrency-and-platforms.md#sources-under-contention)).
 - **Reads inside an edit.** Calling `items()`, `len()`, `count()`, `keys()` or
   `suspend_notifications()` on a source from inside its own `edit` closure deadlocks.
-- **Subscriber panics.** A caught subscriber panic stops all further notifications from that signal,
-  event bus or source.
 - **Suspension.** Connecting or watching while `suspend_notifications` is active, then editing
   again, can re-deliver changes.
 - **Cache indexes.** Cache `filter`, `transform_safe*`, forced transforms, `transform_inline`, the
