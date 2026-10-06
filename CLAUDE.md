@@ -17,14 +17,19 @@ cargo package --workspace
 
 Tests are grouped by feature: collection groups live in `crates/src/collections/tests/<group>/`
 (select one with `cargo test -p rayx_reactive --all-features collections::tests::<group>`), scalar
-state in `crates/src/tests.rs`, and public-surface tests in `crates/tests/`. Test only what you
-changed: run the touched group while iterating, and the full list above once before committing.
+state in `crates/src/tests.rs`, and public-surface tests in `crates/tests/`. Every Rust example in
+`README.md` and `docs/*.md` runs as a test of the unpublished `doc-examples` workspace member (select
+it with `cargo test -p rayx_reactive_doc_examples`; mark deliberate fragments with a preceding
+`<!-- skip-check -->`). Test only what you changed: run the touched group while iterating, and the
+full list above once before committing.
 
 ## Consumers
 
-RayX (`../RayX`) depends on this repository by relative path (`../RayX.Reactive/crates/...`) for local
-co-development. A change to a public API used by RayX needs the matching RayX change; keep the
-two commits paired and validate RayX's affected crates and Test Suite specs.
+This is a standalone library with its own comprehensive tests. Downstream applications such as RayX
+consume it, but never depend on, build, or validate any consumer repository to test a change here. When
+a consumer usage pattern matters (virtualized list/tree binding, foreground/worker contention, UI-thread
+marshalling), mimic it in this repository's tests using only the public API. Document breaking public-API
+changes for consumers instead of pairing commits with them.
 
 ## Commits
 

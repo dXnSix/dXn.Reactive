@@ -36,7 +36,7 @@ The crate (`crates/`) has three layers: scalar state at the crate root, shared s
 - Prefer structured, incremental `ChangeSet` output over resets; preserve keys and indexes.
 - Keep `.references/DynamicData` (in `../RayX`) as behavioral context only; do not copy .NET overload shapes.
 - HARD RULE: test only what you change. Add a new test group per feature (`crates/src/collections/tests/<group>/`, or a named scalar test module) and run it alone; run the full validation list in `AGENTS.md` once before committing.
-- A change to an API RayX uses needs the paired RayX change and its affected checks.
+- The crate is standalone: never depend on, build, or validate RayX (or any consumer) to test a change; mimic consumer scenarios in this repository's own tests and document breaking API changes.
 
 ## Memory
 
