@@ -44,7 +44,7 @@ fn stream_filter_forwards_accepted_values_without_cloning() -> Result<(), Box<dy
         value: 7,
         clone_count: Arc::clone(&clone_count),
     };
-    let source = crate::ValueStream::new(move |subscriber| {
+    let source = crate::ValueStream::from_reactive(move |subscriber| {
         subscriber(&source_value);
         Ok(Subscription::empty())
     });
@@ -70,7 +70,7 @@ struct NonCloneStreamValue(u32);
 fn stream_filter_and_skip_accept_non_clone_values() -> Result<(), Box<dyn std::error::Error>> {
     let first = NonCloneStreamValue(1);
     let second = NonCloneStreamValue(2);
-    let source = crate::ValueStream::new(move |subscriber| {
+    let source = crate::ValueStream::from_reactive(move |subscriber| {
         subscriber(&first);
         subscriber(&second);
         Ok(Subscription::empty())
@@ -483,6 +483,7 @@ fn lifecycle_failed_generation_disposes_partial_work_and_can_reactivate()
     match activator.activate() {
         Err(crate::ReactiveError::Poisoned) => {}
         Ok(_) => panic!("failing generation unexpectedly activated"),
+        Err(error) => panic!("unexpected activation error {error}"),
     }
     assert_eq!(disposed.load(Ordering::SeqCst), 1);
 

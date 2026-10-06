@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
-use crate::collections::stream::ValueStream;
+use crate::collections::error::CollectionError;
+use crate::primitives::ValueStream;
 
-pub trait OptionValueStreamExt<T> {
+/// Operators on streams of `Option<T>`, for any stream error type.
+pub trait OptionValueStreamExt<T, StreamError = CollectionError> {
     fn convert_some<U>(
         &self,
         converter: impl Fn(&T) -> U + Send + Sync + 'static,
-    ) -> ValueStream<Option<U>>
+    ) -> ValueStream<Option<U>, StreamError>
     where
         T: Send + Sync + 'static,
         U: Send + Sync + 'static;
@@ -14,7 +16,7 @@ pub trait OptionValueStreamExt<T> {
     fn convert_some_optional<U>(
         &self,
         converter: impl Fn(&T) -> Option<U> + Send + Sync + 'static,
-    ) -> ValueStream<Option<U>>
+    ) -> ValueStream<Option<U>, StreamError>
     where
         T: Send + Sync + 'static,
         U: Send + Sync + 'static;
@@ -23,7 +25,7 @@ pub trait OptionValueStreamExt<T> {
         &self,
         converter: impl Fn(&T) -> U + Send + Sync + 'static,
         fallback: impl Fn() -> U + Send + Sync + 'static,
-    ) -> ValueStream<U>
+    ) -> ValueStream<U, StreamError>
     where
         T: Send + Sync + 'static,
         U: Send + Sync + 'static;
@@ -51,32 +53,38 @@ pub trait OptionValueStreamExt<T> {
         T: Send + Sync + 'static,
         Self: Sized;
 
-    fn select_values(&self) -> ValueStream<T>
+    fn select_values(&self) -> ValueStream<T, StreamError>
     where
         T: Send + Sync + 'static;
 
-    fn value_or(&self, fallback: impl Fn() -> T + Send + Sync + 'static) -> ValueStream<T>
+    fn value_or(
+        &self,
+        fallback: impl Fn() -> T + Send + Sync + 'static,
+    ) -> ValueStream<T, StreamError>
     where
         T: Clone + Send + Sync + 'static;
 
-    fn value_or_default(&self) -> ValueStream<T>
+    fn value_or_default(&self) -> ValueStream<T, StreamError>
     where
         T: Clone + Default + Send + Sync + 'static;
 
     fn value_or_result<E>(
         &self,
         error: impl Fn() -> E + Send + Sync + 'static,
-    ) -> ValueStream<Result<T, E>>
+    ) -> ValueStream<Result<T, E>, StreamError>
     where
         T: Clone + Send + Sync + 'static,
         E: Send + Sync + 'static;
 }
 
-impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
+impl<T, StreamError> OptionValueStreamExt<T, StreamError> for ValueStream<Option<T>, StreamError>
+where
+    StreamError: Send + Sync + 'static,
+{
     fn convert_some<U>(
         &self,
         converter: impl Fn(&T) -> U + Send + Sync + 'static,
-    ) -> ValueStream<Option<U>>
+    ) -> ValueStream<Option<U>, StreamError>
     where
         T: Send + Sync + 'static,
         U: Send + Sync + 'static,
@@ -88,7 +96,7 @@ impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
     fn convert_some_optional<U>(
         &self,
         converter: impl Fn(&T) -> Option<U> + Send + Sync + 'static,
-    ) -> ValueStream<Option<U>>
+    ) -> ValueStream<Option<U>, StreamError>
     where
         T: Send + Sync + 'static,
         U: Send + Sync + 'static,
@@ -101,7 +109,7 @@ impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
         &self,
         converter: impl Fn(&T) -> U + Send + Sync + 'static,
         fallback: impl Fn() -> U + Send + Sync + 'static,
-    ) -> ValueStream<U>
+    ) -> ValueStream<U, StreamError>
     where
         T: Send + Sync + 'static,
         U: Send + Sync + 'static,
@@ -174,7 +182,7 @@ impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
         })
     }
 
-    fn select_values(&self) -> ValueStream<T>
+    fn select_values(&self) -> ValueStream<T, StreamError>
     where
         T: Send + Sync + 'static,
     {
@@ -188,7 +196,10 @@ impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
         })
     }
 
-    fn value_or(&self, fallback: impl Fn() -> T + Send + Sync + 'static) -> ValueStream<T>
+    fn value_or(
+        &self,
+        fallback: impl Fn() -> T + Send + Sync + 'static,
+    ) -> ValueStream<T, StreamError>
     where
         T: Clone + Send + Sync + 'static,
     {
@@ -196,7 +207,7 @@ impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
         self.map(move |optional| optional.clone().unwrap_or_else(|| fallback()))
     }
 
-    fn value_or_default(&self) -> ValueStream<T>
+    fn value_or_default(&self) -> ValueStream<T, StreamError>
     where
         T: Clone + Default + Send + Sync + 'static,
     {
@@ -206,7 +217,7 @@ impl<T> OptionValueStreamExt<T> for ValueStream<Option<T>> {
     fn value_or_result<E>(
         &self,
         error: impl Fn() -> E + Send + Sync + 'static,
-    ) -> ValueStream<Result<T, E>>
+    ) -> ValueStream<Result<T, E>, StreamError>
     where
         T: Clone + Send + Sync + 'static,
         E: Send + Sync + 'static,

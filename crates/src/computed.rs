@@ -395,6 +395,25 @@ where
         Self::derive_with(source, derive, None)
     }
 
+    /// Holds the latest value of `stream` as scalar state, starting from `initial`.
+    ///
+    /// The `Computed` owns the stream subscription: it follows the stream until it is
+    /// dropped. Use it to feed a stream (for example a collection `count()`) into APIs that
+    /// take a `ReadSignal`, such as `Command::with_can_execute`.
+    pub fn from_stream<E>(stream: &ValueStream<T, E>, initial: T) -> std::result::Result<Self, E>
+    where
+        E: From<crate::primitives::ReactiveError> + Send + Sync + 'static,
+    {
+        let latest = Signal::new(initial);
+        let computed = Self::derive(latest.read_only(), T::clone)?;
+        stream
+            .subscribe(move |value| {
+                let _ = latest.replace(value.clone());
+            })?
+            .dispose_with(&computed._subscriptions);
+        Ok(computed)
+    }
+
     /// Like [`derive`](Self::derive), but publishes only when the derived value changes.
     pub fn derive_distinct<S>(
         source: ReadSignal<S>,

@@ -69,6 +69,25 @@ where
         })
     }
 
+    /// Converts subscription errors with `map`.
+    pub fn map_err<F>(&self, map: impl Fn(E) -> F + Send + Sync + 'static) -> ValueStream<T, F>
+    where
+        T: 'static,
+        F: Send + Sync + 'static,
+    {
+        let source = self.clone();
+        ValueStream::new(move |subscriber| (source.subscribe)(subscriber).map_err(&map))
+    }
+
+    /// Converts subscription errors into `F` with `From`.
+    pub fn err_into<F>(&self) -> ValueStream<T, F>
+    where
+        T: 'static,
+        F: From<E> + Send + Sync + 'static,
+    {
+        self.map_err(F::from)
+    }
+
     /// Emits `initial`, then every upstream value.
     ///
     /// Upstream is subscribed before `initial` is emitted, so a write the subscriber makes
