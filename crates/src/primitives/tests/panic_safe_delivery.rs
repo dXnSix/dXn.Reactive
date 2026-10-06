@@ -13,7 +13,9 @@ use crate::{EventBus, Signal};
 fn recorder<T: Clone + Send + 'static>() -> (Arc<Mutex<Vec<T>>>, impl Fn(&T) + Send + Sync) {
     let values = Arc::new(Mutex::new(Vec::new()));
     let sink = Arc::clone(&values);
-    (values, move |value: &T| sink.lock().unwrap().push(value.clone()))
+    (values, move |value: &T| {
+        sink.lock().unwrap().push(value.clone())
+    })
 }
 
 fn snapshot<T: Clone>(values: &Arc<Mutex<Vec<T>>>) -> Vec<T> {
@@ -37,7 +39,10 @@ fn bare_queue_delivers_queued_and_later_items_after_a_caught_panic() {
     queue.push(2).unwrap();
     queue.push(3).unwrap();
     let outcome = catch_unwind(AssertUnwindSafe(|| queue.drain()));
-    assert!(outcome.is_err(), "the panic propagates to the draining caller");
+    assert!(
+        outcome.is_err(),
+        "the panic propagates to the draining caller"
+    );
     assert_eq!(snapshot(&old_values), vec![1]);
     assert_eq!(queue.pending_len().unwrap(), 1, "item 3 stays queued");
 
@@ -144,7 +149,11 @@ fn source_list_keeps_notifying_old_and_new_subscribers_after_a_caught_panic() {
     list.push(2).unwrap();
     list.push(3).unwrap();
 
-    assert_eq!(list_items(&old_batches), 2, "old subscriber received versions 2 and 3");
+    assert_eq!(
+        list_items(&old_batches),
+        2,
+        "old subscriber received versions 2 and 3"
+    );
     assert_eq!(
         old_batches
             .lock()
@@ -180,7 +189,10 @@ fn source_cache_keeps_notifying_old_and_new_subscribers_after_a_caught_panic() {
         .watch_value(2)
         .subscribe(move |value| watched_sink.lock().unwrap().push(*value))
         .unwrap();
-    let mirror = cache.connect().as_observable_cache(|item: &(u32, u32)| item.0).unwrap();
+    let mirror = cache
+        .connect()
+        .as_observable_cache(|item: &(u32, u32)| item.0)
+        .unwrap();
 
     cache.add_or_update((2, 20)).unwrap();
     cache.add_or_update((3, 30)).unwrap();

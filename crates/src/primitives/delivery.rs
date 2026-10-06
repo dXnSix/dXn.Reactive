@@ -79,6 +79,11 @@ impl<T> DeliveryQueue<T> {
         Ok(self.lock()?.queue.len())
     }
 
+    /// Whether any subscriber is registered (a publisher may skip building items).
+    pub(crate) fn has_subscribers(&self) -> bool {
+        self.lock().is_ok_and(|state| !state.entries.is_empty())
+    }
+
     #[cfg(test)]
     pub(crate) fn snapshot_rebuilds(&self) -> u64 {
         self.lock().map_or(0, |state| state.snapshot_rebuilds)

@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::thread::{self, ThreadId};
 
 use crate::primitives::error::{ReactiveError, Result as ReactiveResult};
 use crate::primitives::subscription::Subscription;
@@ -68,14 +69,88 @@ where
         })
     }
 
+    /// Emits `initial`, then every upstream value.
+    ///
+    /// Upstream is subscribed before `initial` is emitted, so a write the subscriber makes
+    /// while handling `initial` is delivered: on the same thread it arrives nested inside
+    /// that callback. `initial` is emitted exactly once and before any upstream value; an
+    /// upstream value arriving on another thread meanwhile waits until the initial callback
+    /// has returned.
     pub fn start_with(&self, initial: T) -> ValueStream<T, E>
     where
         T: Send + Sync + 'static,
     {
         let source = self.clone();
+        let initial = Arc::new(initial);
         ValueStream::new(move |subscriber| {
-            subscriber(&initial);
-            source.subscribe(move |value| subscriber(value))
+            let gate = Arc::new(InitialGate::default());
+            let emit_initial = {
+                let gate = Arc::clone(&gate);
+                let initial = Arc::clone(&initial);
+                let subscriber = Arc::clone(&subscriber);
+                move || gate.emit_once(|| subscriber(initial.as_ref()))
+            };
+            let emit_initial_for_upstream = emit_initial.clone();
+            let subscription = source.subscribe(move |value| {
+                emit_initial_for_upstream();
+                subscriber(value);
+            })?;
+            emit_initial();
+            Ok(subscription)
         })
+    }
+}
+
+#[derive(Default)]
+struct InitialGateState {
+    emitted: bool,
+    emitting: Option<ThreadId>,
+}
+
+/// Emits a stream's initial value exactly once; other threads wait until it was emitted,
+/// while a nested call on the emitting thread proceeds immediately.
+#[derive(Default)]
+struct InitialGate {
+    state: Mutex<InitialGateState>,
+    emitted: Condvar,
+}
+
+impl InitialGate {
+    fn lock(&self) -> MutexGuard<'_, InitialGateState> {
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn emit_once(&self, emit: impl FnOnce()) {
+        let current = thread::current().id();
+        {
+            let mut state = self.lock();
+            loop {
+                if state.emitted || state.emitting == Some(current) {
+                    return;
+                }
+                if state.emitting.is_none() {
+                    state.emitting = Some(current);
+                    break;
+                }
+                state = self
+                    .emitted
+                    .wait(state)
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+            }
+        }
+        // Marks the value emitted even when the subscriber panics, so waiters never hang.
+        struct Finish<'a>(&'a InitialGate);
+        impl Drop for Finish<'_> {
+            fn drop(&mut self) {
+                let mut state = self.0.lock();
+                state.emitted = true;
+                state.emitting = None;
+                self.0.emitted.notify_all();
+            }
+        }
+        let _finish = Finish(self);
+        emit();
     }
 }

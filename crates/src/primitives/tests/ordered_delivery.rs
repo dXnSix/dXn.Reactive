@@ -321,7 +321,9 @@ fn concurrent_event_bus_emitters_are_delivered_in_emit_order() {
             .collect::<Vec<_>>();
         assert_eq!(
             per_emitter,
-            (0..200).map(|step| emitter * 10_000 + step).collect::<Vec<_>>()
+            (0..200)
+                .map(|step| emitter * 10_000 + step)
+                .collect::<Vec<_>>()
         );
     }
 }
