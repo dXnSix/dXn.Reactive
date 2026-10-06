@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 31,
+  "revision": 45,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -64,19 +64,34 @@
       ]
     },
     "t10-source-lock-policy": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t11-source-commit-order": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t12-suspension-versions": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t13-source-read-api": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t14-watch-batch-coalescing": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t15-materialization-reliability": {
       "status": "pending"
@@ -199,6 +214,15 @@
         }
       },
       "recordedAt": "2026-10-06T22:11:55Z"
+    },
+    "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "44d51c3a124ea67fb457939e328c310210e1aeecca8dec75bf465f78ed4097b9"
+        }
+      },
+      "recordedAt": "2026-10-06T23:19:57Z"
     }
   },
   "checkResults": {
@@ -371,6 +395,91 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s03-interop-final-1d07ae86ce19.log",
       "logSha256": "565bad6fd85af6fad78cccfc960c96d3614f24a8d01b071411c3274faa370bcf",
       "inputsHash": "538806c03b3790c90aa85a38b587a9a37aa6044bdbc4bf054c26ce659c1c382a"
+    },
+    "s04-sources/c-t10/final": {
+      "checkId": "c-t10",
+      "boundaryId": "s04-sources",
+      "phase": "final",
+      "batchId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "definitionHash": "b42dfafa47f54c40dac4d949a14c3f63873d0f3e9d5cb299ef5a610d1cc2534e",
+      "basisHash": "1374383543ad9ab63ae2aa9f28f92aafb94eb18f49b7933d74fb1586fec51641",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 16,
+      "durationSeconds": 9.9141,
+      "recordedAt": "2026-10-06T23:19:54Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s04-sources-final-f294472e51ba.log",
+      "logSha256": "28b862da15caf4a1b6d9439d86bb62b2e0665dee5765e8f464342f4010fe8c5b",
+      "inputsHash": "4c70f6f08e5348530a5a1b7a3c2991b7407703c8770c5fdac8263967b83d43d1"
+    },
+    "s04-sources/c-t11/final": {
+      "checkId": "c-t11",
+      "boundaryId": "s04-sources",
+      "phase": "final",
+      "batchId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "definitionHash": "a7799189b29f2d86b754a18bd67958de4934960f62c40736ed0b27385e7360b6",
+      "basisHash": "c8a6f7c8c435395e9c3b488c820a67863e786af1efdc3d3dbf84db334e8ba5c5",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 7,
+      "durationSeconds": 3.0747,
+      "recordedAt": "2026-10-06T23:19:57Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s04-sources-final-9ddc5671eba5.log",
+      "logSha256": "392333191ef12004da38ed0b4470c261bfe276478968ffc60594dd12c13b8366",
+      "inputsHash": "4c70f6f08e5348530a5a1b7a3c2991b7407703c8770c5fdac8263967b83d43d1"
+    },
+    "s04-sources/c-t12/final": {
+      "checkId": "c-t12",
+      "boundaryId": "s04-sources",
+      "phase": "final",
+      "batchId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "definitionHash": "582670136b7cc9fd354e35c22bd5b59ce5cb1e47aa4405cd3dbbac3b3ded5461",
+      "basisHash": "d4dabe8da9771c14ae8fdf35a4d4e13bc9aa37ab3acca95fe15b38ffd0f07c83",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 4,
+      "durationSeconds": 0.1783,
+      "recordedAt": "2026-10-06T23:19:57Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s04-sources-final-3467799b6019.log",
+      "logSha256": "efc3f3e8566124069f20e04cd35217e8ee7623d0978f819d9afd009ddf0c57cc",
+      "inputsHash": "4c70f6f08e5348530a5a1b7a3c2991b7407703c8770c5fdac8263967b83d43d1"
+    },
+    "s04-sources/c-t13/final": {
+      "checkId": "c-t13",
+      "boundaryId": "s04-sources",
+      "phase": "final",
+      "batchId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "definitionHash": "ade14cc9ff6033e1bcb2cf37423e0b792dc18d1518882f794a0a75b723c0f73d",
+      "basisHash": "0ba97b6e9e48f1386d456b60e44cd52887b84807e5274fd531b7fa9956b675ad",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 5,
+      "durationSeconds": 0.1947,
+      "recordedAt": "2026-10-06T23:19:57Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s04-sources-final-21fcc42d203d.log",
+      "logSha256": "b77ecec6e8df696f949db706152cfceed682cb808008d1781f9209a40662c8ee",
+      "inputsHash": "4c70f6f08e5348530a5a1b7a3c2991b7407703c8770c5fdac8263967b83d43d1"
+    },
+    "s04-sources/c-t14/final": {
+      "checkId": "c-t14",
+      "boundaryId": "s04-sources",
+      "phase": "final",
+      "batchId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "definitionHash": "bc264c65515c1ebe87b6482b57232ed38bbb93ad423216000ee0e401cf157a65",
+      "basisHash": "d9a14c7c71087d0e477fec9a30141c9c28f409488ee85ce3f85521a1862f8178",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 3,
+      "durationSeconds": 0.1727,
+      "recordedAt": "2026-10-06T23:19:57Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s04-sources-final-67b42c78c817.log",
+      "logSha256": "11fcc488483184bb8598bb0ca46ffb28cac914525bcea0e4413dab4ea11babe5",
+      "inputsHash": "4c70f6f08e5348530a5a1b7a3c2991b7407703c8770c5fdac8263967b83d43d1"
     }
   },
   "reviews": {
@@ -955,6 +1064,232 @@
         "S03-F8"
       ],
       "recordedAt": "2026-10-06T22:12:45Z"
+    },
+    "s04-sources": {
+      "reviewerId": "reviewer-s04-indep-7c3e",
+      "snapshotId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "criterionIds": [
+        "SRC-1.1",
+        "SRC-1.2",
+        "SRC-1.3",
+        "SRC-2.1",
+        "SRC-2.2",
+        "SRC-2.3",
+        "SRC-3.1",
+        "SRC-4.1",
+        "SRC-4.2",
+        "SRC-5.1"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/source_lock.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "6785fca754b57069c0949a619597d4322051a7b03568b3e7f6a2f7926dc3e8c9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.3"
+          ],
+          "sha256": "fabf12741899f5c43d2acd4165a5d5a9281327a9059c5c2b0d87f8b7dfbd3076"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3",
+            "SRC-3.1",
+            "SRC-4.1",
+            "SRC-4.2"
+          ],
+          "sha256": "93a6a6f4f99574aec6082f1481e42764d96dc47f28feb905f2de320056bb3f63"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3",
+            "SRC-3.1",
+            "SRC-4.2",
+            "SRC-5.1"
+          ],
+          "sha256": "a23a313bcca831f6efa40981045f02cce5e8126046ea5bad7f86e6746ea1c84e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/cache_notification_suspension.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-3.1",
+            "SRC-4.1",
+            "SRC-4.2",
+            "SRC-5.1"
+          ],
+          "sha256": "b741554b4b41abdf016b712aca47702e1b0e12fdcc8156961b000d75e522fcd0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "3860c03b08415941a228840daa5b350962c80c19ae9521caac1a77b77b56d6c2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list_group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "42201ec990774e1a08c3a897a810a20f3be39c5f8ab7cbcf4d886b793e31e0c2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/keyed_delivery.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-3.1"
+          ],
+          "sha256": "3d95de7dfe38a7f6ae72941c8ba1a6741fcfb07ce62368462feb4dbd5556bc72"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/connection.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-2.1",
+            "SRC-2.3",
+            "SRC-3.1"
+          ],
+          "sha256": "81b864ab0f6b738855461c167133d5940f357405b2db98dc94d6d9d31c9f15c4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-4.2"
+          ],
+          "sha256": "2ae5d89e761bfb17a61f64755ce84481a7ac71a8646733c0b8afaec136c8449c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-4.2"
+          ],
+          "sha256": "f7419f8ae868307a4e49750352e21af118d31b27fe31746085efe87fd08240bf"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-5.1"
+          ],
+          "sha256": "b2ec7a2050987b3dd3788d4112ea99a24d18c6316beefa3d699900a27c7a4c38"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/push_child_adds.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-5.1"
+          ],
+          "sha256": "2714b95b5a824be3c18a666295a2ff9bfa7f00b67c8bd9ca072c5c8f8ac96ecd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "7f059c849342e229863ddd98da860fbe4a437adebe852bf984e3dfe9612e4b53"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_commit_order/ordered_publication.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3"
+          ],
+          "sha256": "beb53b1f275ffcb04b34cb68dfb075a69027acd926c0b8bc0b34f7bc42ee1fa4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/suspension_versions/subscribe_during_suspension.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-3.1"
+          ],
+          "sha256": "cc26bdfc78d4e30f8eabd373c3a804ea01cc082181c9348a46aca0b5ebc75f16"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_read_api/updater_reads_and_point_queries.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-4.1",
+            "SRC-4.2"
+          ],
+          "sha256": "91297ad9b8c6703dabd3fa1c87fe64690dff242301b6e560f7545d9ff76ee153"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/watch_batch_coalescing/one_value_per_batch.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-5.1"
+          ],
+          "sha256": "487a87864d4f0feca030a8f645052323e99203c333f4c3574760209b564ee0d9"
+        }
+      ],
+      "summaryMarkdown": "**Passed.** All seven findings are **resolved** at snapshot `68f46f4d...`. I verified them by source inspection and by re-running my probes in a scratch copy outside the repository, each bounded by a 5 s watchdog:\n- (F1) A suspension guard dropped under contention, or inside the source's own edit, publishes the resumed batch (`[1, 2]` in both probes). The release-hook handoff (request flag plus SeqCst fences, then a second `try_lock_now`) cannot lose a resume.\n- (F2) A group connection made between staging and publishing mirrors the group (`[42]`, no duplicate). Per-change versions in `PendingChanges`, range merging limited by `snapshot_version`, and pushes under the lock keep group startup exact, given the grouping operator's serialized writers.\n- (F3) Keyed watch disposal drops subscribers after unlocking, and the nested-watch probe returns.\n- (F4, F5) Chapters 8 and 16 and the changelog describe per-stream ordering and the cross-source lock-order risk.\n- (F6) The new tests cover groups, `watch_optional` and suspension under both policies.\n- (F7) `try_lock_now` now returns a tracked `SourceGuard`, so a re-entrant `T::clone` during a deferred resume gets `NestedUpdate`. The probe recorded `NestedUpdate` and did not hang. Its release-hook re-run on drop is bounded, because the request flag is swapped off before the hook runs.\n\nThe polling-reader test loop is now bounded by an iteration count. Residual risk, not a finding: on wasm32 the keyed routing and disposal (`lock_blocking`) and the internal `DeliveryQueue` mutex can briefly block the foreground on a lock a worker holds. These are short sections that run no user code.",
+      "findingIds": [
+        "S04-F1",
+        "S04-F2",
+        "S04-F3",
+        "S04-F4",
+        "S04-F5",
+        "S04-F6",
+        "S04-F7"
+      ],
+      "recordedAt": "2026-10-06T23:20:58Z"
     }
   },
   "checkpoints": {
@@ -981,6 +1316,14 @@
       },
       "reviewHash": "eca05b8c3f0e0d707a4b06d37302dbe7e2e0bf00d48d40a7ebf6567ce3d304d2",
       "recordedAt": "2026-10-06T22:13:02Z"
+    },
+    "s04-sources": {
+      "snapshotId": "68f46f4d44fb16b95cf4fb60e3b05034fb6c24ad39af1a5a8ab4806ce103729b",
+      "commits": {
+        "reactive": "6bb6103d3d40ce5511b85b6fad8f111ae66010da"
+      },
+      "reviewHash": "72bc562060ce1791b12852fa4715bebfae9e13aec5295b748dfcc627fe8bd760",
+      "recordedAt": "2026-10-06T23:21:19Z"
     }
   },
   "findings": [
@@ -1380,6 +1723,195 @@
         {
           "repositoryId": "reactive",
           "path": "docs/04-streams-and-subscriptions.md"
+        }
+      ]
+    },
+    {
+      "id": "S04-F1",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-1.2",
+        "SRC-1.3",
+        "SRC-3.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Dropping a suspension guard can silently leave the source suspended forever.**\n\n*Expected:* the non-blocking policy (SRC-1.3) and same-thread re-entry (SRC-1.2) never leave a source in a broken state, the same way they leave no partial registrations; when the outermost `ListNotificationSuspension`/`CacheNotificationSuspension` is dropped, the suspended segments are published as one batch (SRC-3.1).\n\n*Observed:* `resume_notifications` (`list/list_state.rs`, `cache/source_cache_impl.rs`) takes the policy `SourceLock::lock()`, and `Drop` throws the error away (`let _ = source.resume_notifications()`). With the non-blocking policy, `Contended` (another thread holds the state, which is the normal worker/foreground case on wasm32) means `suspend_depth` is never decremented. The source then stays suspended: every later edit is buffered into `suspended` and nothing is ever published. The same thing happens on native when the guard is dropped inside the source's own `edit` closure (or a `read` closure, key selector or `T::clone`), where it gets `NestedUpdate`. Reviewer probes run in a scratch copy outside the repository: (a) hold the state on a helper thread, drop the guard under `with_non_blocking_policy`, release it, then `push(2)`. The `changes()` subscriber received `[]`. (b) Drop the guard inside `list.edit(..)`, then `push(2)`. It also received `[]`.\n\n*Repair:* make resume infallible. For example, give each source an atomic pending-resume counter: when `Drop` cannot take the lock (`Contended`/`NestedUpdate`), it increments the counter, and the current or next lock holder applies the pending resumes and publishes after it releases the state (for example at the end of `edit`/`deliver` and in a `SourceGuard` release hook). Never block the wasm foreground. Add tests to `source_lock_policy` or `suspension_versions` for both repros (contended drop with the non-blocking policy, and a drop inside the source's own edit), for list and cache. Each must end with the resumed batch delivered and a mirror equal to the source.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/source_lock.rs",
+          "symbol": "SourceGuard::drop"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "symbol": "apply_deferred_resumes"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "symbol": "apply_deferred_resumes"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "symbol": "a_suspension_dropped_inside_the_sources_own_edit_still_resumes"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "symbol": "a_suspension_dropped_under_contention_resumes_when_the_holder_releases"
+        }
+      ]
+    },
+    {
+      "id": "S04-F2",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-1.1",
+        "SRC-2.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Live groups expose mutations before their version advances, so a group connection can receive a change twice.**\n\n*Expected:* concurrent group edits and connections give correct contents and mirrors (SRC-1.1), and the versioned startup handshake stays exact for every source, live groups included, as D-SOURCE-LOCK/D-SOURCE-PUBLISH require.\n\n*Observed:* `RayListGroup`/`RayCacheGroup` apply each `*_pending` mutation under its own lock section. `publish_pending` then bumps the version in a separate section and `enqueue`s after unlocking, so it does not push under the state lock. A `connect()` snapshot taken between a pending mutation and `publish_pending` already contains the item at the old version, and the batch published at the new version is forwarded again. Reviewer probe: `add_pending(0, 42)`, then `connect().as_observable_list()`, then `publish_pending` gives group `[42]` and mirror `[42, 42]`. In production, the group operator's draining thread and a UI thread connecting to a group race in exactly this way. The existing test `concurrent_group_edits_and_connections_all_succeed` subscribes with `|_| {}` and never compares mirrors, so it cannot catch this.\n\n*Repair:* commit a group batch atomically. Either stage pending changes and apply them, bump the version and `push` in one `SourceLock` section in `publish_pending` (then `drain` after unlocking), or have the group operator hold one group guard across the pending mutations and the publish. Add a test that connects between pending mutation and publish (and a cross-thread stress test) and asserts that mirror == group for both group types.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/connection.rs",
+          "symbol": "PendingChanges"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list_group.rs",
+          "symbol": "publish_pending"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/group.rs",
+          "symbol": "publish_pending"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_commit_order/ordered_publication.rs",
+          "symbol": "a_group_connection_between_staging_and_publishing_mirrors_the_group"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_commit_order/ordered_publication.rs",
+          "symbol": "group_connections_concurrent_with_staged_writes_keep_mirrors_equal"
+        }
+      ]
+    },
+    {
+      "id": "S04-F3",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Keyed watch disposal can deadlock on the same thread.**\n\n*Expected:* same-thread re-entry never deadlocks (SRC-1.2). `SourceLock::lock_blocking` is documented as only for sections that 'run no user code and cannot be re-entered'.\n\n*Observed:* the dispose closure in `KeyedChangeHub::subscribe` (`keyed_delivery.rs`) removes the subscriber (`let _ = bucket.remove(&subscriber_id)`) and possibly the bucket while it holds `registry.lock_blocking()`. That drops the user's subscriber closure under the registry lock. If the closure owns another `watch` subscription on the same cache, its disposal calls `lock_blocking` again on the same thread and deadlocks. Reviewer probe: `inner = cache.watch(2).subscribe(..)`, then `outer = cache.watch(1).subscribe(move |_| { let _ = &holder_of_inner; })`, then `drop(outer)`. It never returned (5 s watchdog). The bug predates this sprint (the old code used `Mutex::lock`), but the sprint routed the path through the new lock and documented an invariant that it breaks. `DeliveryQueue::subscribe` already handles this case correctly.\n\n*Repair:* move the removed subscriber (and the emptied bucket) out of the map and drop them after the guard is released, as `DeliveryQueue::subscribe`'s disposal does. Add a deadlock-watchdog test for a watch subscriber that owns another watch on the same cache.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/keyed_delivery.rs",
+          "symbol": "KeyedChangeHub::subscribe"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "symbol": "disposing_a_watch_whose_subscriber_owns_another_watch_does_not_deadlock"
+        }
+      ]
+    },
+    {
+      "id": "S04-F4",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-2.1",
+        "SRC-2.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**With several threads, preview-before-changes ordering is not guaranteed, although the docs promise it.**\n\n*Expected:* chapter 8's stream table says `preview()` batches are 'delivered before `changes()`/`connect()` subscribers'. Chapter 16 presents commit order for sources as one guarantee.\n\n*Observed:* `deliver()` drains three independent `DeliveryQueue`s in turn. When thread B is still inside a `preview` callback for batch 1 and thread A commits batch 2, A's `preview.drain()` returns at once (B is draining), and A goes on to drain `changes`. Reviewer probe log: `[preview 1, changes 1, changes 2, preview 2]`. So `changes(1)` runs while `preview(1)` is still running, and `changes(2)` arrives before `preview(2)`. Each stream is still in version order, so SRC-2.1 as written holds; the cross-stream claim in the docs does not.\n\n*Repair:* either publish preview, changes and count through one ordered publication with a single drainer per source, giving a total order `p(N) < c(N) < count(N) < p(N+1)`, or narrow chapters 8 and 16 to per-stream commit order and state that preview-before-changes holds only for a single writer thread or when no preview callback is in flight on another thread.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/08-sources.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md"
+        }
+      ]
+    },
+    {
+      "id": "S04-F5",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The docs do not mention the new cross-source deadlock risk that native blocking introduces.**\n\n*Expected:* chapter 16 'Sources under contention' explains the consequences of the blocking policy.\n\n*Observed:* before this change, accessing source B from inside source A's `edit`/`read` closure (or key selector) while another thread did the reverse failed with `NestedUpdate`. Now both threads block on native and deadlock (lock order A->B against B->A). The chapter only says to keep edit closures short. The thread-local owner check only detects same-source re-entry.\n\n*Repair:* document in chapter 16 (and in chapter 8's re-entrancy section) that edit/read closures and key selectors must not access other sources unless every thread takes them in the same order. Recommend doing cross-source work outside the closure or through subscribers, which run after unlocking.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/08-sources.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md"
+        }
+      ]
+    },
+    {
+      "id": "S04-F6",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-1.2",
+        "SRC-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The task's own test group leaves part of SRC-1.2/SRC-1.3 unproved.**\n\n*Expected:* the `source_lock_policy` group covers every entry point named in the criteria for both source types and both live group types.\n\n*Observed:* the non-blocking contention test covers `SourceList`/`SourceCache` but not `RayListGroup`/`RayCacheGroup` (`connect`, `items`, `len`/`count`, `lookup`, `keys`) or `watch_optional`. Group re-entry is only checked through `items()`. The concurrency test for groups never verifies connection contents (see S04-F2). Suspension guard drop under contention or re-entry is untested (see S04-F1).\n\n*Repair:* extend `collections::tests::source_lock_policy` with group `Contended` cases (asserting no partial `DeliveryQueue`/startup registration), `watch_optional`, group re-entry for `connect`/`len`/`count`/`lookup`/`keys`, and the regression tests from S04-F1 to S04-F3.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "symbol": "the_non_blocking_policy_reports_group_and_watch_optional_contention"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "symbol": "group_connections_from_inside_a_reentrant_clone_get_nested_update"
+        }
+      ]
+    },
+    {
+      "id": "S04-F7",
+      "boundaryId": "s04-sources",
+      "criterionIds": [
+        "SRC-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**A `T::clone` that re-enters its source during a deferred resume deadlocks instead of returning `NestedUpdate`.** This is new code from the S04-F1 repair.\n\n*Expected:* the criterion and chapter 8 say that a `T::clone` running under the source's lock gets `NestedUpdate` when it accesses that source, and never deadlocks (SRC-1.2).\n\n*Observed:* `apply_deferred_resumes` (`list/list_state.rs` and `cache/source_cache_impl.rs`) locks through `SourceLock::try_lock_now`, which returns a raw `MutexGuard` and does not record the lock in the thread-local `HELD` list. Under that guard it clones the resumed changes (`preview.push(versioned.change_set().clone())`). If an item's `clone` calls the source (for example `len()`), `lock()` does not detect re-entry and blocks on the mutex this thread already holds. Reviewer probe (bounded, 5 s watchdog), run in a scratch copy outside the repository: a suspended `SourceList<Re>`; the guard is dropped inside an empty `edit`; the release hook runs the deferred resume, and `Re::clone` calls `list.len()`. It never returned. The normal `resume_notifications` path is not affected, because it uses `SourceGuard`.\n\n*Repair:* register the lock in `HELD` while the deferred-resume guard is held. For example, make `try_lock_now` return a `SourceGuard`-like guard that records and releases the address (and does not run the release hook itself, or treats it as idempotent). Alternatively, move the `ChangeSet` clone for `preview` out of the locked section by building the preview batch after `drop(guard)` and pushing it under a short re-lock. Note that the latter changes the push-under-lock ordering, so the first option is preferred. Add a watchdog test to `source_lock_policy` covering a re-entrant clone during a deferred resume, for list and cache.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/source_lock.rs",
+          "symbol": "SourceLock::try_lock_now"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "symbol": "a_reentrant_clone_during_a_deferred_resume_gets_nested_update"
         }
       ]
     }
