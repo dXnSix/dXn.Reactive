@@ -131,7 +131,7 @@ the scalar operators unchanged. See
 | Type | Variants | Raised by |
 |---|---|---|
 | `ReactiveError` | `Poisoned`, `External(Arc<dyn Error + Send + Sync>)` | Scalar state. `External` carries an error from another layer, for example a `CollectionError` converted with `?`. |
-| `CollectionError` | `Poisoned`, `MissingKey`, `IndexOutOfRange`, `NestedUpdate` | Collections. `NestedUpdate` means a source was edited from inside its own edit or delivery. |
+| `CollectionError` | `Poisoned`, `MissingKey`, `IndexOutOfRange`, `NestedUpdate`, `Contended` | Collections. `NestedUpdate` means a source was accessed from inside its own edit on the same thread; `Contended` (wasm32 only) means another thread holds it. |
 | `CommandError` | `Disabled`, `Failed(String)`, `Reactive(ReactiveError)` | `Command::execute` / `AsyncCommand::execute`. |
 | `TransformError<K, T, E>` | struct `{ error, key, value }` | Passed to the error callback of `transform_safe*` operators. |
 

@@ -85,14 +85,6 @@ A whole-codebase audit on 2026-10-06 found defects that are scheduled for repair
 `reactive-audit-remediation` (`.agentx/tasks/reactive-audit-remediation/`). Until it lands, keep
 these in mind:
 
-- **Concurrent writers.** Writes to one source from several threads can fail with
-  `CollectionError::NestedUpdate` (it also reports contention, not only re-entrancy), and successful
-  concurrent writes can be delivered out of version order. Use a single writer per source
-  ([chapter 16](16-concurrency-and-platforms.md#sources-under-contention)).
-- **Reads inside an edit.** Calling `items()`, `len()`, `count()`, `keys()` or
-  `suspend_notifications()` on a source from inside its own `edit` closure deadlocks.
-- **Suspension.** Connecting or watching while `suspend_notifications` is active, then editing
-  again, can re-deliver changes.
 - **Cache indexes.** Cache `filter`, `transform_safe*`, forced transforms, `transform_inline`, the
   dynamic filter, keyed windows after moving updates, joins, `add_key`, `ensure_unique_keys` and
   `ValueStream::edit_diff` can emit indexes that misplace rows when materialized with

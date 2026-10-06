@@ -34,11 +34,12 @@ own queues to watch the backlog.
 
 ## Ordering guarantees
 
-- **Per queue, commit order.** Signals and event buses push each change while they still hold their
-  state lock and deliver it after releasing it, so subscribers see changes in commit (version)
-  order even with several writer threads. Collection sources currently deliver in enqueue order,
-  which can differ from version order with several writer threads (see
-  [Known issues](README.md#known-issues)).
+- **Per queue, commit order.** Signals, event buses and collection sources push each change while
+  they still hold their state lock and deliver it after releasing it, so subscribers see changes in
+  commit (version) order even with several writer threads. For sources this covers each of
+  `preview()`, `changes()`, `connect()` and `count_changed()` separately (with several writer
+  threads the streams may interleave with one another); an edit made inside a `preview()` callback
+  is delivered after the batch that triggered it.
 - **Batches are atomic.** A subscriber sees a whole change set or nothing, never part of one.
 - **Re-entrant writes are queued, not recursive.** A write made by a subscriber is delivered after
   the current item has reached every subscriber.
@@ -54,13 +55,13 @@ own queues to watch the backlog.
 
 ### Subscribing while other threads write
 
-- `connect()` buffers live batches during the snapshot and de-duplicates them by version, so with
-  one writer thread a subscriber sees every change exactly once, in order. Two current exceptions
-  are listed under [Known issues](README.md#known-issues): concurrent writers on several threads,
-  and connecting while notifications are suspended.
+- `connect()` buffers live batches during the snapshot and de-duplicates them by version, so a
+  subscriber sees every change exactly once, in order, also with several writer threads and when it
+  connects while notifications are suspended (the resumed batch drops the changes its snapshot
+  already contains). `watch*` and `count_changed()` follow the same rules.
 - `Signal::values()` registers for changes *before* reading the baseline, so no change is lost, and
-  routes the baseline and live changes through one per-subscriber queue that drops anything older
-  than what the subscriber already received. When another thread writes during the subscription,
+  buffers live changes until the baseline has been delivered, dropping anything older than what the
+  subscriber already received. When another thread writes during the subscription,
   the subscriber never sees an older value after a newer one, and the last value it sees is the
   signal's current value.
 
@@ -85,23 +86,49 @@ inputs' locks).
 
 ## Sources under contention
 
-Source writes behave differently. `SourceList::edit` and `SourceCache::edit` take the source lock
-with `try_lock`, so that a re-entrant edit from inside an edit closure fails fast with
-`CollectionError::NestedUpdate` instead of deadlocking. The same check fires when **another thread**
-holds the lock at that moment:
+Every source and live group guards its state with one lock that records which thread holds it:
 
-- an `edit` (and every convenience mutator) can fail with `NestedUpdate` while another thread is
-  editing the same source;
-- `connect()` (on both source types), `SourceCache::lookup` and `SourceCache::watch*` can fail the
-  same way, because they also use `try_lock`;
-- `items()`, `keys()`, `len()`, `count()` and the other plain queries block instead, and do not
-  fail.
+- **Same-thread re-entry** (an `edit`, query, `connect`, `watch*`, `suspend_notifications` or
+  `count_changed` subscription made from inside that source's own edit closure, key selector or a
+  `T::clone` running under the lock) returns `CollectionError::NestedUpdate` instead of
+  deadlocking.
+- **Cross-thread contention** waits for the lock on native targets, so concurrent writers, readers
+  and subscribers all succeed:
 
-Under heavy multi-threaded write contention, a large fraction of edits can fail. Treat
-`NestedUpdate` from a write as "not applied". Two patterns avoid the problem.
+```rust
+use rayx_reactive::collections::prelude::*;
+use std::thread;
 
-**A single writer (recommended).** Give each source one owning thread or task and send it
-commands. Readers and subscribers stay on any thread:
+let list = SourceList::<u32>::default();
+let mirror = list.connect().as_observable_list()?;
+let workers: Vec<_> = (0..4)
+    .map(|worker| {
+        let list = list.clone();
+        thread::spawn(move || {
+            for n in 0..250 {
+                list.push(worker * 1000 + n).unwrap(); // never fails under contention
+            }
+        })
+    })
+    .collect();
+for worker in workers {
+    worker.join().unwrap();
+}
+
+assert_eq!(list.len()?, 1000);
+assert_eq!(mirror.items()?, list.items()?); // delivered in commit order
+```
+
+- **Lock order across sources.** Because native targets wait, accessing source B from inside source
+  A's edit closure while another thread accesses A from inside B's edit closure deadlocks. Touch
+  other sources from edit closures only in one global order, or move that work outside the edit.
+- **On `wasm32`** a browser main thread must not block on a lock that a worker holds, so cross-thread
+  contention returns `CollectionError::Contended` immediately, for edits, reads and subscription
+  setup alike, without leaving a partial subscription. Retry on the next frame, or give each source
+  a single writer.
+
+A single writer per source is still a good design: one owning thread or task receives commands,
+and readers and subscribers stay on any thread:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -148,53 +175,14 @@ writer.join().unwrap();
 assert_eq!(users.count()?, 99);
 ```
 
-**Bounded retry.** When writers on several threads are unavoidable, retry `NestedUpdate` a bounded
-number of times. Never call such a helper from inside an edit closure or a subscriber of the same
-source on the same thread: there the error is a genuine re-entrancy and retrying cannot succeed.
-
-```rust
-use rayx_reactive::collections::prelude::*;
-use std::sync::Arc;
-use std::thread;
-
-fn edit_with_retry<T: Clone + Send + Sync + 'static>(
-    list: &SourceList<T>,
-    edit: impl Fn(&mut ListUpdater<'_, T>),
-) -> Result<ChangeSet<ListChange<T>>> {
-    for _ in 0..10_000 {
-        match list.edit(|updater| edit(updater)) {
-            Err(CollectionError::NestedUpdate) => thread::yield_now(),
-            other => return other,
-        }
-    }
-    Err(CollectionError::NestedUpdate)
-}
-
-let list = Arc::new(SourceList::<u32>::default());
-let workers: Vec<_> = (0..4)
-    .map(|worker| {
-        let list = Arc::clone(&list);
-        thread::spawn(move || {
-            for n in 0..250 {
-                edit_with_retry(&list, |updater| updater.push(worker * 1000 + n)).unwrap();
-            }
-        })
-    })
-    .collect();
-for worker in workers {
-    worker.join().unwrap();
-}
-
-assert_eq!(list.len()?, 1000);
-```
-
 Keep edit closures short in either case: the source lock is held for the whole closure.
 
 ### Read-modify-write on sources
 
-Updaters are write-only, so "read the current item, then write a modified copy" spans two lock
-acquisitions. With a single writer this is safe. With several writers, another thread can write in
-between; serialize such sequences yourself.
+Read through the updater inside one `edit` (`ListUpdater::get`, `CacheUpdater::lookup`, …): the
+read and the write then happen under the same lock, so concurrent read-modify-write sequences lose
+no updates ([chapter 8](08-sources.md#editing)). Reading with `items()` or `lookup()` before an
+`edit` spans two lock acquisitions, and another thread can write in between.
 
 ## Panics
 

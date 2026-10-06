@@ -28,6 +28,9 @@ assert_eq!(seeded.version()?, 0); // no edits yet
 | Method | Returns |
 |---|---|
 | `items()` | `Result<Vec<T>>`, a cloned snapshot |
+| `get(index)` | `Option<T>`, a clone of one item |
+| `contains(&item)` | whether an equal item is present (`T: PartialEq`) |
+| `read(\|items\| …)` | runs a closure against `&[T]` without cloning |
 | `len()`, `is_empty()` | size |
 | `version()` | the number of non-empty edits applied so far |
 
@@ -82,9 +85,35 @@ advance the version.
 
 Adjacent appends and removals inside one edit coalesce into `AddRange` and `RemoveRange` changes.
 
-> **Updaters are write-only.** `ListUpdater` and `CacheUpdater` have no read methods. If an edit
-> depends on the current contents, read them first (`items()`, `lookup()`), or express the target
-> state as a snapshot and let `edit_diff` compute the changes.
+Updaters can read what the edit sees, including the changes it already made: `ListUpdater` has
+`items()`, `len()`, `is_empty()` and `get(index)`; `CacheUpdater` has `lookup(&key)`,
+`contains_key(&key)`, `count()` and `keys()`. A read-modify-write inside one `edit` is therefore
+atomic, even with several writer threads:
+
+```rust
+use rayx_reactive::collections::prelude::*;
+
+let counters = SourceList::new(vec![0_u64]);
+let workers = (0..4)
+    .map(|_| {
+        let counters = counters.clone();
+        std::thread::spawn(move || {
+            for _ in 0..100 {
+                counters
+                    .edit(|list| {
+                        let value = *list.get(0).unwrap();
+                        list.replace(0, value + 1).unwrap();
+                    })
+                    .unwrap();
+            }
+        })
+    })
+    .collect::<Vec<_>>();
+for worker in workers {
+    worker.join().unwrap();
+}
+assert_eq!(counters.get(0)?, Some(400)); // no lost updates
+```
 
 ### `load` versus `edit_diff`
 
@@ -162,7 +191,12 @@ assert_eq!(products.lookup(&"A-1".to_string())?.map(|p| p.price_cents), Some(899
 | `keys()` | `Vec<K>` in key order |
 | `key_values()` | `Vec<(K, T)>` in key order |
 | `lookup(&key)` | `Option<T>` |
+| `contains_key(&key)` | whether the key is present |
+| `read(\|view\| …)` | runs a closure against a `CacheView` (`lookup`, `contains_key`, `count`, `keys`, ordered `iter`) without cloning |
 | `version()` | number of non-empty edits applied |
+
+`SourceCache::from_items(key_selector, items)` creates a cache that already holds `items`.
+`ObservableList` and `ObservableCache` offer the same point queries and `read`.
 
 ### Editing
 
@@ -254,11 +288,11 @@ positions.
 |---|---|---|---|
 | `connect()` | ✓ | ✓ | snapshot, then live batches |
 | `changes()` | ✓ | ✓ | live batches only |
-| `preview()` | ✓ | ✓ | live batches, delivered before `changes()`/`connect()` subscribers |
-| `count_changed()` | ✓ | ✓ | `ValueStream<usize>`: the current count, then every change in count |
-| `watch(key)` | | ✓ | `ChangeStream` of the changes for one key (snapshot first) |
-| `watch_value(key)` | | ✓ | `ValueStream<T>`: the current value (if present), then each new value; a removal emits the removed value |
-| `watch_optional(key)` | | ✓ | `ValueStream<Option<T>>`: `Some` on add or update, `None` on removal; duplicates suppressed |
+| `preview()` | ✓ | ✓ | live batches; an edit's preview is delivered before its `changes()`/`connect()` delivery when it is drained on one thread (with several writer threads, each stream is in commit order but the two streams may interleave) |
+| `count_changed()` | ✓ | ✓ | `ValueStream<usize>`: the current count, then every change in count; never an older count after a newer one, and it ends on the current count |
+| `watch(key)` | | ✓ | `ChangeStream` of the changes for one key (snapshot first); a `Clear` is forwarded with only the key's own entry |
+| `watch_value(key)` | | ✓ | `ValueStream<T>`: the current value (if present), then at most one value per batch, the key's last change in it; a removal emits the removed value |
+| `watch_optional(key)` | | ✓ | `ValueStream<Option<T>>`: at most one value per batch, the key's final state in it (`Some` or `None`); duplicates suppressed, so a `load` that keeps the key emits only the new value |
 | `watch_optional_with_initial(key, true)` | | ✓ | as above, and emits `None` immediately if the key is absent |
 | `changes_rx()` | ✓ | ✓ | an rxRust `SharedSubject` of change sets |
 
@@ -338,15 +372,19 @@ assert_eq!(*batches.lock().unwrap(), [3]);
 ```
 
 Guards nest; only the outermost drop publishes. `count_changed()` is not suspended: it keeps
-reporting counts as edits happen. Prefer a single `edit` when you control all the writes; use
+reporting counts as edits happen. A `connect()` or `watch` that subscribes while a guard is alive
+gets the current state as its snapshot; when the guard drops, it receives only the suspended
+changes its snapshot did not already contain, so it never sees a change twice. Prefer a single `edit` when you control all the writes; use
 suspension when the writes come from code you do not control, such as several helper calls.
 
 ## Re-entrancy
 
 Two situations look alike but behave differently:
 
-1. **Editing a source from inside its own `edit` closure** fails with
-   `CollectionError::NestedUpdate`. The outer edit continues and publishes what it recorded.
+1. **Accessing a source from inside its own `edit` closure** (editing, reading, connecting,
+   watching or suspending it), or from its key selector or a `T::clone` that runs while the source
+   is locked, fails with `CollectionError::NestedUpdate` instead of deadlocking. The outer edit
+   continues and publishes what it recorded. Use the updater's read methods inside an edit.
 2. **Editing a source from a subscriber** (while a batch is being delivered) is allowed. The new
    batch is queued and delivered after the current one reaches every subscriber.
 
@@ -366,16 +404,21 @@ A subscriber that writes back into the source it observes must have a terminatin
 `add_or_update` publishes an `Update` even for an identical value, so an unconditional write-back
 loops forever. Use `add_or_update_if_changed`, or check the incoming change first.
 
-`NestedUpdate` is also what a source returns when **another thread** holds its lock during an
-`edit`, `connect` or `lookup`. Sources do not block on contention. See
-[Concurrency and platforms](16-concurrency-and-platforms.md#sources-under-contention) for the
-consequences and recommended patterns.
+`NestedUpdate` always means same-thread re-entry.
+Because native targets wait, two threads that each access the other source from inside an edit
+closure (thread 1 edits `a` and reads `b` inside, thread 2 edits `b` and reads `a` inside) can
+deadlock; access other sources from edit closures only in one global order, or outside the edit. When **another thread** holds a source's lock,
+native targets wait for it, so concurrent writers and readers all succeed. On `wasm32`, where the
+browser main thread must not block, the access returns `CollectionError::Contended` instead, without
+leaving a partial subscription. See
+[Concurrency and platforms](16-concurrency-and-platforms.md#sources-under-contention).
 
 ## Errors
 
 | Error | When |
 |---|---|
-| `NestedUpdate` | re-entrant edit, or contention as described above |
+| `NestedUpdate` | the source was accessed from inside its own edit on the same thread |
+| `Contended` | `wasm32` only: another thread holds the source's lock; retry later |
 | `Poisoned` | a thread panicked while holding the source's lock |
 | `MissingKey`, `IndexOutOfRange` | reserved; sources do not currently return them, because invalid keys and indexes are reported through updater return values instead |
 

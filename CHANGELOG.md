@@ -52,6 +52,44 @@ breaking changes below are listed with migration notes for consumers.
   `with_latest_from`, `switch_map`, `scan`, `take`, `first`, `take_until`, `pairwise`,
   `distinct_until_changed_by`, `share` and `share_replay`.
 
+### Collection sources
+
+- **Breaking:** `CollectionError` has a new variant `Contended`. *Migration:* add a wildcard or a
+  `Contended` arm to exhaustive `match`es on `CollectionError`.
+- **Fixed (behavior):** cross-thread contention no longer fails with `NestedUpdate`. On native
+  targets edits, reads, `connect`, `lookup`, `watch*`, `suspend_notifications` and `count_changed`
+  wait for the lock, so concurrent writers and readers all succeed; on `wasm32` they return
+  `Contended` without blocking and without leaving partial subscriptions. `NestedUpdate` now means
+  same-thread re-entry only, and is also returned (instead of deadlocking) for reads such as
+  `items()`/`len()`/`count()`/`keys()`/`version()` and `suspend_notifications` made from inside the
+  source's own edit closure, key selector or a `T::clone` running under its lock. The same applies
+  to live groups (`RayListGroup`, `RayCacheGroup`). *Migration:* retry loops on `NestedUpdate` for
+  contention are no longer needed.
+- **Fixed:** `changes()`, `preview()`, `connect()` and `count_changed()` deliver batches in commit
+  (version) order with several writer threads; an edit made inside a `preview()` callback is
+  delivered after the batch that triggered it.
+- **Fixed:** `count_changed()` registers before reading its baseline: counts changed during the
+  initial callback or concurrently are reported, and the last reported count equals `len()`/`count()`.
+- **Fixed:** `connect()`, `watch(key)`, `watch_value(key)` and `watch_optional(key)` subscribed while
+  notifications are suspended no longer receive changes their snapshot already covers when the
+  suspension ends. The resumed publication is still one public `ChangeSet`.
+- **Fixed:** dropping the last notification-suspension guard always resumes publication, also when
+  it is dropped inside the source's own edit or while another thread holds the source under the
+  non-blocking policy (the resume is applied when the lock is released).
+- **Fixed:** a live group connection made between a grouping operator staging a change and
+  publishing it no longer receives that change twice, and disposing a keyed watch whose subscriber
+  owns another watch on the same cache no longer deadlocks.
+- **Documented:** native targets now wait on contention, so accessing source B from inside source
+  A's edit closure while another thread does the reverse can deadlock; keep one global order.
+- **Added:** updater reads (`ListUpdater::items`/`len`/`is_empty`/`get`,
+  `CacheUpdater::lookup`/`contains_key`/`count`/`keys`) reflecting the edit's own changes, making
+  read-modify-write inside one `edit` atomic.
+- **Added:** `SourceList::get`/`contains`/`read`, `SourceCache::contains_key`/`read` (with the new
+  `CacheView`), the same on `ObservableList`/`ObservableCache`, and `SourceCache::from_items`.
+- **Changed (behavior):** `watch_value` and `watch_optional` emit at most one value per batch, the
+  key's final state in it (a `load` that keeps the key emits only the new value, with no `None`
+  flicker), and `ChangeStream::watch(key)` forwards a `Clear` with only the watched key's entry.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on
