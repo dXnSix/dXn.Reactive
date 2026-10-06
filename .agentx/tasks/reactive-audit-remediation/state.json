@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 0,
+  "revision": 8,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -10,10 +10,16 @@
   },
   "tasks": {
     "t01-panic-safe-delivery": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t02-ordered-delivery": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t03-command-lifecycle": {
       "status": "pending"
@@ -145,11 +151,221 @@
       "status": "pending"
     }
   },
-  "validationBatches": {},
-  "checkResults": {},
-  "reviews": {},
-  "checkpoints": {},
-  "findings": [],
+  "validationBatches": {
+    "d0b650213e018806a842bd7342593f97b245a91a803cce8e18ee222aba3c1836": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "2108fd6698106ff9fcf88265834326a0a7932353898753a9ddb5490295805499"
+        }
+      },
+      "recordedAt": "2026-10-06T21:06:54Z"
+    }
+  },
+  "checkResults": {
+    "s01-delivery/c-t01/final": {
+      "checkId": "c-t01",
+      "boundaryId": "s01-delivery",
+      "phase": "final",
+      "batchId": "d0b650213e018806a842bd7342593f97b245a91a803cce8e18ee222aba3c1836",
+      "definitionHash": "9e0cde9d137222d0732a57d7022bef304af1a0c69343bfb18526e8584759fbd4",
+      "basisHash": "f600d93421d517339cfabebe13f5e2d87993ae3cc25c200a76aa5c6111137645",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.208,
+      "recordedAt": "2026-10-06T21:06:53Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s01-delivery-final-e86ef431384c.log",
+      "logSha256": "178b542a5665622fddbb64157b0ffcbb0c27112303c779287c8563e7f02e817c",
+      "inputsHash": "f725cf1d351e866be6a50d8e45c1259060fa7950d624d8866f0fed78807d41a3"
+    },
+    "s01-delivery/c-t02/final": {
+      "checkId": "c-t02",
+      "boundaryId": "s01-delivery",
+      "phase": "final",
+      "batchId": "d0b650213e018806a842bd7342593f97b245a91a803cce8e18ee222aba3c1836",
+      "definitionHash": "a382faa203463ffb324261168400287b8f9d43b6ce22eca827cea50f03b34870",
+      "basisHash": "878c65c79d1f6912197618d1cf6e1d2442062893d9ffce6695e6dd924bebee37",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 10,
+      "durationSeconds": 0.25,
+      "recordedAt": "2026-10-06T21:06:54Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s01-delivery-final-da50ff28a9d8.log",
+      "logSha256": "891c4286a66bf7c4eced5534e066d700b8277a27b2116204d834818afac3ffa7",
+      "inputsHash": "f725cf1d351e866be6a50d8e45c1259060fa7950d624d8866f0fed78807d41a3"
+    }
+  },
+  "reviews": {
+    "s01-delivery": {
+      "reviewerId": "reviewer-s01-delivery-indep-20261006a",
+      "snapshotId": "d0b650213e018806a842bd7342593f97b245a91a803cce8e18ee222aba3c1836",
+      "criterionIds": [
+        "DLV-1.1",
+        "DLV-2.1",
+        "DLV-2.2",
+        "DLV-2.3",
+        "DLV-2.4",
+        "DLV-2.5"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/delivery.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.5"
+          ],
+          "sha256": "8187b516e641cec05811623d4fd276d3d09376df86970000c1cd8c1e759d40a5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/signal.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.4"
+          ],
+          "sha256": "6dd70a85c89b46ef24c27f0398eb8b7dc6530b57c8768c0ed54d5ef71db23f7f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/event.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.4"
+          ],
+          "sha256": "04352832b918b80f0e2bddf46fc57d1d9621662a1d2742c17367503aeb14f0b5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-2.3",
+            "DLV-2.5"
+          ],
+          "sha256": "d70b675c6fbf702e7090754b1cc6355ac3894b9dc033115439ae3c31a9b83b04"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.5"
+          ],
+          "sha256": "cb43ab2397eade46d5960b42755d8207f527e766c2c0a3a2c379cef918e9e875"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/panic_safe_delivery.rs",
+          "kind": "test",
+          "criterionIds": [
+            "DLV-1.1"
+          ],
+          "sha256": "33c04ff22e35278ea130a5b8571bf410b459d953e9540948190e52dd6d645c18"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/ordered_delivery.rs",
+          "kind": "test",
+          "criterionIds": [
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.4",
+            "DLV-2.5"
+          ],
+          "sha256": "757aeec3b171c65de340189011eafa442ec2a05ea865b66faa002e8176213644"
+        }
+      ],
+      "summaryMarkdown": "The D-DELIVERY design is implemented correctly. A drain guard keeps delivery going after a caught panic, push/drain is commit-ordered and never runs two drains at once, and subscribers are invoked in subscription order from a shared `u64`-id snapshot that is rebuilt only after subscribe/unsubscribe. Disposal is immediate on the delivering thread, `pending_len()` exposes the backlog, and signals push under the state lock and drain after it. Locks are always taken signal state first, then queue, and no user code runs or is dropped under the queue mutex. Public signatures are unchanged and no collection state entered the queue. All three earlier findings are repaired and verified: disposal no longer drops subscriber closures under the queue lock (regression test added), the multi-thread test no longer masks undelivered items, and chapter 16 names the draining thread for panics. Both task test groups meaningfully cover their criteria, and chapters 4 and 16 match the behavior, including that collection sources are not yet commit-ordered (t11).",
+      "findingIds": [
+        "S01-F1",
+        "S01-F2",
+        "S01-F3"
+      ],
+      "recordedAt": "2026-10-06T21:07:30Z"
+    }
+  },
+  "checkpoints": {
+    "s01-delivery": {
+      "snapshotId": "d0b650213e018806a842bd7342593f97b245a91a803cce8e18ee222aba3c1836",
+      "commits": {
+        "reactive": "0bc54293a4d56fdbcb2b244d050e71690452bfcd"
+      },
+      "reviewHash": "214e61e69a6e64ba47a71bc45a8cc324eb4a3810fba5687159ffbfb6cb7ab7cc",
+      "recordedAt": "2026-10-06T21:08:08Z"
+    }
+  },
+  "findings": [
+    {
+      "id": "S01-F1",
+      "boundaryId": "s01-delivery",
+      "criterionIds": [
+        "DLV-2.3"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Disposal drops the subscriber closure while holding the queue mutex, so disposal can self-deadlock.**\n\nExpected: disposing a `Subscription` never runs user code (closure `Drop`) under the `DeliveryQueue` mutex, consistent with D-DELIVERY's rule that the queue mutex is never held around subscriber code and with chapter 4's 'disposal is non-blocking'.\n\nObserved: in `DeliveryQueue::subscribe`'s dispose closure (`crates/src/primitives/delivery.rs`), `state.entries.remove(position)` and `state.snapshot = None` drop the last `Arc<Entry>` (and thus the boxed subscriber closure and everything it captured) while the `MutexGuard` is alive whenever no drain holds the snapshot. If the closure owns another `Subscription` to the same queue (e.g. operator state holding a sibling/inner subscription, a switch over the same source), that subscription's dispose calls `state.lock()` on the same thread and hangs. Reproduced with a scratch program against the working tree: subscribe `inner`, subscribe `outer` whose closure captures `Arc<Mutex<Option<inner>>>`, `enqueue(1)`, `drop(outer)` -> the disposing thread never returns (5 s timeout). The pattern predates the sprint, but this sprint rewrote exactly this disposal path.\n\nRepair: in the dispose closure, move the removed entry and the cleared snapshot out of the guard (e.g. `let (_removed, _old_snapshot) = { let mut state = ...; (state.entries.remove(position), state.snapshot.take()) };`) so they drop after the lock is released; also make sure `active.store(false)` stays before the lock. Add a regression test to `primitives::tests::ordered_delivery` (or a disposal group) that disposes a subscription whose closure owns another subscription to the same queue, run on a helper thread with a generous deadline, and asserts disposal returns and the inner subscriber is no longer invoked.\n\nResolution verified: the dispose closure now removes the entry and `take()`s the snapshot inside the lock and drops both after the guard is released; `subscribe` drops the stale snapshot after unlocking. The original scratch reproduction now returns, and the regression test passes.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/delivery.rs",
+          "symbol": "DeliveryQueue::subscribe"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/ordered_delivery.rs",
+          "symbol": "disposing_a_subscriber_that_owns_another_subscription_to_the_same_queue_does_not_deadlock"
+        }
+      ]
+    },
+    {
+      "id": "S01-F2",
+      "boundaryId": "s01-delivery",
+      "criterionIds": [
+        "DLV-2.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The multi-thread push/drain test can mask stranded items.**\n\nExpected: DLV-2.1 says a `drain` that finds another drain running relies on that drain to deliver its items; the test should prove that every pushed item is delivered by the workers' own `drain` calls.\n\nObserved: `push_order_is_delivery_order_across_threads_and_drains_never_overlap` calls an extra `queue.drain()` after joining the workers and only then asserts `1..=1000` and `pending_len() == 0`, so an implementation that left items stranded when the last running drain exits would still pass. (Source inspection shows the current implementation does not strand items, because the empty check and `delivering = false` happen under one lock.)\n\nRepair: remove the post-join `queue.drain()` (or assert `pending_len() == 0` and the full delivered sequence before it) so the test pins the hand-off guarantee.\n\nResolution verified: the trailing drain was removed; the test now proves the workers' own drains deliver all 1,000 items with an empty backlog.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/ordered_delivery.rs",
+          "symbol": "push_order_is_delivery_order_across_threads_and_drains_never_overlap"
+        }
+      ]
+    },
+    {
+      "id": "S01-F3",
+      "boundaryId": "s01-delivery",
+      "criterionIds": [
+        "DLV-1.1",
+        "DLV-2.5"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Chapter 16 still says a subscriber panic propagates to the publishing thread.**\n\nExpected: chapter 16's Panics section matches the draining-thread model it documents above and chapter 4's wording: a subscriber panic propagates to the thread that is draining the queue, which can be a different publisher's thread than the one that pushed the item.\n\nObserved: `docs/16-concurrency-and-platforms.md` Panics section, first bullet: 'A panic inside a subscriber propagates to the thread that published.' With push/drain, thread B's item can be delivered (and panic) on draining thread A, and B's `emit`/`set` returns `Ok`.\n\nRepair: reword to 'propagates to the thread draining the queue (usually the publishing thread; see Draining threads)', matching chapter 4's error-handling bullet.\n\nResolution verified: the Panics bullet now says the panic propagates to the thread draining the queue (the publisher or another publisher already draining it).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "symbol": "Panics"
+        }
+      ]
+    }
+  ],
   "handoffMarkdown": "",
   "protectedPaths": {
     "reactive": {
