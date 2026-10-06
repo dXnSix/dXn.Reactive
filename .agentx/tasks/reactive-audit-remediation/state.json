@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 8,
+  "revision": 20,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -22,16 +22,28 @@
       ]
     },
     "t03-command-lifecycle": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t04-computed-consistency": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t05-signal-robustness": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t06-activation-lifecycle": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t07-stream-error-interop": {
       "status": "pending"
@@ -160,6 +172,15 @@
         }
       },
       "recordedAt": "2026-10-06T21:06:54Z"
+    },
+    "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "fc513864f8d8a5b4e46f4ffe9dff7ead36fc2ffa2450d59c27a70d58ac243deb"
+        }
+      },
+      "recordedAt": "2026-10-06T21:38:07Z"
     }
   },
   "checkResults": {
@@ -196,6 +217,74 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s01-delivery-final-da50ff28a9d8.log",
       "logSha256": "891c4286a66bf7c4eced5534e066d700b8277a27b2116204d834818afac3ffa7",
       "inputsHash": "f725cf1d351e866be6a50d8e45c1259060fa7950d624d8866f0fed78807d41a3"
+    },
+    "s02-scalar/c-t03/final": {
+      "checkId": "c-t03",
+      "boundaryId": "s02-scalar",
+      "phase": "final",
+      "batchId": "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540",
+      "definitionHash": "bec901b721c70af70254aeeb5aada501e50c5972f516f6356a932120e0c2cf8a",
+      "basisHash": "e1fd5b5a82a8a3604e0a0126f90236654edb5dc0df14272d7ca78153ad405d39",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 10,
+      "durationSeconds": 0.2877,
+      "recordedAt": "2026-10-06T21:38:06Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s02-scalar-final-e679245da255.log",
+      "logSha256": "11067e734cbe166f6901815f65c483ce0dc4f8d909ddeab8fa943cb1c91250cb",
+      "inputsHash": "18099a9a212c506c6821a967eb22bbd9639428f232f0113e439ed9760c62c6ab"
+    },
+    "s02-scalar/c-t04/final": {
+      "checkId": "c-t04",
+      "boundaryId": "s02-scalar",
+      "phase": "final",
+      "batchId": "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540",
+      "definitionHash": "307b6dc141950c03543a6164e11c1b632602b9974aee1fc987d56863c801d180",
+      "basisHash": "ba59183a9a820bc81ce5e595e1fb02bf7cd4365e3b7b019663ed9c9b6b1c8f4e",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 12,
+      "durationSeconds": 0.2054,
+      "recordedAt": "2026-10-06T21:38:07Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s02-scalar-final-56752f707124.log",
+      "logSha256": "755ec771a2d0bd7af4e3bbb0adc8b2daba33cabb4a1d4898ae7f7b50f9f17f3a",
+      "inputsHash": "18099a9a212c506c6821a967eb22bbd9639428f232f0113e439ed9760c62c6ab"
+    },
+    "s02-scalar/c-t05/final": {
+      "checkId": "c-t05",
+      "boundaryId": "s02-scalar",
+      "phase": "final",
+      "batchId": "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540",
+      "definitionHash": "c8bc93f17a40960f31ce9c71f242afdbcdcef4b184b6853a26ec2d90bf97d2a6",
+      "basisHash": "65feb56d37e9dad8e2fe5aa80d88ac426d4c7b9b393fc569b8f352bd139db3c7",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 10,
+      "durationSeconds": 0.2462,
+      "recordedAt": "2026-10-06T21:38:07Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s02-scalar-final-9f0d6b09f82f.log",
+      "logSha256": "0340ad225cc4014e795b1f1598a3716cd360582b9a2dc2594e3aa80fbc253999",
+      "inputsHash": "18099a9a212c506c6821a967eb22bbd9639428f232f0113e439ed9760c62c6ab"
+    },
+    "s02-scalar/c-t06/final": {
+      "checkId": "c-t06",
+      "boundaryId": "s02-scalar",
+      "phase": "final",
+      "batchId": "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540",
+      "definitionHash": "141b0630f15163d820d685684e75f4a1fd1f2a8a81d209d2559795fee48ce4b4",
+      "basisHash": "da96aae942b30e86e3fcd0d0b88a8da03185e39bed79a2be426d0800c794de37",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.2036,
+      "recordedAt": "2026-10-06T21:38:07Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s02-scalar-final-28527ec62846.log",
+      "logSha256": "80ad91e4c3b468d2a487210567440a4b2b47073b30bfd41af723d88814d78f2f",
+      "inputsHash": "18099a9a212c506c6821a967eb22bbd9639428f232f0113e439ed9760c62c6ab"
     }
   },
   "reviews": {
@@ -295,6 +384,217 @@
         "S01-F3"
       ],
       "recordedAt": "2026-10-06T21:07:30Z"
+    },
+    "s02-scalar": {
+      "reviewerId": "reviewer-s02-indep-opus-a7",
+      "snapshotId": "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540",
+      "criterionIds": [
+        "CMD-1.1",
+        "CMD-1.2",
+        "CMD-1.3",
+        "CMD-1.4",
+        "CMP-1.1",
+        "CMP-1.2",
+        "CMP-1.3",
+        "CMP-1.4",
+        "CMP-1.5",
+        "SIG-1.1",
+        "SIG-1.2",
+        "SIG-1.3",
+        "SIG-1.4",
+        "SIG-1.5",
+        "ACT-1.1",
+        "ACT-1.2",
+        "ACT-1.3"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/command.rs",
+          "kind": "source",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4"
+          ],
+          "sha256": "baa3f93932d8882be99b8ae18be1d2e5072af0125b55167d34f2bcfd0680d042"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/command_lifecycle.rs",
+          "kind": "test",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4"
+          ],
+          "sha256": "93df2d5ed55f4c69b241d6cb395cc5c342824aa31f1bb41e4f08c70e94381f27"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/06-commands-and-events.md",
+          "kind": "source",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4"
+          ],
+          "sha256": "e41e1596330991ec3ce2b96fe1ccd09b107b2d751652b689fee65715b3bdf192"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs",
+          "kind": "source",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5"
+          ],
+          "sha256": "589ce1f73160f4a79098b4a88f1c30670d89d2275bbbc79432215f54826544f6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/computed_consistency.rs",
+          "kind": "test",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5"
+          ],
+          "sha256": "d082294e6b2f98fc6c69b1b88f22298c3521896e0f7a4516901d1d4d5b80a28d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/signal.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4",
+            "CMP-1.2"
+          ],
+          "sha256": "7a3e4b0404776890830fc96e0acec4453f370ea09aa619dd921b6d70c44d5636"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/delivery.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SIG-1.3"
+          ],
+          "sha256": "3ee94ce97bf1d5462e606bc154eedbc2f0c10a60f73d2e33ffb6f981737453b9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SIG-1.5"
+          ],
+          "sha256": "a4d02262694f12b3256c488ff610fb4203c085f72ba243679cb351d4733c790b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/signal_robustness.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4",
+            "SIG-1.5"
+          ],
+          "sha256": "0a63f2ccb40fb62898531251f2e261e5873d292238922724dd7f512d0d54fa14"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/03-signals-and-computed.md",
+          "kind": "source",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4"
+          ],
+          "sha256": "ff79a8bf5fc3b323a844f3563542e1accc0aba3d228883e1b31235d42f37bcb1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md",
+          "kind": "source",
+          "criterionIds": [
+            "SIG-1.5"
+          ],
+          "sha256": "607ffe579caeeb77ed09bf6dd76a8820d1be1474407cbf8cac0b5cdaa42d85a2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "kind": "source",
+          "criterionIds": [
+            "SIG-1.1",
+            "SIG-1.4",
+            "CMP-1.2"
+          ],
+          "sha256": "c17fe4b451d55da1defa658eb3b7fad114378d4977b2bdfd88e335fafe67760c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/activation.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "sha256": "475a5b5118eb7e27a4e384b414f50accc5b2d4a7b53d7e37e58b2c01b4bc9658"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/activation_lifecycle.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "sha256": "36f527efb4df170ae1337e76d741dcebf1409a339635a2c3470da5170ed86512"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/05-lifetimes-effects-activation.md",
+          "kind": "source",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "sha256": "ab72b7afb2711331971f8499bbaeaa3e4a248e1b3171cb9e1ead663d26262ac7"
+        }
+      ],
+      "summaryMarkdown": "All 17 criteria hold, and S02-F1 to S02-F6 are resolved; I verified each against the source, the task test groups and the scratch probes.\n\n- **S02-F1:** the probe found 0 mixed pairs or inconsistent diamond values under concurrent writers and readers, and the regression test reaches the `InputsMoved` path.\n- **S02-F2:** the re-entrant handback is now covered by a deterministic test-only evaluate hook and a handback counter. The new test proves the path runs and that the last notified value (read with `try_get`, no refresh) is complete.\n\n**Is the handback still needed?** I agree with the coordinator that, with the F1 check in place, it is defense in depth rather than load-bearing. A re-entrant handback happens only while an outer `refresh` frame is evaluating on the same thread; an outer `process` frame holds `processing`, so nothing nested can take over. That outer frame checks the inputs' raw versions before publishing and retries on any change, so it ends either on a value current at its publish time or on a not-stale check made after the nested window. A change committed during the window is therefore always folded in.\n\n**Invariants still hold:**\n- callbacks run outside their state locks;\n- the `values()` subscribe-before-baseline handshake is preserved (its baseline is synchronous again);\n- generation-aware token disposal is preserved;\n- `CommandState` is unchanged and no public items were removed;\n- scalar modules do not import `collections`;\n- the test hooks are `cfg(test)` only;\n- the lock order (core, then the inputs' raw versions; core, then its own signal, then the queue) has no cycle.\n\n**Residual note (not a defect):** the `InitialGate` in `start_with` blocks other threads while the initial callback runs, as the required ordering demands.",
+      "findingIds": [
+        "S02-F1",
+        "S02-F2",
+        "S02-F3",
+        "S02-F4",
+        "S02-F5",
+        "S02-F6"
+      ],
+      "recordedAt": "2026-10-06T21:38:51Z"
     }
   },
   "checkpoints": {
@@ -305,6 +605,14 @@
       },
       "reviewHash": "214e61e69a6e64ba47a71bc45a8cc324eb4a3810fba5687159ffbfb6cb7ab7cc",
       "recordedAt": "2026-10-06T21:08:08Z"
+    },
+    "s02-scalar": {
+      "snapshotId": "3547a601e93685ef8757efbcd79ab60de2353eee31ff48849b13bd0632de4540",
+      "commits": {
+        "reactive": "4118e320a19a11a34beef414ac8e68b8eaa28044"
+      },
+      "reviewHash": "7495308a1db4eabf5ad698d730fccfd038c73282878cc75283bd437774155223",
+      "recordedAt": "2026-10-06T21:39:15Z"
     }
   },
   "findings": [
@@ -362,6 +670,161 @@
           "repositoryId": "reactive",
           "path": "docs/16-concurrency-and-platforms.md",
           "symbol": "Panics"
+        }
+      ]
+    },
+    {
+      "id": "S02-F1",
+      "boundaryId": "s02-scalar",
+      "criterionIds": [
+        "CMP-1.1",
+        "CMP-1.5"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Computed publishes mixed-version values under concurrent input writers.**\n\n*Expected:* CMP-1.1 says `combine2(a, a, ...)` *never* publishes a value combining two versions of `a`. Chapter 3 says a `Computed` \"never combines an old value of one input with a new value of another\", chapter 16 says \"`Computed` values stay consistent under concurrent input writes\", and the CHANGELOG repeats \"never mixes two versions of `a`\".\n\n*Observed:* `evaluate` reads the inputs one after another (`read_versioned` per input, each under its own lock). `publish` checks only that the tuple `supersedes` the previously published one, never that the tuple was a simultaneous snapshot. When a second thread commits between the two reads (the first thread is draining, so the second thread's write only queues), a candidate such as `[v5, v6]` supersedes `[v4, v4]` and is published. A scratch probe outside the repo reproduced this with two writer threads each doing `update(+1)` x300 on a value type with a ~20us `Clone`:\n- `combine2(a, a, |x, y| (x, y))` published 3-5 mismatched pairs out of ~7-9k emissions.\n- In the diamond `b = derive(a, x*10)`, `c = combine2(a, b)`, 8 of 22,293 published values had `y != 10x`.\n\nValues converge afterwards (no round ended stale), but transient glitches reach subscribers.\n\nTwo documentation claims are also wrong. Chapter 3 says \"Recomputations are serialized: one thread evaluates at a time\" and chapter 16 says \"one thread recomputes at a time\". In fact `SignalRefresh::refresh`, which runs on every `get`/`read`/`version`/`values` of the read signal, evaluates on the reader thread without the `processing` flag, at the same time as the input-change loop.\n\n*Repair:* Validate the snapshot. After `(self.evaluate)()`, re-read `read_versions()` and publish only when it equals the evaluated tuple. Versions only increase, so equal tuples prove that no input moved between the reads.\n- On a mismatch in `on_input_change`, set `dirty` and loop. The newer write's delivery also triggers a recompute.\n- On a mismatch in `refresh`, retry a bounded number of times so `get()` stays fresh.\n\nAdd a cross-thread regression test to `scalar_tests::computed_consistency`: either two writer threads with a slow-`Clone` type, or a `#[cfg(test)]` hook between input reads. It should assert that `combine2(a, a)` publishes no mixed pair and the diamond publishes no inconsistent value. Correct the chapter 3/16 wording about serialization (reads may evaluate on the reading thread). Keep the CHANGELOG claim only once it holds.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs",
+          "symbol": "publish"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/computed_consistency.rs",
+          "symbol": "concurrent_writers_never_publish_mixed_versions"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/03-signals-and-computed.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md"
+        }
+      ]
+    },
+    {
+      "id": "S02-F2",
+      "boundaryId": "s02-scalar",
+      "criterionIds": [
+        "CMP-1.1",
+        "CMP-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The re-entrant handback fix for the lost input notification has no test that reaches it.**\n\n*Original defect:* a refresh-path evaluation could re-enter `on_input_change`, and the nested processor would clear a pending `dirty` flag without evaluating. That lost an update for subscribers.\n\n*Repair verified by inspection:* `recompute()` now returns `Step::Reentrant`. When `process()` sees it, it sets `dirty` again, releases `processing` and returns. `refresh()` then picks up the leftover `dirty` and runs `process()`. This closes the window.\n\n*Expected:* the repair is covered by a regression test, as requested.\n\n*Observed:* `a_change_delivered_while_a_read_refreshes_the_chain_is_not_lost` does not reach the repaired code. Its comment says it does (\"b's publication re-enters c while c is evaluating\"), but `is_stale()` -> `read_versions(true)` refreshes `b` *before* `c` starts evaluating. So `b`'s publication re-enters `c` outside the `EvaluatingGuard`, and the nested processor evaluates normally.\n\nTo check this, I instrumented a scratch copy of the crate outside the repo with `eprintln!` in the `Step::Reentrant` arm of `process()` and in the pick-up branch of `refresh()`. Running the whole `scalar_tests::computed_consistency` group printed neither, 0 hits. The test would also pass on the pre-repair code.\n\n*Repair:* add a deterministic `#[cfg(test)]` hook, in the same way as `values_with_snapshot_hook`. The hook should run inside `ComputedCore::evaluate` between the input reads, or before a derived input's `read_versioned`, and commit a change to the upstream signal there. A derived input then becomes stale mid-evaluation, so its refresh re-enters the evaluating core. Assert all of the following:\n- the `Reentrant` handback happens, either through the hook or by observing the effect;\n- a change delivered from another thread during that window is not lost;\n- the last *notified* value equals the fresh value, checked with `try_get` on the read signal before any refreshing `get()`.\n\nFix the misleading test comment.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs",
+          "symbol": "process"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs",
+          "symbol": "refresh"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/computed_consistency.rs",
+          "symbol": "a_re_entrant_processor_hands_pending_changes_back_to_the_refreshing_read"
+        }
+      ]
+    },
+    {
+      "id": "S02-F3",
+      "boundaryId": "s02-scalar",
+      "criterionIds": [
+        "SIG-1.1",
+        "SIG-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The `values()` gate clones every change for each subscriber for its whole lifetime, and the chapter 3 \"synchronously, before `subscribe` returns\" row is no longer exact.**\n\n*Expected:* the gate exists to resolve the race between subscribing and reading the baseline. Outside that window, delivery should cost what it did before: the old `values()` forwarded `&change.current` with zero clones. The documented guarantees should also match the behavior.\n\n*Observed:*\n- `SignalInner::values` clones every live change into the per-subscriber `DeliveryQueue<(u64, T)>` (`change.current.clone()`) and adds a second queue lock round trip. This applies to every `values()` subscriber, which is the main UI binding path, for as long as it lives. A `Signal<Vec<_>>` bound by N views clones the vector N extra times per write.\n- When another thread is already draining a subscriber's gate, the subscribing thread's `gate.drain()` returns immediately. That other thread then delivers the baseline (or a newer value), possibly after `subscribe` returned. `docs/03-signals-and-computed.md` line 111 still says the current value is delivered \"synchronously, before `subscribe` returns\".\n\n*Repair:* Clone only until the baseline has been delivered. Keep a per-subscriber flag or version, and once the baseline is out, forward `&change.current` directly with the version filter; the signal's own queue already serializes live deliveries. Add a clone-count assertion for a `values()` subscriber to `scalar_tests::signal_robustness`. Qualify the chapter 3 row: delivery is synchronous unless another thread is delivering a newer value to the same subscriber at that moment.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/signal.rs",
+          "symbol": "values"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/signal_robustness.rs",
+          "symbol": "a_live_values_subscriber_adds_no_clones_per_change"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/signal_robustness.rs",
+          "symbol": "values_drops_a_baseline_overtaken_by_a_concurrent_write"
+        }
+      ]
+    },
+    {
+      "id": "S02-F4",
+      "boundaryId": "s02-scalar",
+      "criterionIds": [
+        "SIG-1.5"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`start_with` does not serialize the initial value with upstream deliveries.**\n\n*Expected:* D-SCALAR says `start_with` buffers upstream until the initial value is emitted. The `stream.rs` rustdoc and chapter 4 say the initial value is \"always\" emitted first, before any upstream value.\n\n*Observed:*\n- The implementation uses an `AtomicBool` swap. Whichever thread wins emits `initial`; a losing thread delivers its upstream value immediately, without waiting for the winner's callback to finish. If upstream emits from another thread during subscription, the subscriber can record the upstream value before `initial`, or while `initial` is still being handled.\n- For an upstream without a queue, such as `changes()`, a write made inside the initial callback is delivered *recursively*, nested inside that callback. This contradicts chapter 3's \"never delivered recursively\" rule, and it would deadlock a subscriber that writes while holding its own lock. The SIG-1.5 test passes only because its recorder releases its mutex before writing.\n\n*Repair:* Make other threads wait until the initial callback returns, for example with a `Mutex`/`Condvar` \"initial done\" latch keyed to the emitting thread, while re-entrant deliveries on the same thread proceed. Document in chapter 4 that a write made during the initial callback is delivered nested inside it, or queue it instead if `T: Clone` can be required without breaking callers. Add a cross-thread ordering test to `scalar_tests::signal_robustness`.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/stream.rs",
+          "symbol": "start_with"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/signal_robustness.rs",
+          "symbol": "start_with_holds_other_threads_until_the_initial_callback_returns"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md"
+        }
+      ]
+    },
+    {
+      "id": "S02-F5",
+      "boundaryId": "s02-scalar",
+      "criterionIds": [
+        "SIG-1.4"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`try_get`/`try_read` on a `Computed`'s read signal can return a stale value, and the docs do not say so.**\n\n*Expected:* chapter 3 documents `try_get()`/`try_read()` as \"Like `get`/`read`\" apart from not waiting.\n\n*Observed:* `SignalInner::try_read` skips the refresh hook. That is correct, because refreshing may block on input locks and run the closure. On a `Computed::read_signal()`, though, it returns the last *published* value. While another thread is still delivering an input change, `get()` returns the fresh value and `try_get()` does not.\n\n*Repair:* State in chapter 3 (the table row) and in chapter 16 that the non-blocking reads return the last published value and never recompute a `Computed`. Optionally assert this in `scalar_tests::signal_robustness`.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/03-signals-and-computed.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md"
+        }
+      ]
+    },
+    {
+      "id": "S02-F6",
+      "boundaryId": "s02-scalar",
+      "criterionIds": [
+        "ACT-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**A panicking activation callback leaves the activator permanently stuck in `Activating`.**\n\n*Expected:* now that generation phases are tracked, a generation whose callbacks fail, including by panic, ends. A later `activate()` then starts a fresh generation, as chapter 5 already says for errors.\n\n*Observed:* `activate()` handles only `Err` returns. If a callback panics, the unwind leaves `active_generation` attached with `active_count == 1`, phase `ACTIVATING`, and no token to release it. From then on:\n- every later `activate()` joins that dead generation and returns a token whose `is_active()` is `false` forever;\n- callbacks never run again;\n- the partial bag is never disposed.\n\nThis behavior predates the sprint, but the new `is_active` API now makes it observable.\n\n*Repair:* Guard the callback loop in `activate()` with a drop guard (or `catch_unwind`) that ends the phase, detaches the generation and disposes its bag before the panic continues. Add a case to `scalar_tests::activation_lifecycle`: a panicking callback, then a successful retry, and a joined token that reports inactive.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/activation.rs",
+          "symbol": "AbandonGeneration"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/activation_lifecycle.rs",
+          "symbol": "a_panicking_activation_callback_abandons_its_generation"
         }
       ]
     }
