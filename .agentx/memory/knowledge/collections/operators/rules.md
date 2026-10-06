@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-05T23:30:00+02:00
+  updated: 2026-10-07T02:00:00+02:00
   topics:
     - operators
     - incremental
@@ -46,3 +46,4 @@ agentx:
 - Cache-to-list bridge operators must maintain an ordered key mirror when producing `ListChange` values; list changes need concrete indices, unlike DynamicData's occasional unspecified-index list changes.
 - Keep Rust optional helpers native to `Option<T>` / `Result<T, E>` and `ValueStream<Option<T>>`; do not simulate Rx error channels for missing optional values in `ValueStream` operators.
 - Preserve the crate's zero-based page/window contract when adding defaults or helpers around `PageRequest` and `VirtualRequest`.
+- Operator parameters that take a stream, and per-item selectors that return one, use a method-level error parameter `E` with `E: Send + Sync + 'static, CollectionError: From<E>` (one independent parameter per stream) and convert with `err_into::<CollectionError>()` at the top of the impl body. Inside such a method, calls to other `E`-generic operators need an explicit `CollectionError` turbofish: the in-scope `CollectionError: From<E>` where clause otherwise drives inference to the caller's `E`.

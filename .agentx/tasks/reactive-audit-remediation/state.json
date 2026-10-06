@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 20,
+  "revision": 31,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -46,13 +46,22 @@
       ]
     },
     "t07-stream-error-interop": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t08-operator-input-interop": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t09-value-stream-combinators": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t10-source-lock-policy": {
       "status": "pending"
@@ -181,6 +190,15 @@
         }
       },
       "recordedAt": "2026-10-06T21:38:07Z"
+    },
+    "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "d8d81c98e88e5fe92db7606675e318a45cf8acc8e6742f5936a625984f58a95c"
+        }
+      },
+      "recordedAt": "2026-10-06T22:11:55Z"
     }
   },
   "checkResults": {
@@ -285,6 +303,74 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s02-scalar-final-28527ec62846.log",
       "logSha256": "80ad91e4c3b468d2a487210567440a4b2b47073b30bfd41af723d88814d78f2f",
       "inputsHash": "18099a9a212c506c6821a967eb22bbd9639428f232f0113e439ed9760c62c6ab"
+    },
+    "s03-interop/c-t07/final": {
+      "checkId": "c-t07",
+      "boundaryId": "s03-interop",
+      "phase": "final",
+      "batchId": "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315",
+      "definitionHash": "9f077576c724d949a28d516f8942e71a2f3df37ee8a4cbdb8e0ccdd103d25403",
+      "basisHash": "cfbae7ad59b5681fcddaf01e83b89f2f04979f76878ac07c5b54df56eb2601fa",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 7,
+      "durationSeconds": 0.3244,
+      "recordedAt": "2026-10-06T22:11:35Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s03-interop-final-c58836ed9d29.log",
+      "logSha256": "30a6f41f675994d19d8e5deec57f547f804095d6019a0ee43df3d936de69d8e3",
+      "inputsHash": "538806c03b3790c90aa85a38b587a9a37aa6044bdbc4bf054c26ce659c1c382a"
+    },
+    "s03-interop/c-t08/final": {
+      "checkId": "c-t08",
+      "boundaryId": "s03-interop",
+      "phase": "final",
+      "batchId": "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315",
+      "definitionHash": "26eafd0ac49a8d602354c961d92bd4f1c439cce7dc721c937c14fdf6ddaa0b67",
+      "basisHash": "b3a0ce983eaeba9687ae58e7bc12a3acf30648fb6cf0803384755d8f71bf0226",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 7,
+      "durationSeconds": 0.2145,
+      "recordedAt": "2026-10-06T22:11:35Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s03-interop-final-b9ac89fc7323.log",
+      "logSha256": "a1ebb4a2087ec43a1a075bc7fc5fae229b7afef01249da4509217de2b8faee85",
+      "inputsHash": "538806c03b3790c90aa85a38b587a9a37aa6044bdbc4bf054c26ce659c1c382a"
+    },
+    "s03-interop/c-t08-docs/final": {
+      "checkId": "c-t08-docs",
+      "boundaryId": "s03-interop",
+      "phase": "final",
+      "batchId": "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315",
+      "definitionHash": "18a690dab311d414ec517d78263e58141b7a13aa30a439d6db2f2baf7a557b83",
+      "basisHash": "75ab0b6e7e90754082863d30b645699a581eb7f7be7bbe2eb5042cd5ff21bcb8",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 130,
+      "durationSeconds": 18.8121,
+      "recordedAt": "2026-10-06T22:11:54Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s03-interop-final-fb272ae17a59.log",
+      "logSha256": "6000513c13d5a52d7c0def8dd4f7387e267932395ba4fc1a071dba91e246ca58",
+      "inputsHash": "f21bd49cf3aafd54b3c54ea75312be8557ba19880b37b8e30b590e659a7bf286"
+    },
+    "s03-interop/c-t09/final": {
+      "checkId": "c-t09",
+      "boundaryId": "s03-interop",
+      "phase": "final",
+      "batchId": "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315",
+      "definitionHash": "353db1c8a80b16743ad1cb8abfc03023ce16768a562dcf0cd05a780eaeaca53f",
+      "basisHash": "027e493591607cce43d27287c8337fc0320f496ce9c5abb00e955f3792002935",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 21,
+      "durationSeconds": 0.2763,
+      "recordedAt": "2026-10-06T22:11:55Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s03-interop-final-1d07ae86ce19.log",
+      "logSha256": "565bad6fd85af6fad78cccfc960c96d3614f24a8d01b071411c3274faa370bcf",
+      "inputsHash": "538806c03b3790c90aa85a38b587a9a37aa6044bdbc4bf054c26ce659c1c382a"
     }
   },
   "reviews": {
@@ -595,6 +681,280 @@
         "S02-F6"
       ],
       "recordedAt": "2026-10-06T21:38:51Z"
+    },
+    "s03-interop": {
+      "reviewerId": "reviewer-s03-indep-opus-k4",
+      "snapshotId": "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315",
+      "criterionIds": [
+        "INT-1.1",
+        "INT-1.2",
+        "INT-1.3",
+        "INT-2.1",
+        "INT-2.2",
+        "INT-3.1"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1"
+          ],
+          "sha256": "5946ce9be242509ca88f5fa16d8482bf953e34eb528194b8b9bde66fa3b4c4db"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1",
+            "INT-3.1"
+          ],
+          "sha256": "a824ed2083f3369f7cd781c646339f7a0f999c48c560c5ca672a5a3d928dbb24"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/effect.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1"
+          ],
+          "sha256": "caf7718b37dc3842cfd40172a6a7266e38224105d11e1bfcc0e350adfef6bcb9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/option/option_value_stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1"
+          ],
+          "sha256": "5ee24b67de1705bdb8a63afdda52ff92c337b256c55201523d50ee4b21088e54"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.2"
+          ],
+          "sha256": "a97c3d0665543dab4c822aa80b269ca2fb5edc0c7f5e9c8408fb4bf969cbca86"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.2"
+          ],
+          "sha256": "c50d66f8bd1124320a2037ddb8d51671468a3804e2d9661bc9cc2f907c59fdc9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.2"
+          ],
+          "sha256": "3f48f387d7eed4044af37b7902870c3560c55476c510eb052b2d3bae8eebd616"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.3"
+          ],
+          "sha256": "d8391defc9205a0c67130f323fcd04ea292d956b53b5df2b93e53edf7ed69cd5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/stream_error_interop.rs",
+          "kind": "test",
+          "criterionIds": [
+            "INT-1.1",
+            "INT-1.2",
+            "INT-1.3"
+          ],
+          "sha256": "4aa51d473bfd0415fe5db8c62716994b7b602260e4780c417a8ae17581da4798"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "698e262c39276f1796ee798a969663983625b65e821ff432490e0a8eae8c2e33"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/predicate.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "cf26fc22b445d8166d232d922ffd92e81f338b0169006a65b58810b52725b7f4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "d3fedf88e80114933aa317a33c466505bfed079aee4f40db2d32761ed976dcda"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "98d4f50bd5a12e584fb5c922abb18bb7e0b0174cfa9cb293a4b7485a1f35fb27"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/true_for/cache_true_for_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "c2c08b65cefbfaa953e504a6cb5f7fe6b1a00cbf73cb6e82de374c75a29a9995"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/cache_aggregation_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "d865e9037bcf0e77a52ceca145b4bab3976d20a6ad8498ed2376c03a56b96f1c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/stream/batch_count_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "f99034e9320df43a2e4c8a949c957228ae0e93259072cb6bbda0c5f9c9c81af0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tree/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "c328575b7f896b622d50ccb2e3f468c0086f35498dc31daa48ef27e05b2f75a2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/switch.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "f8285e2c38c72920eaa5f5f7d819a7f3988efb4393a4f1f1ee21983a1e32fea9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/expiration_selector.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "ee5ea5f1eaf96369f379cb6baa4af08fdddc68afb67cf343515c56a4eb0d17cb"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/diff.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "d0d8617be1b5a50c129daa25336b3c37083a6011e996c88078b19f5903ad738c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/operator_input_interop/signal_streams_feed_every_operator.rs",
+          "kind": "test",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "b87d21133ff9f1940a68f99445652c69a6aeb7a1f521219f9e49884432baaaa4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/15-application-patterns.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "a501de327410e562d6cdf9aca552e0446f30ec8783bc92f8c25ff60c59d20da8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/01-introduction.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "f561d76ab51f3d5a4e91f3e2580dca608e360d3fe4a720566b25a57461103b01"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2",
+            "INT-3.1"
+          ],
+          "sha256": "c3ef9addca78cb2776eddb89e425e97a5d130749fad6c565a60c6ea351654ce4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "README.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "811d91f374518cb698b52005c668fd9e02ac9bfce4fe6be8f986c2c6dcecfb8c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "doc-examples/Cargo.toml",
+          "kind": "runtime",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "40395d6479bf794dff8ee315a0775f6e9ce79c5a3c2a0302e5256762cc020e67"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "kind": "test",
+          "criterionIds": [
+            "INT-3.1"
+          ],
+          "sha256": "d28cf854dfe4013ce81e6d8d16357c51c7c4da2e1da5b8780e4be93af97b940e"
+        }
+      ],
+      "summaryMarkdown": "**Re-review: passed.** All eight findings are resolved.\n\n**S03-F7 (resolved)**\n- `ShareSetupGuard` is armed right after registration and covers both the replay and the connect attempt.\n- On unwind or connect failure, the guard clears `connecting`, notifies the `Condvar` and removes the entry through `Shared::remove`. That is the same path unsubscribing uses, so the last subscriber out bumps the generation and releases upstream.\n- My scratch panic probe, outside the repository, now shows a subscribe from another thread returning instead of hanging, and a later same-thread subscriber receiving values. The new tests cover the connect-panic and replay-panic cases with a bounded wait and an upstream subscription count.\n\n**S03-F8 (resolved)**\n- The trait rustdoc and chapter 4 now state the threading actually provided.\n\n**Earlier repairs (S03-F1 to S03-F6)**\n- The original ordering probe still shows 0 stale rounds of 5,000 for both `combine_latest` and `share_replay`.\n\n**Criteria status**\n- **INT-1.1 to INT-1.3:**\n  - `map_err`/`err_into` and generic `ReactiveValueStreamExt`/`OptionValueStreamExt` are in place.\n  - `Effect::watch` returns `Result<Effect, E>`.\n  - `ReactiveError::External` has a sound manual equality.\n  - The two-way `CollectionError` conversion lives in `collections`.\n  - `Computed::from_stream` owns its subscription.\n- **INT-2.1:** every listed stream input and selector is generic, and two-stream operators take independent error types.\n- **INT-2.2:** the `collection_stream` adapter is gone, and chapter 15 is rewritten.\n- **INT-3.1:** every combinator has order and disposal tests, plus cross-thread and panic tests.\n- **Layering:** holds.\n\n**Accepted:** the documented `ValueStream::new` inference break, with its `from_reactive` migration in the CHANGELOG.\n\n**Residual, non-blocking:** a nested subscribe on the connecting thread joins without waiting, which is documented. Cross-thread ordering between a superseded and a new `switch_map` inner stream is not serialized beyond the generation check.\n",
+      "findingIds": [
+        "S03-F1",
+        "S03-F2",
+        "S03-F3",
+        "S03-F4",
+        "S03-F5",
+        "S03-F6",
+        "S03-F7",
+        "S03-F8"
+      ],
+      "recordedAt": "2026-10-06T22:12:45Z"
     }
   },
   "checkpoints": {
@@ -613,6 +973,14 @@
       },
       "reviewHash": "7495308a1db4eabf5ad698d730fccfd038c73282878cc75283bd437774155223",
       "recordedAt": "2026-10-06T21:39:15Z"
+    },
+    "s03-interop": {
+      "snapshotId": "15a2140470459101ddcac8d1a8b7e5ebd6f8e9822942a51bbd0d47dbc9530315",
+      "commits": {
+        "reactive": "38bb6ea322daec4b942211c12ecdeaceabddc4a5"
+      },
+      "reviewHash": "eca05b8c3f0e0d707a4b06d37302dbe7e2e0bf00d48d40a7ebf6567ce3d304d2",
+      "recordedAt": "2026-10-06T22:13:02Z"
     }
   },
   "findings": [
@@ -825,6 +1193,193 @@
           "repositoryId": "reactive",
           "path": "crates/src/scalar_tests/activation_lifecycle.rs",
           "symbol": "a_panicking_activation_callback_abandons_its_generation"
+        }
+      ]
+    },
+    {
+      "id": "S03-F1",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**`combine_latest` can deliver a stale combination last when its inputs emit on different threads.**\n\n*Expected:* INT-3.1 requires correct emission order. Once both inputs have settled, the last value a subscriber sees should combine both latest inputs. s02 set this freshness bar for scalar state (a `values()` subscriber never receives an older value after a newer one; `Computed` is fresh).\n\n*Observed:* `stream_ext.rs` `combine_latest` writes `latest.0` or `latest.1` under the mutex, releases it, then takes the lock again to clone the pair. It calls `combine` and `subscriber` with no lock held. Take thread A (`a.set(1)`) and thread B (`b.set(1)`). A clones `(1,0)` and releases the lock. B stores `1`, clones `(1,1)` and delivers it. A then delivers `(1,0)`, so the subscriber's final value is stale for good. A scratch probe outside the repository reproduced this: two `Signal`s were written from two barrier-synchronized threads, and `combine` took ~200us for the `(1,0)` case. It ended stale in 1 of 2,000 rounds. The same race exists without the delay (0 of 20,000 there, but the window is real). The group has no cross-thread test for any combinator.\n\n*Repair:* make commit order equal delivery order. Under the state lock, update the slot and push the combined pair (or the computed value) into a per-subscription `primitives::DeliveryQueue`, then `drain()` after unlocking, the pattern `DeliveryQueue::push`/`drain` documents. Apply the same treatment to `with_latest_from`'s source path and `merge` if they are meant to keep the guarantee. Add a deterministic or stress test in `scalar_tests/value_stream_combinators.rs` that asserts the final delivered value equals the combination of both final inputs. If the team decides combinators are deliberately not ordered across threads, document that limitation explicitly in the trait docs and chapter 4 instead. The trait docs currently say only that values arrive on the producing thread.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "symbol": "combine_latest"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "combine_latest_ends_on_the_latest_pair_across_threads"
+        }
+      ]
+    },
+    {
+      "id": "S03-F2",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**`share_replay` can deliver a late subscriber's replay after a newer live value, and `share` leaks state across connection failures and reconnects.**\n\n*Expected:* a `share_replay` subscriber first receives the latest value, then only newer values. Each connection's state is isolated.\n\n*Observed (`stream_ext.rs` `shared`):*\n1. Under the state lock, a subscriber is added to `subscribers` and reads `latest`. The replay is delivered after the lock is released. A concurrent upstream emission can take the lock in between, set `latest = v2`, snapshot the subscriber list (now including the newcomer) and deliver `v2` first. The newcomer then receives the older replay `v1` last and stays stale. A scratch probe reproduced this: `Signal::values().share_replay()` with one permanent subscriber, a writer thread doing `set(i)` and a reader thread subscribing at the same barrier. 1 of 20,000 rounds ended with the reader's last value != `i`.\n2. If the connecting subscriber's `source.subscribe` fails, only that subscriber is removed. Subscribers that joined while `connecting` was true stay registered with no upstream and no connect attempt, so they never receive anything until an unrelated subscriber arrives.\n3. After the last subscriber leaves, the old upstream's value callback is not fenced by a connection generation. An in-flight emission from the disposed connection can repopulate `latest` or fan out to subscribers of the next connection.\n\n*Repair:* give each connection a generation and ignore callbacks from a stale generation. Serialize replay and live fan-out per subscriber. For example, register the newcomer as pending, let live emissions overwrite its pending value instead of calling it, and switch it to live after delivering the newest pending value. Alternatively, route all deliveries through a `DeliveryQueue`. On connect failure, fail or retry every subscriber registered during the attempt, not just the connector. Add focused tests: a late subscriber racing an emission (stress or a deterministic hook), a connect failure with a concurrent joiner, and an emission from a disposed connection.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "symbol": "shared"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "share_replay_never_delivers_an_older_value_after_the_replay"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "a_shared_connection_ignores_its_disposed_predecessor"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "a_failed_shared_connection_is_retried_by_the_next_subscriber"
+        }
+      ]
+    },
+    {
+      "id": "S03-F3",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`switch_map` can deliver inner values after the switched subscription is disposed.**\n\n*Expected:* disposing the `switch_map` subscription stops all delivery. INT-3.1 says only the latest inner stream is live.\n\n*Observed:* the dispose closure drops `outer`, then sets `disposed`. It never invalidates `current`. An outer emission already in flight on another thread passes the `disposed` check, subscribes the new inner, and that inner's synchronous first value (for example from `Signal::values()`) passes `current == generation` and reaches the subscriber after disposal. The inner is only dropped afterwards. The outer callback also checks `current` before calling `subscriber` without serialization, so a superseded inner can still deliver after the newer inner's first value across threads (the same class as S03-F1).\n\n*Repair:* on dispose, set `disposed` under the lock first and store a sentinel (for example `u64::MAX`) into `current` before dropping `outer`. Re-check `disposed` in the inner callback. Consider serializing inner deliveries with the same mechanism chosen for S03-F1. Add a disposal test that disposes while an outer emission is selecting a synchronously emitting inner.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "symbol": "switch_map"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "a_disposed_switch_map_never_forwards_again"
+        }
+      ]
+    },
+    {
+      "id": "S03-F4",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The combinator test group does not cover disposal for every operator, as INT-3.1 requires.**\n\n*Expected:* INT-3.1 says each combinator has focused tests covering emission order and disposal of inner/upstream subscriptions.\n\n*Observed:* `scalar_tests/value_stream_combinators.rs` asserts live upstream counts (`counted`) only for `merge`, `switch_map`, `take`/`first`, `take_until`, `share` and `share_replay`. `with_latest_from` (two upstream subscriptions) has no disposal assertion at all. `combine_latest` checks only that no value arrives after the drop, not that both upstreams were released. `scan`, `pairwise` and `distinct_until_changed_by` have order tests only. No test exercises any combinator across threads (see S03-F1/F2).\n\n*Repair:* wrap the inputs in `counted(..)`. Assert that `with_latest_from` and `combine_latest` hold exactly two upstream subscriptions and release both on drop. Assert that `scan`, `pairwise` and `distinct_until_changed_by` release their upstream on drop. Add the concurrency tests requested in S03-F1/F2.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "every_two_input_combinator_releases_both_upstreams"
+        }
+      ]
+    },
+    {
+      "id": "S03-F5",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-2.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Two-stream collection operators force both stream inputs to share one error type, and the compile test misses some newly generic variants.**\n\n*Expected:* INT-2.1: *every* operator parameter that takes a dynamic stream accepts `ValueStream<_, E>` where `CollectionError: From<E>`. D-INTEROP applies this per dynamic input. The compile test passes `Signal::values()` to each listed operator.\n\n*Observed:*\n- `sort_dynamic_with_resort`, `sort_keyed_dynamic_with_resort`, every `sort_and_page_dynamic*`/`sort_and_virtualize_dynamic*` and `group_dynamic_with_regrouper` (list `predicate.rs` and cache `cache_stream_ext.rs`) declare both streams with the same `E`. A realistic call fails to compile: a comparer from `Signal::values()` (`ReactiveError`) plus a resort or request trigger from a collection output (`CollectionError`, for example `count()` or `watch_value`). The CHANGELOG records this as a design choice, but it contradicts the per-parameter wording of INT-2.1/D-INTEROP.\n- `operator_input_interop/signal_streams_feed_every_operator.rs` never calls the newly generic `transform_async_with_previous_forced` (forced-transform family, `cache_stream_ext.rs`) or `query_when_changed_on_with`. These signatures are untested with a `ReactiveError` stream.\n\n*Repair:* give two-stream operators independent error parameters (`E1`, `E2`, each with `CollectionError: From<_>`) and convert each with `err_into::<CollectionError>()`. Add a mixed-flavor call (signal comparer + collection-flavor trigger) to the interop group. Add `Signal::values()` calls for `transform_async_with_previous_forced` and `query_when_changed_on_with`. Update the CHANGELOG sentence about two-stream operators. If the coordinator decides to keep the single `E`, amend INT-2.1/D-INTEROP to state the restriction explicitly instead.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/predicate.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/operator_input_interop/signal_streams_feed_every_operator.rs",
+          "symbol": "two_stream_operators_mix_error_types_and_remaining_operators_accept_signals"
+        }
+      ]
+    },
+    {
+      "id": "S03-F6",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`take_until` with a `Signal::values()` notifier ends immediately, and this is undocumented.**\n\n*Expected:* chapter 4 and the trait docs say `take_until` \"forwards values until `notifier` emits\". Readers will reach for a `Signal` as the stop flag.\n\n*Observed:* `take_until` subscribes the notifier first. `Signal::values()` emits its current value synchronously on subscribe, so the operator ends at once and never subscribes the source. This matches Rx `BehaviorSubject` semantics, but nothing in the docs or tests says so.\n\n*Repair:* document in the trait doc and the chapter 4 table that a notifier which emits on subscribe (such as `signal.values()`) ends the stream at once, and that `signal.values().skip(1)` or an `EventBus` should be used instead. Add a test pinning the documented behavior.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "take_until_with_a_replaying_notifier_ends_immediately"
+        }
+      ]
+    },
+    {
+      "id": "S03-F7",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**A panic during `shared` connect or replay hangs other threads and leaks the subscriber entry (introduced by the S03-F2 repair).**\n\n*Expected:* a subscriber panic must not stall delivery or leave the operator unusable. The epic fixes exactly this class (DLV-1), and s02's `InitialGate` in `primitives/stream.rs` clears its `emitting` marker in a `Drop` guard for the same reason.\n\n*Observed (`stream_ext.rs` `shared`):*\n1. `state.connecting = Some(current)` is cleared only after `source.subscribe(..)` returns. If a subscriber panics on a value emitted synchronously during connect (for example `Signal::values()`), the unwind skips the reset and `notify_all`. Every later subscriber on another thread blocks forever in the `Condvar` loop. Later subscribers on the same thread register but never connect, because `connecting` is still `Some`. The panicking entry also stays in `entries`.\n2. A `share_replay` subscriber whose callback panics on its replay leaves its entry registered with `buffer = Some(..)`. Every later upstream value is cloned into that buffer without bound. The entry also keeps `entries` non-empty, so the upstream connection is never released.\n\nA scratch probe outside the repository reproduced point 1. With `Signal::new(1).values().share()`, a first subscriber panicking on the initial value (caught with `catch_unwind`) made a subscribe from another thread hang for more than 3 s. A later same-thread subscriber received 0 values after `set(2)`.\n\n*Repair:*\n- Wrap the connect attempt in a drop guard that clears `connecting` and calls `notify_all` on unwind.\n- Wrap entry registration in a guard that, on unwind before the `Subscription` is returned, marks the entry inactive, removes it from `entries`, invalidates the snapshot and releases the upstream if it was the last one, as the dispose path does. This covers both the connect panic and a replay panic.\n- Add panic tests to `scalar_tests/value_stream_combinators.rs`: a panicking connector followed by subscribers on the same thread and on another thread (bounded wait), and a panicking replay subscriber followed by dropping the remaining subscribers (assert the upstream is released via `counted`).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "symbol": "ShareSetupGuard"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "a_subscriber_panicking_while_connecting_does_not_stall_share"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "symbol": "a_subscriber_panicking_on_its_replay_is_unregistered"
+        }
+      ]
+    },
+    {
+      "id": "S03-F8",
+      "boundaryId": "s03-interop",
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The trait-level rustdoc still promises delivery on the producing thread.**\n\n*Expected:* the `ReactiveValueStreamExt` docs describe the threading actually provided.\n\n*Observed:* `stream_ext.rs` line 11 says \"Values are delivered on the thread that produced them.\" After the S03-F1/F2 repairs this no longer holds. A `combine_latest` pair committed on thread B is delivered by thread A when A is draining the per-subscription `DeliveryQueue`. A value buffered for a replaying `share_replay` subscriber is delivered by the subscribing thread.\n\n*Repair:* reword the trait doc, for example: values are delivered on a producing thread, and `combine_latest` and `share_replay` serialize deliveries so a value may be delivered by another producing or subscribing thread. Keep chapter 4 consistent.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "symbol": "ReactiveValueStreamExt"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md"
         }
       ]
     }
