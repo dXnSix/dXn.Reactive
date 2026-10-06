@@ -120,23 +120,24 @@ two-parameter form in such a module. Within collection code, the alias is often 
 `CollectionError` converts from `ReactiveError`, so a function returning
 `rayx_reactive::collections::Result<T>` can use `?` on both layers.
 
-The error-parameter difference matters when you pass a signal stream into a collection operator.
-`filter_with_state` and `filter_dynamic` accept any error type convertible into
-`CollectionError`, so `signal.values()` works directly. The other dynamic operators take the
-collection alias, so they need a one-line adapter, described in
+The error parameter rarely matters in practice: every collection operator accepts streams of any
+error type convertible into `CollectionError`, and every scalar stream operator works with any
+error type, so `signal.values()` feeds collection operators directly and collection outputs use
+the scalar operators unchanged. See
 [Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators).
 
 ## Errors
 
 | Type | Variants | Raised by |
 |---|---|---|
-| `ReactiveError` | `Poisoned` | Scalar state: a mutex was poisoned by a panicking thread. |
+| `ReactiveError` | `Poisoned`, `External(Arc<dyn Error + Send + Sync>)` | Scalar state. `External` carries an error from another layer, for example a `CollectionError` converted with `?`. |
 | `CollectionError` | `Poisoned`, `MissingKey`, `IndexOutOfRange`, `NestedUpdate` | Collections. `NestedUpdate` means a source was edited from inside its own edit or delivery. |
 | `CommandError` | `Disabled`, `Failed(String)`, `Reactive(ReactiveError)` | `Command::execute` / `AsyncCommand::execute`. |
 | `TransformError<K, T, E>` | struct `{ error, key, value }` | Passed to the error callback of `transform_safe*` operators. |
 
-`CollectionError` implements `From<ReactiveError>`, and `CommandError` implements
-`From<ReactiveError>`, so `?` works across the layers. All error types implement
+`CollectionError` and `ReactiveError` convert into each other (a collection error inside
+`ReactiveError::External` converts back to itself), and `CommandError` implements
+`From<ReactiveError>`, so `?` works across the layers in both directions. All error types implement
 `std::error::Error`.
 
 ## What this library is not

@@ -128,14 +128,6 @@ the same order.
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::EventBus;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct Trade {
     symbol: &'static str,
@@ -143,7 +135,7 @@ struct Trade {
 }
 
 let trades = EventBus::<Trade>::new();
-let latest = collection_stream(trades.stream().values())
+let latest = trades.stream().values()
     .to_cache_change_set_with_options(
         |trade| trade.symbol,
         ChangeSetAdapterOptions::limit_size_to(2),
@@ -211,20 +203,12 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 // Each poll of a remote endpoint produces a full snapshot.
 let latest_poll = Signal::new(vec![(1, "queued"), (2, "running")]);
 
 let reasons = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&reasons);
-let _subscription = collection_stream(latest_poll.values())
+let _subscription = latest_poll.values()
     .edit_diff(|job: &(u32, &str)| job.0)
     .subscribe(move |batch| {
         sink.lock().unwrap().push(batch.changes.iter().map(|change| change.reason()).collect::<Vec<_>>());
@@ -329,19 +313,11 @@ active channel", or any view whose backing collection is chosen at runtime.
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 let general = SourceList::new(vec!["hi", "hello"]);
 let random = SourceList::new(vec!["lol"]);
 let active_channel = Signal::new(general.clone());
 
-let messages = collection_stream(active_channel.values()).switch().as_observable_list()?;
+let messages = active_channel.values().switch().as_observable_list()?;
 assert_eq!(messages.items()?, ["hi", "hello"]);
 
 active_channel.replace(random.clone())?; // `replace`: SourceList has no PartialEq

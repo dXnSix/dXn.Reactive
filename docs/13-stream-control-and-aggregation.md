@@ -35,7 +35,7 @@ Timing notes:
 - `batch(Duration::ZERO)` and `buffer_initial(Duration::ZERO)` behave like `not_empty()`.
 - `batch_count(n)` has **no time-based flush**: a tail of fewer than `n` changes stays buffered
   until more changes arrive. `batch_count(0)` and `batch_count(1)` pass batches through.
-- `batch_if` takes a collection-flavor `ValueStream<bool>`; see the adapter in the example.
+- `batch_if` takes any `ValueStream<bool>`, for example `signal.values()`.
 
 ### Pausing delivery
 
@@ -47,14 +47,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 let rows = SourceList::<u32>::default();
 let paused = Signal::new(false);
 
@@ -62,7 +54,7 @@ let batches = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&batches);
 let _subscription = rows
     .connect()
-    .batch_if(collection_stream(paused.values()), false)
+    .batch_if(paused.values(), false)
     .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.len()))?;
 
 paused.set(true)?;

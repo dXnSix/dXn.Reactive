@@ -418,22 +418,14 @@ force stream:
 | `transform_with_forced(f, force)` | `ValueStream<CacheForceTransform<K, T>>` | items for which the emitted predicate `Fn(&T, &K) -> bool` returns `true` |
 | `transform_with_previous_forced`, `transform_safe_with_forced*`, `transform_async_with_previous_forced`, `transform_safe_async_with_previous_forced` | as above | |
 
-Force streams use the collection `ValueStream` flavor (`CollectionError`). The example adapts a
-signal's stream with the small `collection_stream` helper explained in
-[Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators):
+Force streams accept any stream whose error converts into `CollectionError`, so a signal's or an
+event bus's stream is passed directly
+([Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators)):
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, RwLock};
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 let rate = Arc::new(RwLock::new(1.0_f64)); // external state the projection reads
 let rate_changed = Signal::new(0_u32);     // bumped whenever `rate` changes
@@ -447,7 +439,7 @@ let converted = {
         .connect()
         .transform_with_forced_all(
             move |item| item.1 * *rate.read().unwrap(),
-            collection_stream(rate_changed.changes().map(|_| ())),
+            rate_changed.changes().map(|_| ()),
         )
         .as_observable_cache(|_| "")?
 };

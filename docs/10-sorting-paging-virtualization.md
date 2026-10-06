@@ -61,14 +61,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::Arc;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct File {
     name: &'static str,
@@ -98,7 +90,7 @@ let comparers = sort_by.values().map(|mode| -> Comparer<File> {
 
 let sorted = files
     .connect()
-    .sort_keyed_dynamic(collection_stream(comparers))
+    .sort_keyed_dynamic(comparers)
     .as_observable_list()?;
 let names = |list: &ObservableList<File>| -> Vec<&str> {
     list.items().unwrap().iter().map(|file| file.name).collect()
@@ -266,14 +258,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 let people = SourceCache::new(|person: &(u32, &'static str)| person.0);
 people.add_or_update_range([(1, "Eve"), (2, "Bob"), (3, "Dan"), (4, "Amy"), (5, "Cat")])?;
 
@@ -283,7 +267,7 @@ let sink = Arc::clone(&responses);
 let _subscription = people
     .connect()
     .sort_keyed_by_key(|person| person.1)
-    .page_keyed_dynamic_with_response(collection_stream(page.values()))
+    .page_keyed_dynamic_with_response(page.values())
     .subscribe(move |page| {
         let keys: Vec<u32> = page.changes.changes.iter().filter_map(|change| match change {
             CacheChange::Add { key, .. } => Some(*key),

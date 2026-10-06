@@ -36,11 +36,11 @@ Key properties:
 | `rayx_reactive::ValueStream<T>` | `ReactiveError` | signals, computed values, event streams |
 | `rayx_reactive::collections::ValueStream<T>` | `CollectionError` | collection aggregates, watchers, page and virtual responses, `merge_many`, and other collection operators |
 
-Both are the same struct, so `subscribe`, `map` and `start_with` work on both. The scalar
-operators of `ReactiveValueStreamExt` (`filter`, `filter_map`, `distinct_until_changed`, `skip`)
-are implemented for the `ReactiveError` flavor. Collection operators that take a dynamic stream
-input usually expect the `CollectionError` flavor. [Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators)
-shows the adapters that convert between the two.
+Both are the same struct, and every operator works on both: the scalar operators of
+`ReactiveValueStreamExt` are implemented for any error type, and collection operators accept any
+stream whose error converts into `CollectionError`, so `signal.values()` plugs into them directly.
+`map_err` and `err_into` convert explicitly when needed; see
+[Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators).
 
 ## Subscribing
 
@@ -68,17 +68,36 @@ or other signals to move data out of the callback.
 
 ## Operators
 
-| Operator | Available on | Behavior |
-|---|---|---|
-| `map(\|v\| …)` | both flavors | Transforms each value. |
-| `start_with(value)` | both flavors | Emits `value` first, then the source. |
-| `filter(\|v\| …)` | scalar flavor | Forwards only values that match. |
-| `filter_map(\|v\| …)` | scalar flavor | Transforms and drops `None`s in one step. |
-| `distinct_until_changed()` | scalar flavor | Drops values equal to the previously forwarded one (`T: Clone + PartialEq`). |
-| `skip(n)` | scalar flavor | Drops the first `n` values. `skip(1)` on `values()` yields only future values. |
+Every operator works on streams of any error type `E` (scalar and collection flavors alike) and
+keeps that error type.
 
-Bring `filter`, `filter_map`, `distinct_until_changed` and `skip` into scope with
-`rayx_reactive::prelude::*` or `rayx_reactive::ReactiveValueStreamExt`.
+| Operator | Behavior |
+|---|---|
+| `map(\|v\| …)` | Transforms each value. |
+| `start_with(value)` | Emits `value` first, then the source. |
+| `map_err(\|e\| …)` / `err_into::<F>()` | Converts the stream's setup error. |
+| `filter(\|v\| …)` | Forwards only values that match. |
+| `filter_map(\|v\| …)` | Transforms and drops `None`s in one step. |
+| `distinct_until_changed()` | Drops values equal to the previously forwarded one (`T: Clone + PartialEq`). |
+| `distinct_until_changed_by(\|a, b\| …)` | The same with a custom equality. |
+| `skip(n)` | Drops the first `n` values. `skip(1)` on `values()` yields only future values. |
+| `take(n)` / `first()` | Forwards the first `n` values (or one), then disposes the upstream subscription. |
+| `take_until(&notifier)` | Forwards values until `notifier` emits, then disposes both subscriptions. A notifier that emits on subscribe (such as `signal.values()`) ends it at once; use `signal.changes()`, `values().skip(1)` or an event stream. |
+| `scan(seed, \|acc, v\| …)` | Emits the running accumulation. |
+| `pairwise()` | Emits `(previous, current)` for every value after the first. |
+| `merge(&other)` | Emits the values of both streams as they arrive. |
+| `combine_latest(&other, \|a, b\| …)` | Once both emitted, emits a combination whenever either emits, in update order even when the inputs emit on different threads. |
+| `with_latest_from(&other, \|a, b\| …)` | Emits a combination for each value of `self`, using `other`'s latest value; `other` alone emits nothing. |
+| `switch_map(\|v\| stream)` | Maps each value to an inner stream; only the latest inner stream stays subscribed. |
+| `share()` | One upstream subscription shared by every subscriber; the last one to leave disposes it, and a later subscriber reconnects (values of a released connection are ignored). A subscriber arriving while another thread connects waits for that connection. |
+| `share_replay()` | Like `share`, and a late subscriber first receives the latest value, then only newer values. |
+
+Bring the operators other than `map`, `start_with`, `map_err` and `err_into` into scope with
+`rayx_reactive::prelude::*` or `rayx_reactive::ReactiveValueStreamExt`. Disposing a subscription
+disposes everything the operator subscribed to, including inner streams. Values are usually
+delivered on the thread that produced them; `combine_latest` and `share_replay`, which order
+values from several sources, may deliver a value on the thread that is already delivering to that
+subscriber.
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -101,6 +120,57 @@ for typed in ["  Help ", "help", "", "quit"] {
 }
 
 assert_eq!(*commands.lock().unwrap(), ["help", "quit"]);
+```
+
+Combining streams:
+
+```rust
+use rayx_reactive::prelude::*;
+use std::sync::{Arc, Mutex};
+
+let query = Signal::new(String::from("rust"));
+let page = Signal::new(1_u32);
+let requests = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&requests);
+
+// Re-run the search whenever either input changes.
+let _subscription = query
+    .values()
+    .combine_latest(&page.values(), |query, page| format!("{query}#{page}"))
+    .subscribe(move |request| sink.lock().unwrap().push(request.clone()))?;
+page.set(2)?;
+query.set("signals".into())?;
+assert_eq!(*requests.lock().unwrap(), ["rust#1", "rust#2", "signals#2"]);
+
+// Keep a running total of events, and only the first three totals.
+let amounts = EventBus::<u32>::new();
+let totals = Arc::new(Mutex::new(Vec::new()));
+let totals_sink = Arc::clone(&totals);
+let _totals = amounts
+    .stream()
+    .values()
+    .scan(0, |total, amount| total + amount)
+    .take(3)
+    .subscribe(move |total| totals_sink.lock().unwrap().push(*total))?;
+for amount in [5, 10, 20, 40] {
+    amounts.emit(amount)?;
+}
+assert_eq!(*totals.lock().unwrap(), [5, 15, 35]);
+
+// Follow the selected document's title: only the latest selection stays subscribed.
+let titles = [Signal::new("Draft"), Signal::new("Notes")];
+let selected = Signal::new(0_usize);
+let shown = Arc::new(Mutex::new(Vec::new()));
+let shown_sink = Arc::clone(&shown);
+let streams = titles.clone();
+let _title = selected
+    .values()
+    .switch_map(move |index| streams[*index].values())
+    .subscribe(move |title| shown_sink.lock().unwrap().push(*title))?;
+selected.set(1)?;
+titles[0].set("Draft v2")?; // no longer selected: ignored
+titles[1].set("Notes v2")?;
+assert_eq!(*shown.lock().unwrap(), ["Draft", "Notes", "Notes v2"]);
 ```
 
 ### Operators run per subscription
@@ -393,9 +463,12 @@ currently produces `Pending` and then `Loaded`. See
 
 ## The error model
 
-- **Setup errors** come back from `subscribe` (`Result<Subscription, E>`). With the default
-  `std::sync` locks the only scalar failure is `ReactiveError::Poisoned`, which occurs after another
-  thread panicked while holding a lock.
+- **Setup errors** come back from `subscribe` (`Result<Subscription, E>`). Signals recover from
+  poisoned locks, so scalar setup rarely fails; `ReactiveError::External` carries an error from
+  another layer (for example a `CollectionError` converted with `?`) and keeps the original.
+- **Changing the error type.** `stream.map_err(f)` and `stream.err_into::<F>()` (for
+  `F: From<E>`) convert a stream's setup error. Every operator in this crate accepts streams of any
+  error type that converts into the error it needs, so explicit conversion is rarely necessary.
 - **Subscriber callbacks return `()`.** A panic in a subscriber propagates to the thread that
   published the value (or the thread draining the queue); the queue itself keeps delivering.
 - **Domain failures are data.** Model them in the value type (`Signal<Result<Data, String>>`,

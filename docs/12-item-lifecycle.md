@@ -11,12 +11,11 @@ everything when the downstream subscription is dropped. Do not maintain your own
 subscriptions next to a collection: these operators already handle every edge case (moves, clears,
 replacements, unsubscribe during delivery).
 
-## Per-item streams use the collection flavor
+## Per-item streams
 
-Operator selectors return `rayx_reactive::collections::ValueStream<U>` (error type
-`CollectionError`). When items expose `Signal`s, adapt their streams with the `collection_stream`
-helper from [Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators).
-Every example in this chapter defines it inline.
+Operator selectors return a `ValueStream<U, E>` of any error type `E` that converts into
+`CollectionError`. When items expose `Signal`s, return `signal.values()` or `signal.changes()`
+directly ([Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators)).
 
 Cache selectors receive `(&item, &key)`; list selectors receive `&item`.
 
@@ -30,14 +29,6 @@ are not replaced.
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 #[derive(Clone)]
 struct Download {
@@ -60,7 +51,7 @@ downloads.add_or_update_range([first.clone(), second.clone()])?;
 // and the refresh makes the filter re-test it.
 let active = downloads
     .connect()
-    .auto_refresh(|download, _id| collection_stream(download.progress.changes()))
+    .auto_refresh(|download, _id| download.progress.changes())
     .filter(|download| download.progress.get().unwrap_or(0) < 100)
     .as_observable_cache(|download| download.id)?;
 assert_eq!(active.keys()?, [1, 2]);
@@ -88,14 +79,6 @@ replacement resets the item's inclusion and waits for the new stream.
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone)]
 struct Layer {
     id: u32,
@@ -115,7 +98,7 @@ layers.add_or_update_range([background.clone(), overlay.clone()])?;
 
 let shown = layers
     .connect()
-    .filter_on_observable(|layer, _id| collection_stream(layer.visible.values()))
+    .filter_on_observable(|layer, _id| layer.visible.values())
     .as_observable_cache(|layer| layer.id)?;
 assert_eq!(shown.keys()?, [1]);
 
@@ -159,14 +142,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone)]
 struct Field {
     name: &'static str,
@@ -187,7 +162,7 @@ let edits = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&edits);
 let _subscription = form
     .connect()
-    .merge_many_keyed_items(|field, _name| collection_stream(field.text.changes().map(|change| change.current.clone())))
+    .merge_many_keyed_items(|field, _name| field.text.changes().map(|change| change.current.clone()))
     .subscribe(move |edit| sink.lock().unwrap().push((edit.key, edit.value.clone())))?;
 
 email.text.set("ada@example.com".into())?;
@@ -330,14 +305,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone)]
 struct Upload {
     id: u32,
@@ -354,7 +321,7 @@ let uploads = SourceCache::new(|upload: &Upload| upload.id);
 let history = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&history);
 let _subscription = uploads
-    .true_for_all_value(|upload, _id| collection_stream(upload.done.values()), |done| *done)
+    .true_for_all_value(|upload, _id| upload.done.values(), |done| *done)
     .subscribe(move |all_done| sink.lock().unwrap().push(*all_done))?;
 
 let upload = Upload { id: 1, done: Signal::new(false) };

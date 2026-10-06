@@ -21,14 +21,6 @@ var subscription = _people.Connect()
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct Person {
     id: u32,
@@ -43,7 +35,7 @@ let visible_people = people
     .connect()
     .filter_with_state(search_text.values(), |text: &String, person: &Person| person.name.contains(text.as_str()))
     .sort_keyed_by_key(|person| person.name.clone())
-    .page_keyed_dynamic(collection_stream(page.values()))
+    .page_keyed_dynamic(page.values())
     .as_observable_list()?; // the view binds this; marshal to the UI thread in the binding
 
 people.add_or_update(Person { id: 1, name: "Ada".into() })?;

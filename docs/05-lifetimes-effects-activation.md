@@ -309,12 +309,13 @@ assert!(!*child_active.lock().unwrap());
 ### Collection subscriptions inside activation callbacks
 
 Activation callbacks return `rayx_reactive::Result<()>` (error type `ReactiveError`), while
-collection streams fail with `CollectionError`. `?` cannot convert in that direction, so convert
-explicitly:
+collection streams fail with `CollectionError`. `CollectionError` converts into `ReactiveError`
+(`Poisoned` stays `Poisoned`, every other variant becomes `ReactiveError::External` holding the
+original error), so `?` works directly:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{DisposeWith, ReactiveError, ViewModelActivator};
+use rayx_reactive::prelude::{DisposeWith, ViewModelActivator};
 
 let rows = SourceList::new(vec![1, 2, 3]);
 let activator = ViewModelActivator::default();
@@ -322,8 +323,7 @@ let activator = ViewModelActivator::default();
     let rows = rows.clone();
     activator.when_activated(move |bag| {
         rows.connect()
-            .subscribe(|_batch| { /* update the view */ })
-            .map_err(|_| ReactiveError::Poisoned)?
+            .subscribe(|_batch| { /* update the view */ })?
             .dispose_with(bag);
         Ok(())
     })?;
@@ -332,8 +332,8 @@ let _token = activator.activate()?;
 ```
 
 Collection subscription setup can fail with `Poisoned`, or with `NestedUpdate` if you connect to a
-source from inside that source's own edit. Mapping every failure to `ReactiveError::Poisoned` loses
-that distinction. If you need it, record the original error before mapping.
+source from inside that source's own edit. The `External` variant keeps the original: downcast it
+with `error.downcast_ref::<CollectionError>()`, or convert back with `CollectionError::from`.
 
 ## Choosing an owner
 
