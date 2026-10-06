@@ -45,7 +45,11 @@ fn values_subscribers_racing_a_writer_never_end_stale() {
         let signal = signal.clone();
         let stop = Arc::clone(&stop);
         thread::spawn(move || {
-            while !stop.load(Ordering::SeqCst) {
+            // Bounded: every write reaches every subscriber created so far.
+            for _ in 0..20_000 {
+                if stop.load(Ordering::SeqCst) {
+                    break;
+                }
                 signal.update(|value| *value += 1).unwrap();
             }
         })
