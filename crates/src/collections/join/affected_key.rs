@@ -132,7 +132,7 @@ where
                 self.right_items
                     .insert(key.clone(), (group_key.clone(), current.clone()));
                 let group = self.group_for(&group_key);
-                let mut pending = Vec::new();
+                let mut pending = crate::collections::connection::PendingChanges::new();
                 let _ = group.refresh_pending(key, current.clone(), &mut pending);
                 let _ = group.publish_pending(pending);
                 upsert_affected_key(affected, group_key, true);
@@ -152,7 +152,7 @@ where
                 self.right_items
                     .insert(key.clone(), (group_key.clone(), current.clone()));
                 let group = self.group_for(&group_key);
-                let mut pending = Vec::new();
+                let mut pending = crate::collections::connection::PendingChanges::new();
                 if let Some(group_index) = self.group_index_for_right_key(key, &group_key) {
                     let _ = group.move_pending(key, group_index, &mut pending);
                 }
@@ -190,7 +190,7 @@ where
 
     fn add_or_update_group_item(&mut self, key: &RK, item: R, group_key: &K) {
         let group = self.group_for(group_key);
-        let mut pending = Vec::new();
+        let mut pending = crate::collections::connection::PendingChanges::new();
         let group_index = self.group_index_for_right_key(key, group_key);
         let _ = group.add_or_update_pending(key.clone(), item, group_index, &mut pending);
         let _ = group.publish_pending(pending);
@@ -211,7 +211,7 @@ where
         let Some(group) = self.groups.get(group_key).cloned() else {
             return;
         };
-        let mut pending = Vec::new();
+        let mut pending = crate::collections::connection::PendingChanges::new();
         let _ = group.remove_pending(key, &mut pending);
         let _ = group.publish_pending(pending);
     }

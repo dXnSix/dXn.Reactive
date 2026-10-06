@@ -13,14 +13,15 @@ fn live_group_history_free_cache_group_releases_100_000_historical_payloads() {
     for value in 0..100_000 {
         let payload = Arc::new(value);
         historical.push(Arc::downgrade(&payload));
-        let mut pending = Vec::<CacheChange<u32, Arc<usize>>>::new();
+        let mut pending =
+            crate::collections::connection::PendingChanges::<CacheChange<u32, Arc<usize>>>::new();
         group
             .add_or_update_pending(1, Arc::clone(&payload), None, &mut pending)
             .expect("update cache group member");
         group.publish_pending(pending).expect("publish cache group");
     }
 
-    let mut pending = Vec::new();
+    let mut pending = crate::collections::connection::PendingChanges::new();
     group
         .remove_pending(&1, &mut pending)
         .expect("remove cache group member");
@@ -40,7 +41,8 @@ fn live_group_history_free_list_group_releases_100_000_historical_payloads() {
     for value in 0..100_000 {
         let payload = Arc::new(value);
         historical.push(Arc::downgrade(&payload));
-        let mut pending = Vec::<ListChange<Arc<usize>>>::new();
+        let mut pending =
+            crate::collections::connection::PendingChanges::<ListChange<Arc<usize>>>::new();
         if value == 0 {
             group
                 .add_pending(0, Arc::clone(&payload), &mut pending)
@@ -55,7 +57,7 @@ fn live_group_history_free_list_group_releases_100_000_historical_payloads() {
         group.publish_pending(pending).expect("publish list group");
     }
 
-    let mut pending = Vec::new();
+    let mut pending = crate::collections::connection::PendingChanges::new();
     group
         .remove_at_pending(0, &mut pending)
         .expect("remove list group member");
@@ -68,7 +70,7 @@ fn live_group_history_free_list_group_releases_100_000_historical_payloads() {
 }
 
 fn publish_cache_member(group: &RayCacheGroup<u32, u32, u32>, value: u32) {
-    let mut pending = Vec::new();
+    let mut pending = crate::collections::connection::PendingChanges::new();
     group
         .add_or_update_pending(1, value, None, &mut pending)
         .expect("update cache group member");
@@ -76,7 +78,7 @@ fn publish_cache_member(group: &RayCacheGroup<u32, u32, u32>, value: u32) {
 }
 
 fn publish_list_member(group: &RayListGroup<u32, u32>, value: u32) {
-    let mut pending = Vec::new();
+    let mut pending = crate::collections::connection::PendingChanges::new();
     if group.is_empty().expect("list group empty") {
         group
             .add_pending(0, value, &mut pending)

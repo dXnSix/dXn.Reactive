@@ -43,7 +43,7 @@ where
 
 type CacheGroupChange<K, T, G> = CacheChange<G, RayCacheGroup<G, K, T>>;
 type ImmutableCacheGroupChange<K, T, G> = CacheChange<G, ImmutableCacheGroup<G, K, T>>;
-type CacheGroupPending<K, T, G> = HashMap<G, (RayCacheGroup<G, K, T>, Vec<CacheChange<K, T>>)>;
+type CacheGroupPending<K, T, G> = HashMap<G, (RayCacheGroup<G, K, T>, crate::collections::connection::PendingChanges<CacheChange<K, T>>)>;
 type CacheGroupApplyResult<K, T, G> = (Vec<CacheGroupChange<K, T, G>>, CacheGroupPending<K, T, G>);
 type CacheGroupRegroupResult<K, T, G> = (
     Vec<CacheGroupChange<K, T, G>>,
@@ -58,7 +58,7 @@ type CacheSafeErrorHandler<K, T, E> = Arc<dyn Fn(TransformError<K, T, E>) + Send
 type CacheInlineUpdate<T, U> = Arc<dyn Fn(&mut U, &T) + Send + Sync>;
 type ListGroupChange<T, G> = ListChange<RayListGroup<G, T>>;
 type ImmutableListGroupChange<T, G> = ListChange<ImmutableListGroup<G, T>>;
-type ListGroupPending<T, G> = HashMap<G, (RayListGroup<G, T>, Vec<ListChange<T>>)>;
+type ListGroupPending<T, G> = HashMap<G, (RayListGroup<G, T>, crate::collections::connection::PendingChanges<ListChange<T>>)>;
 type ListGroupApplyResult<T, G> = (Vec<ListGroupChange<T, G>>, ListGroupPending<T, G>);
 type ListGroupRegroupResult<T, G> = (Vec<ListGroupChange<T, G>>, ListGroupPending<T, G>, u64);
 type ListTransformFactory<T, U> = Arc<dyn Fn(&T, Option<&U>, usize) -> U + Send + Sync>;

@@ -29,6 +29,7 @@ pub mod populate;
 pub mod projection;
 pub mod ref_count;
 pub mod side_effect;
+mod source_lock;
 pub mod stream;
 pub mod subscription;
 pub mod switch;
@@ -41,7 +42,9 @@ pub mod prelude {
     pub use crate::collections::aggregation::{
         CacheAggregationExt, CacheQuery, ListAggregationExt,
     };
-    pub use crate::collections::cache::{CacheNotificationSuspension, CacheUpdater, SourceCache};
+    pub use crate::collections::cache::{
+        CacheNotificationSuspension, CacheUpdater, CacheView, SourceCache,
+    };
     pub use crate::collections::change::{
         CacheChange, ChangeReason, ChangeSet, KeyedPageChangeSet, KeyedVirtualChangeSet,
         ListChange, ListChangeReason, ListItemChange, PageChangeSet, PageRequest, PageResponse,

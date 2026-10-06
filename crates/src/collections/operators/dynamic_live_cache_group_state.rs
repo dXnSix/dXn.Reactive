@@ -162,7 +162,7 @@ fn live_pending_group_changes<'a, K, T, G>(
     pending: &'a mut CacheGroupPending<K, T, G>,
     group_key: &G,
     group: &RayCacheGroup<G, K, T>,
-) -> &'a mut Vec<CacheChange<K, T>>
+) -> &'a mut crate::collections::connection::PendingChanges<CacheChange<K, T>>
 where
     G: Clone + Eq + Hash,
     K: Clone,
@@ -170,7 +170,7 @@ where
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), Vec::new()))
+        .or_insert_with(|| (group.clone(), crate::collections::connection::PendingChanges::new()))
         .1
 }
 

@@ -337,14 +337,14 @@ fn list_pending_group_changes<'a, T, G>(
     pending: &'a mut ListGroupPending<T, G>,
     group_key: &G,
     group: &RayListGroup<G, T>,
-) -> &'a mut Vec<ListChange<T>>
+) -> &'a mut crate::collections::connection::PendingChanges<ListChange<T>>
 where
     G: Clone + Eq + Hash,
     T: Clone,
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), Vec::new()))
+        .or_insert_with(|| (group.clone(), crate::collections::connection::PendingChanges::new()))
         .1
 }
 

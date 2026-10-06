@@ -26,7 +26,13 @@ type CacheTransformFactory<K, T, U> = Arc<dyn Fn(&T, &K) -> ValueStream<U> + Sen
 type CacheTransformApplyResult<K, T, U> = (Vec<CacheChange<K, U>>, Vec<(K, T, u64)>);
 type CacheGroupFactory<K, T, G> = Arc<dyn Fn(&T, &K) -> ValueStream<G> + Send + Sync>;
 type CacheGroupChange<K, T, G> = CacheChange<G, RayCacheGroup<G, K, T>>;
-type CacheGroupPending<K, T, G> = HashMap<G, (RayCacheGroup<G, K, T>, Vec<CacheChange<K, T>>)>;
+type CacheGroupPending<K, T, G> = HashMap<
+    G,
+    (
+        RayCacheGroup<G, K, T>,
+        crate::collections::connection::PendingChanges<CacheChange<K, T>>,
+    ),
+>;
 type CacheGroupApplyResult<K, T, G> = (
     Vec<CacheGroupChange<K, T, G>>,
     Vec<(K, T, u64)>,
@@ -2776,7 +2782,7 @@ fn pending_group_changes<'a, K, T, G>(
     pending: &'a mut CacheGroupPending<K, T, G>,
     group_key: &G,
     group: &RayCacheGroup<G, K, T>,
-) -> &'a mut Vec<CacheChange<K, T>>
+) -> &'a mut crate::collections::connection::PendingChanges<CacheChange<K, T>>
 where
     G: Clone + Eq + Hash,
     K: Clone,
@@ -2784,7 +2790,12 @@ where
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), Vec::new()))
+        .or_insert_with(|| {
+            (
+                group.clone(),
+                crate::collections::connection::PendingChanges::new(),
+            )
+        })
         .1
 }
 
@@ -2814,7 +2825,7 @@ fn merge_group_pending<K, T, G>(
     for (group_key, (group, mut changes)) in source {
         target
             .entry(group_key)
-            .or_insert_with(|| (group, Vec::new()))
+            .or_insert_with(|| (group, crate::collections::connection::PendingChanges::new()))
             .1
             .append(&mut changes);
     }

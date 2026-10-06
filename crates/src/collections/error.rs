@@ -6,8 +6,14 @@ pub enum CollectionError {
     MissingKey,
     #[error("index was out of range")]
     IndexOutOfRange,
+    /// A source was accessed from inside its own edit (or key selector, or `T::clone`
+    /// while its state is locked) on the same thread.
     #[error("nested updates are not supported")]
     NestedUpdate,
+    /// Another thread holds the source's state and the non-blocking contention policy
+    /// (used on `wasm32`) does not wait for it. Retry later, for example on the next frame.
+    #[error("collection state is in use by another thread")]
+    Contended,
 }
 
 /// A `ReactiveError::External` that wraps a `CollectionError` converts back to it; any
