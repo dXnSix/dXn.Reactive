@@ -538,7 +538,8 @@ fn command_tracks_state_and_can_execute() -> Result<(), Box<dyn std::error::Erro
 
     can_execute.set(false)?;
     assert_eq!(command.execute(), Err(CommandError::Disabled));
-    assert_eq!(command.state().get()?, CommandState::Cancelled);
+    // A disabled call publishes nothing (it used to overwrite the state with `Cancelled`).
+    assert_eq!(command.state().get()?, CommandState::Succeeded);
     Ok(())
 }
 

@@ -15,7 +15,9 @@ pub mod stream_ext;
 
 pub mod prelude {
     pub use crate::activation::{ActivatableViewModel, ActivationToken, ViewModelActivator};
-    pub use crate::command::{AsyncCommand, Command, CommandError, CommandResult, CommandState};
+    pub use crate::command::{
+        AsyncCommand, Command, CommandError, CommandResult, CommandState, ExecutionPolicy,
+    };
     pub use crate::computed::Computed;
     pub use crate::disposal::{Disposable, DisposeBag, DisposeWith};
     pub use crate::effect::Effect;
@@ -29,5 +31,7 @@ pub mod prelude {
 
 pub use prelude::*;
 
+#[cfg(test)]
+mod scalar_tests;
 #[cfg(test)]
 mod tests;
