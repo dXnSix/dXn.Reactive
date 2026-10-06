@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 6,
+  "epicId": "reactive-audit-remediation",
+  "revision": 0,
+  "planRevision": 1,
+  "specHashes": {
+    "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
+    "design": "9a029d8d4d18f8ae4c5fd12bf258dd870ec8b8cf4cf792bf231d022c40e64057",
+    "plan": "8a3c509a97528507288c3b58e3d8c5202ead6a35f9bf9299f7c0ec6c449b0f28"
+  },
+  "tasks": {
+    "t01-panic-safe-delivery": {
+      "status": "pending"
+    },
+    "t02-ordered-delivery": {
+      "status": "pending"
+    },
+    "t03-command-lifecycle": {
+      "status": "pending"
+    },
+    "t04-computed-consistency": {
+      "status": "pending"
+    },
+    "t05-signal-robustness": {
+      "status": "pending"
+    },
+    "t06-activation-lifecycle": {
+      "status": "pending"
+    },
+    "t07-stream-error-interop": {
+      "status": "pending"
+    },
+    "t08-operator-input-interop": {
+      "status": "pending"
+    },
+    "t09-value-stream-combinators": {
+      "status": "pending"
+    },
+    "t10-source-lock-policy": {
+      "status": "pending"
+    },
+    "t11-source-commit-order": {
+      "status": "pending"
+    },
+    "t12-suspension-versions": {
+      "status": "pending"
+    },
+    "t13-source-read-api": {
+      "status": "pending"
+    },
+    "t14-watch-batch-coalescing": {
+      "status": "pending"
+    },
+    "t15-materialization-reliability": {
+      "status": "pending"
+    },
+    "t16-ref-count-lifecycle": {
+      "status": "pending"
+    },
+    "t17-switch-reliability": {
+      "status": "pending"
+    },
+    "t18-ordered-emission-core": {
+      "status": "pending"
+    },
+    "t19-ordered-emission-relations": {
+      "status": "pending"
+    },
+    "t20-index-contract-harness": {
+      "status": "pending"
+    },
+    "t21-keyed-sort-positions": {
+      "status": "pending"
+    },
+    "t22-subset-operator-indexes": {
+      "status": "pending"
+    },
+    "t23-snapshot-diff-indexes": {
+      "status": "pending"
+    },
+    "t24-group-and-combiner-indexes": {
+      "status": "pending"
+    },
+    "t25-key-bridge-indexes": {
+      "status": "pending"
+    },
+    "t26-keyed-state-operators": {
+      "status": "pending"
+    },
+    "t27-window-responses": {
+      "status": "pending"
+    },
+    "t28-scheduler": {
+      "status": "pending"
+    },
+    "t29-timed-stream-controls": {
+      "status": "pending"
+    },
+    "t30-expiration-rework": {
+      "status": "pending"
+    },
+    "t31-limit-size-rework": {
+      "status": "pending"
+    },
+    "t32-timed-value-stream-operators": {
+      "status": "pending"
+    },
+    "t33-async-transform-workers": {
+      "status": "pending"
+    },
+    "t34-list-async-transform-options": {
+      "status": "pending"
+    },
+    "t35-async-dispose-hardening": {
+      "status": "pending"
+    },
+    "t36-aggregate-robustness": {
+      "status": "pending"
+    },
+    "t37-lifecycle-semantics": {
+      "status": "pending"
+    },
+    "t38-source-bookkeeping-costs": {
+      "status": "pending"
+    },
+    "t39-operator-bookkeeping-costs": {
+      "status": "pending"
+    },
+    "t40-relation-operator-costs": {
+      "status": "pending"
+    },
+    "t41-api-hygiene": {
+      "status": "pending"
+    },
+    "t42-rustdoc-coverage": {
+      "status": "pending"
+    },
+    "t43-ci-workflows": {
+      "status": "pending"
+    },
+    "t44-consumer-scenarios": {
+      "status": "pending"
+    },
+    "t45-docs-and-changelog": {
+      "status": "pending"
+    }
+  },
+  "validationBatches": {},
+  "checkResults": {},
+  "reviews": {},
+  "checkpoints": {},
+  "findings": [],
+  "handoffMarkdown": "",
+  "protectedPaths": {
+    "reactive": {
+      ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",
+      "LICENSE-APACHE": "1d39282f42adc0ef965c88cac88e9b39aa332f31fecfd8615eb0e359f84fa663",
+      "LICENSE-MIT": "c294d59965f77468ec952e70be797cad02f00bc160125f47aede58a2b9291af5",
+      "rust-toolchain.toml": "a203d7182f316258763e5eb0f81455729a7da60db4ecbce4aedeef59057ed333"
+    }
+  }
+}

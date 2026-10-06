@@ -1,0 +1,506 @@
+{
+  "schemaVersion": 6,
+  "epicId": "reactive-audit-remediation",
+  "decisions": [
+    {
+      "id": "D-DELIVERY",
+      "requirementIds": [
+        "DLV-1",
+        "DLV-2"
+      ],
+      "descriptionMarkdown": "Harden `DeliveryQueue<T>` in place, keeping it neutral:\n\n- An unwind guard in the drain loop clears `delivering` (and re-arms nothing) when a subscriber panics, so the next push/drain resumes delivery of everything still queued. The panic keeps propagating.\n- Split publication into `push` (append under the queue mutex only; callers may hold their own state lock) and `drain` (deliver until empty unless another drain runs). `enqueue = push + drain`. Publishers that commit state under a lock call `push` before releasing it and `drain` after, which makes delivery order equal commit order.\n- Store subscribers in subscription order with `u64` ids and keep an `Arc<[Entry]>` snapshot rebuilt only on subscribe/unsubscribe. Each entry carries an `active: AtomicBool` cleared by its `Subscription`'s disposal and checked immediately before each call.\n- Expose a `pending_len()` style backlog accessor. Bounding foreign work on a draining thread is out of scope.",
+      "invariantsMarkdown": "No collection-specific state (versions, keyed registries, replay) enters `DeliveryQueue`. Re-entrant pushes are queued, never delivered recursively. `drain` never holds the queue mutex while calling a subscriber. Existing `subscribe`/`enqueue` signatures are unchanged.",
+      "rationaleMarkdown": "One primitive fix removes the panic stall, the cross-thread reordering in signals/sources (C-1, C-8) and the dispose-then-called hazard (S-7) for every layer at once, and subscription-order delivery is the prerequisite for glitch-free `Computed` (S-3). A blocking hand-off to bound foreign drain work (S-6/X-1) would deadlock when a subscriber waits on a lock the enqueuer holds and would block wasm main threads, so it is excluded.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/delivery.rs",
+          "symbol": "DeliveryQueue"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/signal.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/event.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/sources/2026-07-27-collections-sources-history-free-targeted-delivery.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/repository/2026-10-05-repository-single-reactive-crate.md"
+        }
+      ]
+    },
+    {
+      "id": "D-SCALAR",
+      "requirementIds": [
+        "CMD-1",
+        "CMP-1",
+        "SIG-1",
+        "ACT-1"
+      ],
+      "descriptionMarkdown": "Scalar fixes stay inside their modules:\n\n- **Commands:** each execution gets a generation from an atomic counter; only the latest generation publishes its terminal state; an in-flight counter backs `is_executing()`; a drop guard in `AsyncCommand::execute` publishes `Cancelled` when the future is dropped before completion; a panic guard publishes `Failed(\"panicked: …\")` and re-raises. Disabled calls publish nothing. `ExecutionPolicy` is an additive constructor parameter (default `Concurrent`).\n- **Computed:** `drain_combine`/`drain_derive` re-read each input's latest value and version and skip the recompute when the version tuple is unchanged; with subscription-order delivery (D-DELIVERY) a dependency is always notified before its dependents, which resolves diamonds in one emission. `get()` compares cached input versions with current ones and recomputes on mismatch. Construction compares the second snapshot's versions with the first and skips the second evaluation. A `processing` guard resets on unwind.\n- **Signals:** each `values()` subscriber is wrapped by a per-subscriber version gate (last delivered version) so late baselines are dropped; value reads for clones happen outside user callbacks; `update` restores the previous value on unwind and clears poison (`Mutex::clear_poison`); write paths use `mem::replace` and skip building `SignalChange` clones when there are no subscribers; `try_get`/`try_read` use `try_lock`; `start_with` buffers upstream until the initial value is emitted.\n- **Activation:** generations track `Activating/Active/Failed`; tokens of a failed generation report inactive; scoped registrations are stored on the generation and dropped with it; a failing live registration disposes a temporary child bag.",
+      "invariantsMarkdown": "Signal callbacks and activation callbacks still run outside their state locks; the `values()` subscribe-before-baseline handshake and generation-aware token disposal are preserved. `CommandState` variants are unchanged.",
+      "rationaleMarkdown": "Version-gating reuses the existing `DeriveState` pattern and needs no new primitive. Lazy staleness checks fix cross-thread `get()` without blocking. Keeping commands concurrent by default avoids a behavior break while making overlap observable.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/command.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/signal.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/activation.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/stream.rs",
+          "symbol": "start_with"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/repository/2026-10-05-repository-single-reactive-crate.md"
+        }
+      ]
+    },
+    {
+      "id": "D-INTEROP",
+      "requirementIds": [
+        "INT-1",
+        "INT-2",
+        "INT-3",
+        "TIM-4"
+      ],
+      "descriptionMarkdown": "Make error types generic at the boundaries instead of adding adapters:\n\n- `ValueStream<T, E>` gets `map_err`/`err_into`; `ReactiveValueStreamExt<T, E = ReactiveError>` and the new combinators are implemented for every `E: Send + Sync + 'static`; `OptionValueStreamExt` likewise.\n- Collection operators take `crate::primitives::ValueStream<S, E>` with `CollectionError: From<E>` (the pattern `filter_with_state` already uses) for every dynamic input and per-item selector; internally they convert with `err_into`.\n- `ReactiveError::External(Arc<dyn Error + Send + Sync>)` plus `impl From<CollectionError> for ReactiveError` in `collections` lets collection errors flow into scalar contexts without scalar code naming collection types.\n- New combinators live in `stream_ext.rs` (crate root) because they are scalar-facing but generic; time-based ones take a `primitives::Scheduler` (D-TIME).",
+      "invariantsMarkdown": "Scalar modules never import `rayx_reactive::collections`; the `From<CollectionError>` impl lives in `collections`. Existing call sites that pass collection-flavor streams keep compiling.",
+      "rationaleMarkdown": "The primitives rule already prescribes generic `E` with conversion; following it everywhere removes the `collection_stream` boilerplate from user code and RayX-style bindings without new types.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/stream.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/predicate.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/option/option_value_stream_ext.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/repository/2026-10-05-repository-single-reactive-crate.md"
+        }
+      ]
+    },
+    {
+      "id": "D-SOURCE-LOCK",
+      "requirementIds": [
+        "SRC-1",
+        "SRC-4"
+      ],
+      "descriptionMarkdown": "Replace bare `try_lock` with a crate-internal source lock that records the owning thread:\n\n- Every source state access first checks an owner `ThreadId` cell: same thread while an edit or key-selector call is active → `NestedUpdate` (no deadlock), for writes, reads and observer setup alike.\n- Cross-thread contention is resolved by a compile-time policy: **blocking** on native targets (`lock()`), **non-blocking** on `wasm32` returning the new `CollectionError::Contended`. A crate-internal `cfg(test)` switch forces the non-blocking policy on native so both are tested.\n- Applies to `SourceList`, `SourceCache`, `RayListGroup`, `RayCacheGroup` and any internal source used by groups and trees.\n- Updaters gain read access to their in-progress state, making read-modify-write atomic.",
+      "invariantsMarkdown": "On wasm32 no foreground source access blocks on a mutex another thread can hold, and contention never leaves partial registrations. `NestedUpdate` keeps meaning same-thread re-entry only. Edits still deliver after releasing the state lock.",
+      "rationaleMarkdown": "The 2026-07-24 decision made foreground observer setup non-blocking by surfacing `NestedUpdate`, but `edit` and reads shared one `try_lock`, so native writers failed under contention (≈60%), readers made single writers fail (C-2), and reads inside an edit deadlocked (C-5) while reads on wasm still blocked (C-13). Owner-thread detection separates the two cases; native blocking is safe because user callbacks never run under the source lock; wasm keeps the decision's non-blocking guarantee with a distinguishable error.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "symbol": "SourceList::edit"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "symbol": "SourceCache::edit"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/group.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list_group.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/error.rs"
+        }
+      ],
+      "supersedesMemoryDecisions": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/sources/2026-07-24-collections-sources-nonblocking-wasm-cache-observers.md"
+        }
+      ]
+    },
+    {
+      "id": "D-SOURCE-PUBLISH",
+      "requirementIds": [
+        "SRC-2",
+        "SRC-3",
+        "SRC-5"
+      ],
+      "descriptionMarkdown": "Publish source batches in commit order and keep versions exact:\n\n- Sources push to their `preview`, `changes` and `count_changed` queues (D-DELIVERY `push`) while still holding the state lock, then drain after releasing it.\n- Suspended changes are stored as `(version, changes)` segments. Resume publishes one public `ChangeSet` whose crate-private `VersionedChangeSet` carries the segment boundaries; `StartupConnection` and the keyed hub drop segments at or below their snapshot version.\n- `count_changed` subscribes before reading its baseline and carries counts in the same ordered publication.\n- Watches fold each batch per key before emitting (one value per batch).",
+      "invariantsMarkdown": "Zero replay history; the connection-local versioned startup buffer remains the only snapshot/live race mechanism. The public `ChangeSet` type is unchanged.",
+      "rationaleMarkdown": "Builds directly on the history-free startup handshake: ordering at push time plus segment versions closes the two remaining gaps (concurrent-writer inversion and suspension re-delivery) without adding history.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/connection.rs",
+          "symbol": "StartupConnection"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/keyed_delivery.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/cache_notification_suspension.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/sources/2026-07-27-collections-sources-history-free-targeted-delivery.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/2026-06-24-collections-observable-collections.md"
+        }
+      ]
+    },
+    {
+      "id": "D-MATERIALIZE",
+      "requirementIds": [
+        "MAT-1",
+        "MAT-2",
+        "MAT-3"
+      ],
+      "descriptionMarkdown": "Composition operators never drop data silently:\n\n- Materializers and bridges keep a per-destination pending FIFO of batches whose destination edit failed, apply it before the next batch, and publish failures on an additive error stream.\n- `ref_count` registers a subscriber only after upstream startup succeeds (rolling back otherwise), gives each late subscriber a startup buffer keyed by a ref_count-local sequence number, and tags upstream callbacks with an epoch so callbacks from a released upstream are ignored.\n- `switch` serializes output through an ordered emitter that re-checks the generation at dequeue, tracks a `disposed` flag, and reports inner subscribe errors.",
+      "invariantsMarkdown": "No batch is applied out of order; no error path is discarded with `let _ =`.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/expiration_selector.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/ref_count.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/switch.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_list.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_cache.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/2026-06-24-collections-observable-collections.md"
+        }
+      ]
+    },
+    {
+      "id": "D-EMIT",
+      "requirementIds": [
+        "EMT-1",
+        "TIM-1",
+        "ASY-1"
+      ],
+      "descriptionMarkdown": "Add one crate-internal ordered emitter for collection operators (for example `collections::emit::OrderedEmitter<C>`), built on `DeliveryQueue` `push`/`drain`: an operator computes its output batch while holding its state lock, pushes it to the emitter before unlocking, and drains after unlocking. All multi-input, timer-driven and worker-driven operators emit through it, so each operator subscription has one ordered, non-concurrent output.",
+      "invariantsMarkdown": "No operator calls its downstream subscriber while holding its own state lock. Emission order equals the order in which state transitions were computed.",
+      "rationaleMarkdown": "The audit found the same compute-under-lock/emit-after-unlock race in filters, sorts, windows, groups, joins, combiners, trees, forced transforms, timers and async workers (T-5, G-6, L-3, T-6). One mechanism fixes the class and keeps re-entrancy safe because the emitter queues instead of recursing.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/mod.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/mod.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/mod.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/2026-06-24-collections-observable-collections.md"
+        }
+      ]
+    },
+    {
+      "id": "D-INDEX",
+      "requirementIds": [
+        "IDX-1",
+        "IDX-2",
+        "IDX-3",
+        "IDX-4",
+        "IDX-5",
+        "IDX-6",
+        "KEY-1",
+        "WIN-1"
+      ],
+      "descriptionMarkdown": "Define and enforce one `CacheChange` index contract (documented in `change.rs`): indexes are positions in the emitting operator's own output order or `None`; `Update` with differing indexes = remove at `previous_index` then insert at `current_index`; after a `Move` in the same batch the key's `previous_index` is its post-move position. Operators that cannot know output positions emit `None`. Subset operators keep their own output order. A shared strict validator plus deterministic differential fuzzer in collections test support checks operators against naive recomputation; each fix adds its operator to the fuzzer in its own test group.\n\nKeyed sort keeps the indexed-keyed-sort decision's maps but refreshes positions from `min(old, new)` and inserts with binary search. Live grouping keeps sparse member-local batches while fixing pending group indexes. Stateful key operators (`change_key`, sync `transform_many`, merge-many) track per-key state with generations and first-live-parent fallback. Window operators emit responses whenever response fields change.",
+      "invariantsMarkdown": "Structured, incremental output is preserved (no clear/add-range fallbacks); zero-based windows; `ListChange`/`CacheChange` shapes unchanged.",
+      "rationaleMarkdown": "Most corruption reached views through the cache-to-list bridge trusting indexes; fixing producers against one written contract, with the bridge as a defensive backstop, removes the whole class.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/change.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_sort_state_impl.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/diff_cache_snapshots.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/apply_list_changes.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/mod.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/operators/2026-07-24-collections-operators-keyed-sort-indexes-and-batches.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/operators/2026-07-24-collections-operators-sparse-live-group-batches.md"
+        }
+      ]
+    },
+    {
+      "id": "D-TIME",
+      "requirementIds": [
+        "TIM-1",
+        "TIM-2",
+        "TIM-3",
+        "TIM-4"
+      ],
+      "descriptionMarkdown": "Introduce `rayx_reactive::primitives::Scheduler` (shared by scalar time operators and collection time operators): `now()` and `schedule(delay, task) -> ScheduledTask` (cancel on drop or explicit cancel). Provide `ThreadScheduler` (one lazily started timer thread per instance, condvar waits, a process-wide default instance) and `ManualScheduler` (virtual clock, `advance_by`, runs due tasks on the advancing thread). Time-based operators take an `Arc<dyn Scheduler>` through additive `*_with_scheduler` variants; existing methods use the default. Rebuild expiration and stream limits on the scheduler with incremental, validated state.",
+      "invariantsMarkdown": "Only `ThreadScheduler` spawns threads or reads the wall clock. Disposal never joins or blocks. Timer output goes through D-EMIT.",
+      "rationaleMarkdown": "A scheduler fixes thread churn, self-join hangs, wasm usability and deterministic testing together. It belongs in primitives because both scalar (`debounce`/`throttle`) and collection operators need it, which satisfies the primitives placement rule.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/stream/batch_count_state.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/run_expiration_timer.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/limit/cache_limit_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/mod.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/repository/2026-10-05-repository-single-reactive-crate.md"
+        }
+      ]
+    },
+    {
+      "id": "D-ASYNC",
+      "requirementIds": [
+        "ASY-1",
+        "ASY-2",
+        "ASY-3"
+      ],
+      "descriptionMarkdown": "Async operators keep private worker threads (no executor injection) but each subscription owns a bounded worker set driving a `FuturesUnordered`/buffered stream with `maximum_concurrency`; every future is wrapped in `futures::future::Abortable` registered per key and per subscription, and polled under `catch_unwind` (`AssertUnwindSafe`). Results are applied in order and emitted through D-EMIT.",
+      "invariantsMarkdown": "Source delivery never blocks on async work; no emission after disposal; stale generations ignored.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_async_stream.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/start_cache_async_transform_many_child.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_transform_stream.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/2026-06-24-collections-observable-collections.md"
+        }
+      ]
+    },
+    {
+      "id": "D-SEMANTICS",
+      "requirementIds": [
+        "AGG-1",
+        "LIF-1"
+      ],
+      "descriptionMarkdown": "Fix aggregate and lifecycle semantics locally: `is_empty`/`is_not_empty` derive their initial value from the first count result and deduplicate; running sums use compensated (Kahan/Neumaier) accumulation and recompute from stored values when a non-finite or large value leaves; NaN ordering uses a total order; list `dispose_many` compares old and new items; diagnostics emit after releasing their lock; `true_for_*` subscribe children before evaluating; startup and same-children updates in `filter_on_observable`/merge-many are coalesced with the startup buffer already used by `transform_on_observable`.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/cache_aggregation_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/diagnostics.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/true_for/cache_true_for_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/list.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/2026-06-24-collections-observable-collections.md"
+        }
+      ]
+    },
+    {
+      "id": "D-PERF",
+      "requirementIds": [
+        "PRF-1",
+        "PRF-2",
+        "PRF-3"
+      ],
+      "descriptionMarkdown": "Performance work is verified with deterministic counters (a tallying key type for equality/hash calls, cloning probes, comparer-call counters, `cfg(test)` operation counters) rather than wall-clock assertions; Criterion benchmarks provide supporting evidence. Sources share one `Arc` envelope per batch, maintain positions incrementally or lazily, and create the rxRust subject lazily on the first `changes_rx()` call. Operators replace `Vec::position` order mirrors with key→position maps or append fast paths. Dynamic refilters emit inclusion-flip diffs; list resorts emit moves.",
+      "invariantsMarkdown": "No new dependencies; rxRust stays a dependency; output change sets are unchanged except where a criterion requires better structure (flip diffs, moves).",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/select_unique_cache_changes.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tree/stream_ext.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_state.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/keyed_sort.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/operators/2026-07-24-collections-operators-keyed-sort-indexes-and-batches.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/collections/sources/2026-07-27-collections-sources-history-free-targeted-delivery.md"
+        }
+      ]
+    },
+    {
+      "id": "D-RELEASE",
+      "requirementIds": [
+        "HYG-1",
+        "DOC-1",
+        "CI-1",
+        "SCN-1",
+        "REL-1"
+      ],
+      "descriptionMarkdown": "Prepare the crate as a standalone, documented library: `#[must_use]` and `Debug` across handles; `#[non_exhaustive]` only on error enums; `missing_docs = \"warn\"` at crate level with full rustdoc; CI gains MSRV, wasm test execution and macOS jobs; consumer situations are reproduced as integration scenarios in `crates/tests/` using only the public API (no consumer repository is built or tested); `CHANGELOG.md` records every behavior and breaking change with migration notes; the `doc-examples` workspace member keeps README/docs executable.",
+      "invariantsMarkdown": "No dependency on RayX or any consumer repository for building, testing or validation. Change and reason enums stay exhaustive.",
+      "rationaleMarkdown": "The user requires the library to stand alone with its own comprehensive tests; documented breaking changes replace paired consumer commits.",
+      "sourceRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "Cargo.toml"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/Cargo.toml"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "AGENTS.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/public_api.rs"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": ".agentx/memory/decisions/repository/2026-10-05-repository-single-reactive-crate.md"
+        }
+      ]
+    }
+  ],
+  "memoryDecisionsConsidered": [
+    {
+      "repositoryId": "reactive",
+      "path": ".agentx/memory/decisions/repository/2026-10-05-repository-agentx-memory-taxonomy-transplant.md"
+    }
+  ]
+}

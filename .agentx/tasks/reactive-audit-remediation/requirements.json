@@ -1,0 +1,864 @@
+{
+  "schemaVersion": 6,
+  "epicId": "reactive-audit-remediation",
+  "scopeMarkdown": "Remediate the findings of the 2026-10-06 whole-codebase audit of `rayx_reactive` (crate in `crates/`) and add the missing functionality it identified. The audit covered five areas (scalar state and primitives; collection sources and materialization; filter/transform operators; sort/window/group/join/tree operators; lifecycle, time-based and aggregation operators) and reproduced most findings with scratch programs and deterministic differential fuzzers. The reproduction programs are archived, for reference only, under the git-ignored `artifacts-temp/agentx/reactive-audit-remediation/audit/` (may be absent on other machines; every criterion below is self-contained). Finding IDs in parentheses (S-n scalar, C-n sources, T-n transforms, G-n/P-n structure, L-n lifecycle, F-n repository) refer to that audit.\n\nIncluded:\n- Panic-safe, commit-ordered, deterministic delivery (`DeliveryQueue`) and its adoption by signals, event buses and sources.\n- Scalar correctness: command lifecycle, glitch-free and fresh `Computed`, signal robustness, activation lifecycle.\n- Scalar/collection interop: error-type conversion, generic stream operators, operators accepting any convertible stream error, new `ValueStream` combinators.\n- Source locking (contention vs re-entrancy), commit-ordered publication, suspension versions, read APIs, watch coalescing.\n- Materializers, `ref_count` and `switch` that never lose batches.\n- Ordered emission for multi-input, timer and worker-backed operators.\n- The cache index contract across subset, sorted, windowed, grouped, joined, combined and key-bridging operators; stateful key operators; page/virtual response semantics.\n- A `Scheduler` abstraction for every time-based operator, plus fixed expiration and size limits, and time-based `ValueStream` operators.\n- Bounded, cancellable, panic-isolated async operators.\n- Aggregate and lifecycle semantics; performance of sources and operator bookkeeping.\n- API hygiene (`must_use`, `Debug`, `non_exhaustive` errors), full rustdoc, CI coverage (MSRV, wasm tests, macOS), consumer-scenario tests, docs and changelog.\n\nFour findings reported earlier with the documentation work are included explicitly: concurrent source writes failing with `NestedUpdate` (SRC-1), the delivery stall after a caught subscriber panic (DLV-1), signals not plugging into most collection operators (INT-1/INT-2), and stale page/window response totals (WIN-1).\n\nExcluded (recorded so implementers do not expand into them): executor injection for async operators (they keep private worker threads); making `rxrust` an optional feature (the bridge becomes lazy instead); a blocking hand-off that bounds how many foreign items a draining thread delivers (only a backlog accessor and documentation); `Arc`-backed signal storage; an error/completion channel for `ChangeStream` (`monitor_status` keeps `Pending`/`Loaded`); group-order comparers, one-to-one joins with a right key selector, `top` with a comparer, tree sibling comparers, `bind_to_vec` reset thresholds; command parameter/result types; publishing to crates.io and choosing a release version.\n\nAssumptions and recorded product decisions: the crate is unpublished (0.1), so the breaking changes listed in the constraints are acceptable when documented in `CHANGELOG.md`; `Command` keeps concurrent execution as the default policy; `count()` keeps emitting only on change; `auto_refresh` keeps treating every child emission as a refresh; `ListChange`, `CacheChange` and the reason enums stay exhaustive because consumers match them exhaustively.\n",
+  "constraintsMarkdown": "- **Standalone library.** Never depend on, build, or validate RayX or any other consumer repository. Situations that matter to consumers are reproduced in this repository's own tests through the public API.\n- **Public surface.** Do not remove or rename public items. Prefer additive APIs. The only permitted breaking changes are: new variants on `ReactiveError` (`External`) and `CollectionError` (`Contended`); `#[non_exhaustive]` on `ReactiveError`, `CollectionError` and `CommandError`; generic error parameters on existing stream-taking APIs where existing call sites keep compiling; `#[must_use]` attributes; behavior fixes described by the criteria. Every behavior or breaking change is listed in `CHANGELOG.md` with migration notes.\n- **Layering.** Scalar modules never depend on `rayx_reactive::collections`; shared stream/scheduling machinery lives in `rayx_reactive::primitives` only when scalar state and collections both need it; `DeliveryQueue<T>` never gains collection-specific state (versioned startup, keyed registries, replay).\n- **Platforms.** `cargo check --workspace --target wasm32-unknown-unknown` stays green. On wasm32 no foreground source access may block on a mutex another thread can hold.\n- **No new runtime dependencies.** `futures`, `rxrust`, `serde`, `thiserror` remain the only runtime dependencies; deterministic pseudo-random fuzzers are written in-crate.\n- **History-free sources.** Sources keep zero replay history; the connection-local versioned startup handshake stays the mechanism for snapshot/live races.\n- **Zero-based windows.** `PageRequest`/`VirtualRequest` stay zero-based.\n- **Tests.** Every task with automated behavior adds its own new, separately selectable test group (collections: `crates/src/collections/tests/<group>/`; primitives: `crates/src/primitives/tests/<group>.rs`; scalar state: `crates/src/scalar_tests/<group>.rs`; integration: `crates/tests/<name>.rs`). Timing-dependent assertions use deterministic schedulers or generous deadlines, never fixed short sleeps. Existing tests that pin a defective behavior are updated with a note in the changelog.\n- **Documentation stays executable.** README and `docs/*.md` examples run through `cargo test -p rayx_reactive_doc_examples`; when behavior changes, update the affected chapter and its example assertions.\n",
+  "requirements": [
+    {
+      "id": "DLV-1",
+      "title": "Panic-safe delivery",
+      "descriptionMarkdown": "A subscriber panic must not permanently stall a delivery queue (known finding; S-8, C-15, T-2, D-1). Today `DeliveryQueue::enqueue` sets `delivering = true` and only clears it on the normal exit path (`crates/src/primitives/delivery.rs`), so after a caught panic later items are only queued and never delivered.",
+      "criteria": [
+        {
+          "id": "DLV-1.1",
+          "descriptionMarkdown": "After a subscriber panics while an item is delivered and the panic is caught by the publisher's caller, the queue keeps working: items enqueued afterwards, and items that were already queued behind the panicking item, are delivered to every live subscriber (including subscribers added after the panic) no later than the next publication. The panic still propagates to the publishing caller. Verified for a bare `DeliveryQueue` and end to end for `Signal`, `EventBus`, `SourceList` and `SourceCache`: each keeps notifying old and new subscribers after one caught subscriber panic.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "DLV-2",
+      "title": "Commit-ordered, deterministic delivery",
+      "descriptionMarkdown": "Delivery order must match commit order across threads, subscribers must be invoked deterministically, and disposed subscribers must not be called (C-1, C-8, S-7, S-14, S-6/X-1).",
+      "criteria": [
+        {
+          "id": "DLV-2.1",
+          "descriptionMarkdown": "`DeliveryQueue` gains additive `push` (enqueue without draining, safe to call while the caller holds its own state lock) and `drain` (deliver queued items unless a drain is already running) operations. Items are delivered strictly in push order even when several threads push and drain concurrently. `enqueue` keeps its existing contract (push followed by drain).",
+          "verification": "automated"
+        },
+        {
+          "id": "DLV-2.2",
+          "descriptionMarkdown": "Subscribers of one queue are invoked in subscription order, deterministically across runs; subscriber ids are `u64` so they cannot collide on 32-bit targets; delivering an item reuses a shared subscriber snapshot that is rebuilt only on subscribe/unsubscribe (verified with a `cfg(test)` rebuild/allocation counter: delivering 1,000 items to 10 subscribers rebuilds the snapshot 0 times).",
+          "verification": "automated"
+        },
+        {
+          "id": "DLV-2.3",
+          "descriptionMarkdown": "A subscriber whose `Subscription` was disposed on the delivering thread, including disposal by another subscriber while the same item is being delivered, is never invoked afterwards, not even for the in-flight item. Disposal from another thread remains non-blocking best effort and is documented as such in chapter 4.",
+          "verification": "automated"
+        },
+        {
+          "id": "DLV-2.4",
+          "descriptionMarkdown": "`Signal::set`/`replace`/`update` push their `SignalChange` while still holding the signal state lock and drain after releasing it, and `EventBus::emit` uses the same push/drain path, so that with 4 threads writing concurrently (200 rounds) every subscriber observes strictly increasing versions and the last value it sees equals the signal's final value.",
+          "verification": "automated"
+        },
+        {
+          "id": "DLV-2.5",
+          "descriptionMarkdown": "`DeliveryQueue` exposes an additive accessor for its pending backlog length, and chapters 4 and 16 document that a draining thread delivers items enqueued by other threads, that a flood of foreign writes can keep it delivering, and that hot queues should have a single writer.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "CMD-1",
+      "title": "Command lifecycle",
+      "descriptionMarkdown": "`Command`/`AsyncCommand` state must stay truthful across dropped, overlapping, disabled and panicking executions (S-1, S-2, S-8), and expose execution status like ReactiveUI.",
+      "criteria": [
+        {
+          "id": "CMD-1.1",
+          "descriptionMarkdown": "Dropping an in-flight `AsyncCommand::execute()` future (polled at least once, then dropped, e.g. by `select!` or a timeout) publishes `CommandState::Cancelled`; the state never remains `Running` after no execution is in flight.",
+          "verification": "automated"
+        },
+        {
+          "id": "CMD-1.2",
+          "descriptionMarkdown": "With overlapping executions, only the most recently started execution may publish its final state; an earlier execution finishing later does not overwrite it. A new additive `is_executing() -> ReadSignal<bool>` is `true` while at least one execution is in flight. A call to `execute` while disabled returns `CommandError::Disabled` and publishes no state change (it no longer overwrites `Running` with `Cancelled`; three disabled calls publish zero notifications).",
+          "verification": "automated"
+        },
+        {
+          "id": "CMD-1.3",
+          "descriptionMarkdown": "An action that panics leaves the command consistent: the state becomes `Failed` with a message that identifies a panic, `is_executing()` returns to `false`, and the panic propagates to the caller (sync) or out of the future (async).",
+          "verification": "automated"
+        },
+        {
+          "id": "CMD-1.4",
+          "descriptionMarkdown": "An additive execution policy (`ExecutionPolicy::Concurrent`, the default and current behavior, and `ExecutionPolicy::IgnoreWhileRunning`) can be chosen at construction. With `IgnoreWhileRunning`, `execute` while an execution is in flight returns `CommandError::Disabled` without starting the action or changing state.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "CMP-1",
+      "title": "Consistent computed values",
+      "descriptionMarkdown": "`Computed` must not publish glitches or stale values and must not do redundant work (S-3, S-5, S-16, S-8), and should cover common shapes beyond two inputs.",
+      "criteria": [
+        {
+          "id": "CMP-1.1",
+          "descriptionMarkdown": "Diamonds are glitch-free: with `b = Computed::derive(a, x*10)` and `c = Computed::combine2(a, b)`, one write to `a` produces exactly one emission of `c` carrying the consistent pair, in 100 of 100 trials; `combine2(a, a, |x, y| x + y)` never publishes a value combining two different versions of `a` (a write 1→2 publishes 4 and never 3).",
+          "verification": "automated"
+        },
+        {
+          "id": "CMP-1.2",
+          "descriptionMarkdown": "`Computed::get()` (and `get()` on its `read_signal()`) called right after a write to an input returns the up-to-date derived value even when another thread is currently draining that input's delivery queue (staleness is detected from input versions and recomputed on read).",
+          "verification": "automated"
+        },
+        {
+          "id": "CMP-1.3",
+          "descriptionMarkdown": "Constructing a `Computed` evaluates its closure exactly once when no input changes during construction, and the new value starts at version 0 (no spurious first change).",
+          "verification": "automated"
+        },
+        {
+          "id": "CMP-1.4",
+          "descriptionMarkdown": "A panic inside a derive/combine closure propagates to the writer but does not stall the `Computed`: later input changes update it again.",
+          "verification": "automated"
+        },
+        {
+          "id": "CMP-1.5",
+          "descriptionMarkdown": "Additive constructors `Computed::combine3(a, b, c, f)` and `Computed::derive_distinct(source, f)` (publishes only when the derived value changes, `T: PartialEq`) exist and are glitch-free under the same rules.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "SIG-1",
+      "title": "Robust signals",
+      "descriptionMarkdown": "Signals must not leave subscribers stale, must survive panicking user code, should avoid needless clones, and must offer non-blocking reads for threaded-WASM foreground code (S-4, S-8, S-9, S-15, S-17).",
+      "criteria": [
+        {
+          "id": "SIG-1.1",
+          "descriptionMarkdown": "A `values()` subscriber never ends on a stale value: with a write from another thread forced to interleave with subscription (test hook or slow `map`), no value with an older version is delivered after a newer one and the last delivered value equals the signal's current value.",
+          "verification": "automated"
+        },
+        {
+          "id": "SIG-1.2",
+          "descriptionMarkdown": "A panic inside an `update` closure, or inside `T::eq`/`T::clone` during `set`/`replace`/`update`, leaves the signal usable: the previous value is retained, later calls do not return `Poisoned`, and a dependent `Computed` keeps updating.",
+          "verification": "automated"
+        },
+        {
+          "id": "SIG-1.3",
+          "descriptionMarkdown": "Writes clone the value at most once for `set`/`replace` and at most twice for `update` when the signal has no subscribers (counted with a cloning probe type; today 4 each).",
+          "verification": "automated"
+        },
+        {
+          "id": "SIG-1.4",
+          "descriptionMarkdown": "Additive non-blocking reads (`try_get`, `try_read`) on `Signal`/`ReadSignal` return without waiting when the state lock is held by another thread, reporting contention instead; chapter 3 and 16 document their use for browser main-thread code.",
+          "verification": "automated"
+        },
+        {
+          "id": "SIG-1.5",
+          "descriptionMarkdown": "`ValueStream::start_with` subscribes upstream before emitting the initial value, so a write performed by the subscriber during the initial callback is delivered (today it is lost).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "ACT-1",
+      "title": "Activation lifecycle",
+      "descriptionMarkdown": "`ViewModelActivator` must report activation truthfully under concurrency and must not leak registrations or partial work (S-10, S-11, S-12).",
+      "criteria": [
+        {
+          "id": "ACT-1.1",
+          "descriptionMarkdown": "Additive `ViewModelActivator::is_active()` and `ActivationToken::is_active()` exist. When a second `activate()` joins a generation whose first activation is still running callbacks, its token reflects that generation's outcome: if the generation fails, no token reports active and the activator is inactive.",
+          "verification": "automated"
+        },
+        {
+          "id": "ACT-1.2",
+          "descriptionMarkdown": "An additive scoped registration (for example `when_activated_scoped`, or a registration returning a handle) registers activation work that is removed automatically when the registering generation ends, so registering inside an activation callback runs exactly once per activation instead of accumulating (activations 1-4 run the nested callback 1,1,1,1 times).",
+          "verification": "automated"
+        },
+        {
+          "id": "ACT-1.3",
+          "descriptionMarkdown": "When `when_activated` is called while active and the callback fails, the subscriptions it added to the live bag before failing are disposed before the error is returned.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "INT-1",
+      "title": "Scalar/collection stream interop",
+      "descriptionMarkdown": "Signals, computed values and collection outputs must compose without adapters (known finding; S-18, T-15).",
+      "criteria": [
+        {
+          "id": "INT-1.1",
+          "descriptionMarkdown": "`ValueStream` gains `map_err` and `err_into::<F>()` (`F: From<E>`). `ReactiveValueStreamExt` (and the new combinators) are implemented for `ValueStream<T, E>` for any `E` with `E = ReactiveError` remaining the default so existing call sites compile; `OptionValueStreamExt` is likewise generic over `E`; `Effect::watch` accepts `&ValueStream<T, E>` and returns `Result<Effect, E>`.",
+          "verification": "automated"
+        },
+        {
+          "id": "INT-1.2",
+          "descriptionMarkdown": "`ReactiveError` gains an `External` variant carrying an `Arc<dyn std::error::Error + Send + Sync>`, and `rayx_reactive::collections` implements `From<CollectionError> for ReactiveError` (`Poisoned` maps to `Poisoned`, every other variant to `External` preserving the original), so `?` on collection subscriptions works inside `when_activated` callbacks. Listed as a breaking change.",
+          "verification": "automated"
+        },
+        {
+          "id": "INT-1.3",
+          "descriptionMarkdown": "An additive way to hold a stream's latest value as scalar state exists (for example `ValueStream::to_signal(initial)` returning a `ReadSignal` plus the owning `Subscription`, or `Computed::from_stream`), demonstrated with a collection `count()` stream feeding `Command::with_can_execute`.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "INT-2",
+      "title": "Operators accept any convertible stream error",
+      "descriptionMarkdown": "Following the primitives rule (\"accept `ValueStream<_, E>` with an error conversion instead of forcing a module alias\"), every collection operator must accept signal streams directly (known finding).",
+      "criteria": [
+        {
+          "id": "INT-2.1",
+          "descriptionMarkdown": "Every collection operator parameter that takes a dynamic `ValueStream` (sort comparers and resort triggers, page/virtual requests including `sort_and_*`, `batch_if`/`buffer_if` pause streams, regroupers, group selectors, forced-transform triggers, tree predicates, `switch` inputs, `populate_from*`, `to_*_change_set*` and `edit_diff*` bridges) and every per-item selector returning a `ValueStream` (`filter_on_observable`, `auto_refresh*`, `transform_on_observable`, `group_on_observable`, `merge_many*`, `when_*value_changed*`, `true_for_*`, `query_when_changed_on*`) accepts `ValueStream<_, E>` where `CollectionError: From<E>`. A compile test passes `Signal::values()` streams to each of them, and existing call sites passing collection streams compile unchanged.",
+          "verification": "automated"
+        },
+        {
+          "id": "INT-2.2",
+          "descriptionMarkdown": "The `collection_stream` adapter disappears from README and every docs chapter; chapter 15's interop section is rewritten for the new signatures; `cargo test -p rayx_reactive_doc_examples` passes.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "INT-3",
+      "title": "ValueStream combinators",
+      "descriptionMarkdown": "Common stream composition operators are missing (S missing-functionality list).",
+      "criteria": [
+        {
+          "id": "INT-3.1",
+          "descriptionMarkdown": "Additive `ValueStream` operators, generic over the error type: `merge`, `combine_latest`, `switch_map` (only the latest inner stream is live), `scan`, `take`, `first`, `take_until`, `pairwise`, `with_latest_from`, `distinct_until_changed_by`, and `share` (one upstream subscription multicast to all subscribers, optionally replaying the latest value). Each has focused tests covering emission order and disposal of inner/upstream subscriptions.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "SRC-1",
+      "title": "Source locking: contention is not re-entrancy",
+      "descriptionMarkdown": "Sources must distinguish same-thread re-entrancy from cross-thread contention (known finding; C-2, C-5, C-13, X-2). Today `edit`, `connect`, `lookup` and `watch` use `try_lock` and report contention as `NestedUpdate` (≈60% of 4-thread edits fail; a single `items()` poller made 19,069 of 20,000 single-writer pushes fail), while `items`/`len`/`count`/`keys`/`version`/`suspend_notifications` block and deadlock when called inside an edit.",
+      "criteria": [
+        {
+          "id": "SRC-1.1",
+          "descriptionMarkdown": "On native targets, concurrent edits from 4 or more threads on one `SourceList`, `SourceCache`, `RayListGroup` or `RayCacheGroup` all succeed (no error caused by cross-thread contention) and the final contents are correct; a thread polling `items()`/`len()` concurrently never makes a write fail.",
+          "verification": "automated"
+        },
+        {
+          "id": "SRC-1.2",
+          "descriptionMarkdown": "Same-thread re-entry from inside an edit closure or a cache key selector (`edit`, `connect`, `lookup`, `watch*`, `items`, `len`, `is_empty`, `count`, `keys`, `key_values`, `version`, `suspend_notifications`, `count_changed` setup) returns `CollectionError::NestedUpdate` instead of deadlocking, for both source types and both live group types.",
+          "verification": "automated"
+        },
+        {
+          "id": "SRC-1.3",
+          "descriptionMarkdown": "A non-blocking contention policy, selected for `wasm32`, makes cross-thread contention on edits, reads and observer setup return a new `CollectionError::Contended` without blocking and without leaving partial registrations. The policy is a compile-time strategy whose non-blocking variant is also exercised on native through a crate-internal test switch. Under both policies `NestedUpdate` is reserved for same-thread re-entry.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "SRC-2",
+      "title": "Commit-ordered source publication",
+      "descriptionMarkdown": "Concurrent writers must not deliver batches out of version order, and count streams must not lose updates (C-1, C-8, C-10).",
+      "criteria": [
+        {
+          "id": "SRC-2.1",
+          "descriptionMarkdown": "With 4 threads × 2,000 edits on one source, `changes()`, `preview()` and `connect()` subscribers receive batches with strictly increasing versions and a `connect().as_observable_list()` mirror equals the source after every round (20 of 20 rounds).",
+          "verification": "automated"
+        },
+        {
+          "id": "SRC-2.2",
+          "descriptionMarkdown": "An edit made inside a `preview()` callback is delivered to `changes()`/`connect()` subscribers after the batch whose preview triggered it.",
+          "verification": "automated"
+        },
+        {
+          "id": "SRC-2.3",
+          "descriptionMarkdown": "`count_changed()` registers for changes before reading its baseline, so count changes made during the initial callback or concurrently are reported, and the last reported count equals `len()`/`count()`.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "SRC-3",
+      "title": "Suspension preserves versions",
+      "descriptionMarkdown": "Subscribing during notification suspension must not re-deliver changes covered by the snapshot (C-3).",
+      "criteria": [
+        {
+          "id": "SRC-3.1",
+          "descriptionMarkdown": "For lists and caches, `connect()`, `watch(key)` and `watch_optional(key)` subscribed while a suspension guard is alive, followed by more edits and the guard's release, yield a mirror equal to the source with no duplicate or stale-index change (fixes the list mirror `[0,1,2,1]` and the cache wrong-row repros). The resumed publication remains one public `ChangeSet`.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "SRC-4",
+      "title": "Source read APIs",
+      "descriptionMarkdown": "Edits cannot read state, so read-modify-write is not atomic; common point queries are missing (C-5 follow-up, C missing-functionality).",
+      "criteria": [
+        {
+          "id": "SRC-4.1",
+          "descriptionMarkdown": "`ListUpdater` exposes `items()`, `len()`, `is_empty()` and `get(index)`, and `CacheUpdater` exposes `lookup(&key)`, `contains_key(&key)`, `count()` and `keys()`, all reflecting changes already made in the same edit. Four threads incrementing a counter item through read-modify-write inside `edit` lose no updates.",
+          "verification": "automated"
+        },
+        {
+          "id": "SRC-4.2",
+          "descriptionMarkdown": "Additive point queries and zero-clone reads: `SourceList::get`/`contains`/`read(|items: &[T]| ...)`, `SourceCache::contains_key`/`read(...)`, the same on `ObservableList`/`ObservableCache`, and a `SourceCache::from_items(key_selector, items)` constructor.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "SRC-5",
+      "title": "Per-batch watch values",
+      "descriptionMarkdown": "Watches emit intermediate values within one atomic batch (C-14, T-16).",
+      "criteria": [
+        {
+          "id": "SRC-5.1",
+          "descriptionMarkdown": "`watch_value` and `watch_optional` emit at most one value per batch, reflecting the key's final state in that batch (`load` that keeps key 1 emits only the new value, with no `None` flicker); `watch(key)` forwards a `Clear` only as the watched key's own removal.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "MAT-1",
+      "title": "Materializers never lose batches",
+      "descriptionMarkdown": "Materializers and bridges discard failed destination edits with `let _ =` (C-2, L-5 for limits), leaving views permanently diverged.",
+      "criteria": [
+        {
+          "id": "MAT-1.1",
+          "descriptionMarkdown": "`populate_into`, `populate_from*`, every `to_*_change_set*` bridge, `ObservableList`/`ObservableCache::from_stream` and the source limit helpers never discard a batch whose destination edit failed: failed batches are kept in order and applied before later batches, and each failure is reported through an additive error stream (for example `ObservableList::errors()`, `ObservableCache::errors()`, `populate_into_with_errors`). With the non-blocking policy forcing contention, a materialized view converges to its source.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "MAT-2",
+      "title": "Reliable ref_count",
+      "descriptionMarkdown": "`ref_count` can die permanently or deliver live batches before a late subscriber's snapshot (C-6, C-7).",
+      "criteria": [
+        {
+          "id": "MAT-2.1",
+          "descriptionMarkdown": "When the first subscriber's upstream subscription fails, `ref_count` rolls back the registration and the count, so a later subscriber starts upstream and receives the snapshot and live batches (today it receives 0 batches).",
+          "verification": "automated"
+        },
+        {
+          "id": "MAT-2.2",
+          "descriptionMarkdown": "A late subscriber always receives its snapshot before any live batch, even when another thread publishes during its subscription; after the last subscriber leaves, an in-flight upstream batch cannot repopulate the shared state, so the next first subscriber sees exactly the source state.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "MAT-3",
+      "title": "Reliable switch",
+      "descriptionMarkdown": "`switch` swallows inner subscribe errors and races with disposal and stale generations (C-9).",
+      "criteria": [
+        {
+          "id": "MAT-3.1",
+          "descriptionMarkdown": "An inner subscribe failure is reported (error stream) and retried on the next inner emission instead of leaving the output empty forever; batches from a superseded inner never reach downstream after the switch's `Clear`; disposing the switch while an outer emission is in flight never leaves a live inner subscription.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "EMT-1",
+      "title": "Ordered emission for multi-input operators",
+      "descriptionMarkdown": "Operators with several inputs compute under their lock but emit after releasing it, so batches reorder across threads and subscribers are invoked concurrently (T-5, G-6, R-1).",
+      "criteria": [
+        {
+          "id": "EMT-1.1",
+          "descriptionMarkdown": "For `filter_with_state`/`filter_dynamic` (list and cache), `sort_dynamic*` and `*_with_resort` (list, cache and keyed), list and keyed dynamic page/virtualize operators, `sort_and_*_dynamic*`, and `group_dynamic*`/`*_with_regrouper`: when the dynamic input and the source are driven from different threads, downstream batches arrive in computation order and never concurrently, and the final materialized view equals a naive recomputation in 200 of 200 rounds (today 51 of 200 end wrong). No operator invokes its subscriber while holding its own state lock (list `virtualize` and `reverse` included).",
+          "verification": "automated"
+        },
+        {
+          "id": "EMT-1.2",
+          "descriptionMarkdown": "The same guarantees hold for all eight joins, static and dynamic combiners, `transform_*_forced*`, `transform_to_tree_with_predicate` and `merge_many_*_change_sets`: a `full_join` whose left and right sources are edited from two threads delivers no out-of-order batch.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "IDX-1",
+      "title": "Index contract and contract harness",
+      "descriptionMarkdown": "There is no shared definition or test of cache change indexes; several operators violate the implicit contract (G-2, TG).",
+      "criteria": [
+        {
+          "id": "IDX-1.1",
+          "descriptionMarkdown": "`crates/src/collections/change.rs` documents the `CacheChange` index contract: indexes are positions in the emitting operator's own ordered output or `None`; `Update` with differing indexes means remove at `previous_index` then insert at `current_index`; a `Move` followed by an `Update` of the same key in one batch uses the post-move position as `previous_index`. A strict validator and a deterministic differential fuzzer (in-crate PRNG, no new dependencies) live in collections test support, self-test against malformed sequences, and pass for the list operators `filter`, `transform`, `transform_many`, `sort_by`, `page`, `virtualize`, `top`, `reverse`, `group_immutable` and `group_by` over at least 300 seeds.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "IDX-2",
+      "title": "Keyed sort positions",
+      "descriptionMarkdown": "Keyed sort's source-position map desynchronizes on indexed updates that move a key later, producing wrong order and a panic inside source delivery (G-1, X-1, P-1).",
+      "criteria": [
+        {
+          "id": "IDX-2.1",
+          "descriptionMarkdown": "Keyed sort (`sort_keyed_*`, cache `sort_*`, `top_keyed`, `update_index*`) keeps its position maps synchronized: the repros `add_or_update_key_at(0,1,1); add(1,1); add_or_update_key_at(0,1,3); remove(1); add_or_update_key_at(0,0,2)` and keys 1..4 with `add_or_update_at(1, Some(3))` followed by removals neither panic nor misorder; chained `sort_keyed_by(..).sort_keyed_by(..)` and the fuzzer with indexed upserts pass 300 seeds.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-2.2",
+          "descriptionMarkdown": "A sparse keyed-sort insertion performs O(log n) comparer calls (counted: at n = 10,000 an insert uses at most 4·⌈log2 n⌉ comparisons) while preserving the indexed-keyed-sort decision's tie and batch semantics.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "IDX-3",
+      "title": "Subset and inline operators use output-space indexes",
+      "descriptionMarkdown": "Subset operators forward source-space indexes and corrupt bound lists (T-1, T-3, T-4).",
+      "criteria": [
+        {
+          "id": "IDX-3.1",
+          "descriptionMarkdown": "Cache `filter`, `filter_immutable*`, `transform_safe*` and forced transforms emit indexes in their own output order (or `None`) and never emit `Remove`/`Clear` entries for keys they never included: `cache.connect().filter(even).as_observable_list()` stays correct after removing an excluded key, `sort_keyed_by(..).filter(..)` removes the right row, and `transform_safe` with a failed key plus force-all stays correct. The existing test asserting a source-space index is updated.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-3.2",
+          "descriptionMarkdown": "The cache dynamic filter never emits a `Move` followed by an `Update` whose `previous_index` is the pre-move position (the `sort_keyed_by → filter_with_state` update repro yields the correct view).",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-3.3",
+          "descriptionMarkdown": "`transform_inline`/`transform_inline_on_refresh` preserve positional updates: an `Update` that changes position is emitted as a `Move` plus `Refresh` (or an `Update` carrying both indexes), so `sort_keyed_by_key(..).transform_inline(..)` yields `[(2,20),(3,30),(1,40)]` for the audit repro.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-3.4",
+          "descriptionMarkdown": "The cache-to-list bridge behind `bind_to_vec`, `remove_key` and cache `as_observable_list` checks incoming indexes against its own key mirror and falls back to key-based positioning when they disagree, so a non-conforming upstream cannot duplicate or misplace rows.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "IDX-4",
+      "title": "Snapshot and relation diffs",
+      "descriptionMarkdown": "Snapshot diffs, joins and combiners emit `Move` plus `Update` with stale indexes and drift from source order (G-2, G-5, G-8).",
+      "criteria": [
+        {
+          "id": "IDX-4.1",
+          "descriptionMarkdown": "`diff_cache_snapshots` (used by `page_keyed*`, `virtualize_keyed*`, `top_keyed`), join `update_key` paths, combiner `diff_ordered_caches` and `diff_limited_cache` follow the IDX-1 contract: `sort_keyed_by(..).page_keyed((0,3)).bind_to_vec` and `left_join` over a sorted left side stay correct after an update that moves a row.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-4.2",
+          "descriptionMarkdown": "Immutable-group snapshot changes and tree snapshot diffs compute `previous_index` after removals (the remove-plus-update group repro and 300 tree fuzz seeds pass).",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-4.3",
+          "descriptionMarkdown": "Join output order follows the left (or combined) source order after mixed add/remove batches and never emits an out-of-range `Move` (`left_join` of `[1,2,3]` after `[add 4, remove 2]` is ordered `[1,3,4]`).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "IDX-5",
+      "title": "Group and combiner correctness",
+      "descriptionMarkdown": "Live groups emit stale group indexes, cache `group_by` orders members by hash order, and combiners lose updates (G-3, G-4, G-10).",
+      "criteria": [
+        {
+          "id": "IDX-5.1",
+          "descriptionMarkdown": "Live list and cache grouping keep later group `Add` indexes correct when a group is created and emptied within one batch (the list batch `[push 3, remove 0, push 4]` grouped by `v % 3` binds to `[1]`); the fuzzer passes 300 seeds for both.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-5.2",
+          "descriptionMarkdown": "Cache `group_by` orders each group's members by source order and handles `Clear { previous: [] }`.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-5.3",
+          "descriptionMarkdown": "Static and dynamic combiners (`and`, `or`, `xor`, `except`) keep an `Update` when a `Refresh` of the same key follows within one batch.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "IDX-6",
+      "title": "Key bridges and snapshot-stream diffs",
+      "descriptionMarkdown": "`add_key`, `ensure_unique_keys` and `ValueStream::edit_diff` emit indexes that are invalid when applied in order (T-9, T-10, C-4).",
+      "criteria": [
+        {
+          "id": "IDX-6.1",
+          "descriptionMarkdown": "`add_key` emits indexes consistent with the list on `Add`, `Remove` and `Move` (or none at all), so `bind_to_vec` after `insert(0)` and `move_item(0, 2)` equals the list.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-6.2",
+          "descriptionMarkdown": "`ensure_unique_keys` derives emitted indexes from its own order and forwards `Move`s of surviving keys; the batch `[refresh 7, refresh 0, remove 7]` repro produces a correct view.",
+          "verification": "automated"
+        },
+        {
+          "id": "IDX-6.3",
+          "descriptionMarkdown": "`ValueStream<Vec<T>>::edit_diff`/`edit_diff_by` and `edit_diff_optional*` emit indexes valid when applied in order (`[a,b,c,d] → [c,d]` and the swap `[2,3] → [3,2]` materialize correctly) and use the same duplicate-key policy as `SourceCache::edit_diff` (last occurrence wins). The existing test that pins the broken move pair is updated.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "KEY-1",
+      "title": "Stateful key operators",
+      "descriptionMarkdown": "Key-mapping and one-to-many operators lose or duplicate items (T-7, T-8, L-6).",
+      "criteria": [
+        {
+          "id": "KEY-1.1",
+          "descriptionMarkdown": "`change_key` tracks source key to destination key: an update that changes the destination key emits `Remove(old)` and `Add(new)`, and when several source keys map to one destination key, removing one keeps the item of a remaining one.",
+          "verification": "automated"
+        },
+        {
+          "id": "KEY-1.2",
+          "descriptionMarkdown": "Synchronous cache `transform_many` resolves child keys shared by several parents deterministically (first live parent wins, falling back on removal, like the async variant) and emits children in deterministic order (never `HashMap` iteration order).",
+          "verification": "automated"
+        },
+        {
+          "id": "KEY-1.3",
+          "descriptionMarkdown": "`merge_many_cache_change_sets`/`merge_many_list_change_sets` on cache parents keep only the latest child stream's items when the same parent key is added and updated within one batch.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "WIN-1",
+      "title": "Window responses and windows",
+      "descriptionMarkdown": "Page/virtual responses go stale and windows misbehave (known finding; W-1, G-7).",
+      "criteria": [
+        {
+          "id": "WIN-1.1",
+          "descriptionMarkdown": "Every `*_with_response` page and virtual operator (list, keyed, `sort_and_*`) emits a response whenever any response field changes (`total_count`, `total_pages`, `visible_count`, `page`/`start`), with an empty change set when the visible items did not change, and emits an initial response once the source has loaded even when the window is empty.",
+          "verification": "automated"
+        },
+        {
+          "id": "WIN-1.2",
+          "descriptionMarkdown": "List `page_dynamic`, `virtualize_dynamic` and their `_with_response` variants emit nothing until the first request arrives (today a default `0..25` window appears).",
+          "verification": "automated"
+        },
+        {
+          "id": "WIN-1.3",
+          "descriptionMarkdown": "`sort_and_page_*`/`sort_and_virtualize_*` produce the same visible items as `sort_keyed_*` followed by the keyed window (ties, `Move`s, removals inside and outside the window) across 300 fuzz seeds, and an initial load of n items uses O(n log n) comparer calls (counted).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "TIM-1",
+      "title": "Scheduler abstraction",
+      "descriptionMarkdown": "Time-based operators spawn an OS thread per window/subscription, cannot run on wasm32, cannot be tested deterministically, join threads on drop, and emit concurrently with source delivery (L-3, L-4, L-16, lifecycle missing-functionality #1).",
+      "criteria": [
+        {
+          "id": "TIM-1.1",
+          "descriptionMarkdown": "`rayx_reactive::primitives` defines a `Scheduler` abstraction (monotonic `now`, schedule a task after a delay returning a cancellable handle; `Send + Sync`). A default `ThreadScheduler` runs all timers of one scheduler instance on one timer thread with cancellable waits (no thread per window or subscription), and a `ManualScheduler` with virtual time (`advance_by`) supports deterministic tests.",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-1.2",
+          "descriptionMarkdown": "`batch`, `buffer_initial`, `batch_if_with_timeout`/`buffer_if_with_timeout`, list and cache `auto_refresh_buffered`, and every `expire_after*` (stream, source and `ChangeSetAdapterOptions`) gain additive `*_with_scheduler` variants; the existing methods use a default `ThreadScheduler`. Their tests run on `ManualScheduler` without sleeping.",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-1.3",
+          "descriptionMarkdown": "Disposing a timed operator's subscription cancels its pending timers without joining or blocking (including disposal from inside its own timer-delivered callback, which today self-joins), releases buffered change sets and the downstream subscriber immediately, and nothing is emitted after disposal returns on the disposing thread.",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-1.4",
+          "descriptionMarkdown": "Timer-delivered emissions (batch flush, `batch_if` unpause and timeout flushes, buffered refresh flush, expiration removals) are serialized with source-delivered emissions through the ordered emitter: no concurrent subscriber invocation, no out-of-order batches, no new batch timer while a flush runs, and buffered refresh indexes resolve to the refreshed item (0 invalid out of the stress run's refreshes).",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-1.5",
+          "descriptionMarkdown": "`std::thread::spawn`, `Instant::now` and `SystemTime::now` used by time-based operators are confined to `ThreadScheduler` (and the `diagnostics` timestamps), so an application supplying its own `Scheduler` (for example a browser timer) can use every timed operator on wasm32; chapter 16 shows such a scheduler. Verified by code review.",
+          "verification": "manual"
+        }
+      ]
+    },
+    {
+      "id": "TIM-2",
+      "title": "Expiration",
+      "descriptionMarkdown": "Polling expiration never fires, stream expiration corrupts downstream after the first expiry, and source expiration loses edits under concurrency (L-1, L-2, L-5, L-15).",
+      "criteria": [
+        {
+          "id": "TIM-2.1",
+          "descriptionMarkdown": "All polling variants (stream, source and adapter options) expire due items within one polling interval.",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-2.2",
+          "descriptionMarkdown": "Stream `expire_after` keeps downstream consistent after expiries: later source changes are translated for lists (index mapping that skips expired items) and normalized for caches (an `Update` of an expired key becomes an `Add`; `Remove`/`Refresh` of it are dropped). The audit repros (list `[\"b\",\"B\"]` vs `[\"B\"]`; cache removes/updates of expired keys) produce correct mirrors.",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-2.3",
+          "descriptionMarkdown": "Source-mutating `expire_after` and source `limit_size_to` compute due/evicted items inside the edit closure, keep them queued if the edit fails, and report only items the returned batch actually removed; with a concurrent editor, 0 of 400 short-TTL items miss expiry.",
+          "verification": "automated"
+        },
+        {
+          "id": "TIM-2.4",
+          "descriptionMarkdown": "Repeated updates to the same keys do not grow the expiration queue without bound (stale entries are compacted; after 10,000 updates of 10 keys the queue holds O(live keys) entries).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "TIM-3",
+      "title": "Stream size limit",
+      "descriptionMarkdown": "Stream `limit_size_to` drops refreshes and same-value updates and is quadratic per batch (L-8).",
+      "criteria": [
+        {
+          "id": "TIM-3.1",
+          "descriptionMarkdown": "Stream `limit_size_to` forwards `Refresh` and same-value `Update` changes for retained keys and maintains its state incrementally (no clone-and-diff of the whole cache per batch, verified with a cloning probe: a single add into a limit of 4,000 clones O(1) items).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "TIM-4",
+      "title": "Time-based ValueStream operators",
+      "descriptionMarkdown": "Debounce/throttle/sample are missing for scalar and aggregate streams (S and L missing-functionality).",
+      "criteria": [
+        {
+          "id": "TIM-4.1",
+          "descriptionMarkdown": "Additive `debounce`, `throttle` and `sample` on `ValueStream<T, E>` take a `Scheduler` (with default-scheduler conveniences) and behave deterministically on `ManualScheduler`, including cancellation on disposal.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "ASY-1",
+      "title": "Bounded, cancellable, panic-isolated async transforms",
+      "descriptionMarkdown": "Async cache transforms spawn a thread per parent, cannot be cancelled, and die on a panicking future (T-6, T-13, T-2, T-15).",
+      "criteria": [
+        {
+          "id": "ASY-1.1",
+          "descriptionMarkdown": "`transform_many_async*` and `transform_many_*_async_stream*` use a bounded per-subscription worker set honoring `TransformAsyncOptions` (new `_with_options` variants): 2,000 parents never create more than `maximum_concurrency` (default bounded) worker threads; output goes through the ordered emitter (no concurrent subscriber calls, no stale child keys after all parents are removed, even with a slow subscriber).",
+          "verification": "automated"
+        },
+        {
+          "id": "ASY-1.2",
+          "descriptionMarkdown": "In-flight futures of cache and list async transforms are dropped when the subscription is disposed and when their key is removed or updated; worker threads exit promptly after disposal and nothing is emitted afterwards.",
+          "verification": "automated"
+        },
+        {
+          "id": "ASY-1.3",
+          "descriptionMarkdown": "A panicking future does not kill its worker: safe variants report the failure as a transform error carrying the panic message, other variants skip that item, and later batches are still processed.",
+          "verification": "automated"
+        },
+        {
+          "id": "ASY-1.4",
+          "descriptionMarkdown": "`TransformAsyncOptions { maximum_concurrency: Some(0), .. }` is treated consistently by every async operator as a concurrency of 1 and documented as such.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "ASY-2",
+      "title": "List async transform options",
+      "descriptionMarkdown": "List `transform_async` awaits non-contiguous changes one at a time (T-14).",
+      "criteria": [
+        {
+          "id": "ASY-2.1",
+          "descriptionMarkdown": "Additive list `transform_async_with_options(transform, TransformAsyncOptions)` runs a batch's futures concurrently up to the limit and applies results in index order (20 non-contiguous inserts with 20 ms futures and unbounded concurrency complete in about one future's duration); the unused `U: PartialEq` bound is removed from list async transforms.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "ASY-3",
+      "title": "Async disposal hardening",
+      "descriptionMarkdown": "`async_dispose_many*` workers die on a panicking finalizer (L-7).",
+      "criteria": [
+        {
+          "id": "ASY-3.1",
+          "descriptionMarkdown": "In `async_dispose_many*`, a panicking finalizer future does not prevent later finalizers from running, and the completion stream always fires after every queued finalizer, including teardown finalizers.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "AGG-1",
+      "title": "Aggregate semantics",
+      "descriptionMarkdown": "`is_empty` flickers and numeric aggregates are not robust (L-12, L-11).",
+      "criteria": [
+        {
+          "id": "AGG-1.1",
+          "descriptionMarkdown": "`is_empty`/`is_not_empty` emit exactly one initial value that reflects the snapshot (a non-empty cache yields `[false]`, not `[true,false]`) and afterwards only distinct changes.",
+          "verification": "automated"
+        },
+        {
+          "id": "AGG-1.2",
+          "descriptionMarkdown": "`sum_by`, `avg_by` and `std_dev_by` recover after a non-finite value is removed and stay accurate across large-magnitude add/remove (adding then removing `1e17` leaves avg of `[1,2]` at `1.5`); `max_by`, `min_by` and `distinct_values` treat NaN deterministically regardless of arrival order.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "LIF-1",
+      "title": "Lifecycle operator semantics",
+      "descriptionMarkdown": "Lifecycle and diagnostics operators misbehave in edge cases (L-9, L-10, G T-2, L-13).",
+      "criteria": [
+        {
+          "id": "LIF-1.1",
+          "descriptionMarkdown": "List `dispose_many` does not finalize an item replaced by the same item (equality), and an additive list `dispose_many_by(same_item, dispose)` exists.",
+          "verification": "automated"
+        },
+        {
+          "id": "LIF-1.2",
+          "descriptionMarkdown": "`collect_update_stats` invokes its subscriber outside its internal lock, so a re-entrant subscriber cannot deadlock.",
+          "verification": "automated"
+        },
+        {
+          "id": "LIF-1.3",
+          "descriptionMarkdown": "`true_for_all`/`true_for_any` evaluate their initial value after child subscriptions start: subscribing over one passing item emits only `[true]`, and adding another passing item emits nothing.",
+          "verification": "automated"
+        },
+        {
+          "id": "LIF-1.4",
+          "descriptionMarkdown": "`filter_on_observable` and `merge_many_*_change_sets` coalesce synchronous child emissions during startup and parent updates: a parent update with identical children emits no remove/add churn, and list `filter_on_observable` over n synchronously emitting items emits one startup batch.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "PRF-1",
+      "title": "Source costs",
+      "descriptionMarkdown": "Sources do O(n) bookkeeping per edit and clone each item 4-5 times even without subscribers (C-11, C-12, X-3, F-rx).",
+      "criteria": [
+        {
+          "id": "PRF-1.1",
+          "descriptionMarkdown": "`SourceCache` edits do not rebuild the full key-position map (positions are maintained or rebuilt lazily for watch setup), and removals, moves, `refresh()`, `edit_diff` and `Clear` application do not scan the order vector per key: counted with a key type whose equality calls are tallied, these operations perform O(1) amortized key comparisons per affected key.",
+          "verification": "automated"
+        },
+        {
+          "id": "PRF-1.2",
+          "descriptionMarkdown": "Publishing clones each item at most twice for `add_or_update_range` with one `connect()` subscriber (shared envelope), the keyed hub does no partitioning work without watchers, and no rxRust bridge work happens until `changes_rx()` is first called (cloning probe test).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "PRF-2",
+      "title": "Operator bookkeeping costs",
+      "descriptionMarkdown": "Order mirrors use linear scans, dynamic refilters degrade into `Replace` chains, and list resorts lose identity (T-11, T-12, L-13, L-14, S-1).",
+      "criteria": [
+        {
+          "id": "PRF-2.1",
+          "descriptionMarkdown": "Cache transforms, the cache-to-list bridge, `ensure_unique_keys`, `filter_with_state`, lifecycle tracked caches and expiration ordering use key→position maps or append fast paths: loading n items performs O(1) amortized key comparisons per item (counted with the tallying key type).",
+          "verification": "automated"
+        },
+        {
+          "id": "PRF-2.2",
+          "descriptionMarkdown": "Dynamic filter state changes emit inclusion-flip diffs: shifting a window predicate from `[1000,2000)` to `[1001,2001)` emits exactly one `Remove` and one `Add`.",
+          "verification": "automated"
+        },
+        {
+          "id": "PRF-2.3",
+          "descriptionMarkdown": "List-shaped sorts emit `Move` changes (not one `Replace` per item) on comparer change or resort, preserving item identity (reversing 5 items emits only moves).",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "PRF-3",
+      "title": "Relation operator costs and leaks",
+      "descriptionMarkdown": "Tree, joins and live groups are super-quadratic, and join-many and tree cycles leak (P-1, G-9, T-1).",
+      "criteria": [
+        {
+          "id": "PRF-3.1",
+          "descriptionMarkdown": "`transform_to_tree` on a flat 4,000-node tree, `full_join` of 4,000 + 4,000, `left_join_many` of 4,000 and a live cache `group` load of 20,000 items perform near-linear work, counted via comparer/equality probes and child `move_key` calls (no per-child realignment of all siblings).",
+          "verification": "automated"
+        },
+        {
+          "id": "PRF-3.2",
+          "descriptionMarkdown": "Left and full `*_join_many` free the group of a removed left key (the internal group registry returns to the live key count after add/remove churn), and a tree containing a parent cycle releases all nodes after disposal (`Arc` strong count of a probe returns to 1).",
+          "verification": "automated"
+        },
+        {
+          "id": "PRF-3.3",
+          "descriptionMarkdown": "Criterion benchmarks exist for joins, `transform_to_tree` and `sort_and_page` and build with `cargo bench -p rayx_reactive --no-run`.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "HYG-1",
+      "title": "Public API hygiene",
+      "descriptionMarkdown": "Handles silently dispose when discarded, no core type implements `Debug`, error enums cannot grow, and several types are hard to use (S-13, S-19, C-16).",
+      "criteria": [
+        {
+          "id": "HYG-1.1",
+          "descriptionMarkdown": "`#[must_use]` (with a message) is on `Subscription`, `Effect`, `ActivationToken`, `Disposable`, `CompositeSubscription`, both notification-suspension guards, `Computed`, `ValueStream`, `ChangeStream` and `EventStream`; the workspace stays warning-free under `cargo clippy --workspace --all-targets --all-features -- -D warnings`.",
+          "verification": "automated"
+        },
+        {
+          "id": "HYG-1.2",
+          "descriptionMarkdown": "`Debug` is implemented, without holding locks longer than a snapshot read, for `Signal`, `ReadSignal`, `Computed`, `Command`, `AsyncCommand`, `EventBus`, `EventStream`, `ValueStream`, `Subscription`, `DisposeBag`, `ViewModelActivator`, `ActivationToken`, `SourceList`, `SourceCache`, `ObservableList`, `ObservableCache` and `ChangeStream`.",
+          "verification": "automated"
+        },
+        {
+          "id": "HYG-1.3",
+          "descriptionMarkdown": "`ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]` (the change and reason enums are not); `CompositeSubscription` gains `add`, `dispose`, `len` and `is_empty`; `DisposeWith` is implemented for `Disposable`, `Effect` and `CompositeSubscription`; `DisposeBag` gains `clear` and `len`; `EventStream` is `Clone`; `EventBus::emit` no longer requires `T: Clone`; `Signal<T>` implements `Default` when `T: Default`.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "DOC-1",
+      "title": "Rustdoc coverage",
+      "descriptionMarkdown": "Public items have essentially no rustdoc (77 doc-comment lines for 288 public functions), no docs.rs metadata and no `documentation` link (S-20, F-docs).",
+      "criteria": [
+        {
+          "id": "DOC-1.1",
+          "descriptionMarkdown": "Every public item of `rayx_reactive` has rustdoc and the crate root has an overview linking the guide; the crate sets `missing_docs = \"warn\"` so clippy's `-D warnings` enforces coverage; `cargo rustdoc -p rayx_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links` succeeds; `Cargo.toml` sets `documentation` and `[package.metadata.docs.rs] all-features = true`.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "CI-1",
+      "title": "CI coverage",
+      "descriptionMarkdown": "CI never checks the declared MSRV, never executes wasm tests, and does not run on macOS (F-ci).",
+      "criteria": [
+        {
+          "id": "CI-1.1",
+          "descriptionMarkdown": "`.github/workflows/ci.yml` adds an MSRV job that checks and tests `rayx_reactive` on Rust 1.95 (the declared `rust-version`), a job that executes the wasm-annotated tests on `wasm32-unknown-unknown` with `wasm-bindgen-test`, and a macOS test job; locally, `cargo +1.95 check -p rayx_reactive --all-features` succeeds.",
+          "verification": "automated"
+        },
+        {
+          "id": "CI-1.2",
+          "descriptionMarkdown": "The updated workflow runs green on a push or pull request.",
+          "verification": "manual"
+        }
+      ]
+    },
+    {
+      "id": "SCN-1",
+      "title": "Consumer scenario and public-surface tests",
+      "descriptionMarkdown": "The crate is validated only by its own tests; consumer situations (virtualized list/tree binding, foreground/worker contention, UI-thread marshalling) must be covered here, and the collections public surface has no integration test (user instruction; F-tests).",
+      "criteria": [
+        {
+          "id": "SCN-1.1",
+          "descriptionMarkdown": "An integration scenario binds a keyed virtualized list: a worker thread edits a `SourceCache` while a UI thread drives a `VirtualRequest` signal and applies `KeyedVirtualChangeSet`s, received through a channel, to a keyed widget model; after random scroll and edit sequences the widget model equals the expected window and the displayed total equals the source count.",
+          "verification": "automated"
+        },
+        {
+          "id": "SCN-1.2",
+          "descriptionMarkdown": "An integration scenario binds a tree view from `transform_to_tree`: a widget tree mirror keeps per-node expansion state across item updates, re-parenting, parent removal and late-arriving parents.",
+          "verification": "automated"
+        },
+        {
+          "id": "SCN-1.3",
+          "descriptionMarkdown": "An integration scenario has a worker thread editing continuously while a foreground thread repeatedly connects, looks up and watches: on native no call fails and every foreground mirror converges to the source.",
+          "verification": "automated"
+        },
+        {
+          "id": "SCN-1.4",
+          "descriptionMarkdown": "Integration scenarios cover a bounded live feed (adapter + limit + reverse bound to a list), form validation (`true_for_all` over per-field signals driving a command's enablement), and property-grid style scalar mirrors of collection aggregates.",
+          "verification": "automated"
+        },
+        {
+          "id": "SCN-1.5",
+          "descriptionMarkdown": "A collections public-API integration test exercises every collection extension trait and observable wrapper through the public prelude.",
+          "verification": "automated"
+        }
+      ]
+    },
+    {
+      "id": "REL-1",
+      "title": "Documentation and changelog",
+      "descriptionMarkdown": "Docs must describe the remediated behavior and consumers need migration notes (user instruction: standalone library documents breaking changes).",
+      "criteria": [
+        {
+          "id": "REL-1.1",
+          "descriptionMarkdown": "All docs chapters and README describe the final behavior (concurrency and ordering guarantees, contention errors, scheduler, interop, response semantics, index contract) with no stale limitation notes, and `cargo test -p rayx_reactive_doc_examples` passes.",
+          "verification": "automated"
+        },
+        {
+          "id": "REL-1.2",
+          "descriptionMarkdown": "`CHANGELOG.md` exists with an \"Unreleased\" section listing every behavior change, breaking change and new API of this epic with migration notes, and the `rayx-reactive` skill references reflect the new APIs.",
+          "verification": "manual"
+        }
+      ]
+    }
+  ]
+}

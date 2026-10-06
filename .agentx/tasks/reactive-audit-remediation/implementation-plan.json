@@ -1,0 +1,2933 @@
+{
+  "schemaVersion": 6,
+  "epicId": "reactive-audit-remediation",
+  "revision": 1,
+  "title": "rayx_reactive audit remediation: correctness, concurrency, interop, performance and API completeness",
+  "validationMode": "sprint",
+  "repositories": [
+    {
+      "id": "reactive",
+      "path": ".",
+      "role": "execution"
+    }
+  ],
+  "boundaries": {
+    "repositoryIds": [
+      "reactive"
+    ],
+    "forbiddenPaths": [
+      ".agentx/tasks/rayx-reactive-complexity-optimization/**",
+      "LICENSE-APACHE",
+      "LICENSE-MIT",
+      "rust-toolchain.toml"
+    ]
+  },
+  "checks": [
+    {
+      "id": "c-t01",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New primitives test group for panic-safe delivery.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "primitives::tests::panic_safe_delivery"
+      ],
+      "criterionIds": [
+        "DLV-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t02",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New primitives test group for ordered delivery and its signal/event adoption.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "primitives::tests::ordered_delivery"
+      ],
+      "criterionIds": [
+        "DLV-2.1",
+        "DLV-2.2",
+        "DLV-2.3",
+        "DLV-2.4",
+        "DLV-2.5"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t03",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for command lifecycle.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::command_lifecycle"
+      ],
+      "criterionIds": [
+        "CMD-1.1",
+        "CMD-1.2",
+        "CMD-1.3",
+        "CMD-1.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t04",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for computed consistency.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::computed_consistency"
+      ],
+      "criterionIds": [
+        "CMP-1.1",
+        "CMP-1.2",
+        "CMP-1.3",
+        "CMP-1.4",
+        "CMP-1.5"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t05",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for signal robustness.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::signal_robustness"
+      ],
+      "criterionIds": [
+        "SIG-1.1",
+        "SIG-1.2",
+        "SIG-1.3",
+        "SIG-1.4",
+        "SIG-1.5"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t06",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for activation lifecycle.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::activation_lifecycle"
+      ],
+      "criterionIds": [
+        "ACT-1.1",
+        "ACT-1.2",
+        "ACT-1.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t07",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for stream error interop.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::stream_error_interop"
+      ],
+      "criterionIds": [
+        "INT-1.1",
+        "INT-1.2",
+        "INT-1.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t08",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for operator input interop.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::operator_input_interop"
+      ],
+      "criterionIds": [
+        "INT-2.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t08-docs",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "Documentation examples after removing the adapter helper.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive_doc_examples"
+      ],
+      "criterionIds": [
+        "INT-2.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "README.md",
+        "docs/**",
+        "doc-examples/**"
+      ]
+    },
+    {
+      "id": "c-t09",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for ValueStream combinators.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::value_stream_combinators"
+      ],
+      "criterionIds": [
+        "INT-3.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t10",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for the source lock policy.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::source_lock_policy"
+      ],
+      "criterionIds": [
+        "SRC-1.1",
+        "SRC-1.2",
+        "SRC-1.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t11",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for commit-ordered source publication.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::source_commit_order"
+      ],
+      "criterionIds": [
+        "SRC-2.1",
+        "SRC-2.2",
+        "SRC-2.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t12",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for suspension versions.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::suspension_versions"
+      ],
+      "criterionIds": [
+        "SRC-3.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t13",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for source read APIs.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::source_read_api"
+      ],
+      "criterionIds": [
+        "SRC-4.1",
+        "SRC-4.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t14",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for per-batch watch values.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::watch_batch_coalescing"
+      ],
+      "criterionIds": [
+        "SRC-5.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t15",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for materialization reliability.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::materialization_reliability"
+      ],
+      "criterionIds": [
+        "MAT-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t16",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for ref_count lifecycle.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::ref_count_lifecycle"
+      ],
+      "criterionIds": [
+        "MAT-2.1",
+        "MAT-2.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t17",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for switch reliability.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::switch_reliability"
+      ],
+      "criterionIds": [
+        "MAT-3.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t18",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for ordered emission (filters, sorts, windows, groups).",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::ordered_emission_core"
+      ],
+      "criterionIds": [
+        "EMT-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t19",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for ordered emission (relations).",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::ordered_emission_relations"
+      ],
+      "criterionIds": [
+        "EMT-1.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t20",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for the index contract harness.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::index_contract_harness"
+      ],
+      "criterionIds": [
+        "IDX-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t21",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for keyed sort positions.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::keyed_sort_positions"
+      ],
+      "criterionIds": [
+        "IDX-2.1",
+        "IDX-2.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t22",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for subset operator indexes.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::subset_operator_indexes"
+      ],
+      "criterionIds": [
+        "IDX-3.1",
+        "IDX-3.2",
+        "IDX-3.3",
+        "IDX-3.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t23",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for snapshot and relation diff indexes.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::snapshot_diff_indexes"
+      ],
+      "criterionIds": [
+        "IDX-4.1",
+        "IDX-4.2",
+        "IDX-4.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t24",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for group and combiner indexes.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::group_and_combiner_indexes"
+      ],
+      "criterionIds": [
+        "IDX-5.1",
+        "IDX-5.2",
+        "IDX-5.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t25",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for key bridge indexes.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::key_bridge_indexes"
+      ],
+      "criterionIds": [
+        "IDX-6.1",
+        "IDX-6.2",
+        "IDX-6.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t26",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for keyed state operators.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::keyed_state_operators"
+      ],
+      "criterionIds": [
+        "KEY-1.1",
+        "KEY-1.2",
+        "KEY-1.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t27",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for window responses.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::window_responses"
+      ],
+      "criterionIds": [
+        "WIN-1.1",
+        "WIN-1.2",
+        "WIN-1.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t28",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New primitives test group for schedulers.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "primitives::tests::scheduler"
+      ],
+      "criterionIds": [
+        "TIM-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t29",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for timed stream controls.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::timed_stream_controls"
+      ],
+      "criterionIds": [
+        "TIM-1.2",
+        "TIM-1.3",
+        "TIM-1.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t30",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for expiration.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::expiration_rework"
+      ],
+      "criterionIds": [
+        "TIM-2.1",
+        "TIM-2.2",
+        "TIM-2.3",
+        "TIM-2.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t31",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for the stream size limit.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::limit_size_rework"
+      ],
+      "criterionIds": [
+        "TIM-3.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t32",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New scalar test group for timed ValueStream operators.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "scalar_tests::timed_value_stream_operators"
+      ],
+      "criterionIds": [
+        "TIM-4.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t33",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for async transform workers.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::async_transform_workers"
+      ],
+      "criterionIds": [
+        "ASY-1.1",
+        "ASY-1.2",
+        "ASY-1.3",
+        "ASY-1.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t34",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for list async transform options.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::list_async_transform_options"
+      ],
+      "criterionIds": [
+        "ASY-2.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t35",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for async disposal.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::async_dispose_hardening"
+      ],
+      "criterionIds": [
+        "ASY-3.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t36",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for aggregate robustness.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::aggregate_robustness"
+      ],
+      "criterionIds": [
+        "AGG-1.1",
+        "AGG-1.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t37",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for lifecycle semantics.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::lifecycle_semantics"
+      ],
+      "criterionIds": [
+        "LIF-1.1",
+        "LIF-1.2",
+        "LIF-1.3",
+        "LIF-1.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t38",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for source costs.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::source_bookkeeping_costs"
+      ],
+      "criterionIds": [
+        "PRF-1.1",
+        "PRF-1.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t39",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for operator costs.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::operator_bookkeeping_costs"
+      ],
+      "criterionIds": [
+        "PRF-2.1",
+        "PRF-2.2",
+        "PRF-2.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t40",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New collections test group for relation operator costs and leaks.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--lib",
+        "collections::tests::relation_operator_costs"
+      ],
+      "criterionIds": [
+        "PRF-3.1",
+        "PRF-3.2"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t40-benches",
+      "repositoryId": "reactive",
+      "kind": "build",
+      "descriptionMarkdown": "Builds all Criterion benchmarks, including the new joins/tree/sort_and_page benches.",
+      "argv": [
+        "cargo",
+        "bench",
+        "-p",
+        "rayx_reactive",
+        "--no-run"
+      ],
+      "criterionIds": [
+        "PRF-3.3"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "crates/benches/**"
+      ]
+    },
+    {
+      "id": "c-t41",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New integration test for API hygiene.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--test",
+        "api_hygiene"
+      ],
+      "criterionIds": [
+        "HYG-1.2",
+        "HYG-1.3"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "crates/tests/**"
+      ]
+    },
+    {
+      "id": "c-t41-clippy",
+      "repositoryId": "reactive",
+      "kind": "static",
+      "descriptionMarkdown": "Package-scoped clippy proving the crate stays warning-free with the new must_use attributes.",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "rayx_reactive",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "criterionIds": [
+        "HYG-1.1"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "crates/tests/**",
+        "crates/benches/**"
+      ]
+    },
+    {
+      "id": "c-t42",
+      "repositoryId": "reactive",
+      "kind": "static",
+      "descriptionMarkdown": "Rustdoc with missing docs and broken intra-doc links denied.",
+      "argv": [
+        "cargo",
+        "rustdoc",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--",
+        "-D",
+        "missing_docs",
+        "-D",
+        "rustdoc::broken_intra_doc_links"
+      ],
+      "criterionIds": [
+        "DOC-1.1"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml"
+      ]
+    },
+    {
+      "id": "c-t43-msrv",
+      "repositoryId": "reactive",
+      "kind": "build",
+      "descriptionMarkdown": "Builds the crate on the declared MSRV toolchain (requires the 1.95 toolchain installed).",
+      "argv": [
+        "cargo",
+        "+1.95",
+        "check",
+        "-p",
+        "rayx_reactive",
+        "--all-features"
+      ],
+      "criterionIds": [
+        "CI-1.1"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        ".github/workflows/**"
+      ],
+      "reuse": false
+    },
+    {
+      "id": "c-t44",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New integration test with consumer scenarios.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--test",
+        "consumer_scenarios"
+      ],
+      "criterionIds": [
+        "SCN-1.1",
+        "SCN-1.2",
+        "SCN-1.3",
+        "SCN-1.4"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "crates/tests/**"
+      ]
+    },
+    {
+      "id": "c-t44-api",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "New integration test for the collections public API.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive",
+        "--all-features",
+        "--test",
+        "collections_public_api"
+      ],
+      "criterionIds": [
+        "SCN-1.5"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "crates/tests/**"
+      ]
+    },
+    {
+      "id": "c-t45",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "Documentation examples against the final behavior.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive_doc_examples"
+      ],
+      "criterionIds": [
+        "REL-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "crates/src/**",
+        "crates/Cargo.toml",
+        "Cargo.toml",
+        "README.md",
+        "docs/**",
+        "doc-examples/**"
+      ]
+    },
+    {
+      "id": "f-fmt",
+      "repositoryId": "reactive",
+      "kind": "static",
+      "descriptionMarkdown": "Workspace formatting.",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "criterionIds": [],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 600
+    },
+    {
+      "id": "f-clippy",
+      "repositoryId": "reactive",
+      "kind": "static",
+      "descriptionMarkdown": "Workspace clippy with warnings denied.",
+      "argv": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "criterionIds": [
+        "HYG-1.1",
+        "DOC-1.1"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "f-wasm",
+      "repositoryId": "reactive",
+      "kind": "build",
+      "descriptionMarkdown": "wasm32 build of the workspace (D-SOURCE-LOCK non-blocking policy and D-TIME scheduler confinement must compile there).",
+      "argv": [
+        "cargo",
+        "check",
+        "--workspace",
+        "--target",
+        "wasm32-unknown-unknown"
+      ],
+      "criterionIds": [
+        "SRC-1.3"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "f-package",
+      "repositoryId": "reactive",
+      "kind": "build",
+      "descriptionMarkdown": "Packaging gate mirrored from CI.",
+      "argv": [
+        "cargo",
+        "package",
+        "--workspace"
+      ],
+      "criterionIds": [
+        "DOC-1.1"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "f-test",
+      "repositoryId": "reactive",
+      "kind": "test",
+      "descriptionMarkdown": "Whole-workspace tests with all features, including the doc-examples crate. Whole-codebase scope is justified: the epic changes `DeliveryQueue`, the source lock and the emission path that every module consumes.",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-features"
+      ],
+      "criterionIds": [
+        "REL-1.1"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1
+      },
+      "timeoutSeconds": 3600
+    }
+  ],
+  "finalCheckIds": [
+    "f-fmt",
+    "f-clippy",
+    "f-wasm",
+    "f-package",
+    "f-test"
+  ],
+  "sprints": [
+    {
+      "id": "s01-delivery",
+      "title": "Panic-safe, commit-ordered delivery primitive",
+      "dependsOn": [],
+      "tasks": [
+        {
+          "id": "t01-panic-safe-delivery",
+          "title": "Make DeliveryQueue panic-safe",
+          "descriptionMarkdown": "Add an unwind guard to `DeliveryQueue`'s drain loop (`crates/src/primitives/delivery.rs`) so a subscriber panic clears the `delivering` flag; queued items are delivered by the next push/drain and the panic still propagates. Create the primitives test module (`crates/src/primitives/tests/mod.rs`, registered with `#[cfg(test)] mod tests;` in `primitives/mod.rs`) and the new group `panic_safe_delivery.rs` covering a bare queue plus `Signal`, `EventBus`, `SourceList` and `SourceCache` end to end (catch the panic with `std::panic::catch_unwind`, then verify old and new subscribers keep receiving). Update chapter 16's panic section (the stall is gone) and its doc example if any.",
+          "criterionIds": [
+            "DLV-1.1"
+          ],
+          "designIds": [
+            "D-DELIVERY"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t01"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/delivery.rs",
+              "symbol": "DeliveryQueue::enqueue"
+            }
+          ]
+        },
+        {
+          "id": "t02-ordered-delivery",
+          "title": "Commit-ordered push/drain, ordered subscriber registry",
+          "descriptionMarkdown": "Implement D-DELIVERY in `crates/src/primitives/delivery.rs`: additive `push`/`drain`, `enqueue = push + drain`, subscription-ordered registry with `u64` ids and a shared `Arc` snapshot rebuilt only on subscribe/unsubscribe, per-entry `active` flag cleared by `Subscription` disposal and checked before each call, and a backlog accessor. Adopt push-under-lock/drain-after-unlock in `Signal::set/replace/update` (`crates/src/signal.rs`) and `EventBus::emit` (`crates/src/event.rs`). Add the group `crates/src/primitives/tests/ordered_delivery.rs` (multi-thread push order, deterministic subscriber order, `cfg(test)` snapshot rebuild counter, disposal during delivery, 4-thread signal writers over 200 rounds asserting strictly increasing versions and final-value convergence, backlog accessor). Update chapters 4 and 16 (ordering, subscriber order, disposal, draining-thread behavior) and their examples.",
+          "criterionIds": [
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.4",
+            "DLV-2.5"
+          ],
+          "designIds": [
+            "D-DELIVERY"
+          ],
+          "dependsOn": [
+            "t01-panic-safe-delivery"
+          ],
+          "checkIds": [
+            "c-t02"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/delivery.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/signal.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/subscription.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s02-scalar",
+      "title": "Scalar state correctness",
+      "dependsOn": [
+        "s01-delivery"
+      ],
+      "tasks": [
+        {
+          "id": "t03-command-lifecycle",
+          "title": "Truthful command lifecycle and execution policy",
+          "descriptionMarkdown": "Implement the command part of D-SCALAR in `crates/src/command.rs`: per-execution generations so only the latest execution publishes its terminal state, an in-flight counter behind additive `is_executing() -> ReadSignal<bool>`, a drop guard in `AsyncCommand::execute` that publishes `Cancelled` when the future is dropped mid-flight, a panic guard publishing `Failed` with a panic message and re-raising, disabled calls that publish nothing, and additive `ExecutionPolicy::{Concurrent, IgnoreWhileRunning}` constructors. Create the scalar test module `crates/src/scalar_tests/mod.rs` (registered in `lib.rs` as `#[cfg(test)] mod scalar_tests;`) and the group `command_lifecycle.rs` (drop after one poll via a manual waker or `futures::poll!`, overlapping runs, disabled calls, panics, policy). Update chapter 6 and its examples.",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4"
+          ],
+          "designIds": [
+            "D-SCALAR"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t03"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/command.rs"
+            }
+          ]
+        },
+        {
+          "id": "t04-computed-consistency",
+          "title": "Glitch-free, fresh and cheaper Computed",
+          "descriptionMarkdown": "Implement the computed part of D-SCALAR in `crates/src/computed.rs`: version-tuple re-read in `drain_combine`/`drain_derive` (relies on subscription-order delivery from t02), lazy staleness check in `get()`/read handles, single evaluation at construction when the second snapshot is unchanged, unwind-safe `processing` flags, and additive `combine3` and `derive_distinct`. Group `crates/src/scalar_tests/computed_consistency.rs`: diamond over 100 trials, `combine2(a, a)`, cross-thread `get()` freshness (hold another thread in a slow subscriber), construction evaluation count and version 0, panic recovery, new constructors. Update chapter 3 (remove the \"equal results are still published\" caveat only where `derive_distinct` applies; document glitch freedom).",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5"
+          ],
+          "designIds": [
+            "D-SCALAR"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t04"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/computed.rs"
+            }
+          ]
+        },
+        {
+          "id": "t05-signal-robustness",
+          "title": "Robust signals and non-blocking reads",
+          "descriptionMarkdown": "Implement the signal part of D-SCALAR in `crates/src/signal.rs` and `crates/src/primitives/stream.rs`: per-subscriber version gate for `values()`, unwind-safe `update`/`set`/`replace` (restore previous value, clear poison), clone reduction (`mem::replace`, no change construction without subscribers), additive `try_get`/`try_read` on `Signal` and `ReadSignal`, and `start_with` that subscribes upstream first. Group `crates/src/scalar_tests/signal_robustness.rs` with a cloning probe type, a forced cross-thread interleaving test hook, panic tests, and the `start_with` write-in-callback test. Update chapters 3, 4 and 16.",
+          "criterionIds": [
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4",
+            "SIG-1.5"
+          ],
+          "designIds": [
+            "D-SCALAR"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t05"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/signal.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/stream.rs",
+              "symbol": "start_with"
+            }
+          ]
+        },
+        {
+          "id": "t06-activation-lifecycle",
+          "title": "Truthful activation and scoped registrations",
+          "descriptionMarkdown": "Implement the activation part of D-SCALAR in `crates/src/activation.rs`: generation phases, additive `ViewModelActivator::is_active()` and `ActivationToken::is_active()`, scoped registrations dropped with their generation (additive API), and disposal of partial work when a live `when_activated` registration fails. Group `crates/src/scalar_tests/activation_lifecycle.rs` (concurrent activate during a slow first activation that fails, nested registration counts across four activations, partial-work disposal). Update chapter 5.",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "designIds": [
+            "D-SCALAR"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t06"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/activation.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s03-interop",
+      "title": "Scalar/collection interop and stream combinators",
+      "dependsOn": [
+        "s02-scalar"
+      ],
+      "tasks": [
+        {
+          "id": "t07-stream-error-interop",
+          "title": "Error-generic streams and collection-to-scalar errors",
+          "descriptionMarkdown": "Implement D-INTEROP's primitive and scalar parts: `ValueStream::map_err`/`err_into` (`crates/src/primitives/stream.rs`), `ReactiveValueStreamExt<T, E = ReactiveError>` for every `E` (`crates/src/stream_ext.rs`), `Effect::watch` over `ValueStream<T, E>` (`crates/src/effect.rs`), `OptionValueStreamExt` generic over `E` (`crates/src/collections/option/option_value_stream_ext.rs`), `ReactiveError::External` (`crates/src/primitives/error.rs`) with `impl From<CollectionError> for ReactiveError` in `crates/src/collections/error.rs`, and an additive stream-to-state conversion (`ValueStream::to_signal` or `Computed::from_stream`). Group `crates/src/scalar_tests/stream_error_interop.rs` (including `?` on a collection subscription inside `when_activated`, `Effect::watch` on a collection `count()`, and a command enabled by a collection count). Record the breaking variant in the changelog draft notes for t45.",
+          "criterionIds": [
+            "INT-1.1",
+            "INT-1.2",
+            "INT-1.3"
+          ],
+          "designIds": [
+            "D-INTEROP"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t07"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/stream.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/stream_ext.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/effect.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/error.rs"
+            }
+          ]
+        },
+        {
+          "id": "t08-operator-input-interop",
+          "title": "Collection operators accept any convertible stream error",
+          "descriptionMarkdown": "Change every collection operator parameter listed in INT-2.1 to accept `crate::primitives::ValueStream<_, E>` with `CollectionError: From<E>` (following `filter_with_state`), converting internally with `err_into`; touch the trait declarations in `operators/predicate.rs`, `operators/cache_stream_ext.rs`, `lifecycle/{list,cache}.rs`, `aggregation/cache_aggregation_ext.rs`, `true_for/`, `tree/stream_ext.rs`, `switch.rs`, `populate/`, `diff.rs`, `stream/batch_count_state.rs`, and their impls. Group `crates/src/collections/tests/operator_input_interop/` with a compile-and-run test passing `Signal::values()` to each operator plus a test that existing collection-flavor call sites still compile. Remove the `collection_stream` helper from README and docs, rewrite chapter 15's interop section, and keep `cargo test -p rayx_reactive_doc_examples` green.",
+          "criterionIds": [
+            "INT-2.1",
+            "INT-2.2"
+          ],
+          "designIds": [
+            "D-INTEROP"
+          ],
+          "dependsOn": [
+            "t07-stream-error-interop"
+          ],
+          "checkIds": [
+            "c-t08",
+            "c-t08-docs"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/predicate.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_stream_ext.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/lifecycle/mod.rs"
+            }
+          ]
+        },
+        {
+          "id": "t09-value-stream-combinators",
+          "title": "ValueStream combinators",
+          "descriptionMarkdown": "Add the INT-3.1 operators to `crates/src/stream_ext.rs` (generic over `E`): `merge`, `combine_latest`, `switch_map`, `scan`, `take`, `first`, `take_until`, `pairwise`, `with_latest_from`, `distinct_until_changed_by`, `share` (with optional replay of the latest value). Each operator owns and disposes its inner/upstream subscriptions. Group `crates/src/scalar_tests/value_stream_combinators.rs` covering order and disposal for each. Document them in chapter 4 with executable examples.",
+          "criterionIds": [
+            "INT-3.1"
+          ],
+          "designIds": [
+            "D-INTEROP"
+          ],
+          "dependsOn": [
+            "t07-stream-error-interop"
+          ],
+          "checkIds": [
+            "c-t09"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/stream_ext.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s04-sources",
+      "title": "Source locking, ordering, suspension and reads",
+      "dependsOn": [
+        "s03-interop"
+      ],
+      "tasks": [
+        {
+          "id": "t10-source-lock-policy",
+          "title": "Owner-aware source lock with native blocking and wasm non-blocking policy",
+          "descriptionMarkdown": "Implement D-SOURCE-LOCK: a crate-internal source lock (for example `collections/source_lock.rs`) that records the owning `ThreadId` during edits and key-selector calls, returns `NestedUpdate` for same-thread re-entry, blocks on native and returns the new `CollectionError::Contended` on `wasm32`, with a `cfg(test)` switch forcing the non-blocking policy on native. Route every state access of `SourceList` (`list/list_state.rs`), `SourceCache` (`cache/source_cache_impl.rs`), `RayCacheGroup` (`group.rs`) and `RayListGroup` (`list_group.rs`) through it, including reads, `connect`, `lookup`, `watch*`, `suspend_notifications` and `count_changed` setup. Group `crates/src/collections/tests/source_lock_policy/` (4-thread writers, reader-plus-writer, every same-thread re-entry entry point with a deadlock watchdog thread, non-blocking policy contention without partial registrations). Update chapters 8 and 16 and the sources memory rules note in the changelog draft.",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "designIds": [
+            "D-SOURCE-LOCK"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t10"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/list/list_state.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/cache/source_cache_impl.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/error.rs"
+            }
+          ]
+        },
+        {
+          "id": "t11-source-commit-order",
+          "title": "Commit-ordered source publication and count streams",
+          "descriptionMarkdown": "Implement the ordering part of D-SOURCE-PUBLISH: sources push `preview`, `changes` and `count_changed` items under the state lock using t02's `push` and drain after unlocking; `count_changed` subscribes before reading its baseline. Group `crates/src/collections/tests/source_commit_order/` (4 threads × 2,000 edits over 20 rounds with strictly increasing versions and a converging `as_observable_list` mirror; edit inside a `preview` callback; count updates in the initial callback and concurrently).",
+          "criterionIds": [
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3"
+          ],
+          "designIds": [
+            "D-SOURCE-PUBLISH"
+          ],
+          "dependsOn": [
+            "t10-source-lock-policy"
+          ],
+          "checkIds": [
+            "c-t11"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/list/list_state.rs",
+              "symbol": "SourceList::edit"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/cache/source_cache_impl.rs",
+              "symbol": "SourceCache::edit"
+            }
+          ]
+        },
+        {
+          "id": "t12-suspension-versions",
+          "title": "Versioned suspension segments",
+          "descriptionMarkdown": "Implement the suspension part of D-SOURCE-PUBLISH: store suspended changes as `(version, changes)` segments; on resume publish one public `ChangeSet` whose crate-private `VersionedChangeSet` carries segment boundaries; teach `StartupConnection` (`connection.rs`) and the keyed hub (`keyed_delivery.rs`) to drop segments covered by their snapshot version. Group `crates/src/collections/tests/suspension_versions/` with the list `[0,1,2,1]`, cache wrong-row and `watch(5)` duplicate repros for both source types.",
+          "criterionIds": [
+            "SRC-3.1"
+          ],
+          "designIds": [
+            "D-SOURCE-PUBLISH"
+          ],
+          "dependsOn": [
+            "t11-source-commit-order"
+          ],
+          "checkIds": [
+            "c-t12"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/connection.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/keyed_delivery.rs"
+            }
+          ]
+        },
+        {
+          "id": "t13-source-read-api",
+          "title": "Updater reads and point queries",
+          "descriptionMarkdown": "Add read access to `ListUpdater` (`items`, `len`, `is_empty`, `get`) and `CacheUpdater` (`lookup`, `contains_key`, `count`, `keys`), and additive point queries and zero-clone reads (`SourceList::get/contains/read`, `SourceCache::contains_key/read`, the same on `ObservableList`/`ObservableCache`, `SourceCache::from_items`). Group `crates/src/collections/tests/source_read_api/` (in-edit visibility, 4-thread read-modify-write counter with no lost updates, each new query). Update chapter 8 (remove the \"updaters are write-only\" note).",
+          "criterionIds": [
+            "SRC-4.1",
+            "SRC-4.2"
+          ],
+          "designIds": [
+            "D-SOURCE-LOCK"
+          ],
+          "dependsOn": [
+            "t10-source-lock-policy"
+          ],
+          "checkIds": [
+            "c-t13"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/cache/cache_notification_suspension.rs",
+              "symbol": "CacheUpdater"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/list/push_add_change.rs"
+            }
+          ]
+        },
+        {
+          "id": "t14-watch-batch-coalescing",
+          "title": "One watch value per batch",
+          "descriptionMarkdown": "Fold each batch per key before emitting from `watch_value`/`watch_optional` (sources, observable caches and `CacheStreamExt` watches) and forward only the watched key's part of a `Clear` from `watch(key)`. Group `crates/src/collections/tests/watch_batch_coalescing/` (`load` keeping the key, add+update+remove in one edit, `Clear` with other keys). Update chapter 8's watch table and example.",
+          "criterionIds": [
+            "SRC-5.1"
+          ],
+          "designIds": [
+            "D-SOURCE-PUBLISH"
+          ],
+          "dependsOn": [
+            "t11-source-commit-order"
+          ],
+          "checkIds": [
+            "c-t14"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/cache/source_cache_impl.rs",
+              "symbol": "SourceCache::watch_optional_with_initial"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/push_child_adds.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s05-composition",
+      "title": "Materialization, ref_count and switch that never lose batches",
+      "dependsOn": [
+        "s04-sources"
+      ],
+      "tasks": [
+        {
+          "id": "t15-materialization-reliability",
+          "title": "Pending FIFO and error reporting for materializers",
+          "descriptionMarkdown": "Implement D-MATERIALIZE for `populate_into`, `populate_from*`, every `to_*_change_set*` bridge, `ObservableList`/`ObservableCache::from_stream` and the source limit helpers: replace every `let _ = destination.edit(..)` with a pending FIFO applied before the next batch and an additive error stream (`errors()` on the wrappers, `populate_into_with_errors`). Group `crates/src/collections/tests/materialization_reliability/` using t10's non-blocking policy switch to force contention and asserting convergence and reported errors. Update chapter 14.",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "designIds": [
+            "D-MATERIALIZE"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t15"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/populate/expiration_selector.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/observable_list.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/observable_cache.rs"
+            }
+          ]
+        },
+        {
+          "id": "t16-ref-count-lifecycle",
+          "title": "Reliable ref_count startup and teardown",
+          "descriptionMarkdown": "Implement the `ref_count` part of D-MATERIALIZE in `crates/src/collections/ref_count.rs`: rollback on failed upstream start, per-subscriber startup buffer with a local sequence number, upstream epochs. Group `crates/src/collections/tests/ref_count_lifecycle/` (failure then retry, late subscriber with a concurrent publisher receiving its snapshot first over many rounds, last-unsubscribe race leaving no stale state).",
+          "criterionIds": [
+            "MAT-2.1",
+            "MAT-2.2"
+          ],
+          "designIds": [
+            "D-MATERIALIZE"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t16"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/ref_count.rs"
+            }
+          ]
+        },
+        {
+          "id": "t17-switch-reliability",
+          "title": "Reliable switch",
+          "descriptionMarkdown": "Implement the `switch` part of D-MATERIALIZE in `crates/src/collections/switch.rs` (all four receivers): report and retry inner subscribe failures, `disposed` flag, ordered output re-checking the generation at dequeue (may use t18's emitter if already present; otherwise a local `DeliveryQueue` push/drain). Group `crates/src/collections/tests/switch_reliability/` (failing inner under the non-blocking policy, stale-generation batches from another thread, dispose racing an outer emission).",
+          "criterionIds": [
+            "MAT-3.1"
+          ],
+          "designIds": [
+            "D-MATERIALIZE"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t17"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/switch.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s06-emission",
+      "title": "Ordered emission for multi-input operators",
+      "dependsOn": [
+        "s05-composition"
+      ],
+      "tasks": [
+        {
+          "id": "t18-ordered-emission-core",
+          "title": "Ordered emitter and its adoption by filters, sorts, windows and groups",
+          "descriptionMarkdown": "Create the crate-internal ordered emitter (D-EMIT, for example `crates/src/collections/emit.rs`) and route through it every operator named in EMT-1.1, plus list `virtualize` and `reverse`, which today call the subscriber under their own locks. Group `crates/src/collections/tests/ordered_emission_core/`: for each operator family, a two-thread test (dynamic input on one thread, source edits on another) over 200 rounds comparing the final view with a naive recomputation, plus a concurrency probe asserting the subscriber is never entered twice at once.",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "designIds": [
+            "D-EMIT"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t18"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/list_stream_ext_impl.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_stream_ext_impl.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/mod.rs"
+            }
+          ]
+        },
+        {
+          "id": "t19-ordered-emission-relations",
+          "title": "Ordered emission for joins, combiners, trees, forced transforms and merge-many",
+          "descriptionMarkdown": "Route every operator named in EMT-1.2 through t18's emitter: `join/*`, `combine/*`, forced transforms (`operators/cache_inline_transform_state.rs`, `cache_async_safe_job.rs`, `start_cache_async_transform_many_child.rs`), `tree/stream_ext.rs` with predicates, and `merge_many_*_change_sets` in `lifecycle/`. Group `crates/src/collections/tests/ordered_emission_relations/` including the two-thread `full_join` inversion repro and per-family convergence tests.",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "designIds": [
+            "D-EMIT"
+          ],
+          "dependsOn": [
+            "t18-ordered-emission-core"
+          ],
+          "checkIds": [
+            "c-t19"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/join/mod.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/combine/mod.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/tree/stream_ext.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s07-index-contract",
+      "title": "Cache index contract: harness, keyed sort, subsets, snapshot diffs",
+      "dependsOn": [
+        "s06-emission"
+      ],
+      "tasks": [
+        {
+          "id": "t20-index-contract-harness",
+          "title": "Document the index contract and build the contract harness",
+          "descriptionMarkdown": "Document the `CacheChange` (and `ListChange`) index contract in `crates/src/collections/change.rs` rustdoc per D-INDEX. Add shared test support (for example `crates/src/collections/tests/support/contract.rs`): strict list/cache mirrors that apply changes in order and reject out-of-range or inconsistent indexes, and a deterministic differential fuzzer (in-crate xorshift PRNG, random batches of add/update/remove/move/refresh/clear/indexed upserts, naive recomputation oracle). Group `crates/src/collections/tests/index_contract_harness/` self-tests the validator against malformed sequences and runs the list operators named in IDX-1.1 over 300 seeds. Later index tasks reuse this support in their own groups.",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t20"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/change.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/tests/mod.rs"
+            }
+          ]
+        },
+        {
+          "id": "t21-keyed-sort-positions",
+          "title": "Keyed sort position maps and binary-search insertion",
+          "descriptionMarkdown": "Fix `insert_order_key` in `crates/src/collections/operators/cache_sort_state_impl.rs` to refresh positions from `min(existing, index)` (as `move_order_key` does), add debug assertions that maps match vectors, and switch sparse insertion to binary search while keeping the indexed-keyed-sort decision's tie and 64-entry batch semantics. Group `crates/src/collections/tests/keyed_sort_positions/`: both audit repros, chained sorts, 300 fuzz seeds with indexed upserts through `sort_keyed_*`, cache `sort_*`, `top_keyed`, `update_index`, and a comparer-call counter at n = 10,000.",
+          "criterionIds": [
+            "IDX-2.1",
+            "IDX-2.2"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [
+            "t20-index-contract-harness"
+          ],
+          "checkIds": [
+            "c-t21"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_sort_state_impl.rs"
+            }
+          ]
+        },
+        {
+          "id": "t22-subset-operator-indexes",
+          "title": "Output-space indexes for subset and inline operators",
+          "descriptionMarkdown": "Make cache `filter` keep its own output order (no spurious `Remove`/`Clear` for never-included keys), make `filter_immutable*`, `transform_safe*` and forced transforms emit output-space indexes or `None`, fix the dynamic filter's `Move`+`Update` (`cache_dynamic_filter_state_impl.rs`), make `transform_inline*` preserve positional updates (`list_sort_state.rs` `CacheInlineTransformState`), and harden the cache-to-list bridge (`apply_list_changes.rs` `CacheRemoveKeyState`) to fall back to key positions on disagreement. Update the existing test `transforms_filters/cache_filter_and_transform_emit_keyed_changes.rs` that pins a source-space index. Group `crates/src/collections/tests/subset_operator_indexes/` with the audit repros and fuzzer coverage for each operator.",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [
+            "t20-index-contract-harness"
+          ],
+          "checkIds": [
+            "c-t22"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+              "symbol": "filter"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_dynamic_filter_state_impl.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/apply_list_changes.rs"
+            }
+          ]
+        },
+        {
+          "id": "t23-snapshot-diff-indexes",
+          "title": "Snapshot, join and combiner diffs follow the contract",
+          "descriptionMarkdown": "Fix `Move`+`Update` index pairs in `operators/diff_cache_snapshots.rs`, `join/join_state.rs`, `join/affected_key.rs`, `combine/cache_key_updates.rs` and `limit/diff_limited_cache.rs`; compute `previous_index` after removals in `operators/ungrouped_cache_state.rs` and `tree/stream_ext.rs`; make join output order follow the left/combined source order without out-of-range moves. Group `crates/src/collections/tests/snapshot_diff_indexes/` with the G-2/G-5/G-8 repros and fuzzer runs for keyed windows, joins, immutable groups and trees (300 seeds each).",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [
+            "t20-index-contract-harness"
+          ],
+          "checkIds": [
+            "c-t23"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/diff_cache_snapshots.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/join/join_state.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/tree/stream_ext.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s08-keyed-operators",
+      "title": "Groups, key bridges, keyed state and windows",
+      "dependsOn": [
+        "s07-index-contract"
+      ],
+      "tasks": [
+        {
+          "id": "t24-group-and-combiner-indexes",
+          "title": "Group indexes, group_by order and combiner updates",
+          "descriptionMarkdown": "Shift later pending group `Add` indexes when a pending `Add` is dropped (or emit adds after finalization) in `operators/list_pending_group_changes.rs` and `operators/immutable_cache_group_entry.rs` without breaking the sparse-live-group decision; order cache `group_by` members by an ordered key mirror and handle `Clear { previous: [] }`; keep `preferred` values when an `Update` and `Refresh` merge in `combine/cache_key_updates.rs` (static and dynamic). Group `crates/src/collections/tests/group_and_combiner_indexes/` with repros and fuzzer runs.",
+          "criterionIds": [
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t24"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/list_pending_group_changes.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/combine/cache_key_updates.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+              "symbol": "group_by"
+            }
+          ]
+        },
+        {
+          "id": "t25-key-bridge-indexes",
+          "title": "add_key, ensure_unique_keys and ValueStream edit_diff",
+          "descriptionMarkdown": "Make `add_key` (`operators/diff_cache_snapshots.rs`) emit list-consistent indexes on add/remove/move (or none), rebuild `ensure_unique_keys` emission from its own order and forward surviving `Move`s (`operators/select_unique_cache_changes.rs`, `push_child_adds.rs`), and reimplement `ValueStream` `edit_diff*` (`crates/src/collections/diff.rs`) on an ordered private state with sequentially valid indexes and last-occurrence duplicate policy. Update the pinned test in `aggregation_diagnostics_diff/value_stream_snapshot_edit_diff_emits_list_changes.rs` (or the keyed equivalent) and note it for the changelog. Group `crates/src/collections/tests/key_bridge_indexes/`.",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t25"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/diff.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/select_unique_cache_changes.rs"
+            }
+          ]
+        },
+        {
+          "id": "t26-keyed-state-operators",
+          "title": "Stateful change_key, deterministic transform_many, merge-many generations",
+          "descriptionMarkdown": "Make `change_key`/`change_key_with_source_key` track source→destination keys with collision reference counts (`operators/push_child_adds.rs`, `cache_stream_ext_impl.rs`); rebuild sync cache `transform_many` on the async variant's ordered first-live-parent state (`cache_async_transform_many_state.rs`); add generation tokens or last-wins start deduplication to cache-parent `merge_many_*_change_sets` (`lifecycle/cache.rs`). Group `crates/src/collections/tests/keyed_state_operators/` with the T-7, T-8 and L-6 repros and fuzzer runs.",
+          "criterionIds": [
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t26"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/push_child_adds.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_async_transform_many_state.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/lifecycle/cache.rs"
+            }
+          ]
+        },
+        {
+          "id": "t27-window-responses",
+          "title": "Current response totals, request-gated list windows, correct sort_and_page",
+          "descriptionMarkdown": "Emit page/virtual responses whenever response fields change (empty change set allowed) and an initial response once loaded, for list (`list_stream_ext_impl.rs`), keyed (`keyed_cache_page_state.rs`) and `sort_and_*` (`cache_sorted_page_state.rs`) variants; start list dynamic windows without a request; rebuild `sort_and_page_*`/`sort_and_virtualize_*` on `CacheSortState` plus window diffing (or apply removals before reinsertion with an incrementally maintained position map) so results match `sort_keyed_*` + keyed window. Group `crates/src/collections/tests/window_responses/` (totals changing outside the window, empty initial window, W-1, fuzzer equivalence, comparer-call count for an 8,000-item load). Update chapter 10 (remove the stale-totals warning).",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "designIds": [
+            "D-INDEX"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t27"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_sorted_page_state.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/keyed_cache_page_state.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s09-time",
+      "title": "Scheduler abstraction and time-based operators",
+      "dependsOn": [
+        "s08-keyed-operators"
+      ],
+      "tasks": [
+        {
+          "id": "t28-scheduler",
+          "title": "Scheduler, ThreadScheduler and ManualScheduler",
+          "descriptionMarkdown": "Add `crates/src/primitives/scheduler.rs` per D-TIME: the `Scheduler` trait (`now`, `schedule(delay, task) -> ScheduledTask` with cancel-on-drop), `ThreadScheduler` (one lazily started timer thread per instance with condvar waits and cancellation, plus a process-wide default), and `ManualScheduler` (virtual clock, `advance_by`, deterministic ordering of due tasks). Export from the primitives prelude. Group `crates/src/primitives/tests/scheduler.rs` (ordering, cancellation, many timers on one thread via a `cfg(test)` spawn counter, manual clock). Document in chapter 16 how a wasm application supplies its own scheduler.",
+          "criterionIds": [
+            "TIM-1.1"
+          ],
+          "designIds": [
+            "D-TIME"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t28"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/mod.rs"
+            }
+          ]
+        },
+        {
+          "id": "t29-timed-stream-controls",
+          "title": "Timed stream controls on the scheduler",
+          "descriptionMarkdown": "Rebuild `batch`, `buffer_initial`, `batch_if_with_timeout`/`buffer_if_with_timeout` (`stream/batch_count_state.rs`, `stream/flush_initial_buffer.rs`) and list/cache `auto_refresh_buffered` (`lifecycle/list.rs`, `lifecycle/cache.rs`) on the scheduler with additive `*_with_scheduler` variants, cancel-on-dispose without joins, immediate release of buffers and subscribers, and emission through t18's emitter (no new timer while a flush runs). Group `crates/src/collections/tests/timed_stream_controls/` using `ManualScheduler` (deterministic flushes, disposal from inside a timer callback, no emission after dispose) plus a real-thread stress for ordering and refresh-index validity.",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "designIds": [
+            "D-TIME",
+            "D-EMIT"
+          ],
+          "dependsOn": [
+            "t28-scheduler"
+          ],
+          "checkIds": [
+            "c-t29"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/stream/batch_count_state.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/lifecycle/list.rs"
+            }
+          ]
+        },
+        {
+          "id": "t30-expiration-rework",
+          "title": "Expiration on the scheduler",
+          "descriptionMarkdown": "Rebuild every `expire_after*` (`expiration/*`, adapter options in `populate/`) on the scheduler: fix polling waits, translate/normalize later changes in stream expiration, compute due items inside the source edit closure with requeue-on-failure and actual-removal reporting, and compact stale queue entries. Group `crates/src/collections/tests/expiration_rework/` on `ManualScheduler` for L-1, L-2 and L-15, plus a real-thread concurrent-editor test for L-5 (0 of 400 missed). Update chapter 14's expiration section. Finally confirm by review (TIM-1.5) that `thread::spawn`, `Instant::now` and `SystemTime::now` in time-based operators now live only in `ThreadScheduler` and the `diagnostics` timestamps.",
+          "criterionIds": [
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3",
+            "TIM-2.4",
+            "TIM-1.5"
+          ],
+          "designIds": [
+            "D-TIME"
+          ],
+          "dependsOn": [
+            "t28-scheduler"
+          ],
+          "checkIds": [
+            "c-t30"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/expiration/run_expiration_timer.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/expiration/cache_expire_after_ext.rs"
+            }
+          ]
+        },
+        {
+          "id": "t31-limit-size-rework",
+          "title": "Incremental stream size limit",
+          "descriptionMarkdown": "Rewrite stream `limit_size_to` (`limit/cache_limit_ext.rs`, `limit/diff_limited_cache.rs`) with an incremental sequence-ordered structure that forwards `Refresh` and same-value `Update` for retained keys; the source limiters adopt t30's inside-edit validation. Group `crates/src/collections/tests/limit_size_rework/` with the L-8 repro and a cloning-probe cost test.",
+          "criterionIds": [
+            "TIM-3.1"
+          ],
+          "designIds": [
+            "D-TIME"
+          ],
+          "dependsOn": [
+            "t30-expiration-rework"
+          ],
+          "checkIds": [
+            "c-t31"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/limit/cache_limit_ext.rs"
+            }
+          ]
+        },
+        {
+          "id": "t32-timed-value-stream-operators",
+          "title": "debounce, throttle and sample",
+          "descriptionMarkdown": "Add `debounce`, `throttle` and `sample` for `ValueStream<T, E>` in `crates/src/stream_ext.rs`, taking a `Scheduler` with default-scheduler conveniences; disposal cancels pending timers. Group `crates/src/scalar_tests/timed_value_stream_operators.rs` on `ManualScheduler`. Document in chapter 4.",
+          "criterionIds": [
+            "TIM-4.1"
+          ],
+          "designIds": [
+            "D-TIME",
+            "D-INTEROP"
+          ],
+          "dependsOn": [
+            "t28-scheduler"
+          ],
+          "checkIds": [
+            "c-t32"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/stream_ext.rs"
+            }
+          ]
+        }
+      ],
+      "memoryScopes": [
+        "primitives",
+        "collections/operators"
+      ]
+    },
+    {
+      "id": "s10-async",
+      "title": "Bounded, cancellable, panic-isolated async operators",
+      "dependsOn": [
+        "s09-time"
+      ],
+      "tasks": [
+        {
+          "id": "t33-async-transform-workers",
+          "title": "Bounded workers, cancellation and panic isolation for cache async transforms",
+          "descriptionMarkdown": "Rebuild cache `transform_async*`/`transform_safe_async*` (`cache_transform_async_stream.rs`) and `transform_many_async*`/`*_async_stream*` (`start_cache_async_transform_many_child.rs`, `cache_transform_many_*`) per D-ASYNC: bounded per-subscription workers honoring `TransformAsyncOptions` (new `_with_options` variants for transform-many), `Abortable` futures cancelled on dispose and key removal/update, `catch_unwind` per future, `Some(0)` treated as 1, output through t18's emitter; apply the same cancellation and panic isolation to list `transform_async*` (`list_transform_stream.rs`). Group `crates/src/collections/tests/async_transform_workers/` (2,000 parents with a `cfg(test)` thread counter, slow-subscriber stale-child check, cancellation with a pending future, panicking future).",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "designIds": [
+            "D-ASYNC",
+            "D-EMIT"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t33"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_transform_async_stream.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/start_cache_async_transform_many_child.rs"
+            }
+          ]
+        },
+        {
+          "id": "t34-list-async-transform-options",
+          "title": "List transform_async_with_options",
+          "descriptionMarkdown": "Add list `transform_async_with_options` running a batch's futures concurrently up to the limit and applying results in index order (`list_transform_stream.rs`), and drop the unused `U: PartialEq` bound from list async transforms. Group `crates/src/collections/tests/list_async_transform_options/` with the 20 non-contiguous inserts timing test (generous bound) and ordering checks.",
+          "criterionIds": [
+            "ASY-2.1"
+          ],
+          "designIds": [
+            "D-ASYNC"
+          ],
+          "dependsOn": [
+            "t33-async-transform-workers"
+          ],
+          "checkIds": [
+            "c-t34"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/list_transform_stream.rs"
+            }
+          ]
+        },
+        {
+          "id": "t35-async-dispose-hardening",
+          "title": "Panic-isolated async disposal",
+          "descriptionMarkdown": "Wrap each `async_dispose_many*` finalizer future in `catch_unwind` (`lifecycle/cache.rs` worker) so later finalizers run and completion always fires. Group `crates/src/collections/tests/async_dispose_hardening/`.",
+          "criterionIds": [
+            "ASY-3.1"
+          ],
+          "designIds": [
+            "D-ASYNC"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t35"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/lifecycle/cache.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s11-semantics",
+      "title": "Aggregate and lifecycle semantics",
+      "dependsOn": [
+        "s10-async"
+      ],
+      "tasks": [
+        {
+          "id": "t36-aggregate-robustness",
+          "title": "Non-flickering emptiness and robust numeric aggregates",
+          "descriptionMarkdown": "Fix `is_empty`/`is_not_empty` (list `aggregation/cache_query.rs`, cache `aggregation/cache_aggregation_ext.rs`) to derive the initial value from the first count and deduplicate; use compensated sums with recompute on non-finite/large removals for `sum_by`/`avg_by`/`std_dev_by` (keeping the DynamicData std-dev formula rule); total-order NaN handling in `max_by`/`min_by`/`distinct_values`. Group `crates/src/collections/tests/aggregate_robustness/`. Update chapters 7 and 13.",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "designIds": [
+            "D-SEMANTICS"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t36"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/aggregation/cache_aggregation_ext.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/aggregation/apply_list_std_dev_changes.rs"
+            }
+          ]
+        },
+        {
+          "id": "t37-lifecycle-semantics",
+          "title": "Lifecycle edge cases",
+          "descriptionMarkdown": "List `dispose_many` same-item skip and additive list `dispose_many_by` (`lifecycle/list.rs`); emit `collect_update_stats` outside its lock (`diagnostics.rs`); subscribe `true_for_*` children before evaluating (`true_for/`); coalesce synchronous child emissions at startup and on same-children parent updates in `filter_on_observable` and merge-many (`lifecycle/`). Group `crates/src/collections/tests/lifecycle_semantics/` (requires the `diagnostics` feature, which the check enables).",
+          "criterionIds": [
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "designIds": [
+            "D-SEMANTICS"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t37"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/diagnostics.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/true_for/cache_true_for_ext.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/lifecycle/list.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s12-performance",
+      "title": "Source and operator costs",
+      "dependsOn": [
+        "s11-semantics"
+      ],
+      "tasks": [
+        {
+          "id": "t38-source-bookkeeping-costs",
+          "title": "Source bookkeeping and clone costs",
+          "descriptionMarkdown": "Per D-PERF in `cache/source_cache_impl.rs`, `cache/cache_notification_suspension.rs`, `list/list_state.rs` and `keyed_delivery.rs`: maintain or lazily rebuild key positions, remove/move/refresh/diff/Clear without per-key order scans, share one `Arc` envelope per batch, skip keyed-hub partitioning without watchers, and create the rxRust subject lazily on the first `changes_rx()` call. Group `crates/src/collections/tests/source_bookkeeping_costs/` with a tallying key type (equality/hash counters) and a cloning probe.",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-1.2"
+          ],
+          "designIds": [
+            "D-PERF"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t38"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/cache/source_cache_impl.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/keyed_delivery.rs"
+            }
+          ]
+        },
+        {
+          "id": "t39-operator-bookkeeping-costs",
+          "title": "Operator order mirrors, flip diffs and resort moves",
+          "descriptionMarkdown": "Replace `Vec::position` order mirrors with key→position maps or append fast paths in `operators/select_unique_cache_changes.rs` helpers, `apply_list_changes.rs`, `cache_dynamic_filter_state*.rs`, lifecycle tracked caches and expiration ordering; make dynamic refilters emit inclusion-flip diffs; make list-shaped sorts emit moves on comparer change/resort (`list_sort_state.rs`, `cache_sort_state_impl.rs`). Group `crates/src/collections/tests/operator_bookkeeping_costs/` with tallying-key counts, the `[1000,2000)→[1001,2001)` flip test and the reverse-5 moves test.",
+          "criterionIds": [
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-2.3"
+          ],
+          "designIds": [
+            "D-PERF"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t39"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/select_unique_cache_changes.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/operators/cache_dynamic_filter_state.rs"
+            }
+          ]
+        },
+        {
+          "id": "t40-relation-operator-costs",
+          "title": "Tree, join and group costs; join-many and tree leaks; benchmarks",
+          "descriptionMarkdown": "Align tree children once per parent per batch with position maps (`tree/stream_ext.rs`), use sets/maps instead of rebuilt orders and `iter().any` in joins (`join/*`), index group membership in live cache grouping, free join-many groups on left removal (`join/affected_key.rs`), break tree parent cycles on disposal (`tree/node.rs`). Add Criterion benches `crates/benches/joins.rs`, `tree.rs` and `sort_and_page.rs` registered in `crates/Cargo.toml`. Group `crates/src/collections/tests/relation_operator_costs/` with counter-based scaling checks and leak probes.",
+          "criterionIds": [
+            "PRF-3.1",
+            "PRF-3.2",
+            "PRF-3.3"
+          ],
+          "designIds": [
+            "D-PERF"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t40",
+            "c-t40-benches"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/tree/stream_ext.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/collections/join/mod.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/benches/keyed_sort.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s13-release-readiness",
+      "title": "API hygiene, rustdoc, CI, consumer scenarios, docs and changelog",
+      "dependsOn": [
+        "s12-performance"
+      ],
+      "tasks": [
+        {
+          "id": "t41-api-hygiene",
+          "title": "must_use, Debug, non_exhaustive errors and small API gaps",
+          "descriptionMarkdown": "Apply HYG-1.1-1.3 across `crates/src/` (attributes, `Debug` impls that snapshot under short lock holds, `#[non_exhaustive]` on the three error enums only, `CompositeSubscription` methods, `DisposeWith` impls, `DisposeBag::clear/len`, `EventStream: Clone`, `EventBus::emit` without `T: Clone`, `Signal: Default`), and fix any call sites in tests, benches, doc examples and `doc-examples` that the new `#[must_use]` flags. Add the integration test `crates/tests/api_hygiene.rs` asserting `Debug` output, the new methods and `#[non_exhaustive]` matching with a wildcard.",
+          "criterionIds": [
+            "HYG-1.1",
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "designIds": [
+            "D-RELEASE"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t41",
+            "c-t41-clippy"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/primitives/subscription.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/lib.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/tests/public_api.rs"
+            }
+          ]
+        },
+        {
+          "id": "t42-rustdoc-coverage",
+          "title": "Full rustdoc and docs.rs metadata",
+          "descriptionMarkdown": "Write rustdoc for every public item (modules, types, traits, methods, fields, variants), a crate-root overview linking the guide in `docs/`, set `missing_docs = \"warn\"` for the crate, and add `documentation` and `[package.metadata.docs.rs] all-features = true` to `crates/Cargo.toml`. Prefer short runnable examples on central APIs (they run as doctests).",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "designIds": [
+            "D-RELEASE"
+          ],
+          "dependsOn": [
+            "t41-api-hygiene"
+          ],
+          "checkIds": [
+            "c-t42"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/src/lib.rs"
+            },
+            {
+              "repositoryId": "reactive",
+              "path": "crates/Cargo.toml"
+            }
+          ]
+        },
+        {
+          "id": "t43-ci-workflows",
+          "title": "MSRV, wasm test and macOS CI jobs",
+          "descriptionMarkdown": "Extend `.github/workflows/ci.yml` with an MSRV job (Rust 1.95: check and test `rayx_reactive`), a wasm job that installs `wasm-bindgen-cli` and runs the wasm-annotated tests on `wasm32-unknown-unknown` (configure `CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner` with Node), and a macOS test job. Locally verify the MSRV build; the green CI run is a manual check.",
+          "criterionIds": [
+            "CI-1.1",
+            "CI-1.2"
+          ],
+          "designIds": [
+            "D-RELEASE"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t43-msrv"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": ".github/workflows/ci.yml"
+            }
+          ]
+        },
+        {
+          "id": "t44-consumer-scenarios",
+          "title": "Consumer scenarios and collections public-API test",
+          "descriptionMarkdown": "Add `crates/tests/consumer_scenarios.rs` implementing SCN-1.1-1.4 through the public API only (no consumer repository): keyed virtualized list binding with a worker writer and a channel-marshalled UI model, tree view binding with expansion state, foreground observers under worker writes, bounded feed, form validation driving a command, and property-grid style aggregate mirrors. Add `crates/tests/collections_public_api.rs` exercising every collection extension trait and observable wrapper through `rayx_reactive::collections::prelude`.",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4",
+            "SCN-1.5"
+          ],
+          "designIds": [
+            "D-RELEASE"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "c-t44",
+            "c-t44-api"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "crates/tests/public_api.rs"
+            }
+          ]
+        },
+        {
+          "id": "t45-docs-and-changelog",
+          "title": "Docs reflect final behavior; changelog with migration notes",
+          "descriptionMarkdown": "Review README and every `docs/*.md` chapter against the final behavior (delivery ordering, contention errors and policies, scheduler, interop without adapters, window responses, index contract, async cancellation, aggregates), remove stale limitation notes and update example assertions; write `CHANGELOG.md` with an \"Unreleased\" section listing every behavior change, breaking change (new error variants, `#[non_exhaustive]`, generic stream errors, `#[must_use]`, updated pinned tests) and new API with migration notes; update `.claude/skills/rayx-reactive/` references for the new APIs.",
+          "criterionIds": [
+            "REL-1.1",
+            "REL-1.2"
+          ],
+          "designIds": [
+            "D-RELEASE"
+          ],
+          "dependsOn": [
+            "t41-api-hygiene",
+            "t42-rustdoc-coverage",
+            "t44-consumer-scenarios"
+          ],
+          "checkIds": [
+            "c-t45"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "reactive",
+              "path": "AGENTS.md"
+            }
+          ]
+        }
+      ],
+      "memoryScopes": [
+        "repository"
+      ]
+    }
+  ]
+}
