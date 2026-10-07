@@ -3,6 +3,7 @@
 mod contract;
 mod support;
 
+mod aggregate_robustness;
 #[cfg(feature = "diagnostics")]
 mod aggregation_diagnostics_diff;
 mod async_dispose_hardening;

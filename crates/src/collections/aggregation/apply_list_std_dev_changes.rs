@@ -1,64 +1,3 @@
-fn apply_list_std_dev_changes<T>(
-    state: &mut ListStdDevState,
-    changes: &[ListChange<T>],
-    selector: &dyn Fn(&T) -> f64,
-) where
-    T: Clone,
-{
-    for change in changes {
-        match change {
-            ListChange::Add { index, item } => {
-                let value = selector(item);
-                let index = (*index).min(state.values.len());
-                state.values.insert(index, value);
-                add_std_dev_value(&mut state.sum, &mut state.sum_squares, value);
-            }
-            ListChange::AddRange { index, items } => {
-                let insert_at = (*index).min(state.values.len());
-                let new_values = items.iter().map(selector).collect::<Vec<_>>();
-                for value in &new_values {
-                    add_std_dev_value(&mut state.sum, &mut state.sum_squares, *value);
-                }
-                state.values.splice(insert_at..insert_at, new_values);
-            }
-            ListChange::Replace { index, new, .. } | ListChange::Refresh { index, item: new } => {
-                if let Some(slot) = state.values.get_mut(*index) {
-                    remove_std_dev_value(&mut state.sum, &mut state.sum_squares, *slot);
-                    let value = selector(new);
-                    *slot = value;
-                    add_std_dev_value(&mut state.sum, &mut state.sum_squares, value);
-                }
-            }
-            ListChange::Move { from, to, .. } => {
-                if *from < state.values.len() && *to < state.values.len() {
-                    let value = state.values.remove(*from);
-                    state.values.insert(*to, value);
-                }
-            }
-            ListChange::Remove { index, .. } => {
-                if *index < state.values.len() {
-                    let value = state.values.remove(*index);
-                    remove_std_dev_value(&mut state.sum, &mut state.sum_squares, value);
-                }
-            }
-            ListChange::RemoveRange { index, old } => {
-                if *index < state.values.len() {
-                    let end = index.saturating_add(old.len()).min(state.values.len());
-                    let removed = state.values.drain(*index..end).collect::<Vec<_>>();
-                    for value in removed {
-                        remove_std_dev_value(&mut state.sum, &mut state.sum_squares, value);
-                    }
-                }
-            }
-            ListChange::Clear { .. } => {
-                state.values.clear();
-                state.sum = 0.0;
-                state.sum_squares = 0.0;
-            }
-        }
-    }
-}
-
 fn update_cache_snapshot<K, T>(
     state: &Arc<Mutex<CacheSnapshotState<K, T>>>,
     batch: &ChangeSet<CacheChange<K, T>>,
@@ -113,7 +52,7 @@ fn update_cache_sum<K, T, N>(
 where
     K: Clone + Eq + Hash,
     T: Clone,
-    N: Copy + Default + Add<Output = N> + Sub<Output = N>,
+    N: Copy + Default + Add<Output = N> + Sub<Output = N> + 'static,
 {
     if changes.is_empty() {
         return None;
@@ -124,7 +63,7 @@ where
     };
     let CacheSumState { values, total } = &mut *state;
     apply_cache_numeric_changes(values, total, changes, selector);
-    Some(state.total)
+    Some(state.total.value())
 }
 
 fn update_cache_average<K, T>(
@@ -143,9 +82,8 @@ where
     let Ok(mut state) = state.lock() else {
         return None;
     };
-    let mut sum = state.sum;
-    apply_cache_numeric_changes(&mut state.values, &mut sum, changes, selector);
-    state.sum = sum;
+    let CacheAverageState { values, sum, .. } = &mut *state;
+    apply_cache_numeric_changes(values, sum, changes, selector);
     Some(state.current())
 }
 
@@ -165,119 +103,65 @@ where
     let Ok(mut state) = state.lock() else {
         return None;
     };
-    apply_cache_std_dev_changes(&mut state, changes, selector);
+    let CacheStdDevState { values, totals, .. } = &mut *state;
+    apply_cache_numeric_changes(values, totals, changes, selector);
     Some(state.current())
 }
 
+/// Applies cache changes to the selected values and their running total, recomputing the
+/// total from the values when a removal asks for it.
 fn apply_cache_numeric_changes<K, T, N>(
     values: &mut HashMap<K, N>,
-    total: &mut N,
+    total: &mut impl NumericTotal<N>,
     changes: &[CacheChange<K, T>],
     selector: &dyn Fn(&T) -> N,
 ) where
     K: Clone + Eq + Hash,
     T: Clone,
-    N: Copy + Default + Add<Output = N> + Sub<Output = N>,
+    N: Copy,
 {
+    let mut recompute = false;
     for change in changes {
         match change {
             CacheChange::Add { key, current, .. } => {
                 if let Some(previous) = values.remove(key) {
-                    *total = *total - previous;
+                    recompute |= total.remove(previous);
                 }
                 let value = selector(current);
                 values.insert(key.clone(), value);
-                *total = *total + value;
+                total.add(value);
             }
             CacheChange::Update { key, current, .. }
             | CacheChange::Refresh { key, current, .. }
             | CacheChange::Move { key, current, .. } => {
                 if let Some(previous) = values.remove(key) {
-                    *total = *total - previous;
+                    recompute |= total.remove(previous);
                     let value = selector(current);
                     values.insert(key.clone(), value);
-                    *total = *total + value;
+                    total.add(value);
                 }
             }
             CacheChange::Remove { key, .. } => {
                 if let Some(previous) = values.remove(key) {
-                    *total = *total - previous;
+                    recompute |= total.remove(previous);
                 }
             }
             CacheChange::Clear { previous } => {
                 if previous.is_empty() {
                     values.clear();
-                    *total = N::default();
+                    total.reset();
+                    recompute = false;
                 } else {
                     for (key, _) in previous {
                         if let Some(previous) = values.remove(key) {
-                            *total = *total - previous;
+                            recompute |= total.remove(previous);
                         }
                     }
                 }
             }
         }
     }
-}
-
-fn apply_cache_std_dev_changes<K, T>(
-    state: &mut CacheStdDevState<K>,
-    changes: &[CacheChange<K, T>],
-    selector: &dyn Fn(&T) -> f64,
-) where
-    K: Clone + Eq + Hash,
-    T: Clone,
-{
-    for change in changes {
-        match change {
-            CacheChange::Add { key, current, .. } => {
-                if let Some(previous) = state.values.remove(key) {
-                    remove_std_dev_value(&mut state.sum, &mut state.sum_squares, previous);
-                }
-                let value = selector(current);
-                state.values.insert(key.clone(), value);
-                add_std_dev_value(&mut state.sum, &mut state.sum_squares, value);
-            }
-            CacheChange::Update { key, current, .. }
-            | CacheChange::Refresh { key, current, .. }
-            | CacheChange::Move { key, current, .. } => {
-                if let Some(previous) = state.values.remove(key) {
-                    remove_std_dev_value(&mut state.sum, &mut state.sum_squares, previous);
-                    let value = selector(current);
-                    state.values.insert(key.clone(), value);
-                    add_std_dev_value(&mut state.sum, &mut state.sum_squares, value);
-                }
-            }
-            CacheChange::Remove { key, .. } => {
-                if let Some(previous) = state.values.remove(key) {
-                    remove_std_dev_value(&mut state.sum, &mut state.sum_squares, previous);
-                }
-            }
-            CacheChange::Clear { previous } => {
-                if previous.is_empty() {
-                    state.values.clear();
-                    state.sum = 0.0;
-                    state.sum_squares = 0.0;
-                } else {
-                    for (key, _) in previous {
-                        if let Some(previous) = state.values.remove(key) {
-                            remove_std_dev_value(&mut state.sum, &mut state.sum_squares, previous);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn add_std_dev_value(sum: &mut f64, sum_squares: &mut f64, value: f64) {
-    *sum += value;
-    *sum_squares += value * value;
-}
-
-fn remove_std_dev_value(sum: &mut f64, sum_squares: &mut f64, value: f64) {
-    *sum -= value;
-    *sum_squares -= value * value;
+    recompute_total(total, recompute, values.values().copied());
 }
 
 fn std_dev_current(count: usize, sum: f64, sum_squares: f64, fallback_value: f64) -> f64 {

@@ -5,6 +5,7 @@ use std::ops::{Add, Sub};
 use std::sync::{Arc, Mutex};
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::operators::apply_list_changes;
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
@@ -253,22 +254,14 @@ impl<T> ListAggregationExt<T> for ChangeStream<ListChange<T>> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        let counts = self.count();
-        ValueStream::new(move |subscriber| {
-            subscriber(&true);
-            counts.subscribe(move |count| subscriber(&(*count == 0)))
-        })
+        emptiness(self.count(), |count| count == 0)
     }
 
     fn is_not_empty(&self) -> ValueStream<bool>
     where
         T: Clone + Send + Sync + 'static,
     {
-        let counts = self.count();
-        ValueStream::new(move |subscriber| {
-            subscriber(&false);
-            counts.subscribe(move |count| subscriber(&(*count > 0)))
-        })
+        emptiness(self.count(), |count| count > 0)
     }
 
     fn sum_by<N>(&self, selector: impl Fn(&T) -> N + Send + Sync + 'static) -> ValueStream<N>
@@ -366,4 +359,3 @@ impl<T> ListAggregationExt<T> for ChangeStream<ListChange<T>> {
         distinct_values(values)
     }
 }
-

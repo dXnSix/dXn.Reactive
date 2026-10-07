@@ -339,11 +339,7 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let counts = CacheAggregationExt::count(self);
-        ValueStream::new(move |subscriber| {
-            subscriber(&true);
-            counts.subscribe(move |count| subscriber(&(*count == 0)))
-        })
+        emptiness(CacheAggregationExt::count(self), |count| count == 0)
     }
 
     fn is_not_empty(&self) -> ValueStream<bool>
@@ -351,11 +347,7 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let counts = CacheAggregationExt::count(self);
-        ValueStream::new(move |subscriber| {
-            subscriber(&false);
-            counts.subscribe(move |count| subscriber(&(*count > 0)))
-        })
+        emptiness(CacheAggregationExt::count(self), |count| count > 0)
     }
 
     fn sum_by<N>(&self, selector: impl Fn(&T) -> N + Send + Sync + 'static) -> ValueStream<N>
