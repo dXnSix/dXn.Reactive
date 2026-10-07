@@ -11,6 +11,7 @@ mod group_and_combiner_indexes;
 mod grouping_tree_switching;
 mod index_contract_harness;
 mod joins;
+mod key_bridge_indexes;
 mod keyed_sort_positions;
 mod lifecycle_observables;
 mod limits_expiration_streams;

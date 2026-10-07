@@ -190,8 +190,13 @@ fn apply_cache_changes_to_ordered_state<K, T>(
                 current,
                 current_index,
             } => {
-                items.insert(key.clone(), current.clone());
-                insert_cache_key(order, key.clone(), *current_index);
+                let is_new = items.insert(key.clone(), current.clone()).is_none();
+                // A new key at the end (the common load) is appended without scanning.
+                if is_new && current_index.is_none_or(|index| index >= order.len()) {
+                    order.push(key.clone());
+                } else {
+                    insert_cache_key(order, key.clone(), *current_index);
+                }
             }
             CacheChange::Update {
                 key,
@@ -247,6 +252,8 @@ fn apply_cache_changes_to_ordered_state<K, T>(
     }
 }
 
+/// Keys list changes. With unique keys the list's positions are the keyed output's
+/// positions, so every change carries them and applies in order (the index contract).
 fn add_key_changes<K, T>(
     changes: &[ListChange<T>],
     key_selector: &dyn Fn(&T) -> K,
@@ -258,19 +265,24 @@ where
     let mut keyed = Vec::new();
     for change in changes {
         match change {
-            ListChange::Add { item, .. } => keyed.push(CacheChange::Add {
+            ListChange::Add { index, item } => keyed.push(CacheChange::Add {
                 key: key_selector(item),
                 current: item.clone(),
-                current_index: None,
+                current_index: Some(*index),
             }),
-            ListChange::AddRange { items, .. } => {
-                keyed.extend(items.iter().map(|item| CacheChange::Add {
-                    key: key_selector(item),
-                    current: item.clone(),
-                    current_index: None,
-                }));
+            ListChange::AddRange { index, items } => {
+                keyed.extend(
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(offset, item)| CacheChange::Add {
+                            key: key_selector(item),
+                            current: item.clone(),
+                            current_index: Some(index + offset),
+                        }),
+                );
             }
-            ListChange::Replace { old, new, .. } => {
+            ListChange::Replace { index, old, new } => {
                 let previous_key = key_selector(old);
                 let current_key = key_selector(new);
                 if previous_key == current_key {
@@ -278,19 +290,19 @@ where
                         key: current_key,
                         current: new.clone(),
                         previous: old.clone(),
-                        current_index: None,
-                        previous_index: None,
+                        current_index: Some(*index),
+                        previous_index: Some(*index),
                     });
                 } else {
                     keyed.push(CacheChange::Remove {
                         key: previous_key,
                         previous: old.clone(),
-                        previous_index: None,
+                        previous_index: Some(*index),
                     });
                     keyed.push(CacheChange::Add {
                         key: current_key,
                         current: new.clone(),
-                        current_index: None,
+                        current_index: Some(*index),
                     });
                 }
             }
@@ -300,22 +312,33 @@ where
                 current_index: *to,
                 previous_index: *from,
             }),
-            ListChange::Remove { old, .. } => keyed.push(CacheChange::Remove {
+            ListChange::Remove { index, old } => keyed.push(CacheChange::Remove {
                 key: key_selector(old),
                 previous: old.clone(),
-                previous_index: None,
+                previous_index: Some(*index),
             }),
-            ListChange::RemoveRange { old, .. } | ListChange::Clear { old } => {
+            // Each removal of a range leaves the next item at the same position.
+            ListChange::RemoveRange { index, old } => {
                 keyed.extend(old.iter().map(|item| CacheChange::Remove {
                     key: key_selector(item),
                     previous: item.clone(),
-                    previous_index: None,
+                    previous_index: Some(*index),
                 }));
             }
-            ListChange::Refresh { item, .. } => keyed.push(CacheChange::Refresh {
+            ListChange::Clear { old } => {
+                if !old.is_empty() {
+                    keyed.push(CacheChange::Clear {
+                        previous: old
+                            .iter()
+                            .map(|item| (key_selector(item), item.clone()))
+                            .collect(),
+                    });
+                }
+            }
+            ListChange::Refresh { index, item } => keyed.push(CacheChange::Refresh {
                 key: key_selector(item),
                 current: item.clone(),
-                current_index: None,
+                current_index: Some(*index),
             }),
         }
     }
@@ -338,46 +361,117 @@ impl<K, T> Default for CacheRemoveKeyState<K, T> {
 
 /// Where a new key goes in `working` so the keys keep `target` order: before the first key
 /// that comes after it in `target` (keys `target` does not list are skipped).
-fn provisional_position<K: Eq + Hash>(working: &[K], ranks: &HashMap<&K, usize>, key: &K) -> usize {
+fn provisional_position<K: Eq + Hash>(
+    working: &[K],
+    ranks: &HashMap<&K, usize>,
+    key: &K,
+) -> usize {
     let Some(rank) = ranks.get(key).copied() else {
         return working.len();
     };
+    // A key ranked after the last one (the common append) needs no scan.
+    if working
+        .last()
+        .is_none_or(|last| ranks.get(last).is_some_and(|other| *other < rank))
+    {
+        return working.len();
+    }
     working
         .iter()
         .position(|existing| ranks.get(existing).is_some_and(|other| *other > rank))
         .unwrap_or(working.len())
 }
 
-/// Moves the keys of `working` into `target` order (keys `target` does not list stay at the
-/// end), emitting a `Move` for each displaced key that `item` knows.
+/// Moves the keys of `working` into `target` order with as few moves as possible, emitting a
+/// `Move` for each moved key that `item` knows.
 fn moves_into_order<K, T>(
     working: &mut Vec<K>,
     target: &[K],
     item: impl Fn(&K) -> Option<T>,
     changes: &mut Vec<CacheChange<K, T>>,
 ) where
-    K: Clone + Eq,
+    K: Clone + Eq + Hash,
 {
-    let target = target
-        .iter()
-        .filter(|key| working.contains(key))
-        .collect::<Vec<_>>();
-    for (index, key) in target.into_iter().enumerate() {
-        if working.get(index) == Some(key) {
-            continue;
-        }
-        let Some(from) = working.iter().position(|existing| existing == key) else {
-            continue;
-        };
-        let moved = working.remove(from);
-        working.insert(index, moved);
-        if let Some(current) = item(key) {
+    for (key, from, to) in minimal_moves(working, target) {
+        if let Some(current) = item(&key) {
             changes.push(CacheChange::Move {
-                key: key.clone(),
+                key,
                 current,
-                current_index: index,
+                current_index: to,
                 previous_index: from,
             });
         }
     }
+}
+
+/// Reorders `working` (whose keys `target` all lists) into `target` order and returns the
+/// moves as `(key, from, to)` in application order. The longest run of keys already in target
+/// order stays in place, so only the keys whose relative order changed move: moving one key of
+/// many is one move, not a move per shifted key.
+pub(crate) fn minimal_moves<K>(working: &mut Vec<K>, target: &[K]) -> Vec<(K, usize, usize)>
+where
+    K: Clone + Eq + Hash,
+{
+    // Most batches leave the order alone: one comparison, no bookkeeping.
+    if working.as_slice() == target {
+        return Vec::new();
+    }
+    let ranks = target
+        .iter()
+        .enumerate()
+        .map(|(rank, key)| (key, rank))
+        .collect::<HashMap<_, _>>();
+    let sequence = working
+        .iter()
+        .filter_map(|key| ranks.get(key).map(|rank| (*rank, key)))
+        .collect::<Vec<_>>();
+    // Longest increasing subsequence of the ranks (patience sorting), kept in place.
+    let mut tails = Vec::<usize>::new();
+    let mut previous = vec![usize::MAX; sequence.len()];
+    for (index, (rank, _)) in sequence.iter().enumerate() {
+        let slot = tails.partition_point(|tail| sequence[*tail].0 < *rank);
+        if slot > 0 {
+            previous[index] = tails[slot - 1];
+        }
+        if slot == tails.len() {
+            tails.push(index);
+        } else {
+            tails[slot] = index;
+        }
+    }
+    let mut kept = HashSet::new();
+    let mut cursor = tails.last().copied().unwrap_or(usize::MAX);
+    while cursor != usize::MAX {
+        kept.insert(sequence[cursor].1.clone());
+        cursor = previous[cursor];
+    }
+
+    let present = working.iter().cloned().collect::<HashSet<_>>();
+    let ordered = target
+        .iter()
+        .filter(|key| present.contains(*key))
+        .collect::<Vec<_>>();
+    let mut moves = Vec::new();
+    for (index, key) in ordered.iter().enumerate() {
+        if kept.contains(*key) {
+            continue;
+        }
+        let Some(from) = working.iter().position(|existing| existing == *key) else {
+            continue;
+        };
+        let moved = working.remove(from);
+        // Right after its predecessor in target order, which is already in place.
+        let to = match index.checked_sub(1) {
+            Some(before) => working
+                .iter()
+                .position(|existing| existing == ordered[before])
+                .map_or(0, |position| position + 1),
+            None => 0,
+        };
+        working.insert(to, moved);
+        if from != to {
+            moves.push(((*key).clone(), from, to));
+        }
+    }
+    moves
 }

@@ -255,18 +255,24 @@ where
         key_selector: &dyn Fn(&T) -> K,
         are_items_equal: &dyn Fn(&T, &T) -> bool,
     ) -> Option<ChangeSet<CacheChange<K, T>>> {
+        // Duplicate keys: the last occurrence's item at the first occurrence's position (as
+        // `SourceCache::edit_diff`). The changes apply in order (the index contract):
+        // removals, then each key placed at its target position in snapshot order.
         let (next_items, next_order) = keyed_snapshot(items, key_selector);
         let mut state_items = HashMap::<K, T>::new();
         let mut changes = Vec::new();
+        let mut working = self.order.clone();
 
-        for (previous_index, key) in self.order.iter().enumerate() {
+        for key in self.order.iter().rev() {
             if !next_items.contains_key(key)
                 && let Some(previous) = self.items.get(key)
+                && let Some(index) = working.iter().position(|existing| existing == key)
             {
+                let _ = working.remove(index);
                 changes.push(CacheChange::Remove {
                     key: key.clone(),
                     previous: previous.clone(),
-                    previous_index: Some(previous_index),
+                    previous_index: Some(index),
                 });
             }
         }
@@ -275,39 +281,39 @@ where
             let Some(current) = next_items.get(key) else {
                 continue;
             };
-            match self.items.get(key) {
-                Some(previous) if are_items_equal(previous, current) => {
-                    state_items.insert(key.clone(), previous.clone());
-                    if let Some(previous_index) =
-                        self.order.iter().position(|existing| existing == key)
-                        && previous_index != current_index
-                    {
-                        changes.push(CacheChange::Move {
-                            key: key.clone(),
-                            current: previous.clone(),
-                            current_index,
-                            previous_index,
-                        });
-                    }
-                }
-                Some(previous) => {
-                    state_items.insert(key.clone(), current.clone());
-                    changes.push(CacheChange::Update {
-                        key: key.clone(),
-                        current: current.clone(),
-                        previous: previous.clone(),
-                        current_index: Some(current_index),
-                        previous_index: self.order.iter().position(|existing| existing == key),
-                    });
-                }
-                None => {
-                    state_items.insert(key.clone(), current.clone());
-                    changes.push(CacheChange::Add {
-                        key: key.clone(),
-                        current: current.clone(),
-                        current_index: Some(current_index),
-                    });
-                }
+            let Some(previous) = self.items.get(key) else {
+                working.insert(current_index.min(working.len()), key.clone());
+                state_items.insert(key.clone(), current.clone());
+                changes.push(CacheChange::Add {
+                    key: key.clone(),
+                    current: current.clone(),
+                    current_index: Some(current_index),
+                });
+                continue;
+            };
+            if let Some(from) = working.iter().position(|existing| existing == key)
+                && from != current_index
+            {
+                let moved = working.remove(from);
+                working.insert(current_index.min(working.len()), moved);
+                changes.push(CacheChange::Move {
+                    key: key.clone(),
+                    current: previous.clone(),
+                    current_index,
+                    previous_index: from,
+                });
+            }
+            if are_items_equal(previous, current) {
+                state_items.insert(key.clone(), previous.clone());
+            } else {
+                state_items.insert(key.clone(), current.clone());
+                changes.push(CacheChange::Update {
+                    key: key.clone(),
+                    current: current.clone(),
+                    previous: previous.clone(),
+                    current_index: Some(current_index),
+                    previous_index: Some(current_index),
+                });
             }
         }
 

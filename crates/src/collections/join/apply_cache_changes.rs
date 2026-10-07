@@ -111,8 +111,8 @@ fn provisional_index<K: Eq + Hash>(
         .unwrap_or(result_order.len())
 }
 
-/// Moves the result's keys into `desired` order, emitting a `Move` per displaced key: after a
-/// batch's adds, updates and removals the join output follows its source order (IDX-4.3).
+/// Moves the result's keys into `desired` order with as few moves as possible: after a batch's
+/// adds, updates and removals the join output follows its source order (IDX-4.3).
 fn reorder_result<K, U>(
     result: &mut OrderedCache<K, U>,
     desired: &[K],
@@ -124,21 +124,16 @@ fn reorder_result<K, U>(
     let target = desired
         .iter()
         .filter(|key| result.items.contains_key(*key))
+        .cloned()
         .collect::<Vec<_>>();
-    for (index, key) in target.into_iter().enumerate() {
-        if result.order.get(index) == Some(key) {
-            continue;
-        }
-        let Some(from) = result.order.iter().position(|existing| existing == key) else {
-            continue;
-        };
-        let moved = result.order.remove(from);
-        result.order.insert(index, moved);
-        if let Some(item) = result.items.get(key) {
+    for (key, from, to) in
+        crate::collections::operators::minimal_moves(&mut result.order, &target)
+    {
+        if let Some(item) = result.items.get(&key) {
             changes.push(CacheChange::Move {
-                key: key.clone(),
                 current: item.clone(),
-                current_index: index,
+                key,
+                current_index: to,
                 previous_index: from,
             });
         }

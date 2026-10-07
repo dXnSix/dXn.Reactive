@@ -174,17 +174,12 @@ fn value_stream_snapshot_edit_diff_emits_keyed_cache_changes()
     assert_eq!(
         received[2].changes,
         vec![
+            // A swap is one move when the changes apply in order (the index contract).
             CacheChange::Move {
                 key: 3,
                 current: Row { id: 3, value: 30 },
                 current_index: 0,
                 previous_index: 1,
-            },
-            CacheChange::Move {
-                key: 2,
-                current: Row { id: 2, value: 21 },
-                current_index: 1,
-                previous_index: 0,
             },
         ]
     );
@@ -225,32 +220,28 @@ fn value_stream_snapshot_edit_diff_by_uses_custom_equality()
     assert_eq!(
         received[1].changes,
         vec![
+            // A swap is one move when the changes apply in order (the index contract).
             CacheChange::Move {
                 key: 2,
                 current: Row { id: 2, value: 20 },
                 current_index: 0,
                 previous_index: 1,
             },
-            CacheChange::Move {
-                key: 1,
-                current: Row { id: 1, value: 10 },
-                current_index: 1,
-                previous_index: 0,
-            },
         ]
     );
     assert_eq!(
         received[2].changes,
+        // Removed from the end, so each index is valid when the removals apply in order.
         vec![
-            CacheChange::Remove {
-                key: 2,
-                previous: Row { id: 2, value: 20 },
-                previous_index: Some(0),
-            },
             CacheChange::Remove {
                 key: 1,
                 previous: Row { id: 1, value: 10 },
                 previous_index: Some(1),
+            },
+            CacheChange::Remove {
+                key: 2,
+                previous: Row { id: 2, value: 20 },
+                previous_index: Some(0),
             },
         ]
     );
