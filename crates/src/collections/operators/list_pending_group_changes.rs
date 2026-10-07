@@ -373,13 +373,28 @@ fn remove_pending_list_group_add<T, G>(
 where
     G: Clone + Eq,
 {
-    let Some(index) = group_changes.iter().position(|change| match change {
-        ListChange::Add { item, .. } => item.key() == group_key.clone(),
-        _ => false,
-    }) else {
+    let Some((position, dropped)) =
+        group_changes
+            .iter()
+            .enumerate()
+            .find_map(|(position, change)| match change {
+                ListChange::Add { index, item } if item.key() == group_key.clone() => {
+                    Some((position, *index))
+                }
+                _ => None,
+            })
+    else {
         return false;
     };
-    let _ = group_changes.remove(index);
+    let _ = group_changes.remove(position);
+    // Later changes were indexed with the dropped group still in the output.
+    for change in group_changes.iter_mut().skip(position) {
+        if let ListChange::Add { index, .. } | ListChange::Remove { index, .. } = change
+            && *index > dropped
+        {
+            *index -= 1;
+        }
+    }
     true
 }
 

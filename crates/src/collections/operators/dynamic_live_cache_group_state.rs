@@ -200,13 +200,37 @@ fn remove_live_pending_group_add<K, T, G>(
 where
     G: Eq,
 {
-    let Some(index) = group_changes
-        .iter()
-        .position(|change| matches!(change, CacheChange::Add { key, .. } if key == group_key))
+    let Some((position, dropped)) =
+        group_changes
+            .iter()
+            .enumerate()
+            .find_map(|(position, change)| match change {
+                CacheChange::Add {
+                    key, current_index, ..
+                } if key == group_key => Some((position, *current_index)),
+                _ => None,
+            })
     else {
         return false;
     };
-    let _ = group_changes.remove(index);
+    let _ = group_changes.remove(position);
+    // Later changes were indexed with the dropped group still in the output.
+    if let Some(dropped) = dropped {
+        for change in group_changes.iter_mut().skip(position) {
+            if let CacheChange::Add {
+                current_index: Some(index),
+                ..
+            }
+            | CacheChange::Remove {
+                previous_index: Some(index),
+                ..
+            } = change
+                && *index > dropped
+            {
+                *index -= 1;
+            }
+        }
+    }
     true
 }
 
@@ -239,100 +263,6 @@ fn total_pages(total_count: usize, page_size: usize) -> usize {
         1
     } else {
         total_count.div_ceil(page_size)
-    }
-}
-
-fn child_map<ChildKey, Child, Children>(
-    children: Children,
-    child_key: &dyn Fn(&Child) -> ChildKey,
-) -> HashMap<ChildKey, Child>
-where
-    ChildKey: Eq + Hash,
-    Children: IntoIterator<Item = Child>,
-{
-    children
-        .into_iter()
-        .map(|child| (child_key(&child), child))
-        .collect()
-}
-
-fn diff_child_maps<ChildKey, Child>(
-    previous: &HashMap<ChildKey, Child>,
-    next: &HashMap<ChildKey, Child>,
-    changes: &mut Vec<CacheChange<ChildKey, Child>>,
-) where
-    ChildKey: Clone + Eq + Hash,
-    Child: Clone + PartialEq,
-{
-    for (key, previous_child) in previous {
-        if !next.contains_key(key) {
-            changes.push(CacheChange::Remove {
-                key: key.clone(),
-                previous: previous_child.clone(),
-                previous_index: None,
-            });
-        }
-    }
-
-    for (key, next_child) in next {
-        match previous.get(key) {
-            Some(previous_child) if previous_child == next_child => {}
-            Some(previous_child) => changes.push(CacheChange::Update {
-                key: key.clone(),
-                current: next_child.clone(),
-                previous: previous_child.clone(),
-                current_index: None,
-                previous_index: None,
-            }),
-            None => changes.push(CacheChange::Add {
-                key: key.clone(),
-                current: next_child.clone(),
-                current_index: None,
-            }),
-        }
-    }
-}
-
-fn refresh_child_maps<ChildKey, Child>(
-    previous: &HashMap<ChildKey, Child>,
-    next: &HashMap<ChildKey, Child>,
-    changes: &mut Vec<CacheChange<ChildKey, Child>>,
-) where
-    ChildKey: Clone + Eq + Hash,
-    Child: Clone + PartialEq,
-{
-    for (key, previous_child) in previous {
-        if !next.contains_key(key) {
-            changes.push(CacheChange::Remove {
-                key: key.clone(),
-                previous: previous_child.clone(),
-                previous_index: None,
-            });
-        }
-    }
-
-    for (key, next_child) in next {
-        match previous.get(key) {
-            Some(previous_child) if previous_child == next_child => {
-                changes.push(CacheChange::Refresh {
-                    key: key.clone(),
-                    current: next_child.clone(),
-                    current_index: None,
-                });
-            }
-            Some(previous_child) => changes.push(CacheChange::Update {
-                key: key.clone(),
-                current: next_child.clone(),
-                previous: previous_child.clone(),
-                current_index: None,
-                previous_index: None,
-            }),
-            None => changes.push(CacheChange::Add {
-                key: key.clone(),
-                current: next_child.clone(),
-                current_index: None,
-            }),
-        }
     }
 }
 

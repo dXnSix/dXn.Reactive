@@ -250,7 +250,21 @@ where
     }
 
     fn finalize_empty_groups(&mut self, group_changes: &mut Vec<ListGroupChange<T, G>>) {
-        let empty_groups = self.empty_groups.iter().cloned().collect::<Vec<_>>();
+        // Pending additions first (later removals are indexed without them), then by group
+        // order, so the removals are deterministic.
+        let positions = self
+            .group_order
+            .iter()
+            .enumerate()
+            .map(|(position, key)| (key.clone(), position))
+            .collect::<HashMap<_, _>>();
+        let mut empty_groups = self.empty_groups.iter().cloned().collect::<Vec<_>>();
+        empty_groups.sort_by_key(|key| {
+            let pending = group_changes
+                .iter()
+                .any(|change| matches!(change, ListChange::Add { item, .. } if item.key() == *key));
+            (!pending, positions.get(key).copied().unwrap_or(usize::MAX))
+        });
         for group_key in empty_groups {
             let Some(group) = self.groups.get(&group_key).cloned() else {
                 let _ = self.empty_groups.remove(&group_key);
@@ -324,4 +338,3 @@ impl<T, G> Default for ImmutableListGroupState<T, G> {
         }
     }
 }
-
