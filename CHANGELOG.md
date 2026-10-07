@@ -184,6 +184,56 @@ breaking changes below are listed with migration notes for consumers.
 - **Fixed:** `sort_and_page_*` / `sort_and_virtualize_*` run on the keyed sort's state, so they
   match `sort_keyed_*` plus the keyed window and load with O(n log n) comparisons.
 
+### Time
+
+- **Added:** `primitives::Scheduler` (`now`, `schedule(delay, task) -> ScheduledTask`, cancelled on
+  drop), `ThreadScheduler` (one lazily started timer thread per instance), `default_scheduler()`
+  (one shared instance) and `ManualScheduler` (a virtual clock for deterministic tests,
+  `advance_by`).
+- **Added:** `*_with_scheduler` variants of `batch`, `buffer_initial`,
+  `batch_if_with_timeout`/`buffer_if_with_timeout` and list and cache `auto_refresh_buffered`.
+  The existing methods run on `default_scheduler()` instead of spawning a thread per window or
+  timeout. Implementers of `ListLifecycleExt`/`CacheLifecycleExt` outside the crate (none are
+  expected) must add `auto_refresh_buffered_with_scheduler`.
+- **Fixed:** timer flushes of these operators and of `auto_refresh` are emitted in order with the
+  source batches and never concurrently with them, so buffered refresh indexes always resolve to
+  the refreshed item; `batch` arms its next window only after a flush was delivered.
+- **Fixed:** dropping a timed operator's subscription cancels its pending timer without waiting
+  (also from inside its own delivery), releases the buffered changes and the subscriber at once,
+  and nothing more is delivered on the dropping thread once the drop returns. A subscriber panic
+  caught by the caller no longer stops `batch` or `expire_after*`.
+- **Added:** `expire_after_with_scheduler` and `expire_after_with_polling_with_scheduler` on
+  `CacheExpireAfterExt`, `ListExpireAfterExt`, `SourceCacheExpireAfterExt` and
+  `SourceListExpireAfterExt`; `ChangeSetAdapterOptions::expire_after_with_scheduler`,
+  `expire_after_with_polling_with_scheduler` and `with_scheduler`. Every `expire_after*` runs on a
+  scheduler instead of a thread per subscription, and disposal no longer joins a timer thread.
+- **Breaking:** `ChangeSetAdapterOptions` has a new public field, `scheduler`. Code that builds it
+  with a struct literal adds `scheduler: None` (or `..Default::default()`); the constructors and
+  builders are unchanged. Implementers of the expiration traits outside the crate (none are
+  expected) add the two new methods.
+- **Fixed:** the polling variants (stream, source and adapter options) expire due items within one
+  polling interval; source changes no longer postpone the poll forever.
+- **Fixed (behavior change):** stream `expire_after` translates later source changes to its own
+  output: list indexes skip expired items, cache indexes are positions among unexpired keys, an
+  update (cache) or replacement (list) of an expired item adds it back, and its refreshes, moves
+  and removals are dropped.
+- **Fixed:** source `expire_after` takes due items inside its source edit, only from state that has
+  seen every committed batch (it waits otherwise, for example during `suspend_notifications`),
+  retries an edit that failed because the source was busy, and reports exactly the items the edit
+  removed; under a concurrent editor no item misses its expiry.
+- **Fixed:** repeated updates of the same items no longer grow the expiration queue: it holds one
+  entry per live item.
+- **Fixed (behavior change):** stream `limit_size_to` forwards `Refresh` and same-value `Update`
+  changes of the keys it holds (it dropped them), and maintains its state per change instead of
+  cloning and diffing the whole retained cache on every batch.
+- **Fixed:** source `limit_size_to` (lists and caches) picks the items to evict inside its source
+  edit, only from state that has seen every committed batch, so an item renewed while an earlier
+  batch is still being delivered is no longer evicted as the oldest. Eviction follows delivery:
+  while writers commit faster than batches are delivered, the source can exceed the limit until
+  the limiter has received them.
+- **Added:** `debounce`, `throttle` and `sample` on `ValueStream<T, E>` (`ReactiveValueStreamExt`),
+  each with a `*_with_scheduler` variant; disposal cancels their pending timers.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on

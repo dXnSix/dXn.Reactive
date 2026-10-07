@@ -67,7 +67,11 @@ Use `changes()`, or another stream that emits only on change, as above.
 `auto_refresh_buffered(selector, duration)` forwards normal source changes immediately, but
 collects child-triggered refreshes for `duration` and emits them as one batch. Use it for
 high-frequency per-item signals such as progress, live metrics or validation-on-keystroke.
-It runs a timer thread, so see [platform notes](16-concurrency-and-platforms.md#worker-threads-and-timers).
+Its timer runs on the default [scheduler](16-concurrency-and-platforms.md#schedulers);
+`auto_refresh_buffered_with_scheduler(selector, duration, scheduler)` takes another one. The
+buffered refreshes leave the operator in order with the source batches, one at a time, and each
+refresh index is the item's position when the refresh batch is delivered. Dropping the
+subscription cancels a pending flush without waiting for it.
 
 ## Filtering on per-item streams
 

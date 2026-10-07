@@ -203,9 +203,9 @@ it once with `as_observable_list` / `as_observable_cache`.
 `connect()` is race-free. It registers for live batches *before* taking the snapshot, buffers live
 batches until the snapshot has been delivered, and drops any buffered batch whose version is
 already covered by the snapshot. With a single writer thread you never miss a change and never see
-one twice, even when the write happens on another thread during the connect. Concurrent writers on
-several threads and connecting during `suspend_notifications` are current exceptions; see
-[Known issues](README.md#known-issues).
+one twice, even when the write happens on another thread during the connect. The same holds with
+concurrent writers on several threads (batches are delivered in commit order) and when connecting
+during `suspend_notifications`.
 
 ### Empty sources emit no snapshot
 

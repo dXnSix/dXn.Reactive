@@ -133,9 +133,10 @@ If your application runs on Tokio or another runtime, use that runtime's test ha
 
 ## Timers, worker threads and async operators
 
-`batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered`, `expire_after*`,
-`transform_async*`, `transform_many_async*` and `async_dispose_many*` deliver from other threads.
-Wait for the expected **state** with a deadline instead of sleeping for a fixed time:
+`transform_async*`, `transform_many_async*` and `async_dispose_many*` deliver from worker threads,
+and the timed operators (`batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered`,
+`expire_after*`) from the default scheduler's timer thread. Wait for the expected **state** with a
+deadline instead of sleeping for a fixed time:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -165,9 +166,34 @@ assert_eq!(doubled.lookup(&3)?, Some(6));
 ```
 
 Use a generous timeout (seconds, not milliseconds). It costs nothing when the condition holds
-early and prevents flaky failures on loaded CI machines. To test logic that sits *around* a timed
-operator, consider making the timing injectable, for example by using `batch_if` with a pause
-signal in tests instead of `batch(duration)`.
+early and prevents flaky failures on loaded CI machines.
+
+Timed operators need no waiting at all when the test owns the clock: pass a `ManualScheduler` to
+their `*_with_scheduler` variant and move time with `advance_by`, which runs the due timers on the
+test thread:
+
+```rust
+use rayx_reactive::collections::prelude::*;
+use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+let clock = ManualScheduler::new();
+let scheduler: Arc<dyn Scheduler> = Arc::new(clock.clone());
+let rows = SourceList::new(vec![1_u32, 2]);
+let batches = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&batches);
+let _subscription = rows
+    .connect()
+    .buffer_initial_with_scheduler(Duration::from_millis(50), scheduler)
+    .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.len()))?;
+
+rows.push(3)?;
+assert!(batches.lock().unwrap().is_empty()); // still inside the startup window
+clock.advance_by(Duration::from_millis(50));
+assert_eq!(*batches.lock().unwrap(), [2]); // the snapshot's `AddRange` plus the push
+assert_eq!(clock.pending(), 0);
+```
 
 ## Concurrency tests
 

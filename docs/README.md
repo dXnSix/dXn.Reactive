@@ -78,12 +78,3 @@ patterns that make the library effective in real applications.
   should handle poisoned locks deliberately.
 - "List" means `SourceList<T>` and `ChangeStream<ListChange<T>>`; "cache" means
   `SourceCache<K, T>` and `ChangeStream<CacheChange<K, T>>`.
-
-## Known issues
-
-A whole-codebase audit on 2026-10-06 found defects that are scheduled for repair in the AgentX epic
-`reactive-audit-remediation` (`.agentx/tasks/reactive-audit-remediation/`). Until it lands, keep
-these in mind:
-
-- **Expiration.** The `*_with_polling` expiration variants never expire items; stream-level
-  `expire_after` can desynchronize downstream after the first expiry.

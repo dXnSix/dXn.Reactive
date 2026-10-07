@@ -125,7 +125,7 @@ operator state away and re-delivers everything.
 When updates arrive faster than a view can render, coalesce them upstream of the binding:
 `buffer_initial` for the startup burst, `batch(frame_duration)` for continuous streams, and
 `batch_if(paused)` around drags, bulk imports and animations. Pick windows of a frame or longer;
-each timed window spawns a short-lived timer thread.
+each window is a timer task on the operator's scheduler and each flush a delivery.
 
 ### Filter noise early
 

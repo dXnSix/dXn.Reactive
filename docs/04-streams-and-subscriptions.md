@@ -91,6 +91,9 @@ keeps that error type.
 | `switch_map(\|v\| stream)` | Maps each value to an inner stream; only the latest inner stream stays subscribed. |
 | `share()` | One upstream subscription shared by every subscriber; the last one to leave disposes it, and a later subscriber reconnects (values of a released connection are ignored). A subscriber arriving while another thread connects waits for that connection. |
 | `share_replay()` | Like `share`, and a late subscriber first receives the latest value, then only newer values. |
+| `debounce(quiet)` | Emits a value once `quiet` has passed without a newer one: the last value of each burst. |
+| `throttle(window)` | Forwards a value, then drops the values that arrive less than `window` after it. |
+| `sample(period)` | At every `period` tick (counted from subscription), emits the latest value if one arrived since the previous tick. |
 
 Bring the operators other than `map`, `start_with`, `map_err` and `err_into` into scope with
 `rayx_reactive::prelude::*` or `rayx_reactive::ReactiveValueStreamExt`. Disposing a subscription
@@ -98,6 +101,13 @@ disposes everything the operator subscribed to, including inner streams. Values 
 delivered on the thread that produced them; `combine_latest` and `share_replay`, which order
 values from several sources, may deliver a value on the thread that is already delivering to that
 subscriber.
+
+The time-based operators (`debounce`, `throttle`, `sample`) run on a
+[scheduler](16-concurrency-and-platforms.md#schedulers): the plain methods use
+`default_scheduler()`, whose timer thread then delivers `debounce` and `sample` values, and
+`debounce_with_scheduler`, `throttle_with_scheduler` and `sample_with_scheduler` take an
+`Arc<dyn Scheduler>`, such as a `ManualScheduler` that makes them deterministic in tests.
+Disposing the subscription cancels a pending timer, and a zero duration forwards every value.
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -171,6 +181,34 @@ selected.set(1)?;
 titles[0].set("Draft v2")?; // no longer selected: ignored
 titles[1].set("Notes v2")?;
 assert_eq!(*shown.lock().unwrap(), ["Draft", "Notes", "Notes v2"]);
+```
+
+Search-as-you-type with `debounce`, here on a `ManualScheduler` that stands in for the clock:
+
+```rust
+use rayx_reactive::prelude::*;
+use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+let clock = ManualScheduler::new();
+let scheduler: Arc<dyn Scheduler> = Arc::new(clock.clone());
+let query = Signal::new(String::new());
+let searches = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&searches);
+let _search = query
+    .changes()
+    .map(|change| change.current.clone())
+    .debounce_with_scheduler(Duration::from_millis(300), scheduler)
+    .subscribe(move |text| sink.lock().unwrap().push(text.clone()))?;
+
+for typed in ["r", "ru", "rus", "rust"] {
+    query.set(typed.to_string())?;
+    clock.advance_by(Duration::from_millis(100)); // still typing
+}
+assert!(searches.lock().unwrap().is_empty());
+clock.advance_by(Duration::from_millis(200)); // 300ms after the last keystroke
+assert_eq!(*searches.lock().unwrap(), ["rust"]);
 ```
 
 ### Operators run per subscription

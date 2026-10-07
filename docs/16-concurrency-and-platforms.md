@@ -11,8 +11,9 @@ library behaves under contention and failure, and what each platform supports.
 |---|---|
 | `Signal::set` / `replace` / `update`, `EventBus::emit`, source edits | the thread that published, or the thread already draining that delivery queue (see below) |
 | `Signal::values()`, `connect()` initial emissions | the thread calling `subscribe` |
-| `batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered` flushes | a timer thread spawned by the operator |
-| `expire_after*` removals | the expiration timer thread |
+| `batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered` flushes | the [scheduler](#schedulers)'s timer: the default scheduler's single timer thread, or wherever your scheduler runs its tasks |
+| `expire_after*` removals | the [scheduler](#schedulers)'s timer, like the flushes above |
+| `debounce`, `sample` | the [scheduler](#schedulers)'s timer (`throttle` forwards on the source's thread) |
 | `transform_async*`, `transform_many_async*` | the operator's worker thread |
 | `async_dispose_many*` finalizers | the operator's worker thread |
 | `AsyncCommand::execute` | whatever executor polls the future |
@@ -214,14 +215,112 @@ These operators create OS threads:
 | `transform_async*` (lists and caches) | one worker per subscription |
 | `transform_many_async*`, `transform_many_*_async_stream*` | a thread per parent materialization |
 | `async_dispose_many*` | one worker per subscription |
-| `batch(window)`, `buffer_initial(duration)` | a short-lived timer thread per window |
-| `batch_if_with_timeout`, `buffer_if_with_timeout` | a timer thread per armed timeout |
-| `auto_refresh_buffered(…, duration)` | a timer thread per buffering window |
-| `expire_after*` (stream, source, and `ChangeSetAdapterOptions`) | a timer thread per subscription |
+| `batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered`, `expire_after*` (stream, source, and `ChangeSetAdapterOptions`) | none of their own: their timers run on a [scheduler](#schedulers) |
 
-Timer threads are cheap but not free. A `batch(Duration::from_millis(1))` over a stream that changes
-continuously spawns about a thousand short-lived threads per second; choose windows that match how
-often a consumer can actually use updates (one display frame is typical).
+Choose timer windows that match how often a consumer can actually use updates (one display frame
+is typical): every window is a timer task, and every flush is a delivery.
+
+### Schedulers
+
+Time-based operators tell time and wait through a `rayx_reactive::primitives::Scheduler`:
+`now()` returns monotonic time since the scheduler's origin, and `schedule(delay, task)` runs
+`task` once `delay` has elapsed, returning a `ScheduledTask` handle that cancels the task when
+dropped. Each timed operator has a `*_with_scheduler` variant; the plain methods use
+`default_scheduler()`.
+
+| Scheduler | Behavior |
+|---|---|
+| `ThreadScheduler` | runs every timer of the instance on one lazily started thread, waiting on a condition variable; the thread ends after the last handle to the instance is dropped |
+| `default_scheduler()` | one process-wide `ThreadScheduler`, shared by all operators without an explicit scheduler |
+| `ManualScheduler` | a virtual clock for tests: time stands still until `advance_by` moves it, running the due tasks on the calling thread in due-time order |
+
+Only `ThreadScheduler` spawns threads or reads the system clock. A scheduler of your own makes the
+timed operators usable where those are unavailable, such as the browser. This one runs timers from
+the application's frame loop:
+
+```rust
+use rayx_reactive::collections::prelude::*;
+use rayx_reactive::primitives::{ScheduledTask, ScheduledWork, Scheduler};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+/// Runs timers when the application's frame loop calls `tick` (for example from
+/// `requestAnimationFrame`, with the frame timestamp).
+#[derive(Default)]
+struct FrameScheduler {
+    state: Arc<Mutex<FrameState>>,
+}
+
+#[derive(Default)]
+struct FrameState {
+    now: Duration,
+    next_id: u64,
+    tasks: Vec<(u64, Duration, ScheduledWork)>,
+}
+
+impl FrameScheduler {
+    fn tick(&self, now: Duration) {
+        let due = {
+            let mut state = self.state.lock().unwrap();
+            state.now = now;
+            let (due, pending) = std::mem::take(&mut state.tasks)
+                .into_iter()
+                .partition::<Vec<_>, _>(|(_, at, _)| *at <= now);
+            state.tasks = pending;
+            due
+        };
+        // Tasks run without the lock held: they may schedule or cancel timers.
+        for (_, _, task) in due {
+            task();
+        }
+    }
+}
+
+impl Scheduler for FrameScheduler {
+    fn now(&self) -> Duration {
+        self.state.lock().unwrap().now
+    }
+
+    fn schedule(&self, delay: Duration, task: ScheduledWork) -> ScheduledTask {
+        let id = {
+            let mut state = self.state.lock().unwrap();
+            state.next_id += 1;
+            let (id, at) = (state.next_id, state.now + delay);
+            state.tasks.push((id, at, task));
+            id
+        };
+        let state = Arc::downgrade(&self.state);
+        ScheduledTask::new(move || {
+            let Some(state) = state.upgrade() else { return };
+            let removed = {
+                let mut state = state.lock().unwrap();
+                let position = state.tasks.iter().position(|(task_id, ..)| *task_id == id);
+                position.map(|position| state.tasks.remove(position))
+            };
+            drop(removed); // dropped after unlocking
+        })
+    }
+}
+
+let frames = Arc::new(FrameScheduler::default());
+let rows = SourceList::<u32>::default();
+let deliveries = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&deliveries);
+let _subscription = rows
+    .connect()
+    .batch_with_scheduler(Duration::from_millis(16), frames.clone())
+    .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.len()))?;
+
+rows.push(1)?;
+rows.push(2)?;
+frames.tick(Duration::from_millis(10));
+assert!(deliveries.lock().unwrap().is_empty());
+frames.tick(Duration::from_millis(20));
+assert_eq!(*deliveries.lock().unwrap(), [2]);
+```
+
+Cancelling a `ScheduledTask` must return promptly, without waiting for a task that is already
+running: operators cancel their timers during disposal, possibly from inside that very task.
 
 ### Async futures in operators
 
@@ -258,14 +357,18 @@ such as `wasm-bindgen-futures`), event buses, all synchronous collection operato
 combiners, trees, aggregation, lifecycle operators other than the ones below, materialization,
 `switch`, `ref_count`, snapshot diffing, size limits).
 
-**Do not use:** `batch`, `buffer_initial`, `batch_if_with_timeout` / `buffer_if_with_timeout`,
-`auto_refresh_buffered`, every `expire_after*` (including `ChangeSetAdapterOptions::expire_after*`),
-`transform_async*`, `transform_many_async*`, `async_dispose_many*`, and `collect_update_stats`
-(it timestamps with `SystemTime`).
+**With your own [scheduler](#schedulers):** the `*_with_scheduler` variants of `batch`,
+`buffer_initial`, `batch_if_with_timeout` / `buffer_if_with_timeout`, `auto_refresh_buffered`,
+every `expire_after*` (for `ChangeSetAdapterOptions`, `.with_scheduler(…)`), and the `ValueStream`
+operators `debounce`, `throttle` and `sample`. Their plain variants use `default_scheduler()`, a
+`ThreadScheduler`, which needs threads.
 
-Equivalents on the web: drive batching from your frame loop with `batch_if` and a pause signal
-(`batch_if` without a timeout needs no timer), and run async work in your own futures, applying
-results to sources when they complete.
+**Do not use:** `transform_async*`, `transform_many_async*`, `async_dispose_many*`, and
+`collect_update_stats` (it timestamps with `SystemTime`).
+
+Equivalents on the web: drive batching from your frame loop, either through a frame-loop
+scheduler as above or with `batch_if` and a pause signal (`batch_if` without a timeout needs no
+timer), and run async work in your own futures, applying results to sources when they complete.
 
 ---
 

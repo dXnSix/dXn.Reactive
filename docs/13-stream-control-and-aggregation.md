@@ -29,9 +29,20 @@ batch is exactly equivalent to the original sequence.
 
 Timing notes:
 
-- `batch`, `buffer_initial` and the `*_with_timeout` variants flush from a timer thread, so their
-  output is delivered **on that thread**. They need OS threads (see
-  [platform notes](16-concurrency-and-platforms.md#worker-threads-and-timers)).
+- `batch`, `buffer_initial` and the `*_with_timeout` variants run their timers on a
+  [scheduler](16-concurrency-and-platforms.md#schedulers): the plain methods use
+  `default_scheduler()`, whose single timer thread then delivers the flushes. Each has a
+  `*_with_scheduler` variant taking an `Arc<dyn Scheduler>` (`batch_with_scheduler`,
+  `buffer_initial_with_scheduler`, `batch_if_with_timeout_with_scheduler`,
+  `buffer_if_with_timeout_with_scheduler`), for example a `ManualScheduler` in tests or your own
+  frame-loop scheduler on the web.
+- Timer flushes and source batches leave the operator in order, one at a time, never
+  concurrently. `batch` arms the next window only after a flush has been delivered, so batches
+  arriving during a slow delivery go into the next window.
+- Dropping the subscription cancels a pending timer without waiting for it (also from inside the
+  operator's own delivery) and releases the buffered changes and the subscriber. Once the drop
+  returns, nothing more is delivered on the dropping thread; a delivery already running on
+  another thread may still finish.
 - `batch(Duration::ZERO)` and `buffer_initial(Duration::ZERO)` behave like `not_empty()`.
 - `batch_count(n)` has **no time-based flush**: a tail of fewer than `n` changes stays buffered
   until more changes arrive. `batch_count(0)` and `batch_count(1)` pass batches through.
@@ -70,28 +81,35 @@ assert_eq!(*batches.lock().unwrap(), [3]);
 ### Time-based batching
 
 `batch(window)` coalesces bursts, for example a feed that pushes many small updates per frame,
-into at most one delivery per window:
+into at most one delivery per window. Here a `ManualScheduler` stands in for the clock:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
+use rayx_reactive::primitives::{ManualScheduler, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+let clock = ManualScheduler::new();
+let scheduler: Arc<dyn Scheduler> = Arc::new(clock.clone());
 let ticks = SourceCache::new(|tick: &(u32, u32)| tick.0);
 let deliveries = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&deliveries);
 let _subscription = ticks
     .connect()
-    .batch(Duration::from_millis(20))
+    .batch_with_scheduler(Duration::from_millis(20), scheduler)
     .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.len()))?;
 
 for n in 0..10 {
     ticks.add_or_update((n % 3, n))?;
 }
-std::thread::sleep(Duration::from_millis(250)); // let the window elapse
-
+clock.advance_by(Duration::from_millis(19));
+assert!(deliveries.lock().unwrap().is_empty()); // the window is still open
+clock.advance_by(Duration::from_millis(1));
 assert_eq!(*deliveries.lock().unwrap(), [10]); // ten changes, one delivery
 ```
+
+With `batch(Duration::from_millis(20))` the same window runs on the default scheduler's timer
+thread.
 
 `buffer_initial(duration)` applies the same idea only to the startup burst: the snapshot plus
 whatever arrives in the first `duration` is delivered once, and later batches pass straight

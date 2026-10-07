@@ -152,7 +152,8 @@ own private backing source:
 | `ChangeSetAdapterOptions::new()` | no bounds |
 | `ChangeSetAdapterOptions::limit_size_to(n)` / `.with_limit_size_to(n)` | keep at most `n` items, evicting the oldest (for caches, the least recently added or updated); **`n == 0` panics** |
 | `ChangeSetAdapterOptions::expire_after(selector)` / `.with_expire_after(selector)` | remove each item after the `Option<Duration>` its selector returns (`None` never expires) |
-| `ChangeSetAdapterOptions::expire_after_with_polling(selector, interval)` / `.with_polling_interval(interval)` | check expirations on a fixed interval instead of per-item timers |
+| `ChangeSetAdapterOptions::expire_after_with_polling(selector, interval)` / `.with_polling_interval(interval)` | check expirations every `interval` instead of at each due time |
+| `ChangeSetAdapterOptions::expire_after_with_scheduler(…)`, `…_with_polling_with_scheduler(…)` / `.with_scheduler(scheduler)` | run the expiration timer on `scheduler` (default: `default_scheduler()`) |
 
 The adapters subscribe their output **before** their input, so a stream that emits synchronously
 on subscription (like `Signal::values()`) is never lost. If you build such a bridge by hand, keep
@@ -269,6 +270,11 @@ assert_eq!(
 
 All three panic if `n == 0`; validate user-provided sizes first.
 
+The stream variant updates its state per change (an addition costs O(1) clones, however large the
+limit). It forwards refreshes and updates of the keys it holds, including updates to an equal
+value; an update of a key it evicted earlier adds that key back as the newest and evicts the
+oldest. Its indexes are positions in its own output.
+
 The source variants return a **cold** `ValueStream`. The limit is enforced only while it is
 subscribed, and subscribing trims the source immediately:
 
@@ -292,7 +298,12 @@ assert_eq!(recent.len()?, 3);
 ```
 
 Source limiters perform their removals after releasing their own state, as separate source edits.
-Do not implement limits yourself by editing a source from inside its own edit.
+They pick the oldest items inside that edit, only from state that has seen every batch the source
+committed before it (otherwise the next delivered batch triggers the eviction again), retry an
+edit that failed because the source was busy, and emit exactly the items the edit removed.
+Eviction therefore follows delivery: while several threads commit faster than the source delivers
+its batches, the source can hold more than `n` items until the limiter has received them. Do not
+implement limits yourself by editing a source from inside its own edit.
 
 ## Expiration
 
@@ -303,26 +314,48 @@ Do not implement limits yourself by editing a source from inside its own edit.
 | `SourceCacheExpireAfterExt::expire_after(…)` | while subscribed, **removes** expired entries from the source and emits them as `Vec<(K, T)>` |
 | `SourceListExpireAfterExt::expire_after(…)` | same for lists, emitting `Vec<T>` |
 
-The selector returns `Option<Duration>` per item: the time to live, or `None` to keep the item
-indefinitely. Updating a cache item restarts its timer. Without polling, a timer thread wakes at the
-next deadline. With `*_with_polling`, expirations are meant to be checked on a fixed interval;
-the polling variants currently never expire anything, and stream-level `expire_after` can
-desynchronize downstream after the first expiry. Both are listed under
-[Known issues](README.md#known-issues).
+Every one of them has `*_with_scheduler` variants (`expire_after_with_scheduler(selector,
+scheduler)`, `expire_after_with_polling_with_scheduler(selector, interval, scheduler)`); the plain
+methods use `default_scheduler()` (see [schedulers](16-concurrency-and-platforms.md#schedulers)).
+
+The selector returns `Option<Duration>` per item: the time to live, counted from when the operator
+sees the item, or `None` to keep the item indefinitely. Adding, updating (caches) or replacing
+(lists) an item restarts its time to live; a refresh or move does not. Without polling, the timer
+fires at the next due time. With `*_with_polling`, it checks every `interval` while items wait,
+so an item goes at most one interval after it is due, however often the source changes.
+
+Stream expiration hides expired items from its own output only: they stay in the source. Later
+source changes are translated to the output, so its indexes skip the expired items, an update
+(cache) or replacement (list) of an expired item adds it back, and its refreshes, moves and
+removals are dropped.
+
+Source expiration removes due items inside one source edit, and only if it has seen every batch
+the source committed before that edit; otherwise (for example while notifications are suspended)
+it waits for those batches. If the edit fails because the source is busy, it retries when the
+source is released. It reports exactly the items its edit removed.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
+use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use std::sync::Arc;
 use std::time::Duration;
 
+let clock = ManualScheduler::new();
+let scheduler: Arc<dyn Scheduler> = Arc::new(clock.clone());
 let toasts = SourceCache::new(|toast: &(u32, &'static str)| toast.0);
 let _expiry = toasts
-    .expire_after(|toast| (toast.1 != "sticky").then_some(Duration::from_millis(30)))
+    .expire_after_with_scheduler(
+        |toast| (toast.1 != "sticky").then_some(Duration::from_millis(30)),
+        scheduler,
+    )
     .subscribe(|_expired| {})?;
 
 toasts.add_or_update_range([(1, "saved"), (2, "sticky")])?;
-std::thread::sleep(Duration::from_millis(300));
+clock.advance_by(Duration::from_millis(30));
 assert_eq!(toasts.keys()?, [2]);
 ```
+
+With `expire_after(…)` the same removal happens on the default scheduler's timer thread.
 
 Use **source** expiration when the canonical data should forget expired items (caches of remote
 data, notifications). Use **stream** expiration when only one view should hide them.
