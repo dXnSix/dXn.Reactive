@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 74,
+  "revision": 83,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -148,16 +148,28 @@
       ]
     },
     "t24-group-and-combiner-indexes": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t25-key-bridge-indexes": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t26-keyed-state-operators": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t27-window-responses": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t28-scheduler": {
       "status": "pending"
@@ -277,6 +289,15 @@
         }
       },
       "recordedAt": "2026-10-07T01:47:52Z"
+    },
+    "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "05972ef2416fbb72e830e32323b69528c8c52c348da998cafac8743df1963a01"
+        }
+      },
+      "recordedAt": "2026-10-07T02:36:06Z"
     }
   },
   "checkResults": {
@@ -687,6 +708,74 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s07-index-contract-final-9ce7581c2962.log",
       "logSha256": "06d19652fe5526ca28ac70dbefc09447d95043190f8b70c5bc956e766e877465",
       "inputsHash": "a358937953562f7df4796213de9506e23a49e4c4ea9fae2d002bf10c3c20a693"
+    },
+    "s08-keyed-operators/c-t24/final": {
+      "checkId": "c-t24",
+      "boundaryId": "s08-keyed-operators",
+      "phase": "final",
+      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "definitionHash": "84f82851d994307c47e40e839bc68a9e5645d01062b8faa6d142ab96924610b0",
+      "basisHash": "81f1202054ed99ca900eb93798c21d8dc4eb263f8a562cd8a0e1aa659794ebfa",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.6804,
+      "recordedAt": "2026-10-07T02:36:03Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-d1cb4f9f9835.log",
+      "logSha256": "bfdfc676799ca3114a90565c59a663f60d10827e75a2ef846681444d8a87627d",
+      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+    },
+    "s08-keyed-operators/c-t25/final": {
+      "checkId": "c-t25",
+      "boundaryId": "s08-keyed-operators",
+      "phase": "final",
+      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "definitionHash": "e9dca787d484796c455281020c018c91681a8fe388d549d8cbe135cd7cba9248",
+      "basisHash": "6ae19d5d59c22d8b561cc74d13c993485e4414c5e1c5360a7403fff94f31f2db",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 5,
+      "durationSeconds": 0.6986,
+      "recordedAt": "2026-10-07T02:36:03Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-e75c9daefc54.log",
+      "logSha256": "acde313e1ee9fbad1b91484dd4061ac4f33f23ad5af3d4cc8f811a3715e8f8a1",
+      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+    },
+    "s08-keyed-operators/c-t26/final": {
+      "checkId": "c-t26",
+      "boundaryId": "s08-keyed-operators",
+      "phase": "final",
+      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "definitionHash": "3ff5c1b6dea07c3e1ae8160fc85aa48cda1a18836bad31d9d0207a575b498d8f",
+      "basisHash": "8cedaceff2b52b32c20c4e9923e1f0d7041b402e4fc9b611525752f115d77826",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 1.6492,
+      "recordedAt": "2026-10-07T02:36:05Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-d9e49b3b407f.log",
+      "logSha256": "ea0445098c7193e64655c132b1bbf88e2b44d345a928053fbdb83ad4c6f527e8",
+      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+    },
+    "s08-keyed-operators/c-t27/final": {
+      "checkId": "c-t27",
+      "boundaryId": "s08-keyed-operators",
+      "phase": "final",
+      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "definitionHash": "a4e3a4bb6cd3ac76c9e8104db7b034a1bf22051b759aecd4035e4bd18743b7c4",
+      "basisHash": "44caceb70ed477e5c2de6cd025b902a37077a22f193565ebff2a29135010101c",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 7,
+      "durationSeconds": 0.9108,
+      "recordedAt": "2026-10-07T02:36:06Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-02f159a6d35c.log",
+      "logSha256": "d3e154e1a1facc32e42d3c18a7b1d353084e592f6636fde2c321ed5cc3774dd0",
+      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
     }
   },
   "reviews": {
@@ -2252,6 +2341,336 @@
         "S07-F4"
       ],
       "recordedAt": "2026-10-07T01:51:00Z"
+    },
+    "s08-keyed-operators": {
+      "reviewerId": "reviewer-s08-indep-5b9e",
+      "snapshotId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "criterionIds": [
+        "IDX-5.1",
+        "IDX-5.2",
+        "IDX-5.3",
+        "IDX-6.1",
+        "IDX-6.2",
+        "IDX-6.3",
+        "KEY-1.1",
+        "KEY-1.2",
+        "KEY-1.3",
+        "WIN-1.1",
+        "WIN-1.2",
+        "WIN-1.3"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_pending_group_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1"
+          ],
+          "sha256": "c27cd046cf3e57d6cfe2711b63e689ffa8e8ed93119f76258034f7fe29c59ad5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/immutable_list_group_entry.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1"
+          ],
+          "sha256": "d568d3f960ace441cd2c206f160c68ee3ac7cf6071d0f12893fbebf6fc707e96"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/immutable_cache_group_entry.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1"
+          ],
+          "sha256": "13504eee4498ec14834f6fd37a98fa72542b5010bf7e518be515ee554b7fcf90"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/dynamic_live_cache_group_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1"
+          ],
+          "sha256": "e5d7cb74ee42e98dc6363da83f0ee8bfc2756569dd1f5bd8f02b75aee2980a34"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.2",
+            "KEY-1.1",
+            "KEY-1.2",
+            "WIN-1.1",
+            "WIN-1.3"
+          ],
+          "sha256": "08bc59d737c02d803eefa75e6ba72e5eddf2bbee57ff1b2e8dc8fe6a8d2bfa86"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/cache_key_updates.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.3"
+          ],
+          "sha256": "37762d33800d13005325c955dfe842f28149760842367a73442835650af76130"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/diff_cache_snapshots.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.1"
+          ],
+          "sha256": "2b8907259b370491de7027d7acbc3bbe721063761055f5c8094ff15b769811c7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/push_child_adds.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.2"
+          ],
+          "sha256": "cf460308028b37da99332a2e52a7a8a712475bde8db46c5f290934e304bb6ec6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/diff.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.3"
+          ],
+          "sha256": "c2a03c62e5206392f615fb6feacfb6e2cf7dd3153a980deee4181482f4701404"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/change_key_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "KEY-1.1"
+          ],
+          "sha256": "af50a61881e65e48d6df549cb8d1e93e02aa4036fa7cfdec7ae38623b5e77756"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/sync_transform_many_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "KEY-1.2"
+          ],
+          "sha256": "86227d6ed3906326907b921b9896352c25fd8ff495bb281310d00fba9f6ca90c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "KEY-1.3",
+            "IDX-5.1"
+          ],
+          "sha256": "df44f2cfdb83ed59b7ba5a85fcd872741a94fb9788188a6b0d7bae023892343a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_sorted_page_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "f2e13a983e2d65c39956c55e62dd4a8c95966a5fae1c8321913143d3dbde4ae8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/keyed_cache_page_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1"
+          ],
+          "sha256": "3669e30b693e3a9e1df94e3aa7055b6553da1e74451ef1f58970e4392143c9b1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2"
+          ],
+          "sha256": "d6dda4e736661d287cdc89484f0eaf6041c5aa65815f0628b85c12cae5de9889"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3",
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3",
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "caa40b898dbde0278ac7783b01469f807c94c79f6d195e819e7179f449b7dbf4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/09-filtering-and-transforming.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "KEY-1.1",
+            "KEY-1.2"
+          ],
+          "sha256": "429bb4b7617ca77e4eb8ba27d02728d26307c676a42ea1aa3ed667b2c4809e71"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/10-sorting-paging-virtualization.md",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "5aa2d2fc517f03773eda61e84555b4e2dfe766cf7c2fe33c840a96d26949f010"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/README.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "WIN-1.1"
+          ],
+          "sha256": "a6f3fb2774695db2c1625d75f867546c99c02c8442613cf74a292b184655b9ff"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/contract.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3",
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3",
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "02b3dadb3b3d063ecd3b12a01068a9211e77176aa543b881ee3df6ca3e817b63"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/group_and_combiner_indexes/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3"
+          ],
+          "sha256": "9f7f085964bd49d80655342c8ead9d72d050560a15ee997784f00d7b55db7afd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/key_bridge_indexes/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3"
+          ],
+          "sha256": "3b120a24b28a7dd914edb2ea009363a7d5df00867ef5ad87277b9c0543563146"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_state_operators/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3"
+          ],
+          "sha256": "a6c81687befd509c41e7b4df028e5237cb9a49d8078c5200a3b3a62da23de8a6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/window_responses/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "985ec56dfbcce93475c844f53eef096dca43ea5784257b96bed0ba45f40cb7e1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/aggregation_diagnostics_diff/value_stream_snapshot_edit_diff_emits_list_changes.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-6.3"
+          ],
+          "sha256": "d87c5687fd43bb1d269f3266a2a354d286156c3295cd4e96b4a748c94b445188"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/side_effects_options_bridges/list_add_key_converts_list_changes_to_keyed_cache_changes.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-6.1"
+          ],
+          "sha256": "a0f39df8703420329393835e677fe8ede14335891228c91ee8e24d94bb26edab"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/side_effects_options_bridges/cache_change_key_preserves_reasons_and_remaps_keys.rs",
+          "kind": "test",
+          "criterionIds": [
+            "KEY-1.1"
+          ],
+          "sha256": "197d94f60d452aaf3d8f691d5c9230be610672fa2ea114125cf516af7e67a38f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/apply_cache_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.2"
+          ],
+          "sha256": "43cea6efef1458fea9744738a6d724a59f6f2c2320f50a1ea38aa19cd6171e62"
+        }
+      ],
+      "summaryMarkdown": "Re-review of sprint s08-keyed-operators at snapshot eb8e19c4. **Verdict: passed.** All seven findings (S08-F1 to F7) are resolved, and every criterion holds.\n\n**Checks run:**\n- The four sprint groups pass: 6, 5, 6 and 7 tests.\n- Eleven related groups pass: joins, grouping_tree_switching, snapshot_diff_indexes, subset_operator_indexes, side_effects_options_bridges, aggregation_diagnostics_diff, sorting_windowing, transforms_filters, lifecycle_observables, index_contract_harness and keyed_sort_positions.\n- `cargo fmt --check`, Clippy `-D warnings` and the wasm32 check pass.\n\n**Independent probes** (release build, public API, compared against HEAD 49e9bdb):\n- `ensure_unique_keys` stays strict-correct over four kinds of upstream.\n- A single move or a single sort change produces one output change.\n- Live groups pass with a regrouper firing on every batch, including over a positionless upstream.\n- `group_on_observable` is strict-correct.\n- `sort_and_virtualize` passes with a dynamic comparer and request (300/300).\n- `edit_diff` keeps the same duplicate policy as `SourceCache::edit_diff`.\n- The `change_key` refresh repro is fixed.\n\n**Non-blocking residuals** (linear or HEAD-like costs; candidates for a later performance pass):\n1. `ensure_unique_keys` rebuilds full rank and presence hash sets on every batch, even when nothing moves. A one-key update costs 9.3 ms at 40k items (HEAD 1.4 ms) and 20 ms at 80k. A cheap fast path is to skip `minimal_moves` when `working` already equals the target order.\n2. Sync `transform_many` handling `SourceCache::clear()` (a `Clear` that lists its entries) removes parents one at a time with `Vec::remove`. It takes 59 ms at 40k (HEAD 14 ms) and 206 ms at 80k, which is superlinear.\n3. Bulk update-all and remove-all batches in `transform_many` cost about 2.5x HEAD (both are superlinear because of the source).\n4. The new wall-clock ratio tests (`*_loads_linearly`, `keyed_state_bookkeeping_scales_linearly`, bound below 8x) could flake on a heavily loaded debug runner.\n5. The rustdoc on `ensure_unique_cache_changes` still lists the old phase order (additions before moves).",
+      "findingIds": [
+        "S08-F1",
+        "S08-F2",
+        "S08-F3",
+        "S08-F4",
+        "S08-F5",
+        "S08-F6",
+        "S08-F7"
+      ],
+      "recordedAt": "2026-10-07T02:40:50Z"
     }
   },
   "checkpoints": {
@@ -3262,9 +3681,176 @@
           "path": "docs/07-collections-fundamentals.md"
         }
       ]
+    },
+    {
+      "id": "S08-F1",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "IDX-6.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**`ensure_unique_keys` turns one upstream move into a cascade of moves for keys that never moved: n-1 changes for a single move, quadratic cost, and a load that is 16x slower than HEAD.** The final pass of `ensure_unique_cache_changes` (`operators/push_child_adds.rs`) walks the whole new order. At each slot where `working[index] != order[index]`, it moves the key that belongs there into the slot and emits a `Move` for it. When one key moves from the front to the back, every other key is displaced by one slot, so each of them is moved and reported.\n\n- **Expected (IDX-6.2, D-INDEX \"structured, incremental output\"):** surviving keys' `Move`s are forwarded. An upstream batch with one `Move` produces one `Move`, or one indexed `Update`. Only keys whose relative order changed are repositioned.\n- **Observed** (bounded scratch probes, public API, release build, same probe on HEAD 49e9bdb):\n  - Moving the first key to the last slot of a 10,000-item `SourceCache` (`move_key(&0, n-1)`) emits **9,999 changes** and takes 17.8 ms. At n=40,000 it emits 39,999 changes and takes 283 ms. HEAD emits 0 changes (it dropped moves) in 0.9 ms.\n  - With `sort_keyed_by(value).ensure_unique_keys()`, updating the top item so it sorts last emits **10,000 changes** at n=10k (40,000 at n=40k, 284 ms). HEAD emits 1 change.\n  - Over 300 seeds x 25 batches of the sprint's cache edit generator, the output carries 3,238 `Move`s against 952 upstream `Move`s, and 268 of 300 seeds have more output moves than upstream moves. Every output is contract-valid: strict mirrors over `SourceCache`, `filter_immutable(|_| true)`, `sort_keyed_by` and `transform(identity)` upstreams all match, with 0/300 failures.\n  - Initial load of n items: n=10k takes 393 ms (HEAD 41 ms), and n=40k takes 9.56 s (HEAD 0.60 s). `provisional_position` scans `working` with a hash lookup per element for every added key, on top of the per-change `apply_cache_changes_to_ordered_state` scans.\n- **Repair:**\n  - Reposition only the touched surviving keys, because untouched keys keep their relative order. Either keep a longest increasing subsequence of target ranks in `working` fixed and move the rest, or replay the upstream `Move`s and indexed `Update`s against `working` in batch order.\n  - Compute add positions without a per-add scan of the whole order.\n  - Add regression tests:\n    - a single upstream move, and a single sort-position change, each produce exactly one change;\n    - a load-scaling bound, for example 8,000 items within a fixed multiple of HEAD's work or O(n log n).\n\n---\n\nRe-review: resolved. `minimal_moves` keeps the longest increasing subsequence of keys in place and moves only the others; `ensure_unique_cache_changes` now runs removals, then minimal moves of existing keys, then additions at their final positions. Release-build probe: moving the first key of 10k or 40k to the end emits **1** change, and one top-to-bottom update behind `sort_keyed_by` emits 1 change. A 40k load takes 25 ms (previously 9.56 s; HEAD 0.79 s). Strict mirrors over `SourceCache`, `filter_immutable(|_| true)`, `sort_keyed_by` and `transform(identity)` upstreams: 0/300 failures. Output moves fell from 3,238 to 869 against 952 upstream.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/key_bridge_indexes/mod.rs",
+          "symbol": "ensure_unique_keys_moves_only_the_keys_that_moved"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/key_bridge_indexes/mod.rs",
+          "symbol": "ensure_unique_keys_loads_linearly"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/diff_cache_snapshots.rs",
+          "symbol": "minimal_moves"
+        }
+      ]
+    },
+    {
+      "id": "S08-F2",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "KEY-1.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**`change_key` reports a change of item as a `Refresh`, so downstream operators go stale when collisions occur.** `ChangeKeyState::write` (`operators/change_key_state.rs`) treats a `Refresh` as a write. It makes the refreshed source key the latest holder and switches the destination's item to that key's item. It then emits `Refresh { current: <new holder's item> }` even though the destination previously showed a different item. A `Refresh` means \"the same item may have changed internally\" (docs ch07). Operators that do not recompute on refresh therefore keep the old value.\n\n- **Expected (KEY-1.1):** with several source keys mapping to one destination key, the output item changes only through `Add`, `Update` or `Remove`. A `Refresh` of a source key that does not provide the item either does nothing, or produces an `Update` from the old item to the new one if latest-writer-wins is meant to apply to refreshes.\n- **Observed** (scratch probe on the working tree): `SourceCache [(1,7),(2,7)]`, `change_key(|r| r.1)`, then `refresh_key(&1)`.\n  - The operator emits `[Refresh { key: 7, current: (1, 7), current_index: None }]`, while the destination held `(2, 7)`.\n  - `as_observable_cache` now shows `(7, (1, 7))`.\n  - The same stream through `.transform(|r| r.0)` still shows `[2]`. The two views of one stream disagree.\n  - The sprint's `fuzz_cache_check(\"change_key with collisions\")` misses this because its strict mirror stores whatever item a `Refresh` carries.\n- **Related:** a `Clear` with collisions can emit a fallback `Update` before the `Clear`. When a full `Clear { previous: [] }` takes source keys in `HashMap` order and a key that is the latest holder is released first, an `Update` goes to the remaining holder, and that holder is then removed by the `Clear`. Such an `Update` is spurious, and whether it appears depends on iteration order.\n- **Repair:**\n  - Do not reorder holders on `Refresh`. Emit `Refresh` only when the refreshed source key is the current provider (with that provider's item), and otherwise emit nothing. Alternatively, emit an `Update` with `previous` set to the shown item.\n  - In `Clear`, release all keys before computing fallbacks, so destinations that end up empty are reported once in the `Clear`.\n  - Add a collision test that refreshes a non-providing source and checks a `transform` downstream.\n\n---\n\nRe-review: resolved. A refresh never changes the provider; only the provider emits `Refresh`. Probe: `[(1,7),(2,7)]` then `refresh_key(&1)` emits nothing, and `as_observable_cache` and `transform(|r| r.0)` both show the item of key 2. `Clear` releases every listed key first, then emits fallback updates and a single `Clear` ordered by addition sequence.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_state_operators/mod.rs",
+          "symbol": "change_key_refreshes_never_change_the_provider"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/change_key_state.rs"
+        }
+      ]
+    },
+    {
+      "id": "S08-F3",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "KEY-1.1",
+        "KEY-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**The new `change_key` and synchronous `transform_many` state make clears, bulk removals and loads quadratic. HEAD did this work in O(n).**\n\n- **`ChangeKeyState`:**\n  - Every removed destination runs `self.order.retain(..)` once, which is O(n) for each removal.\n  - `Clear` sorts with `cleared.sort_by_key(|(key, _)| self.order_position(key))`, a linear `position` per comparison, and then calls `retain` once per cleared key.\n- **`SyncTransformManyState`:**\n  - Every parent `Add` or `Update` runs `insert_cache_key` (a linear `position`) and `parent_order.contains` (linear).\n  - Every batch rebuilds a `positions` map over all parents.\n  - `set_children` deduplicates children with a linear `find`, so the cost is quadratic in the number of children per parent.\n- **Observed** (release-build scratch probe, public API, same probe on HEAD 49e9bdb):\n\n  | Operation | HEAD n=10k | Working tree n=10k | HEAD n=40k | Working tree n=40k |\n  |---|---|---|---|---|\n  | `change_key` `clear()` | 2.9 ms | 48 ms | 11.6 ms | **691 ms** |\n  | `change_key` removing every key in one batch | 4.7 ms | 24 ms | 50 ms | **348 ms** |\n  | `transform_many` (one child per parent) loading n parents | 5.4 ms | 21.9 ms | 23 ms | **268 ms** |\n\n  The time per operation grows roughly with n². The work runs under the operator's state lock.\n- **Expected:** stateful key bookkeeping stays proportional to the change (epic scope: \"performance of sources and operator bookkeeping\"; HEAD was O(n) for a clear or load).\n- **Repair:**\n  - Give destinations, and parents, an insertion sequence number or an index map. Sort a `Clear` by sequence number, and remove from the order lazily or in a single `retain` pass with a set.\n  - Find the first live parent by comparing stored positions or sequence numbers instead of rebuilding a map every batch.\n  - Deduplicate children with a `HashMap`.\n  - Add load and clear scaling tests (for example 20,000 items within a linear-time budget, or counted operations).\n\n---\n\nRe-review: resolved for the reported regressions. Release-build probe at 40k items: `change_key` clear takes 21 ms (was 691 ms; HEAD 12 ms) and remove-all takes 57 ms (HEAD 51 ms). `transform_many` load takes 39 ms (was 268 ms; HEAD 25 ms). From 10k to 80k, `change_key` clear, `change_key` load and `transform_many` load all scale roughly linearly. Residual non-blocking costs are listed in the review summary.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_state_operators/mod.rs",
+          "symbol": "keyed_state_bookkeeping_scales_linearly"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/sync_transform_many_state.rs"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/change_key_state.rs"
+        }
+      ]
+    },
+    {
+      "id": "S08-F4",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "IDX-5.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`group_on_observable` still drops a pending group `Add` without shifting later indexes, and live-group finalization emits removals in `HashSet` order.**\n\n- **`group_on_observable`:** the sprint fixed `remove_live_pending_group_add` and `remove_pending_list_group_add` and ordered the drops first. `lifecycle/cache.rs` (`GroupOnObservableCacheState::finalize_empty_groups` and `remove_pending_group_add`) is unchanged and still drops the `Add` without shifting later `Add`/`Remove` indexes.\n  - Repro: a cache holding `(0,0)` uses `group_on_observable(|row, _| ...)`, where a row with value 5 gets a stream that emits `100` and then `200` synchronously on subscribe. One batch adds `(1,5)` and `(2,9)`. The output contains `Add { key: 200, current_index: Some(2) }` on a one-group output, which a strict mirror rejects as out of range. HEAD behaves the same.\n  - docs ch07 now says \"Every operator follows one index contract\".\n- **Determinism:** `finalize_empty_groups` in `immutable_list_group_entry.rs` and `immutable_cache_group_entry.rs` iterates `self.empty_groups` (a `HashSet`). The stable `sort_by_key` keeps that order for groups that already existed. When several groups are emptied in one batch, their `Remove`s are emitted in an order that varies from run to run. The indexes stay valid, but the emission order is not deterministic.\n- **Repair:** reuse the index-shifting drop and the drops-first order in the lifecycle state. Iterate empty groups in `group_order` order. Add `group_on_observable` to the group fuzzer, with a multi-emission group stream.\n\n---\n\nRe-review: resolved. `remove_pending_group_add` in `lifecycle/cache.rs` shifts later indexes, and all three finalizers order empty groups by (pending addition first, then group-order position). Probe: the 100/200 `group_on_observable` repro is accepted by a strict mirror, giving `[(0,0),(200,200),(9,9)]`.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/group_and_combiner_indexes/mod.rs",
+          "symbol": "groups_on_observables_index_groups_created_and_emptied_at_subscription"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/group_and_combiner_indexes/mod.rs",
+          "symbol": "group_removals_are_deterministic"
+        }
+      ]
+    },
+    {
+      "id": "S08-F5",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "WIN-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**A window over an empty source never reports a response.** No variant (list `page_with_response`, `page_keyed_with_response`, `sort_and_page_dynamic_with_response_by`, `sort_and_virtualize_dynamic_with_response_by`) emits anything when subscribed to an empty `SourceList`/`SourceCache`. Each probe recorded `[]`, because an empty source emits no initial batch and `loaded` stays `false`. A pager over an empty collection therefore never receives `total_count: 0` / `total_pages: 1`. For a non-empty source with an empty window, the initial response is correct (probe: `VirtualResponse { visible_count: 0, start: 3, total_count: 1 }`).\n\n- **Expected (WIN-1.1, docs ch10):** \"Once the source has loaded, a window reports its first response even when it is empty.\"\n- **Repair:** either emit the initial response for an empty source (if a connection can signal its startup without a batch), or narrow the WIN-1.1 wording and the chapter 10 sentence to \"once the source has emitted\", and add the empty-source case to `window_responses`.\n\n---\n\nRe-review: resolved through documentation. Chapter 10 now says a window reports once the source has delivered its first batch, and that a window over an empty source stays silent until its first change. Behaviour is unchanged and matches the text (probe).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/10-sorting-paging-virtualization.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/window_responses/mod.rs",
+          "symbol": "an_empty_window_reports_its_initial_response"
+        }
+      ]
+    },
+    {
+      "id": "S08-F6",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "KEY-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`change_key` drops all positions, including for one-to-one mappings, so ordered pipelines lose their order.** `ChangeKeyState` ignores `Move` and emits `None` indexes everywhere. Through `sort_keyed_by(..).change_key(..)` (or any positioned upstream), a materialized list therefore no longer follows the upstream order:\n- sort-position changes, which arrive as `Move` or as an indexed `Update`, are dropped;\n- re-keyed items are appended at the end.\n\nHEAD forwarded the upstream indexes, which were correct for injective selectors. The CHANGELOG and chapter 9 say \"no indexes\", but they do not warn that ordering through `change_key` is lost.\n\n**Repair:** order the output by the providing source key's upstream position (maintained incrementally) and emit those positions, or at least document the loss of ordering with a migration note (re-sort after `change_key`).\n\n---\n\nRe-review: resolved through documentation. Chapter 9's `change_key` row and the CHANGELOG state that it emits no indexes and that sorting belongs after `change_key`.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "docs/09-filtering-and-transforming.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md"
+        }
+      ]
+    },
+    {
+      "id": "S08-F7",
+      "boundaryId": "s08-keyed-operators",
+      "criterionIds": [
+        "IDX-5.3",
+        "IDX-6.2",
+        "KEY-1.2",
+        "WIN-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Documentation inaccuracies and test coverage gaps.** Each gap was checked with a scratch probe, and every probe passed on the working tree.\n\n- **CHANGELOG:** it says `ensure_unique_keys` \"emits at most one change per key\". Chapter 9 and the code emit a `Move` plus a `Refresh` for a key that is both moved and refreshed. Make the two consistent.\n- **`SyncTransformManyState` rustdoc:** it says emission order is \"parent order, then each parent's transform order\". The actual order is the order in which the batch's changes first touch each child key. Correct the comment, or sort by parent order.\n- **IDX-5.3:** the test covers `and_dynamic`/`or_dynamic` but not `xor_dynamic`/`except_dynamic`. A probe of update then refresh passed for both.\n- **KEY-1.2:** the fuzz uses only a `SourceCache` upstream. A probe with a `filter_immutable(|_| true)` upstream passed 300/300 seeds.\n- **WIN-1.3:** the fuzz uses only static requests and comparers. A probe with the comparer and request changing on every batch, checking items and response, passed 300/300 seeds (excluding empty-source starts, see S08-F5).\n\nAdd the missing cases to the sprint groups.\n\n---\n\nRe-review: resolved. The CHANGELOG and chapter 9 agree on the moved-and-refreshed exception, and the `transform_many` state comment describes the first-touch order. Tests now cover `xor_dynamic`/`except_dynamic`, `transform_many` over a positionless upstream, and `sort_and_*` with requests and comparers changing between batches (300 seeds). My own probes of these cases also pass.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/group_and_combiner_indexes/mod.rs",
+          "symbol": "combiners_keep_an_update_followed_by_a_refresh"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_state_operators/mod.rs",
+          "symbol": "transform_many_over_a_positionless_upstream_keeps_the_first_parent"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/window_responses/mod.rs",
+          "symbol": "sort_and_window_follow_requests_and_comparers_between_batches"
+        }
+      ]
     }
   ],
-  "handoffMarkdown": "diff_cache_snapshots, combine diff_ordered_caches, limit diff_limited_cache and tree diff: Move carries the pre-update item and Update uses the post-move position. Joins (same-key and many): updates in place, adds at provisional_index, then reorder_result emits Moves into the left/combined order. Immutable groups replay removes/updates/adds then moves_into_order. Combiner keeps Update before Refresh (C-1). Group snapshot_diff_indexes: G-2/J-1/J-2/G-5 repros + fuzz for keyed windows, 5 joins, combiners, stream limit, immutable groups, trees.",
+  "handoffMarkdown": "List/keyed/sort_and_* window states track last_response + loaded and emit whenever a response field changes (empty change set allowed) and the initial response once loaded; list dynamic windows start with request None; sort_and_* rebuilt on CacheSortState + window diff (shared next_window_version). Docs ch10 updated (stale-totals warning removed), README known issues trimmed, ch09 re-keying table updated. Group window_responses incl. comparer count for 8,000 items.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",

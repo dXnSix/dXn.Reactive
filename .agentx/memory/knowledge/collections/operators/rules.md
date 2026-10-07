@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-08T02:00:00+02:00
+  updated: 2026-10-08T08:00:00+02:00
   topics:
     - operators
     - incremental
@@ -52,3 +52,6 @@ agentx:
 - Every cache operator follows the `CacheChange` index contract documented in `change.rs`: indexes are positions in the operator's own output (or `None`); an `Update` with differing indexes is remove-then-insert; a `Move` carries the item as currently held (a changed value follows as an `Update`); later changes to a moved key use its post-move position; an index-less `Update` keeps the key in place (`insert_cache_key` semantics). Subset operators never forward source positions and never emit `Remove`/`Clear` for keys they did not include.
 - Snapshot-style operators (keyed windows, joins, immutable groups, trees, combiners, stream limits) replay changes against their output: removals, in-place updates, additions at provisional positions, then explicit moves into the final order (`moves_into_order`, `reorder_result`). Never pair a `Move` with an `Update` whose `previous_index` is the pre-move position.
 - Every index fix gets differential fuzz coverage through `collections/tests/contract.rs` (`StrictList`/`StrictCache`, `fuzz_*`), including a positionless upstream (`filter_immutable(|_| true)`) and dynamic inputs fired between batches (`per_batch`). Keep appended loads linear (no per-key position scans on the append path).
+- Reorder an operator's output with `minimal_moves` (keep the longest in-order run, move the rest): never emit a `Move` per shifted key. Emit additions at their final positions after the moves when the operator promises one change per key (`ensure_unique_keys`).
+- Live group finalizers drop this batch's pending group additions first (shifting later indexes) and then remove empty groups in group order; never iterate a `HashSet`/`HashMap` to decide emission order.
+- `change_key` and synchronous cache `transform_many` keep per-key state (destination holders with latest-writer fallback; first live parent per child key) and emit no indexes; sort after them, not before. Page/virtual responses are emitted whenever a response field changes; list dynamic windows wait for a request; `sort_and_*` windows `CacheSortState`.
