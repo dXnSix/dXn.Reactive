@@ -90,6 +90,31 @@ breaking changes below are listed with migration notes for consumers.
   key's final state in it (a `load` that keeps the key emits only the new value, with no `None`
   flicker), and `ChangeStream::watch(key)` forwards a `Clear` with only the watched key's entry.
 
+### Materialization and composition
+
+- **Fixed:** `populate_into`, `populate_from*`, the `to_*_change_set*` adapters,
+  `ObservableList`/`ObservableCache::from_stream` (and `as_observable_*`) and the source size limits
+  no longer discard a batch whose destination edit fails: the batch is kept and retried, in order,
+  when the destination's lock is next released (and in any case before the next batch). A failure
+  that cannot clear (`Poisoned`) is reported and its batch dropped. A retry runs on the thread that
+  releases the lock, so the destination's subscribers can be called from that thread.
+- **Added:** `populate_into_with_errors`, `populate_from_with_errors`,
+  `populate_from_batches_with_errors`, the `to_list_change_set*_with_errors` /
+  `to_cache_change_set*_with_errors` adapters, `limit_size_to_with_errors` on `SourceList` and
+  `SourceCache`, and `ObservableList::errors()` / `ObservableCache::errors()`, which report each
+  failed attempt.
+- **Fixed:** the source size limits (`SourceList`/`SourceCache::limit_size_to`) recompute an eviction
+  whose edit failed instead of queueing it, so an item is never evicted twice or in place of another,
+  and emit only the items actually removed.
+- **Fixed:** `ref_count` rolls back a subscriber whose upstream connection failed; a subscriber that
+  joined from another thread meanwhile waits for the outcome and connects again itself (on wasm32 it
+  gets `Contended` instead of waiting). A late subscriber's snapshot always comes before live
+  batches, and batches from a released upstream are ignored.
+- **Fixed:** `switch` delivers its output in order and never concurrently, never forwards a
+  superseded inner's batches after its `Clear`, and leaves no inner subscription after disposal.
+  **Added:** `switch_with_errors` reports an inner subscription that failed; the switch retries when
+  the outer stream emits again.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on

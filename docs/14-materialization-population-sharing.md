@@ -25,7 +25,11 @@ but no mutators. Both are `Clone`.
 | `cache_stream.as_observable_list()?` (`CacheStreamObservableListExt`) | an ordered list of the cache stream's values, following its indexes |
 
 Wrappers built from a stream own their populating subscription. It stays active while any clone of
-the wrapper is alive and is disposed with the last one.
+the wrapper is alive and is disposed with the last one. If writing a batch into the private source
+fails (for example with `Contended` on wasm32), the batch is kept and retried as soon as the lock
+that blocked it is released (and in any case before the next batch), so the view converges;
+`errors()` reports each failed attempt. A wrapper over an existing
+source (`from_source`) never reports errors.
 
 The wrappers are the recommended **public surface** of a service or ViewModel: expose derived,
 read-only collections and keep the mutable source private.
@@ -86,6 +90,31 @@ source, each batch inside one destination edit. Cache population uses `add_or_up
 the destination keeps the **stream's keys and positions**, not keys recomputed by the
 destination's selector. That matters after `change_key` or `transform`.
 
+A batch whose destination edit fails is never dropped: it is kept, in order, and retried when the
+destination's lock is next released, and in any case before the next batch. Batches are never
+applied concurrently or out of order. A retry runs on the thread that releases the lock, so the
+destination's subscribers can be called from that thread; marshal to the UI thread in the
+subscriber when that matters. A failure that cannot clear (`Poisoned`) is reported and its batch
+dropped, so a dead destination never accumulates batches.
+`populate_into_with_errors(&destination, |error| …)` also reports each failed attempt:
+
+```rust
+use rayx_reactive::collections::prelude::*;
+use std::sync::{Arc, Mutex};
+
+let source = SourceList::new(vec![1, 2]);
+let destination = SourceList::<i32>::default();
+let errors = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&errors);
+let _feed = source
+    .connect()
+    .populate_into_with_errors(&destination, move |error| sink.lock().unwrap().push(error.clone()))?;
+
+source.push(3)?;
+assert_eq!(destination.items()?, [1, 2, 3]);
+assert!(errors.lock().unwrap().is_empty()); // nothing failed here
+```
+
 ## Feeding sources from value streams
 
 ### Into an existing source
@@ -97,7 +126,12 @@ destination's selector. That matters after `change_key` or `transform`.
 | `SourceCache::populate_from(&stream)` | adds or updates every item |
 | `SourceCache::populate_from_batches(&stream_of_vecs)` | adds or updates each emitted batch in one edit |
 
-All return the `Subscription` that keeps the feed connected.
+All return the `Subscription` that keeps the feed connected. As with `populate_into`, an item whose
+edit fails is kept and retried the same way; the `populate_from_with_errors` and
+`populate_from_batches_with_errors` variants report each failed attempt. The `to_*_change_set*`
+adapters apply the same rule to their private sources, and their `_with_errors` variants
+(`to_list_change_set_with_errors`, `to_cache_change_set_batches_with_errors`, …) report failures,
+including those of an adapter's size limit.
 
 ### As a new change stream
 
@@ -306,8 +340,13 @@ data, notifications). Use **stream** expiration when only one view should hide t
 
 When a new inner collection arrives, the previous one's items are cleared from the output, its
 subscription is disposed, and the new one is connected. Late notifications from older inner
-collections are ignored. Use `switch` for "the rows of the selected project", "the messages of the
-active channel", or any view whose backing collection is chosen at runtime.
+collections are ignored: nothing from a superseded inner reaches the output after its `Clear`, and
+output batches are delivered one at a time, in order. Disposing the switch leaves no inner
+subscription behind, even when the outer stream emits concurrently. If subscribing to an inner
+collection fails, the output stays empty until the outer stream emits again (then it retries);
+`switch_with_errors(|error| …)` reports such failures. Use `switch` for "the rows of the selected
+project", "the messages of the active channel", or any view whose backing collection is chosen at
+runtime.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -331,10 +370,15 @@ assert_eq!(messages.items()?, ["lol", "rofl"]);
 Each subscription to a change stream builds its own operator chain. When several consumers need
 the same expensive pipeline, `ref_count()` (lists and caches) shares one upstream subscription:
 
-- The first subscriber connects upstream and materializes the result.
-- Later subscribers receive a structured snapshot of the current state, then live batches.
+- The first subscriber connects upstream and materializes the result. A subscriber arriving from
+  another thread while it connects waits for the outcome (on wasm32 it gets `Contended` instead of
+  blocking). If connecting fails, the subscription returns the error and is rolled back, and the
+  next subscriber, including one that was waiting, connects again.
+- Later subscribers receive a structured snapshot of the current state, then live batches; a batch
+  published while a subscriber is connecting is buffered for it, so its snapshot always comes first.
 - The upstream subscription stays alive while at least one subscriber exists, and is dropped,
-  together with its state, when the last subscriber leaves.
+  together with its state, when the last subscriber leaves. A batch still in flight from the
+  released upstream is ignored, so the next subscriber starts from the source's actual state.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
