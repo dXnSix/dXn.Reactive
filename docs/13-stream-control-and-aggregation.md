@@ -167,10 +167,17 @@ Aggregation operators turn a change stream into a `ValueStream` (collection flav
 running result from each change. `max_by`, `min_by`, `query_when_changed*` and `to_*collection`
 are **snapshot-based**: they keep a full copy and recompute from it after every batch.
 
+Floating-point aggregates are robust: `sum_by` over `f64`/`f32`, `avg_by` and `std_dev_by` use a
+compensated (Neumaier) running sum, so adding and then removing a huge value (such as `1e17`)
+leaves the result of the remaining values exact, and they count infinities and NaN apart, so the
+result recovers once such a value leaves. `max_by`, `min_by` and their change detection use a
+total order in which NaN is the greatest value and equals itself, so the result does not depend
+on the order in which items arrive.
+
 | Operator | Lists (`ListAggregationExt`) | Caches (`CacheAggregationExt`) | Emits |
 |---|---|---|---|
 | `count()` | ✓ | ✓ | the item count, when it changes |
-| `is_empty()` / `is_not_empty()` | ✓ | ✓ | immediately, then when it changes |
+| `is_empty()` / `is_not_empty()` | ✓ | ✓ | one initial value reflecting the snapshot, then only when it changes |
 | `sum_by(\|item\| n)` | ✓ | ✓ | the running sum (`N: Copy + Default + Add + Sub`) |
 | `avg_by(\|item\| f64, empty_value)` | ✓ | ✓ | the mean; `empty_value` when empty |
 | `std_dev_by(\|item\| f64, fallback)` | ✓ | ✓ | the standard deviation; `fallback` when undefined |
@@ -301,7 +308,8 @@ assert_eq!(*log.lock().unwrap(), [(ListChangeReason::Add, "a"), (ListChangeReaso
 ## Diagnostics
 
 With the `diagnostics` feature enabled, `collect_update_stats()` (`ListDiagnosticsExt` and
-`CacheDiagnosticsExt`) emits a `ChangeSummary` after every batch:
+`CacheDiagnosticsExt`) emits a `ChangeSummary` after every batch, in batch order and outside its
+internal lock (a subscriber may write to the source):
 
 | Field | Meaning |
 |---|---|

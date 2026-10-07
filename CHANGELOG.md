@@ -234,6 +234,36 @@ breaking changes below are listed with migration notes for consumers.
 - **Added:** `debounce`, `throttle` and `sample` on `ValueStream<T, E>` (`ReactiveValueStreamExt`),
   each with a `*_with_scheduler` variant; disposal cancels their pending timers.
 
+### Aggregates
+
+- **Fixed (behavior change):** `is_empty`/`is_not_empty` emit one initial value that reflects the
+  snapshot (a non-empty source yields `[false]`, not `[true, false]`) and afterwards only distinct
+  changes. The tests `list_aggregations_track_snapshots_counts_sum_and_average` and
+  `cache_aggregations_track_query_counts_sum_and_average` (in
+  `aggregation_diagnostics_diff::list_aggregations_track_snapshots_counts_sum_and_average`) pinned
+  the old sequences and were updated.
+- **Fixed:** `sum_by` over `f64`/`f32`, `avg_by` and `std_dev_by` use a compensated running sum
+  (an overflowing sum is infinite, and recovers when a value leaves;
+  recomputed from the values when one of magnitude 2^53 or more leaves) and count infinities and
+  NaN apart, so they recover once a non-finite value leaves and stay accurate across
+  large-magnitude additions and removals.
+- **Fixed:** `max_by` and `min_by` order NaN as the greatest value (equal to itself), so their
+  results and change detection do not depend on arrival order.
+
+### Lifecycle
+
+- **Breaking:** list `dispose_many` and `dispose_many_with` require `T: PartialEq` (like the cache
+  versions) and no longer dispose an item replaced by an equal one. **Added:** list
+  `dispose_many_by(same_item, dispose)`; types without `PartialEq` migrate to it.
+- **Fixed:** `collect_update_stats` emits its summaries in batch order and outside its lock.
+- **Fixed (behavior change):** `true_for_all*`/`true_for_any*` evaluate after a batch's item
+  streams have been subscribed: over one passing item they emit `[true]` (not `[true, false,
+  true]`), and adding another passing item emits nothing.
+- **Fixed (behavior change):** `filter_on_observable` and `merge_many_*_change_sets` fold the values
+  child streams emit while being subscribed into the source batch: subscribing emits one startup
+  batch, a replaced or updated item whose result does not change is one `Replace`/`Update` (no
+  remove and add), and a parent updated with identical children emits nothing.
+
 ### Async operators
 
 - **Added:** list `transform_async_with_options(transform, TransformAsyncOptions)`: a batch's

@@ -215,7 +215,8 @@ render an initial "no items" state, or a stream control that waits for the first
 
 Scalar aggregates behave the same way: `count()` emits only when the count *changes*, so it never
 reports `0` for a source that has always been empty. Seed it with `start_with(0)`, or use
-`is_empty()`, which emits `true` immediately.
+`is_empty()`, which always emits one initial value: the snapshot's (`false` for a non-empty
+source), or `true` when the source is empty.
 
 ```rust
 use rayx_reactive::collections::prelude::*;

@@ -355,7 +355,9 @@ These reduce a cache to a single `ValueStream<bool>` from a per-item stream:
 
 `selector(&item, &key)` returns the item's `ValueStream<U>` (collection flavor). Items whose stream
 has not emitted yet count as `false`. An empty cache is `true` for *all* and `false` for *any*.
-Duplicate results are suppressed. They are available on change streams (`CacheTrueForExt`) and
+The result is evaluated after a batch's item streams have been subscribed, so values they emit
+while subscribing count at once (no `false` flicker for passing items), and duplicate results are
+suppressed. They are available on change streams (`CacheTrueForExt`) and
 directly on sources (`SourceCacheTrueForExt`). Typical uses are "all rows valid", "any row
 dirty", and "all uploads finished". The [item lifecycle chapter](12-item-lifecycle.md#all-and-any-over-per-item-streams)
 has an example.

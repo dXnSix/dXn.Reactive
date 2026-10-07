@@ -76,8 +76,12 @@ subscription cancels a pending flush without waiting for it.
 ## Filtering on per-item streams
 
 `filter_on_observable(|item, key| ValueStream<bool>)` (lists and caches) shows an item only while
-its stream's latest value is `true`. An item is hidden until its stream emits `true`. An update or
-replacement resets the item's inclusion and waits for the new stream.
+its stream's latest value is `true`. An item is hidden until its stream emits `true`. The values a
+stream emits while it is being subscribed are folded into the source batch, so subscribing over
+`n` items emits one batch. An updated (cache, at the same position) or replaced (list) item keeps
+its previous inclusion until its new stream has been subscribed: if it still passes, the change is
+one `Update`/`Replace`; otherwise it is removed (or added). A cache update that moves the item
+hides it until the new stream emits `true`.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -184,6 +188,11 @@ the children into one flat stream:
 | `merge_many_cache_change_sets(\|parent\| ChangeStream<CacheChange<CK, U>>)` | one cache of all children; on duplicate child keys the first live parent (in source order) wins |
 | `merge_many_cache_change_sets_by(selector, compare)` | as above, but `compare` picks the winner for duplicate child keys and recomputes fallbacks when a winner changes or leaves |
 
+Children that a child stream emits while it is being subscribed are folded into the parent batch,
+so the startup is one batch, and a parent updated (or replaced) with identical children changes
+nothing: its previous children stay until the new stream has been subscribed and are then
+reconciled with the new ones.
+
 The free functions `merge_list_change_sets(streams)`, `merge_cache_change_sets(streams)` and
 `merge_cache_change_sets_by(streams, compare)` merge a fixed set of streams the same way.
 
@@ -239,7 +248,10 @@ collection or are replaced.
 |---|---|
 | `dispose_many()` | `DisposeItem::dispose(&self)`, implemented by the item type |
 | `dispose_many_with(\|item, key\| …)` | a closure |
-| `dispose_many_by(same_item, dispose)` (cache) | a closure, skipped on updates where `same_item(previous, current)` says the resource was kept |
+| `dispose_many_by(same_item, dispose)` | a closure, skipped on updates (cache) and replacements (list) where `same_item(previous, current)` says the resource was kept |
+
+`dispose_many` and `dispose_many_with` skip an update or replacement by an **equal** item (they
+require `T: PartialEq`); use `dispose_many_by` for another notion of sameness.
 
 Ordering is deliberate: the batch is **forwarded first**, then removed and replaced items are
 finalized, so downstream observers never see a disposed item. On unsubscribe, every remaining item
