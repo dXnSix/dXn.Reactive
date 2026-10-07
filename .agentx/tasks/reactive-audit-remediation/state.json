@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 83,
+  "revision": 86,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -290,14 +290,14 @@
       },
       "recordedAt": "2026-10-07T01:47:52Z"
     },
-    "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d": {
+    "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5": {
       "snapshot": {
         "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
         "repositories": {
-          "reactive": "05972ef2416fbb72e830e32323b69528c8c52c348da998cafac8743df1963a01"
+          "reactive": "8c54af6aa1b582c32c50c1e6f260f174897edbe3400632cb8d1ce4233a99f25f"
         }
       },
-      "recordedAt": "2026-10-07T02:36:06Z"
+      "recordedAt": "2026-10-07T02:42:10Z"
     }
   },
   "checkResults": {
@@ -713,69 +713,69 @@
       "checkId": "c-t24",
       "boundaryId": "s08-keyed-operators",
       "phase": "final",
-      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "batchId": "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5",
       "definitionHash": "84f82851d994307c47e40e839bc68a9e5645d01062b8faa6d142ab96924610b0",
-      "basisHash": "81f1202054ed99ca900eb93798c21d8dc4eb263f8a562cd8a0e1aa659794ebfa",
+      "basisHash": "bf67d34fcc1a1ee9710f3c7fca11d8056a520cce1ff43c99ae9b7c096bec52b9",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.6804,
-      "recordedAt": "2026-10-07T02:36:03Z",
+      "durationSeconds": 0.6783,
+      "recordedAt": "2026-10-07T02:42:07Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-d1cb4f9f9835.log",
-      "logSha256": "bfdfc676799ca3114a90565c59a663f60d10827e75a2ef846681444d8a87627d",
-      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-be9b0469e25a.log",
+      "logSha256": "1b3d4f1fb7dc04444af14b80fd8b0c2144664e450a9aa756f59e039dd7c18113",
+      "inputsHash": "d0db1e4f2a0e01e478c547f5c0135672125f6250fb4ac16062835b52fb9e5168"
     },
     "s08-keyed-operators/c-t25/final": {
       "checkId": "c-t25",
       "boundaryId": "s08-keyed-operators",
       "phase": "final",
-      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "batchId": "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5",
       "definitionHash": "e9dca787d484796c455281020c018c91681a8fe388d549d8cbe135cd7cba9248",
-      "basisHash": "6ae19d5d59c22d8b561cc74d13c993485e4414c5e1c5360a7403fff94f31f2db",
+      "basisHash": "2ff655dea443d7f8d01c3c917b839b3373bef361456423c0cb03d66f581753b9",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.6986,
-      "recordedAt": "2026-10-07T02:36:03Z",
+      "durationSeconds": 0.5905,
+      "recordedAt": "2026-10-07T02:42:07Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-e75c9daefc54.log",
-      "logSha256": "acde313e1ee9fbad1b91484dd4061ac4f33f23ad5af3d4cc8f811a3715e8f8a1",
-      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-9abcaebf7415.log",
+      "logSha256": "1d1ccc14697e3ea3657c9d18d6c1e105fe6ff1e6c01fcc1a3d55d3ed5ea90dc8",
+      "inputsHash": "d0db1e4f2a0e01e478c547f5c0135672125f6250fb4ac16062835b52fb9e5168"
     },
     "s08-keyed-operators/c-t26/final": {
       "checkId": "c-t26",
       "boundaryId": "s08-keyed-operators",
       "phase": "final",
-      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "batchId": "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5",
       "definitionHash": "3ff5c1b6dea07c3e1ae8160fc85aa48cda1a18836bad31d9d0207a575b498d8f",
-      "basisHash": "8cedaceff2b52b32c20c4e9923e1f0d7041b402e4fc9b611525752f115d77826",
+      "basisHash": "d35f16e5aa4eff76ab2ddb7cee3e933c5f96aa33189632e37ffaae2467dc2314",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 1.6492,
-      "recordedAt": "2026-10-07T02:36:05Z",
+      "durationSeconds": 1.6648,
+      "recordedAt": "2026-10-07T02:42:09Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-d9e49b3b407f.log",
-      "logSha256": "ea0445098c7193e64655c132b1bbf88e2b44d345a928053fbdb83ad4c6f527e8",
-      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-4df2e1b12916.log",
+      "logSha256": "61406a4e8304f403b2cc33888249168bfb65cb994ceca4ee951416dd9934e0bc",
+      "inputsHash": "d0db1e4f2a0e01e478c547f5c0135672125f6250fb4ac16062835b52fb9e5168"
     },
     "s08-keyed-operators/c-t27/final": {
       "checkId": "c-t27",
       "boundaryId": "s08-keyed-operators",
       "phase": "final",
-      "batchId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "batchId": "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5",
       "definitionHash": "a4e3a4bb6cd3ac76c9e8104db7b034a1bf22051b759aecd4035e4bd18743b7c4",
-      "basisHash": "44caceb70ed477e5c2de6cd025b902a37077a22f193565ebff2a29135010101c",
+      "basisHash": "5077814442a74674116e2d708e30b8d0fbac868be6bae213fc9c2b44645d2daf",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 0.9108,
-      "recordedAt": "2026-10-07T02:36:06Z",
+      "durationSeconds": 0.9027,
+      "recordedAt": "2026-10-07T02:42:10Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-02f159a6d35c.log",
-      "logSha256": "d3e154e1a1facc32e42d3c18a7b1d353084e592f6636fde2c321ed5cc3774dd0",
-      "inputsHash": "6a3e8cfda40fbbde0fe4c00ae35fc7a526d8f1a2d5f6eac4ed9fd68dc1b4d19e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-922a0e6feb36.log",
+      "logSha256": "7def46702cd842b2940a58c9fca7c4839a9f03aebe3447154714e1f2411a7305",
+      "inputsHash": "d0db1e4f2a0e01e478c547f5c0135672125f6250fb4ac16062835b52fb9e5168"
     }
   },
   "reviews": {
@@ -2344,7 +2344,7 @@
     },
     "s08-keyed-operators": {
       "reviewerId": "reviewer-s08-indep-5b9e",
-      "snapshotId": "eb8e19c43a8fec23c255afe1c28eee4627e27464056858d336f9e6c932d4aa0d",
+      "snapshotId": "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5",
       "criterionIds": [
         "IDX-5.1",
         "IDX-5.2",
@@ -2426,7 +2426,7 @@
           "criterionIds": [
             "IDX-6.1"
           ],
-          "sha256": "2b8907259b370491de7027d7acbc3bbe721063761055f5c8094ff15b769811c7"
+          "sha256": "1ec47d1a3c0d4a271c8b61147f1efa5b971186fbb91e8aff911818d445e9bf3b"
         },
         {
           "repositoryId": "reactive",
@@ -2435,7 +2435,7 @@
           "criterionIds": [
             "IDX-6.2"
           ],
-          "sha256": "cf460308028b37da99332a2e52a7a8a712475bde8db46c5f290934e304bb6ec6"
+          "sha256": "29c13f705fd5e189cd2c299f652066d477e9a2c0c31c6cb0349bec9181c6c8d8"
         },
         {
           "repositoryId": "reactive",
@@ -2660,7 +2660,7 @@
           "sha256": "43cea6efef1458fea9744738a6d724a59f6f2c2320f50a1ea38aa19cd6171e62"
         }
       ],
-      "summaryMarkdown": "Re-review of sprint s08-keyed-operators at snapshot eb8e19c4. **Verdict: passed.** All seven findings (S08-F1 to F7) are resolved, and every criterion holds.\n\n**Checks run:**\n- The four sprint groups pass: 6, 5, 6 and 7 tests.\n- Eleven related groups pass: joins, grouping_tree_switching, snapshot_diff_indexes, subset_operator_indexes, side_effects_options_bridges, aggregation_diagnostics_diff, sorting_windowing, transforms_filters, lifecycle_observables, index_contract_harness and keyed_sort_positions.\n- `cargo fmt --check`, Clippy `-D warnings` and the wasm32 check pass.\n\n**Independent probes** (release build, public API, compared against HEAD 49e9bdb):\n- `ensure_unique_keys` stays strict-correct over four kinds of upstream.\n- A single move or a single sort change produces one output change.\n- Live groups pass with a regrouper firing on every batch, including over a positionless upstream.\n- `group_on_observable` is strict-correct.\n- `sort_and_virtualize` passes with a dynamic comparer and request (300/300).\n- `edit_diff` keeps the same duplicate policy as `SourceCache::edit_diff`.\n- The `change_key` refresh repro is fixed.\n\n**Non-blocking residuals** (linear or HEAD-like costs; candidates for a later performance pass):\n1. `ensure_unique_keys` rebuilds full rank and presence hash sets on every batch, even when nothing moves. A one-key update costs 9.3 ms at 40k items (HEAD 1.4 ms) and 20 ms at 80k. A cheap fast path is to skip `minimal_moves` when `working` already equals the target order.\n2. Sync `transform_many` handling `SourceCache::clear()` (a `Clear` that lists its entries) removes parents one at a time with `Vec::remove`. It takes 59 ms at 40k (HEAD 14 ms) and 206 ms at 80k, which is superlinear.\n3. Bulk update-all and remove-all batches in `transform_many` cost about 2.5x HEAD (both are superlinear because of the source).\n4. The new wall-clock ratio tests (`*_loads_linearly`, `keyed_state_bookkeeping_scales_linearly`, bound below 8x) could flake on a heavily loaded debug runner.\n5. The rustdoc on `ensure_unique_cache_changes` still lists the old phase order (additions before moves).",
+      "summaryMarkdown": "Re-confirmation of sprint s08-keyed-operators at snapshot 8f51189c (HEAD 3a7adb7). **Verdict: passed.** All seven findings (S08-F1 to F7) remain resolved.\n\n**What changed since the last pass:** only the two stated edits, checked by diffing against my reviewed copy.\n- `minimal_moves` returns early when `working` already equals `target`. This is correct: there is nothing to move, and the caller's `working` is already in order. When the target lists keys that are absent, the slices are unequal and the normal path still runs.\n- The doc comment on `ensure_unique_cache_changes` now matches the phase order.\n\n**Checks run:**\n- `cargo fmt --check` and Clippy `-D warnings` pass.\n- `key_bridge_indexes` (5), `snapshot_diff_indexes` (11), `joins` (4) and `grouping_tree_switching` (23) pass.\n\n**Probes** (release build):\n- `ensure_unique_keys` stays strict-correct over four kinds of upstream (0/300 each).\n- A single move or a single sort change still produces one output change.\n- A one-key update at 40k items now costs 2.8–2.9 ms, down from 9.3 ms; HEAD costs 1.4 ms.\n\n**Remaining non-blocking notes** (from the previous summary):\n- Sync `transform_many` handling a `Clear` that lists its entries is superlinear: 59 ms at 40k items, against 14 ms on HEAD.\n- Bulk update-all and remove-all batches cost about 2.5x HEAD.\n- The wall-clock ratio tests (below 8x) could flake on a heavily loaded runner.",
       "findingIds": [
         "S08-F1",
         "S08-F2",
@@ -2670,7 +2670,7 @@
         "S08-F6",
         "S08-F7"
       ],
-      "recordedAt": "2026-10-07T02:40:50Z"
+      "recordedAt": "2026-10-07T02:43:11Z"
     }
   },
   "checkpoints": {
@@ -2729,6 +2729,14 @@
       },
       "reviewHash": "1524be0bfaca687006c3ba82bd3cbbe74837b18edf89c99bada5391dd54bd17f",
       "recordedAt": "2026-10-07T01:51:46Z"
+    },
+    "s08-keyed-operators": {
+      "snapshotId": "8f51189c588700f31c61f4ea9145d69f462fddb20e1bc5b1602002c66e8552a5",
+      "commits": {
+        "reactive": "3a7adb725ed6b92672dd67a06906c728b5a59f15"
+      },
+      "reviewHash": "df8f5809c2cc7b00dcbc4b0c67e601fe2260fad366aa9d496fe555fe95b42bf3",
+      "recordedAt": "2026-10-07T02:43:24Z"
     }
   },
   "findings": [
