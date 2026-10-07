@@ -1,8 +1,13 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, Weak};
+use std::time::Duration;
 
-use crate::primitives::{DeliveryQueue, ReactiveError, Subscription, ValueStream, ValueSubscriber};
+use crate::primitives::timer::{OperatorTimer, schedule_timer};
+use crate::primitives::{
+    DeliveryQueue, ReactiveError, Scheduler, Subscription, ValueStream, ValueSubscriber,
+    default_scheduler,
+};
 
 /// Operators on [`ValueStream`], for any stream error type `E`.
 ///
@@ -125,6 +130,54 @@ pub trait ReactiveValueStreamExt<T, E = ReactiveError> {
     /// Like [`share`](Self::share), and a new subscriber immediately receives the latest
     /// value the shared upstream emitted (if any).
     fn share_replay(&self) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// Emits a value once `quiet` has passed without a newer one: the last value of each
+    /// burst. The timer runs on [`default_scheduler`]; values are delivered on its thread.
+    /// `Duration::ZERO` forwards every value.
+    fn debounce(&self, quiet: Duration) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// [`debounce`](Self::debounce) with its timer on `scheduler`.
+    fn debounce_with_scheduler(
+        &self,
+        quiet: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// Forwards a value, then drops the values that arrive less than `window` after it (the
+    /// leading value of each window), timed by [`default_scheduler`]. `Duration::ZERO`
+    /// forwards every value.
+    fn throttle(&self, window: Duration) -> ValueStream<T, E>
+    where
+        T: Send + Sync + 'static;
+
+    /// [`throttle`](Self::throttle) timed by `scheduler`.
+    fn throttle_with_scheduler(
+        &self,
+        window: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<T, E>
+    where
+        T: Send + Sync + 'static;
+
+    /// At every `period` (counted from subscription), emits the latest value if one arrived
+    /// since the previous tick. The timer runs on [`default_scheduler`]; values are
+    /// delivered on its thread. `Duration::ZERO` forwards every value.
+    fn sample(&self, period: Duration) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// [`sample`](Self::sample) with its timer on `scheduler`.
+    fn sample_with_scheduler(
+        &self,
+        period: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<T, E>
     where
         T: Clone + Send + Sync + 'static;
 }
@@ -562,6 +615,227 @@ where
         T: Clone + Send + Sync + 'static,
     {
         shared(self.clone(), Some(|value: &T| value.clone()))
+    }
+
+    fn debounce(&self, quiet: Duration) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        self.debounce_with_scheduler(quiet, default_scheduler())
+    }
+
+    fn debounce_with_scheduler(
+        &self,
+        quiet: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        if quiet.is_zero() {
+            return self.clone();
+        }
+        timed_value_stream(self.clone(), scheduler, move |state, value, _now| {
+            state.pending = Some(value.clone());
+            // Every value restarts the quiet period.
+            let cancelled = state.timer.disarm();
+            (
+                cancelled,
+                state.timer.arm().map(|generation| (generation, quiet)),
+            )
+        })
+    }
+
+    fn throttle(&self, window: Duration) -> ValueStream<T, E>
+    where
+        T: Send + Sync + 'static,
+    {
+        self.throttle_with_scheduler(window, default_scheduler())
+    }
+
+    fn throttle_with_scheduler(
+        &self,
+        window: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<T, E>
+    where
+        T: Send + Sync + 'static,
+    {
+        if window.is_zero() {
+            return self.clone();
+        }
+        let source = self.clone();
+        ValueStream::new(move |subscriber| {
+            let last_forwarded = Mutex::new(None::<Duration>);
+            let scheduler = Arc::clone(&scheduler);
+            source.subscribe(move |value| {
+                let forward = {
+                    let mut last = lock(&last_forwarded);
+                    let now = scheduler.now();
+                    let open = last.is_none_or(|last| now >= last.saturating_add(window));
+                    if open {
+                        *last = Some(now);
+                    }
+                    open
+                };
+                if forward {
+                    subscriber(value);
+                }
+            })
+        })
+    }
+
+    fn sample(&self, period: Duration) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        self.sample_with_scheduler(period, default_scheduler())
+    }
+
+    fn sample_with_scheduler(
+        &self,
+        period: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<T, E>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        if period.is_zero() {
+            return self.clone();
+        }
+        timed_value_stream(self.clone(), scheduler, move |state, value, now| {
+            state.pending = Some(value.clone());
+            // A tick is armed only while a value waits for it.
+            let next = state.timer.arm().map(|generation| {
+                let period = period.as_nanos();
+                let elapsed = now.saturating_sub(state.origin).as_nanos();
+                let until_tick = period - elapsed % period;
+                (
+                    generation,
+                    Duration::from_nanos(u64::try_from(until_tick).unwrap_or(u64::MAX)),
+                )
+            });
+            (None, next)
+        })
+    }
+}
+
+/// The state of `debounce` and `sample`: the value waiting for the timer.
+struct TimedValue<T> {
+    pending: Option<T>,
+    timer: OperatorTimer,
+    /// The scheduler's time at subscription.
+    origin: Duration,
+}
+
+/// A timer to cancel (dropped after unlocking) and one to schedule: (generation, delay).
+type TimedValuePlan = (
+    Option<crate::primitives::ScheduledTask>,
+    Option<(u64, Duration)>,
+);
+
+/// Shared by `debounce` and `sample`: `on_value` updates the state for each value and plans
+/// the timer; the timer delivers the pending value through a delivery queue, so nothing is
+/// delivered after the subscription is disposed.
+fn timed_value_stream<T, E>(
+    source: ValueStream<T, E>,
+    scheduler: Arc<dyn Scheduler>,
+    on_value: impl Fn(&mut TimedValue<T>, &T, Duration) -> TimedValuePlan + Send + Sync + 'static,
+) -> ValueStream<T, E>
+where
+    T: Send + Sync + 'static,
+    E: Send + Sync + 'static,
+{
+    let on_value = Arc::new(on_value);
+    ValueStream::new(move |subscriber| {
+        let output = Arc::new(DeliveryQueue::<T>::new());
+        let delivery = output.subscribe(move |value| subscriber(value)).ok();
+        let state = Arc::new(Mutex::new(TimedValue {
+            pending: None,
+            timer: OperatorTimer::default(),
+            origin: scheduler.now(),
+        }));
+        let timed = TimedOutput {
+            state: Arc::downgrade(&state),
+            output,
+            scheduler: Arc::clone(&scheduler),
+        };
+
+        let source_state = Arc::clone(&state);
+        let on_value = Arc::clone(&on_value);
+        let subscription = source.subscribe(move |value| {
+            let (cancelled, next) = {
+                let mut state = lock(&source_state);
+                if state.timer.is_closed() {
+                    return;
+                }
+                let now = timed.scheduler.now();
+                on_value(&mut state, value, now)
+            };
+            drop(cancelled);
+            if let Some((generation, delay)) = next {
+                timed.schedule(&source_state, generation, delay);
+            }
+        })?;
+
+        let close = Subscription::new(move || {
+            let (task, pending) = {
+                let mut state = lock(&state);
+                (state.timer.close(), state.pending.take())
+            };
+            drop(task);
+            drop(pending);
+        });
+        let mut subscriptions = vec![subscription, close];
+        subscriptions.extend(delivery);
+        Ok(Subscription::many(subscriptions))
+    })
+}
+
+/// The timer side of a `debounce` or `sample` subscription.
+struct TimedOutput<T> {
+    state: Weak<Mutex<TimedValue<T>>>,
+    output: Arc<DeliveryQueue<T>>,
+    scheduler: Arc<dyn Scheduler>,
+}
+
+impl<T> Clone for TimedOutput<T> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            output: Arc::clone(&self.output),
+            scheduler: Arc::clone(&self.scheduler),
+        }
+    }
+}
+
+impl<T: Send + Sync + 'static> TimedOutput<T> {
+    fn schedule(&self, state: &Mutex<TimedValue<T>>, generation: u64, delay: Duration) {
+        let timed = self.clone();
+        schedule_timer(
+            &*self.scheduler,
+            state,
+            |state| &mut state.timer,
+            generation,
+            delay,
+            move || timed.fire(generation),
+        );
+    }
+
+    fn fire(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        {
+            let mut state = lock(&state);
+            if !state.timer.fire(generation) {
+                return;
+            }
+            if let Some(value) = state.pending.take() {
+                let _ = self.output.push(value);
+            }
+        }
+        let _ = self.output.drain();
     }
 }
 
