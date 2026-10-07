@@ -151,9 +151,15 @@ fn cache_expire_after_removes_due_items_and_keeps_never_expiring_items()
     let rows_for_subscriber = Arc::clone(&rows);
     let order_for_subscriber = Arc::clone(&order);
     let batches_for_subscriber = Arc::clone(&batches);
+    // A manual clock keeps the due time exact (no wall-clock sleep).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .connect()
-        .expire_after(|row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))))
+        .expire_after_with_scheduler(
+            |row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))),
+            scheduler,
+        )
         .subscribe(move |batch| {
             if let Ok(mut batches) = batches_for_subscriber.lock() {
                 batches.push(batch.clone());
@@ -171,7 +177,9 @@ fn cache_expire_after_removes_due_items_and_keeps_never_expiring_items()
     })?;
     assert_eq!(row_pairs(&rows)?, vec![(1, 20), (2, 0)]);
 
-    std::thread::sleep(Duration::from_millis(120));
+    clock.advance_by(Duration::from_millis(19));
+    assert_eq!(row_pairs(&rows)?, vec![(1, 20), (2, 0)]);
+    clock.advance_by(Duration::from_millis(1));
     assert_eq!(row_pairs(&rows)?, vec![(2, 0)]);
     assert!(lock_vec(&batches)?.iter().any(|batch| matches!(
         batch.changes.as_slice(),
@@ -188,9 +196,15 @@ fn cache_expire_after_update_resets_due_time() -> Result<(), Box<dyn std::error:
 
     let rows_for_subscriber = Arc::clone(&rows);
     let order_for_subscriber = Arc::clone(&order);
+    // A manual clock keeps the due times exact (no wall-clock sleeps).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .connect()
-        .expire_after(|row| Some(Duration::from_millis(u64::from(row.value))))
+        .expire_after_with_scheduler(
+            |row| Some(Duration::from_millis(u64::from(row.value))),
+            scheduler,
+        )
         .subscribe(move |batch| {
             if let (Ok(mut rows), Ok(mut order)) =
                 (rows_for_subscriber.lock(), order_for_subscriber.lock())
@@ -200,12 +214,13 @@ fn cache_expire_after_update_resets_due_time() -> Result<(), Box<dyn std::error:
         })?;
 
     source.add_or_update(Row { id: 1, value: 40 })?;
-    std::thread::sleep(Duration::from_millis(20));
+    clock.advance_by(Duration::from_millis(20));
     source.add_or_update(Row { id: 1, value: 120 })?;
-    std::thread::sleep(Duration::from_millis(70));
+    // Past the first due time (40 ms), before the reset one (20 + 120 ms).
+    clock.advance_by(Duration::from_millis(70));
     assert_eq!(row_pairs(&rows)?, vec![(1, 120)]);
 
-    std::thread::sleep(Duration::from_millis(100));
+    clock.advance_by(Duration::from_millis(50));
     assert!(lock_vec(&rows)?.is_empty());
     Ok(())
 }
@@ -219,9 +234,15 @@ fn list_expire_after_removes_due_items_and_keeps_never_expiring_items()
 
     let rows_for_subscriber = Arc::clone(&rows);
     let batches_for_subscriber = Arc::clone(&batches);
+    // A manual clock keeps the due time exact (no wall-clock sleep).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .connect()
-        .expire_after(|row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))))
+        .expire_after_with_scheduler(
+            |row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))),
+            scheduler,
+        )
         .subscribe(move |batch| {
             if let Ok(mut batches) = batches_for_subscriber.lock() {
                 batches.push(batch.clone());
@@ -236,7 +257,9 @@ fn list_expire_after_removes_due_items_and_keeps_never_expiring_items()
     })?;
     assert_eq!(row_pairs(&rows)?, vec![(1, 20), (2, 0)]);
 
-    std::thread::sleep(Duration::from_millis(120));
+    clock.advance_by(Duration::from_millis(19));
+    assert_eq!(row_pairs(&rows)?, vec![(1, 20), (2, 0)]);
+    clock.advance_by(Duration::from_millis(1));
     assert_eq!(row_pairs(&rows)?, vec![(2, 0)]);
     assert!(lock_vec(&batches)?.iter().any(|batch| matches!(
         batch.changes.as_slice(),

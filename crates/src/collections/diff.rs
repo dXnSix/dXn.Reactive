@@ -1,12 +1,20 @@
+use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::operators::{apply_list_changes, diff_list_by};
-use crate::collections::stream::{ChangeStream, ValueStream};
+use crate::collections::stream::ChangeStream;
 
+/// Turns a stream of full snapshots into an incremental keyed cache stream.
+///
+/// Each snapshot is diffed by key against the previous one, so a poll, file listing or query
+/// result publishes only the removes, updates, adds and moves that it implies. A snapshot
+/// that changes nothing publishes nothing.
 pub trait ValueStreamCacheDiffExt<T> {
+    /// Diffs each snapshot by the key from `key_selector`, treating items as updated when they
+    /// differ (`PartialEq`).
     fn edit_diff<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -15,6 +23,8 @@ pub trait ValueStreamCacheDiffExt<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`edit_diff`](Self::edit_diff), with `are_items_equal` deciding whether an item with
+    /// an existing key was updated.
     fn edit_diff_by<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -25,11 +35,17 @@ pub trait ValueStreamCacheDiffExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Turns a stream of full snapshots into an incremental list stream.
+///
+/// Each snapshot is diffed positionally against the previous one (like the list `edit_diff`),
+/// so unchanged items keep their identity. A snapshot that changes nothing publishes nothing.
 pub trait ValueStreamListDiffExt<T> {
+    /// Diffs each snapshot against the previous one, comparing items with `PartialEq`.
     fn edit_diff_list(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`edit_diff_list`](Self::edit_diff_list), with `are_items_equal` as the item equality.
     fn edit_diff_list_by(
         &self,
         are_items_equal: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -38,7 +54,11 @@ pub trait ValueStreamListDiffExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
-impl<T> ValueStreamListDiffExt<T> for ValueStream<Vec<T>> {
+impl<T, E> ValueStreamListDiffExt<T> for crate::primitives::ValueStream<Vec<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn edit_diff_list(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
@@ -53,7 +73,7 @@ impl<T> ValueStreamListDiffExt<T> for ValueStream<Vec<T>> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let are_items_equal = Arc::new(are_items_equal);
         ChangeStream::new(move |subscriber| {
             let state = Arc::new(Mutex::new(ListSnapshotDiffState::<T>::default()));
@@ -73,7 +93,11 @@ impl<T> ValueStreamListDiffExt<T> for ValueStream<Vec<T>> {
     }
 }
 
-impl<T> ValueStreamCacheDiffExt<T> for ValueStream<Vec<T>> {
+impl<T, E> ValueStreamCacheDiffExt<T> for crate::primitives::ValueStream<Vec<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn edit_diff<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -94,7 +118,7 @@ impl<T> ValueStreamCacheDiffExt<T> for ValueStream<Vec<T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = Arc::new(key_selector);
         let are_items_equal = Arc::new(are_items_equal);
         ChangeStream::new(move |subscriber| {
@@ -153,7 +177,11 @@ where
     }
 }
 
+/// Turns a stream of optional values into a zero-or-one item keyed cache stream.
 pub trait OptionalValueStreamCacheDiffExt<T> {
+    /// Diffs each value against the previous one by the key from `key_selector`: `None` removes
+    /// the item, a value with another key removes the previous item and adds the new one, and a
+    /// changed item (`PartialEq`) under the same key updates it.
     fn edit_diff_optional<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -162,6 +190,8 @@ pub trait OptionalValueStreamCacheDiffExt<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`edit_diff_optional`](Self::edit_diff_optional), with `are_items_equal` deciding
+    /// whether an item under the same key was updated.
     fn edit_diff_optional_by<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -172,7 +202,11 @@ pub trait OptionalValueStreamCacheDiffExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
-impl<T> OptionalValueStreamCacheDiffExt<T> for ValueStream<Option<T>> {
+impl<T, E> OptionalValueStreamCacheDiffExt<T> for crate::primitives::ValueStream<Option<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
     fn edit_diff_optional<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -193,7 +227,7 @@ impl<T> OptionalValueStreamCacheDiffExt<T> for ValueStream<Option<T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let source = self.clone();
+        let source = self.err_into::<CollectionError>();
         let key_selector = Arc::new(key_selector);
         let are_items_equal = Arc::new(are_items_equal);
         ChangeStream::new(move |subscriber| {
@@ -242,18 +276,24 @@ where
         key_selector: &dyn Fn(&T) -> K,
         are_items_equal: &dyn Fn(&T, &T) -> bool,
     ) -> Option<ChangeSet<CacheChange<K, T>>> {
+        // Duplicate keys: the last occurrence's item at the first occurrence's position (as
+        // `SourceCache::edit_diff`). The changes apply in order (the index contract):
+        // removals, then each key placed at its target position in snapshot order.
         let (next_items, next_order) = keyed_snapshot(items, key_selector);
         let mut state_items = HashMap::<K, T>::new();
         let mut changes = Vec::new();
+        let mut working = self.order.clone();
 
-        for (previous_index, key) in self.order.iter().enumerate() {
+        for key in self.order.iter().rev() {
             if !next_items.contains_key(key)
                 && let Some(previous) = self.items.get(key)
+                && let Some(index) = working.iter().position(|existing| existing == key)
             {
+                let _ = working.remove(index);
                 changes.push(CacheChange::Remove {
                     key: key.clone(),
                     previous: previous.clone(),
-                    previous_index: Some(previous_index),
+                    previous_index: Some(index),
                 });
             }
         }
@@ -262,39 +302,39 @@ where
             let Some(current) = next_items.get(key) else {
                 continue;
             };
-            match self.items.get(key) {
-                Some(previous) if are_items_equal(previous, current) => {
-                    state_items.insert(key.clone(), previous.clone());
-                    if let Some(previous_index) =
-                        self.order.iter().position(|existing| existing == key)
-                        && previous_index != current_index
-                    {
-                        changes.push(CacheChange::Move {
-                            key: key.clone(),
-                            current: previous.clone(),
-                            current_index,
-                            previous_index,
-                        });
-                    }
-                }
-                Some(previous) => {
-                    state_items.insert(key.clone(), current.clone());
-                    changes.push(CacheChange::Update {
-                        key: key.clone(),
-                        current: current.clone(),
-                        previous: previous.clone(),
-                        current_index: Some(current_index),
-                        previous_index: self.order.iter().position(|existing| existing == key),
-                    });
-                }
-                None => {
-                    state_items.insert(key.clone(), current.clone());
-                    changes.push(CacheChange::Add {
-                        key: key.clone(),
-                        current: current.clone(),
-                        current_index: Some(current_index),
-                    });
-                }
+            let Some(previous) = self.items.get(key) else {
+                working.insert(current_index.min(working.len()), key.clone());
+                state_items.insert(key.clone(), current.clone());
+                changes.push(CacheChange::Add {
+                    key: key.clone(),
+                    current: current.clone(),
+                    current_index: Some(current_index),
+                });
+                continue;
+            };
+            if let Some(from) = working.iter().position(|existing| existing == key)
+                && from != current_index
+            {
+                let moved = working.remove(from);
+                working.insert(current_index.min(working.len()), moved);
+                changes.push(CacheChange::Move {
+                    key: key.clone(),
+                    current: previous.clone(),
+                    current_index,
+                    previous_index: from,
+                });
+            }
+            if are_items_equal(previous, current) {
+                state_items.insert(key.clone(), previous.clone());
+            } else {
+                state_items.insert(key.clone(), current.clone());
+                changes.push(CacheChange::Update {
+                    key: key.clone(),
+                    current: current.clone(),
+                    previous: previous.clone(),
+                    current_index: Some(current_index),
+                    previous_index: Some(current_index),
+                });
             }
         }
 

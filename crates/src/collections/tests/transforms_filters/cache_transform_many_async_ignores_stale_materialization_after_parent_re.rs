@@ -40,12 +40,28 @@ fn cache_transform_many_async_ignores_stale_materialization_after_parent_removed
         let mut pending = lock_vec(&pending)?;
         pending.remove(0)
     };
-    if sender.send(vec![Row { id: 10, value: 10 }]).is_err() {
-        return Err(std::io::Error::other("receiver dropped").into());
-    }
-    std::thread::sleep(Duration::from_millis(60));
+    // Removing the parent drops its pending transform, so the receiver may already be gone;
+    // either way nothing may be published for the removed parent.
+    let _ = sender.send(vec![Row { id: 10, value: 10 }]);
 
-    assert!(lock_vec(&received)?.is_empty());
+    // A later parent's materialization is the barrier (instead of a fixed sleep): once its
+    // children are published, the stale result sent before it has been handled.
+    source.add_or_update(Row { id: 2, value: 20 })?;
+    assert!(wait_for_len(&pending, 1));
+    let sender = {
+        let mut pending = lock_vec(&pending)?;
+        pending.remove(0)
+    };
+    let _ = sender.send(vec![Row { id: 20, value: 20 }]);
+    assert!(wait_for_len(&received, 1));
+
+    // Only the live parent's children were published; nothing for the removed parent.
+    let received = lock_vec(&received)?;
+    assert_eq!(received.len(), 1);
+    assert!(matches!(
+        received[0].changes.as_slice(),
+        [CacheChange::Add { key: 20, .. }]
+    ));
     Ok(())
 }
 

@@ -50,14 +50,14 @@ patterns that make the library effective in real applications.
 15. [Application patterns](15-application-patterns.md): ViewModel composition, bridging signals
     into collection operators, binding to a UI, and complete recipes.
 16. [Concurrency and platforms](16-concurrency-and-platforms.md): the threading model, delivery
-    order, re-entrancy, worker threads, async futures, and WebAssembly.
+    order, contention, panics, worker threads, schedulers, async futures, and WebAssembly.
 17. [Performance](17-performance.md): cost model, guidelines, anti-patterns, and benchmarks.
 18. [Testing reactive code](18-testing.md): probes, deterministic assertions, and testing time
     and async operators.
 19. [Coming from DynamicData and ReactiveUI](19-coming-from-dynamicdata.md): concept and API
     mapping for .NET developers.
 20. [Contributing](20-contributing.md): repository layout, validation, test organization, and
-    co-development with RayX.
+    working with consumers such as RayX.
 
 ## Reading paths
 
@@ -78,33 +78,3 @@ patterns that make the library effective in real applications.
   should handle poisoned locks deliberately.
 - "List" means `SourceList<T>` and `ChangeStream<ListChange<T>>`; "cache" means
   `SourceCache<K, T>` and `ChangeStream<CacheChange<K, T>>`.
-
-## Known issues
-
-A whole-codebase audit on 2026-10-06 found defects that are scheduled for repair in the AgentX epic
-`reactive-audit-remediation` (`.agentx/tasks/reactive-audit-remediation/`). Until it lands, keep
-these in mind:
-
-- **Concurrent writers.** Writes to one source from several threads can fail with
-  `CollectionError::NestedUpdate` (it also reports contention, not only re-entrancy), and successful
-  concurrent writes can be delivered out of version order. Use a single writer per source
-  ([chapter 16](16-concurrency-and-platforms.md#sources-under-contention)).
-- **Reads inside an edit.** Calling `items()`, `len()`, `count()`, `keys()` or
-  `suspend_notifications()` on a source from inside its own `edit` closure deadlocks.
-- **Subscriber panics.** A caught subscriber panic stops all further notifications from that signal,
-  event bus or source.
-- **Suspension.** Connecting or watching while `suspend_notifications` is active, then editing
-  again, can re-deliver changes.
-- **Cache indexes.** Cache `filter`, `transform_safe*`, forced transforms, `transform_inline`, the
-  dynamic filter, keyed windows after moving updates, joins, `add_key`, `ensure_unique_keys` and
-  `ValueStream::edit_diff` can emit indexes that misplace rows when materialized with
-  `as_observable_list()` or `bind_to_vec()`. Materializing with `as_observable_cache()` (by key), or
-  sorting with `sort_keyed_*` before materializing, avoids the problem. Keyed sort can panic on
-  indexed updates that move a key later (`add_or_update_key_at`).
-- **Expiration.** The `*_with_polling` expiration variants never expire items; stream-level
-  `expire_after` can desynchronize downstream after the first expiry.
-- **Commands.** Dropping an in-flight `AsyncCommand::execute()` future leaves the state `Running`;
-  overlapping executions can report a wrong state.
-- **Computed.** Diamond-shaped dependencies (one signal feeding a `Computed` through two paths)
-  can publish an intermediate value combining old and new inputs.
-- **Page and window totals** can go stale ([chapter 10](10-sorting-paging-virtualization.md#response-metadata)).

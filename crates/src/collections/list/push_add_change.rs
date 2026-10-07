@@ -1,10 +1,12 @@
 impl<T: Clone> ListUpdater<'_, T> {
+    /// Appends `item`.
     pub fn push(&mut self, item: T) {
         let index = self.items.len();
         self.items.push(item.clone());
         push_add_change(self.changes, index, item);
     }
 
+    /// Appends `items`; consecutive appends coalesce into one `AddRange`.
     pub fn add_range(&mut self, items: impl IntoIterator<Item = T>) {
         let index = self.items.len();
         let items = items.into_iter().collect::<Vec<_>>();
@@ -15,6 +17,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         push_add_range_change(self.changes, index, items);
     }
 
+    /// Inserts `item` at `index`; returns `false` and records nothing if `index > len`.
     pub fn insert(&mut self, index: usize, item: T) -> bool {
         if index > self.items.len() {
             return false;
@@ -24,6 +27,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         true
     }
 
+    /// Inserts `items` starting at `index`; returns `false` and records nothing if `index > len`.
     pub fn insert_range(&mut self, index: usize, items: impl IntoIterator<Item = T>) -> bool {
         if index > self.items.len() {
             return false;
@@ -37,6 +41,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         true
     }
 
+    /// Replaces the item at `index` and returns the old item, or `None` if `index` is out of range.
     pub fn replace(&mut self, index: usize, item: T) -> Option<T> {
         if index >= self.items.len() {
             return None;
@@ -50,6 +55,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         Some(old)
     }
 
+    /// Replaces the first item equal to `original` and returns it, or `None` if there is none.
     pub fn replace_item(&mut self, original: &T, item: T) -> Option<T>
     where
         T: PartialEq,
@@ -61,6 +67,10 @@ impl<T: Clone> ListUpdater<'_, T> {
         self.replace(index, item)
     }
 
+    /// Moves the item at `from` to `to`, recording a `Move`.
+    ///
+    /// Returns `false` if either index is out of range; `from == to` returns `true` and records
+    /// nothing.
     pub fn move_item(&mut self, from: usize, to: usize) -> bool {
         if from >= self.items.len() || to >= self.items.len() || from == to {
             return from < self.items.len() && to < self.items.len();
@@ -71,6 +81,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         true
     }
 
+    /// Removes the item at `index` and returns it, or `None` if `index` is out of range.
     pub fn remove(&mut self, index: usize) -> Option<T> {
         if index >= self.items.len() {
             return None;
@@ -80,6 +91,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         Some(old)
     }
 
+    /// Removes the first item equal to `item` and returns it, or `None` if there is none.
     pub fn remove_item(&mut self, item: &T) -> Option<T>
     where
         T: PartialEq,
@@ -88,6 +100,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         self.remove(index)
     }
 
+    /// Removes the first item equal to each of `items` and returns the items removed.
     pub fn remove_many(&mut self, items: impl IntoIterator<Item = T>) -> Vec<T>
     where
         T: PartialEq,
@@ -98,6 +111,10 @@ impl<T: Clone> ListUpdater<'_, T> {
             .collect()
     }
 
+    /// Removes up to `count` items starting at `index` and returns them.
+    ///
+    /// The range is clamped to the end of the list. Returns `None` if `index` is out of range or
+    /// `count` is zero.
     pub fn remove_range(&mut self, index: usize, count: usize) -> Option<Vec<T>> {
         if index >= self.items.len() || count == 0 {
             return None;
@@ -110,6 +127,7 @@ impl<T: Clone> ListUpdater<'_, T> {
         Some(old)
     }
 
+    /// Records a `Refresh` for the item at `index`; returns `false` if `index` is out of range.
     pub fn refresh(&mut self, index: usize) -> bool {
         let Some(item) = self.items.get(index).cloned() else {
             return false;
@@ -118,12 +136,25 @@ impl<T: Clone> ListUpdater<'_, T> {
         true
     }
 
+    /// Refreshes the item at `index` with `item` as its current value: a refresh carries
+    /// the item as it now is (used when materializing a change stream).
+    pub(crate) fn refresh_with(&mut self, index: usize, item: T) -> bool {
+        let Some(slot) = self.items.get_mut(index) else {
+            return false;
+        };
+        *slot = item.clone();
+        self.changes.push(ListChange::Refresh { index, item });
+        true
+    }
+
+    /// Records a `Refresh` for every item.
     pub fn refresh_all(&mut self) {
         for (index, item) in self.items.iter().cloned().enumerate() {
             self.changes.push(ListChange::Refresh { index, item });
         }
     }
 
+    /// Removes every item, recording one `Clear`; an empty list records nothing.
     pub fn clear(&mut self) {
         if self.items.is_empty() {
             return;
@@ -132,11 +163,13 @@ impl<T: Clone> ListUpdater<'_, T> {
         self.changes.push(ListChange::Clear { old });
     }
 
+    /// Clears the list, then appends `items`.
     pub fn load(&mut self, items: impl IntoIterator<Item = T>) {
         self.clear();
         self.add_range(items);
     }
 
+    /// Transforms the list into `items` with minimal changes, comparing items with `==`.
     pub fn edit_diff(&mut self, items: impl IntoIterator<Item = T>)
     where
         T: PartialEq,
@@ -144,6 +177,11 @@ impl<T: Clone> ListUpdater<'_, T> {
         self.edit_diff_by(items, |previous, current| previous == current);
     }
 
+    /// Transforms the list into `items` with minimal changes, comparing items with
+    /// `are_items_equal`.
+    ///
+    /// Records `Replace`, `Add`, `AddRange`, `Remove` and `RemoveRange` changes; moves are not
+    /// detected.
     pub fn edit_diff_by(
         &mut self,
         items: impl IntoIterator<Item = T>,

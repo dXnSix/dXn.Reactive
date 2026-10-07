@@ -63,14 +63,14 @@ sources; the library itself never couples them.
 | Module | Contents |
 |---|---|
 | `signal` | `Signal<T>`, `ReadSignal<T>`, `SignalChange<T>` |
-| `computed` | `Computed<T>` (`derive`, `combine2`) |
-| `stream_ext` | `ReactiveValueStreamExt`: `filter`, `filter_map`, `distinct_until_changed`, `skip` |
+| `computed` | `Computed<T>` (`derive`, `derive_distinct`, `combine2`, `combine3`, `from_stream`) |
+| `stream_ext` | `ReactiveValueStreamExt`: `filter`, `filter_map`, `distinct_until_changed`, `skip`, `take`, `merge`, `combine_latest`, `switch_map`, `scan`, `share`, `debounce`, `throttle`, `sample`, … |
 | `effect` | `Effect` |
 | `disposal` | `Disposable`, `DisposeBag`, `DisposeWith` |
 | `activation` | `ViewModelActivator`, `ActivationToken`, `ActivatableViewModel` |
-| `command` | `Command`, `AsyncCommand`, `CommandState`, `CommandError`, `CommandResult` |
+| `command` | `Command`, `AsyncCommand`, `CommandState`, `CommandError`, `CommandResult`, `ExecutionPolicy` |
 | `event` | `EventBus<T>`, `EventStream<T>` |
-| `primitives` | `ValueStream`, `ValueSubscriber`, `Subscription`, `CompositeSubscription`, `DeliveryQueue`, `ConnectionStatus`, `ReactiveError`, `Result` |
+| `primitives` | `ValueStream`, `ValueSubscriber`, `Subscription`, `CompositeSubscription`, `DeliveryQueue`, `ConnectionStatus`, `ReactiveError`, `Result`, `Scheduler`, `ThreadScheduler`, `ManualScheduler`, `default_scheduler` |
 
 ### `rayx_reactive::collections`
 
@@ -120,24 +120,26 @@ two-parameter form in such a module. Within collection code, the alias is often 
 `CollectionError` converts from `ReactiveError`, so a function returning
 `rayx_reactive::collections::Result<T>` can use `?` on both layers.
 
-The error-parameter difference matters when you pass a signal stream into a collection operator.
-`filter_with_state` and `filter_dynamic` accept any error type convertible into
-`CollectionError`, so `signal.values()` works directly. The other dynamic operators take the
-collection alias, so they need a one-line adapter, described in
+The error parameter rarely matters in practice: every collection operator accepts streams of any
+error type convertible into `CollectionError`, and every scalar stream operator works with any
+error type, so `signal.values()` feeds collection operators directly and collection outputs use
+the scalar operators unchanged. See
 [Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators).
 
 ## Errors
 
 | Type | Variants | Raised by |
 |---|---|---|
-| `ReactiveError` | `Poisoned` | Scalar state: a mutex was poisoned by a panicking thread. |
-| `CollectionError` | `Poisoned`, `MissingKey`, `IndexOutOfRange`, `NestedUpdate` | Collections. `NestedUpdate` means a source was edited from inside its own edit or delivery. |
+| `ReactiveError` | `Poisoned`, `External(Arc<dyn Error + Send + Sync>)` | Scalar state. `External` carries an error from another layer, for example a `CollectionError` converted with `?`. |
+| `CollectionError` | `Poisoned`, `MissingKey`, `IndexOutOfRange`, `NestedUpdate`, `Contended` | Collections. `NestedUpdate` means a source was accessed from inside its own edit on the same thread; `Contended` (wasm32 only) means another thread holds it. |
 | `CommandError` | `Disabled`, `Failed(String)`, `Reactive(ReactiveError)` | `Command::execute` / `AsyncCommand::execute`. |
 | `TransformError<K, T, E>` | struct `{ error, key, value }` | Passed to the error callback of `transform_safe*` operators. |
 
-`CollectionError` implements `From<ReactiveError>`, and `CommandError` implements
-`From<ReactiveError>`, so `?` works across the layers. All error types implement
-`std::error::Error`.
+`CollectionError` and `ReactiveError` convert into each other (a collection error inside
+`ReactiveError::External` converts back to itself), and `CommandError` implements
+`From<ReactiveError>`, so `?` works across the layers in both directions. All error types implement
+`std::error::Error`. `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`:
+a `match` on them outside the crate needs a wildcard arm.
 
 ## What this library is not
 

@@ -3,13 +3,17 @@ use std::hash::Hash;
 
 use crate::collections::option::ItemWithIndex;
 
+/// Lookup helpers for any iterable collection.
 pub trait IterableCollectionExt<T>: IntoIterator<Item = T> + Sized {
+    /// Returns every item whose selected value occurs more than once, in input order.
     fn duplicates_by<K>(self, value_selector: impl Fn(&T) -> K) -> Vec<T>
     where
         K: Clone + Eq + Hash;
 
+    /// Returns the first item matching `predicate`, or `None`.
     fn first_or_optional(self, predicate: impl Fn(&T) -> bool) -> Option<T>;
 
+    /// Returns the first item equal to `item` with its index, or `None`.
     fn index_of_optional(self, item: &T) -> Option<ItemWithIndex<T>>
     where
         T: Clone + PartialEq,
@@ -17,6 +21,7 @@ pub trait IterableCollectionExt<T>: IntoIterator<Item = T> + Sized {
         self.index_of_optional_by(item, |left, right| left == right)
     }
 
+    /// Returns the first item that `equality` matches with `item`, with its index, or `None`.
     fn index_of_optional_by(
         self,
         item: &T,
@@ -25,6 +30,8 @@ pub trait IterableCollectionExt<T>: IntoIterator<Item = T> + Sized {
     where
         T: Clone;
 
+    /// Returns every occurrence of each of `items_to_find` with its index, grouped in the order of
+    /// `items_to_find`.
     fn index_of_many(self, items_to_find: impl IntoIterator<Item = T>) -> Vec<ItemWithIndex<T>>
     where
         T: Clone + Eq + Hash,
@@ -34,6 +41,8 @@ pub trait IterableCollectionExt<T>: IntoIterator<Item = T> + Sized {
         })
     }
 
+    /// Like [`index_of_many`](Self::index_of_many), mapping each occurrence and its index with
+    /// `result_selector`.
     fn index_of_many_with<R>(
         self,
         items_to_find: impl IntoIterator<Item = T>,

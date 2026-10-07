@@ -1,21 +1,59 @@
-use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::primitives::error::{ReactiveError, Result};
 use crate::primitives::subscription::Subscription;
 
 type Subscriber<T> = Arc<dyn Fn(&T) + Send + Sync>;
 
-struct DeliveryState<T> {
-    queue: VecDeque<T>,
-    subscribers: HashMap<usize, Subscriber<T>>,
-    next_subscriber_id: usize,
-    delivering: bool,
+struct Entry<T> {
+    id: u64,
+    active: Arc<AtomicBool>,
+    subscriber: Subscriber<T>,
 }
 
-#[derive(Clone)]
+struct DeliveryState<T> {
+    queue: VecDeque<T>,
+    entries: Vec<Arc<Entry<T>>>,
+    snapshot: Option<Arc<[Arc<Entry<T>>]>>,
+    next_subscriber_id: u64,
+    delivering: bool,
+    #[cfg(test)]
+    snapshot_rebuilds: u64,
+}
+
+impl<T> DeliveryState<T> {
+    fn snapshot(&mut self) -> Arc<[Arc<Entry<T>>]> {
+        if let Some(snapshot) = &self.snapshot {
+            return Arc::clone(snapshot);
+        }
+        let snapshot: Arc<[Arc<Entry<T>>]> = self.entries.iter().cloned().collect();
+        self.snapshot = Some(Arc::clone(&snapshot));
+        #[cfg(test)]
+        {
+            self.snapshot_rebuilds += 1;
+        }
+        snapshot
+    }
+}
+
+/// A FIFO queue that delivers items to its subscribers one at a time.
+///
+/// Items are delivered strictly in push order and subscribers are invoked in
+/// subscription order. Only one thread drains a queue at a time: an item pushed
+/// while another thread (or a subscriber on the draining thread) is delivering
+/// is queued and delivered by that draining thread, never recursively.
 pub struct DeliveryQueue<T> {
     state: Arc<Mutex<DeliveryState<T>>>,
+}
+
+impl<T> Clone for DeliveryQueue<T> {
+    fn clone(&self) -> Self {
+        Self {
+            state: Arc::clone(&self.state),
+        }
+    }
 }
 
 impl<T> Default for DeliveryQueue<T> {
@@ -25,58 +63,128 @@ impl<T> Default for DeliveryQueue<T> {
 }
 
 impl<T> DeliveryQueue<T> {
+    /// Creates a queue without subscribers or pending items.
     pub fn new() -> Self {
         Self {
             state: Arc::new(Mutex::new(DeliveryState {
                 queue: VecDeque::new(),
-                subscribers: HashMap::new(),
+                entries: Vec::new(),
+                snapshot: None,
                 next_subscriber_id: 0,
                 delivering: false,
+                #[cfg(test)]
+                snapshot_rebuilds: 0,
             })),
         }
+    }
+
+    fn lock(&self) -> Result<MutexGuard<'_, DeliveryState<T>>> {
+        self.state.lock().map_err(|_| ReactiveError::Poisoned)
+    }
+
+    /// Number of items pushed but not yet delivered.
+    pub fn pending_len(&self) -> Result<usize> {
+        Ok(self.lock()?.queue.len())
+    }
+
+    /// Whether any subscriber is registered (a publisher may skip building items).
+    pub(crate) fn has_subscribers(&self) -> bool {
+        self.lock().is_ok_and(|state| !state.entries.is_empty())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn snapshot_rebuilds(&self) -> u64 {
+        self.lock().map_or(0, |state| state.snapshot_rebuilds)
     }
 }
 
 impl<T: Send + 'static> DeliveryQueue<T> {
+    /// Registers `subscriber` for every item delivered from now on.
+    ///
+    /// Dropping or disposing the returned [`Subscription`] unregisters it; once its disposal
+    /// returns on the delivering thread, the subscriber is not called again.
     pub fn subscribe(
         &self,
         subscriber: impl Fn(&T) + Send + Sync + 'static,
     ) -> Result<Subscription> {
+        let active = Arc::new(AtomicBool::new(true));
+        let stale_snapshot;
         let id = {
-            let mut state = self.state.lock().map_err(|_| ReactiveError::Poisoned)?;
-            state.next_subscriber_id = state.next_subscriber_id.saturating_add(1);
+            let mut state = self.lock()?;
+            state.next_subscriber_id = state.next_subscriber_id.wrapping_add(1);
             let id = state.next_subscriber_id;
-            state.subscribers.insert(id, Arc::new(subscriber));
+            state.entries.push(Arc::new(Entry {
+                id,
+                active: Arc::clone(&active),
+                subscriber: Arc::new(subscriber),
+            }));
+            stale_snapshot = state.snapshot.take();
             id
         };
-        let state = Arc::clone(&self.state);
+        drop(stale_snapshot);
+        let state = Arc::downgrade(&self.state);
         Ok(Subscription::new(move || {
-            if let Ok(mut state) = state.lock() {
-                let _ = state.subscribers.remove(&id);
-            }
+            // Cleared before taking the lock so the delivering thread never calls a
+            // subscriber after its disposal on that thread returned.
+            active.store(false, Ordering::SeqCst);
+            let Some(state) = state.upgrade() else {
+                return;
+            };
+            // The removed entry and the stale snapshot are dropped after unlocking: the
+            // subscriber closure may own other subscriptions to this queue.
+            let removed = state.lock().ok().and_then(|mut state| {
+                let position = state
+                    .entries
+                    .binary_search_by_key(&id, |entry| entry.id)
+                    .ok()?;
+                Some((state.entries.remove(position), state.snapshot.take()))
+            });
+            drop(removed);
         }))
     }
 }
 
 impl<T> DeliveryQueue<T> {
+    /// Pushes `item` and delivers every queued item unless another drain is running.
     pub fn enqueue(&self, item: T) -> Result<()> {
+        self.push(item)?;
+        self.drain()
+    }
+
+    /// Appends `item` without delivering it.
+    ///
+    /// Only the queue's own mutex is taken, so a publisher may call `push` while it
+    /// holds its own state lock and [`drain`](Self::drain) after releasing it; the
+    /// delivery order then equals the order in which the publisher committed.
+    pub fn push(&self, item: T) -> Result<()> {
+        self.lock()?.queue.push_back(item);
+        Ok(())
+    }
+
+    /// Delivers queued items until the queue is empty, unless a drain is already
+    /// running (on this or another thread), in which case that drain delivers them.
+    ///
+    /// A subscriber panic propagates to the caller; the queue stays usable and the
+    /// remaining items are delivered by the next `drain`.
+    pub fn drain(&self) -> Result<()> {
         {
-            let mut state = self.state.lock().map_err(|_| ReactiveError::Poisoned)?;
-            state.queue.push_back(item);
-            if state.delivering {
+            let mut state = self.lock()?;
+            if state.delivering || state.queue.is_empty() {
                 return Ok(());
             }
             state.delivering = true;
         }
 
+        let mut guard = DrainGuard {
+            state: &self.state,
+            armed: true,
+        };
+
         loop {
             let next = {
-                let mut state = self.state.lock().map_err(|_| ReactiveError::Poisoned)?;
+                let mut state = self.lock()?;
                 match state.queue.pop_front() {
-                    Some(item) => {
-                        let subscribers = state.subscribers.values().cloned().collect::<Vec<_>>();
-                        Some((item, subscribers))
-                    }
+                    Some(item) => Some((item, state.snapshot())),
                     None => {
                         state.delivering = false;
                         None
@@ -85,15 +193,37 @@ impl<T> DeliveryQueue<T> {
             };
 
             let Some((item, subscribers)) = next else {
+                guard.armed = false;
                 break;
             };
 
-            for subscriber in subscribers {
-                subscriber(&item);
+            for entry in subscribers.iter() {
+                if entry.active.load(Ordering::SeqCst) {
+                    (entry.subscriber)(&item);
+                }
             }
         }
 
         Ok(())
+    }
+}
+
+/// Clears `delivering` when a drain exits early (subscriber panic or poisoned lock),
+/// so the next push/drain resumes delivery of the remaining items.
+struct DrainGuard<'a, T> {
+    state: &'a Mutex<DeliveryState<T>>,
+    armed: bool,
+}
+
+impl<T> Drop for DrainGuard<'_, T> {
+    fn drop(&mut self) {
+        if self.armed {
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            state.delivering = false;
+        }
     }
 }
 

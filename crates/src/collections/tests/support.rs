@@ -38,11 +38,13 @@ pub(super) use crate::collections::{
     type_filter::{AnyItem, CacheTypeFilterExt},
 };
 
-#[cfg(feature = "diagnostics")]
 pub(super) use crate::collections::{
-    CacheAggregationExt, ListAggregationExt, OptionalValueStreamCacheDiffExt,
-    ValueStreamCacheDiffExt, ValueStreamListDiffExt,
+    CacheAggregationExt, OptionalValueStreamCacheDiffExt, ValueStreamCacheDiffExt,
+    ValueStreamListDiffExt,
 };
+
+#[cfg(feature = "diagnostics")]
+pub(super) use crate::collections::ListAggregationExt;
 
 #[cfg(feature = "diagnostics")]
 pub(super) use crate::collections::diagnostics::{
@@ -57,21 +59,32 @@ pub(super) fn lock_vec<T>(
         .map_err(|_| std::io::Error::other("mutex poisoned").into())
 }
 
-pub(super) fn wait_for_len<T>(value: &Arc<Mutex<Vec<T>>>, len: usize) -> bool {
-    let deadline = Instant::now() + Duration::from_millis(750);
+/// A deadline for waits on real threads or the real scheduler, generous enough for a slow CI
+/// runner; a passing wait returns as soon as its condition holds.
+pub(super) const GENEROUS_DEADLINE: Duration = Duration::from_secs(20);
+
+/// Polls `condition` every 2 ms until it holds (`true`) or `deadline` passes (`false`).
+pub(super) fn wait_until(deadline: Duration, mut condition: impl FnMut() -> bool) -> bool {
+    let deadline = Instant::now() + deadline;
     loop {
-        if value
-            .lock()
-            .map(|items| items.len() >= len)
-            .unwrap_or(false)
-        {
+        if condition() {
             return true;
         }
         if Instant::now() >= deadline {
             return false;
         }
-        std::thread::sleep(Duration::from_millis(5));
+        std::thread::sleep(Duration::from_millis(2));
     }
+}
+
+/// Waits (up to [`GENEROUS_DEADLINE`]) until `value` holds at least `len` items.
+pub(super) fn wait_for_len<T>(value: &Arc<Mutex<Vec<T>>>, len: usize) -> bool {
+    wait_until(GENEROUS_DEADLINE, || {
+        value
+            .lock()
+            .map(|items| items.len() >= len)
+            .unwrap_or(false)
+    })
 }
 
 pub(super) fn apply_cache_changes_to_ordered_vec<K, T>(

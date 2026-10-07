@@ -70,8 +70,10 @@ A `DisposeBag` collects subscriptions and disposes them together.
 |---|---|
 | `DisposeBag::new()` / `default()` | An empty, live bag. |
 | `add(subscription)` | Stores the subscription; if the bag is already disposed, drops it immediately. |
-| `subscription.dispose_with(&bag)` | Same as `bag.add(subscription)`, written fluently (`DisposeWith` trait). |
+| `subscription.dispose_with(&bag)` | Same as `bag.add(subscription)`, written fluently (`DisposeWith` trait, also implemented by `Disposable`, `Effect` and `CompositeSubscription`). |
 | `dispose()` | Drops every stored subscription. Idempotent. |
+| `clear()` | Drops every stored subscription but keeps the bag live for new ones. |
+| `len()` / `is_empty()` | How many subscriptions the bag holds. |
 | `is_disposed()` | Whether `dispose` has run. |
 | drop | Disposes. |
 
@@ -112,16 +114,23 @@ only while it is visible. `ViewModelActivator` models this with reference-counte
 | Member | Behavior |
 |---|---|
 | `when_activated(\|bag\| …)` | Registers activation work. The callback receives the active generation's `DisposeBag` and returns `rayx_reactive::Result<()>`. |
+| `when_activated_scoped(\|bag\| …)` | Runs work once for the generation that is active (or activating) now, and keeps nothing for later generations. Without an active generation it does nothing. |
+| `is_active()` | `true` while a generation is active: all its callbacks succeeded and a token is held. |
 | `activate()` | Returns an `ActivationToken`. The first live token starts a **generation**: it creates a fresh `DisposeBag` and runs every registered callback against it. |
 | drop an `ActivationToken` | Decrements the count. Dropping the last token disposes the generation's bag. |
+| `ActivationToken::is_active()` | `true` while the token is held and its generation finished activating successfully. |
 | `ActivatableViewModel` | Trait with `fn activator(&self) -> &ViewModelActivator`, so view code can activate any ViewModel uniformly. |
 
 Activation rules:
 
-- Additional tokens while active only increase the count; callbacks do not run again.
+- Additional tokens while active only increase the count; callbacks do not run again. A token taken
+  while another thread is still running the generation's callbacks joins that generation and
+  reflects its outcome: it reports `is_active() == false` until the callbacks succeed, and for
+  good if they fail.
 - Each new generation (after a full deactivation) runs every callback again with a new bag.
 - Registering a callback **while active** runs it immediately against the current bag and keeps it
-  for future generations.
+  for future generations. Registering from *inside* an activation callback therefore adds one more
+  callback on every activation; use `when_activated_scoped` there, which runs once per activation:
 - Callbacks run after the activator's internal lock is released, so they can register further
   callbacks or activate other ViewModels without deadlocking.
 - Tokens remember their generation. A token from an old generation never disposes a newer one.
@@ -148,12 +157,41 @@ let _again = activator.activate()?;      // generation 2: callback runs again
 assert_eq!(*runs.lock().unwrap(), 2);
 ```
 
+```rust
+use rayx_reactive::prelude::*;
+use std::sync::{Arc, Mutex};
+
+let activator = ViewModelActivator::default();
+let nested_runs = Arc::new(Mutex::new(0));
+{
+    let activator_for_callback = activator.clone();
+    let nested_runs = Arc::clone(&nested_runs);
+    activator.when_activated(move |_bag| {
+        let nested_runs = Arc::clone(&nested_runs);
+        activator_for_callback.when_activated_scoped(move |_bag| {
+            *nested_runs.lock().unwrap() += 1;
+            Ok(())
+        })
+    })?;
+}
+
+for _ in 0..3 {
+    let token = activator.activate()?;
+    assert!(token.is_active());
+    drop(token);
+}
+assert_eq!(*nested_runs.lock().unwrap(), 3); // once per activation, not 1 + 2 + 3
+assert!(!activator.is_active());
+```
+
 ### Failure behavior
 
 If a callback returns an error during activation, the activator disposes the partially built bag,
-abandons the generation, and returns the error from `activate()`. A later `activate()` call starts
-a fresh generation and runs every callback again. If a callback registered while active fails, it
-is unregistered and the error is returned from `when_activated`.
+abandons the generation, and returns the error from `activate()`. Tokens that joined the
+generation meanwhile report `is_active() == false`. A later `activate()` call starts a fresh
+generation and runs every callback again. If a callback registered while active (with
+`when_activated` or `when_activated_scoped`) fails, the subscriptions it added before failing are
+disposed, it is unregistered, and the error is returned.
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -273,12 +311,13 @@ assert!(!*child_active.lock().unwrap());
 ### Collection subscriptions inside activation callbacks
 
 Activation callbacks return `rayx_reactive::Result<()>` (error type `ReactiveError`), while
-collection streams fail with `CollectionError`. `?` cannot convert in that direction, so convert
-explicitly:
+collection streams fail with `CollectionError`. `CollectionError` converts into `ReactiveError`
+(`Poisoned` stays `Poisoned`, every other variant becomes `ReactiveError::External` holding the
+original error), so `?` works directly:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{DisposeWith, ReactiveError, ViewModelActivator};
+use rayx_reactive::prelude::{DisposeWith, ViewModelActivator};
 
 let rows = SourceList::new(vec![1, 2, 3]);
 let activator = ViewModelActivator::default();
@@ -286,8 +325,7 @@ let activator = ViewModelActivator::default();
     let rows = rows.clone();
     activator.when_activated(move |bag| {
         rows.connect()
-            .subscribe(|_batch| { /* update the view */ })
-            .map_err(|_| ReactiveError::Poisoned)?
+            .subscribe(|_batch| { /* update the view */ })?
             .dispose_with(bag);
         Ok(())
     })?;
@@ -295,9 +333,10 @@ let activator = ViewModelActivator::default();
 let _token = activator.activate()?;
 ```
 
-Collection subscription setup can fail with `Poisoned`, or with `NestedUpdate` if you connect to a
-source from inside that source's own edit. Mapping every failure to `ReactiveError::Poisoned` loses
-that distinction. If you need it, record the original error before mapping.
+Collection subscription setup can fail with `Poisoned`, with `NestedUpdate` if you connect to a
+source from inside that source's own edit, or (on `wasm32` only) with `Contended` while another
+thread holds the source. The `External` variant keeps the original: downcast it
+with `error.downcast_ref::<CollectionError>()`, or convert back with `CollectionError::from`.
 
 ## Choosing an owner
 
@@ -315,8 +354,9 @@ that distinction. If you need it, record the original error before mapping.
   closure needs (as in `ClockViewModel`), or a `Weak`.
 - **Unowned subscriptions in activation callbacks.** Anything not added to `bag` outlives the
   activation, or ends immediately if dropped. Add every subscription to the bag.
-- **Panicking in callbacks.** Return an error instead; the activator cleans up the partial
-  generation for you.
+- **Panicking in callbacks.** Return an error instead. A panic propagates to the caller of
+  `activate()`; the activator still abandons the generation and disposes its partial work, so a
+  later `activate()` starts afresh.
 - **Forgetting the token.** `vm.activator().activate()?;` without binding the token activates and
   immediately deactivates.
 

@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-05T23:30:00+02:00
+  updated: 2026-10-07T12:00:00+02:00
   topics:
     - observable-collections
     - change-sets
@@ -25,6 +25,8 @@ Read this before changing collection sources, change-set streams, or operators; 
 
 Module map: sources in `cache/`, `list/`, `connection.rs`, `keyed_delivery.rs`, `diff.rs`, `observable_list.rs`, `observable_cache.rs`, `populate/`, and `factory.rs`; operators in `operators/` (filter, sort, transform, page/window, group state) plus `aggregation/`, `combine/`, `join/`, `lifecycle/`, `limit/`, `expiration/`, `tree/`, `true_for/`, `distinct.rs`, `switch.rs`, `ref_count.rs`, `merge.rs`, `side_effect.rs`, `option/`, `stream/`, `group.rs`, and `list_group.rs`. Focused tests are grouped by feature under `src/collections/tests/`.
 
+Materialization is loss-free: `materialize.rs` holds the `OrderedWriter` (ordered FIFO of failed batches, retry on the destination's next lock release, optional latest-wins) and the `ErrorChannel` behind `ObservableList`/`ObservableCache::errors()`. `ref_count` buffers late subscribers until their snapshot, makes cross-thread joiners wait for an in-flight upstream start (and restart it after a failure), and ignores released upstreams by epoch; `switch` serializes its output through a delivery queue and checks generation and disposal.
+
 The `diagnostics` feature compiles `retained_implicit_batch_count()` (the aggregate envelope count held by in-flight startup buffers) and the update-stat operators with their prelude exports. Without it, those symbols, atomics, and operator state are absent. RayX forwards its `rayx_diagnostics` feature to it.
 
 RayX re-exports this module as `rayx::collections`; its `ListViewState`/`TreeStateBase` bind ordered observable lists through `from_observable_list(...)`/`from_stream(...)`.
@@ -34,5 +36,6 @@ RayX re-exports this module as `rayx::collections`; its `ListViewState`/`TreeSta
 - [Collections module](../../../../crates/src/collections/mod.rs)
 - [Collections diagnostics](../../../../crates/src/collections/diagnostics.rs)
 - [Collection tests](../../../../crates/src/collections/tests/mod.rs)
+- [Ordered materialization](../../../../crates/src/collections/materialize.rs)
 - 2026-06-24 current [AD-008 observable collections](../../decisions/collections/2026-06-24-collections-observable-collections.md)
 - 2026-10-05 current [One gpux-free rayx_reactive crate](../../decisions/repository/2026-10-05-repository-single-reactive-crate.md)

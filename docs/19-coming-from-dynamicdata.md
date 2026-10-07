@@ -21,14 +21,6 @@ var subscription = _people.Connect()
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct Person {
     id: u32,
@@ -43,7 +35,7 @@ let visible_people = people
     .connect()
     .filter_with_state(search_text.values(), |text: &String, person: &Person| person.name.contains(text.as_str()))
     .sort_keyed_by_key(|person| person.name.clone())
-    .page_keyed_dynamic(collection_stream(page.values()))
+    .page_keyed_dynamic(page.values())
     .as_observable_list()?; // the view binds this; marshal to the UI thread in the binding
 
 people.add_or_update(Person { id: 1, name: "Ada".into() })?;
@@ -57,7 +49,7 @@ assert_eq!(visible_people.len()?, 1);
 | Stream type | `IObservable<IChangeSet<…>>` with `OnError`/`OnCompleted` | `ChangeStream<C>` and `ValueStream<T>`: values only, no terminal events |
 | Errors | exceptions, `OnError` | `Result` from setup and edits; `transform_safe*` callbacks; `CommandState::Failed` |
 | Subscription lifetime | `IDisposable`, `CompositeDisposable` | RAII `Subscription`; drop to dispose; `DisposeBag` |
-| Schedulers | `ObserveOn`, `SubscribeOn`, schedulers in time operators | none: delivery is synchronous on the writer's thread; time operators use their own threads; the consumer marshals to the UI thread |
+| Schedulers | `ObserveOn`, `SubscribeOn`, schedulers in time operators | no `ObserveOn`: delivery is synchronous on the writer's thread and the consumer marshals to the UI thread; time operators take a `Scheduler` (`*_with_scheduler`; a shared timer thread by default, `ManualScheduler` as the test scheduler) |
 | Paging | `PageRequest` is **one-based** | `PageRequest` is **zero-based** |
 | Comparers | `IComparer<T>`, `SortExpressionComparer` | closures; `Comparer<T> = Arc<dyn Fn(&T, &T) -> Ordering>`; `sort_*_by_key` |
 | Cache order | `SourceCache` is unordered | `SourceCache` keeps an insertion (or `move_key`) order and reports indexes |
@@ -136,31 +128,34 @@ assert_eq!(visible_people.len()?, 1);
 |---|---|
 | `[Reactive]` property / `RaiseAndSetIfChanged` | `Signal<T>` with `set` |
 | `WhenAnyValue(x => x.A)` | `signal.values()` |
-| `WhenAnyValue(x => x.A, x => x.B, …)` | `Computed::combine2`, nested for more inputs |
-| `ObservableAsPropertyHelper` (`ToProperty`) | `Computed<T>`, or a signal mirrored from a stream |
+| `WhenAnyValue(x => x.A, x => x.B, …)` | `Computed::combine2` / `combine3`, nested for more inputs, or `values().combine_latest(…)` |
+| `ObservableAsPropertyHelper` (`ToProperty`) | `Computed<T>`, or `Computed::from_stream(&stream, initial)` |
 | `ReactiveCommand.Create` / `CreateFromTask` | `Command::new` / `AsyncCommand::new` |
 | `canExecute` observable | `with_can_execute(ReadSignal<bool>)` |
-| `IsExecuting` | `state()` is `CommandState::Running` |
+| `IsExecuting` | `is_executing()` |
 | `ThrownExceptions` | the returned `CommandError` and `CommandState::Failed(message)` |
 | `MessageBus` | `EventBus<T>` |
 | `IActivatableViewModel` / `ViewModelActivator` | `ActivatableViewModel` / `ViewModelActivator` |
 | `WhenActivated(disposables => …)` | `when_activated(\|bag\| …)` |
 | `DisposeWith(disposables)` | `subscription.dispose_with(&bag)` |
-| `CompositeDisposable` | `DisposeBag` |
+| `CompositeDisposable` | `DisposeBag` or `CompositeSubscription` |
 | `ObserveOn(RxApp.MainThreadScheduler)` | the UI binding layer (in RayX: `ReactiveContextExt`) |
 
 ## Behaviors that may surprise you
 
 - **`Computed` republishes equal results.** ReactiveUI's `WhenAnyValue` with
-  `DistinctUntilChanged` habits carry over: add `distinct_until_changed()` where it matters.
-- **Commands do not serialize execution.** There is no built-in `IsExecuting`-based gating; derive
-  `can_execute` from a `busy` signal.
+  `DistinctUntilChanged` habits carry over: use `Computed::derive_distinct` or add
+  `distinct_until_changed()` where it matters.
+- **Commands run concurrently by default.** Overlapping `execute` calls each run; choose
+  `ExecutionPolicy::IgnoreWhileRunning` to refuse them while one is in flight, and note that
+  `execute` on a disabled command returns `CommandError::Disabled` instead of doing nothing.
 - **`count()` never emits for an always-empty source**, and an empty source's `connect()` sends no
   snapshot. Use `start_with(0)` or `start_with_empty()`.
-- **Page responses are emitted only when the window changes.** Totals can go stale; subscribe to
-  `count()` for live totals.
-- **Concurrent source writes do not block.** They can fail with `NestedUpdate` under contention;
-  use a single writer.
+- **Page responses follow every field.** A change outside the window still emits a response (with
+  an empty change set) so `total_count` stays current.
+- **Nested edits fail instead of recursing.** Accessing a source from inside its own `edit` returns
+  `NestedUpdate`; concurrent writers on other threads simply wait (on `wasm32` they get
+  `Contended`).
 
 ---
 

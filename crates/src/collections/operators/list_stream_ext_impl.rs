@@ -81,7 +81,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static,
     {
         self.transform_async_with_previous(move |current, _, _| transform(current), false)
@@ -93,7 +93,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static,
     {
         self.transform_async_with_previous(move |current, _, _| transform(current), true)
@@ -106,10 +106,31 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static,
     {
-        list_transform_async_stream(self, Arc::new(transform), transform_on_refresh)
+        list_transform_async_stream(
+            self,
+            Arc::new(transform),
+            TransformAsyncOptions::new(None, transform_on_refresh),
+        )
+    }
+
+    fn transform_async_with_options<U, Fut>(
+        &self,
+        transform: impl Fn(T) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<ListChange<U>>
+    where
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        Fut: Future<Output = U> + Send + 'static,
+    {
+        list_transform_async_stream(
+            self,
+            Arc::new(move |current, _, _| transform(current)),
+            options,
+        )
     }
 
     fn transform_many<Child, Children>(
@@ -192,40 +213,30 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         let source = self.clone();
         let predicate = Arc::new(predicate);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let filter = Arc::new(Mutex::new(ListDynamicFilterState::<T, S>::default()));
 
             let state_filter = Arc::clone(&filter);
             let state_predicate = Arc::clone(&predicate);
-            let state_subscriber = Arc::clone(&subscriber);
+            let state_emitter = emitter.clone();
             let state_subscription = state.subscribe(move |next_state| {
-                let batch = {
-                    let Ok(mut filter) = state_filter.lock() else {
-                        return;
-                    };
+                state_emitter.update(&state_filter, |filter| {
                     filter.set_state(next_state.clone(), &*state_predicate)
-                };
-                if let Some(batch) = batch {
-                    state_subscriber(&batch);
-                }
+                });
             })?;
 
             let source_filter = Arc::clone(&filter);
             let source_predicate = Arc::clone(&predicate);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut filter) = source_filter.lock() else {
-                        return;
-                    };
+                emitter.update(&source_filter, |filter| {
                     filter.apply_source(batch, &*source_predicate)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 state_subscription,
+                delivery,
             ]))
         })
     }
@@ -279,87 +290,82 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         self.sort_by(move |left, right| key_selector(right).cmp(&key_selector(left)))
     }
 
-    fn sort_dynamic(&self, comparers: ValueStream<Comparer<T>>) -> ChangeStream<ListChange<T>>
-    where
-        T: Clone + PartialEq + Send + Sync + 'static,
-    {
-        let resort = ValueStream::new(|_| Ok(Subscription::empty()));
-        self.sort_dynamic_with_resort(comparers, resort)
-    }
-
-    fn sort_with_resort(
+    fn sort_dynamic<E>(
         &self,
-        compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
-        resort: ValueStream<()>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let comparers = comparers.err_into::<CollectionError>();
+        let resort = ValueStream::new(|_| Ok(Subscription::empty()));
+        self.sort_dynamic_with_resort::<CollectionError, CollectionError>(comparers, resort)
+    }
+
+    fn sort_with_resort<E>(
+        &self,
+        compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
+        resort: crate::primitives::ValueStream<(), E>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
+        let resort = resort.err_into::<CollectionError>();
         let comparer: Comparer<T> = Arc::new(compare);
         let comparers = ValueStream::new(move |subscriber| {
             subscriber(&comparer);
             Ok(Subscription::empty())
         });
-        self.sort_dynamic_with_resort(comparers, resort)
+        self.sort_dynamic_with_resort::<CollectionError, CollectionError>(comparers, resort)
     }
 
-    fn sort_dynamic_with_resort(
+    fn sort_dynamic_with_resort<E, E2>(
         &self,
-        comparers: ValueStream<Comparer<T>>,
-        resort: ValueStream<()>,
+        comparers: crate::primitives::ValueStream<Comparer<T>, E>,
+        resort: crate::primitives::ValueStream<(), E2>,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+        E2: Send + Sync + 'static,
+        CollectionError: From<E2>,
     {
+        let comparers = comparers.err_into::<CollectionError>();
+        let resort = resort.err_into::<CollectionError>();
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(ListSortState::<T>::default()));
 
             let comparer_state = Arc::clone(&state);
-            let comparer_subscriber = Arc::clone(&subscriber);
+            let comparer_emitter = emitter.clone();
             let comparer_subscription = comparers.subscribe(move |comparer| {
-                let batch = {
-                    let Ok(mut state) = comparer_state.lock() else {
-                        return;
-                    };
+                comparer_emitter.update(&comparer_state, |state| {
                     state.set_comparer(Arc::clone(comparer))
-                };
-                if let Some(batch) = batch {
-                    comparer_subscriber(&batch);
-                }
+                });
             })?;
 
             let resort_state = Arc::clone(&state);
-            let resort_subscriber = Arc::clone(&subscriber);
+            let resort_emitter = emitter.clone();
             let resort_subscription = resort.subscribe(move |_| {
-                let batch = {
-                    let Ok(mut state) = resort_state.lock() else {
-                        return;
-                    };
-                    state.resort(None)
-                };
-                if let Some(batch) = batch {
-                    resort_subscriber(&batch);
-                }
+                resort_emitter.update(&resort_state, |state| state.resort(None));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
-                    state.apply_source(batch)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 comparer_subscription,
                 resort_subscription,
+                delivery,
             ]))
         })
     }
@@ -382,13 +388,19 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
             subscriber(&request);
             Ok(Subscription::empty())
         });
-        self.page_dynamic_with_response(requests)
+        self.page_dynamic_with_response::<CollectionError>(requests)
     }
 
-    fn page_dynamic(&self, requests: ValueStream<PageRequest>) -> ChangeStream<ListChange<T>>
+    fn page_dynamic<E>(
+        &self,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
+    ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let requests = requests.err_into::<CollectionError>();
         let virtual_requests = ValueStream::new(move |subscriber| {
             requests.subscribe(move |request| {
                 subscriber(&VirtualRequest::new(
@@ -397,50 +409,39 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
                 ));
             })
         });
-        self.virtualize_dynamic(virtual_requests)
+        self.virtualize_dynamic::<CollectionError>(virtual_requests)
     }
 
-    fn page_dynamic_with_response(
+    fn page_dynamic_with_response<E>(
         &self,
-        requests: ValueStream<PageRequest>,
+        requests: crate::primitives::ValueStream<PageRequest, E>,
     ) -> ValueStream<PageChangeSet<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ValueStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(ListPageState::<T>::new(PageRequest::new(0, 25))));
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+            let state = Arc::new(Mutex::new(ListPageState::<T>::default()));
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let update = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
-                    state.set_request(*request)
-                };
-                if let Some(update) = update {
-                    request_subscriber(&update);
-                }
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let update = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
-                    state.apply_source(batch)
-                };
-                if let Some(update) = update {
-                    subscriber(&update);
-                }
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 request_subscription,
+                delivery,
             ]))
         })
     }
@@ -462,16 +463,15 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let length = Arc::new(Mutex::new(0_usize));
-            source.subscribe(move |batch| {
-                let Ok(mut length) = length.lock() else {
-                    return;
-                };
-                let changes = reverse_list_changes(&mut length, &batch.changes);
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
-            })
+            let input = source.subscribe(move |batch| {
+                emitter.update(&length, |length| {
+                    let changes = reverse_list_changes(length, &batch.changes);
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
+            })?;
+            Ok(Subscription::many(vec![input, delivery]))
         })
     }
 
@@ -481,29 +481,25 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(Vec::<T>::new()));
-            let window = Arc::new(Mutex::new(Vec::<T>::new()));
-            source.subscribe(move |batch| {
-                let Ok(mut state) = state.lock() else {
-                    return;
-                };
-                let Ok(mut window) = window.lock() else {
-                    return;
-                };
-                apply_list_changes(&mut state, &batch.changes);
-                let range = request.range();
-                let next = state
-                    .iter()
-                    .skip(range.start)
-                    .take(range.end.saturating_sub(range.start))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                let changes = diff_list(&window, &next);
-                *window = next;
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
-            })
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+            // (all items, visible window)
+            let state = Arc::new(Mutex::new((Vec::<T>::new(), Vec::<T>::new())));
+            let input = source.subscribe(move |batch| {
+                emitter.update(&state, |(items, window)| {
+                    apply_list_changes(items, &batch.changes);
+                    let range = request.range();
+                    let next = items
+                        .iter()
+                        .skip(range.start)
+                        .take(range.end.saturating_sub(range.start))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    let changes = diff_list(window, &next);
+                    *window = next;
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
+            })?;
+            Ok(Subscription::many(vec![input, delivery]))
         })
     }
 
@@ -515,99 +511,77 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
             subscriber(&request);
             Ok(Subscription::empty())
         });
-        self.virtualize_dynamic_with_response(requests)
+        self.virtualize_dynamic_with_response::<CollectionError>(requests)
     }
 
-    fn virtualize_dynamic(
+    fn virtualize_dynamic<E>(
         &self,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(ListWindowState::<T>::new(VirtualRequest::new(
-                0, 25,
-            ))));
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+            let state = Arc::new(Mutex::new(ListWindowState::<T>::default()));
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let batch = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
-                    state.set_request(*request)
-                };
-                if let Some(batch) = batch {
-                    request_subscriber(&batch);
-                }
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
-                    state.apply_source(batch)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 request_subscription,
+                delivery,
             ]))
         })
     }
 
-    fn virtualize_dynamic_with_response(
+    fn virtualize_dynamic_with_response<E>(
         &self,
-        requests: ValueStream<VirtualRequest>,
+        requests: crate::primitives::ValueStream<VirtualRequest, E>,
     ) -> ValueStream<VirtualChangeSet<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ValueStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(ListWindowState::<T>::new(VirtualRequest::new(
-                0, 25,
-            ))));
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+            let state = Arc::new(Mutex::new(ListWindowState::<T>::default()));
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let update = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
+                request_emitter.update(&request_state, |state| {
                     state.set_request_with_response(*request)
-                };
-                if let Some(update) = update {
-                    request_subscriber(&update);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let update = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source_with_response(batch)
-                };
-                if let Some(update) = update {
-                    subscriber(&update);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 request_subscription,
+                delivery,
             ]))
         })
     }
@@ -637,6 +611,8 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
                 let next = group_list(&state, &*group_key);
                 let changes = diff_list(&grouped, &next);
                 *grouped = next;
+                // Released before calling downstream, which may re-enter this operator.
+                drop((state, grouped));
                 if !changes.is_empty() {
                     subscriber(&ChangeSet::new(changes, batch.version));
                 }
@@ -653,55 +629,66 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         G: Clone + Eq + Hash + Send + Sync + 'static,
     {
         let never = ValueStream::new(|_| Ok(Subscription::empty()));
-        self.group_with_regrouper(group_key, never)
+        self.group_with_regrouper::<_, CollectionError>(group_key, never)
     }
 
-    fn group_with_regrouper<G>(
+    fn group_with_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ListGroupChange<T, G>>
     where
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let regrouper = regrouper.err_into::<CollectionError>();
         let source = self.clone();
         let group_key = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(LiveListGroupState::<T, G>::default()));
 
             let source_state = Arc::clone(&state);
             let source_selector = Arc::clone(&group_key);
-            let source_subscriber = Arc::clone(&subscriber);
+            let source_emitter = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, pending) = if let Ok(mut state) = source_state.lock() {
-                    state.apply_source(batch, &*source_selector)
-                } else {
-                    (Vec::new(), HashMap::new())
+                let staged = {
+                    let Ok(mut state) = source_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending) = state.apply_source(batch, &*source_selector);
+                    if !changes.is_empty() {
+                        source_emitter.push(ChangeSet::new(changes, batch.version));
+                    }
+                    stage_pending_group_list_changes(pending)
                 };
-                publish_pending_group_list_changes(pending);
-                if !changes.is_empty() {
-                    source_subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                drain_staged_groups(staged);
+                source_emitter.drain();
             })?;
 
             let regroup_state = Arc::clone(&state);
             let regroup_selector = Arc::clone(&group_key);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                let (changes, pending, version) = if let Ok(mut state) = regroup_state.lock() {
-                    state.regroup_all(&*regroup_selector)
-                } else {
-                    (Vec::new(), HashMap::new(), 0)
+                let staged = {
+                    let Ok(mut state) = regroup_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending, version) = state.regroup_all(&*regroup_selector);
+                    if !changes.is_empty() {
+                        emitter.push(ChangeSet::new(changes, version));
+                    }
+                    stage_pending_group_list_changes(pending)
                 };
-                publish_pending_group_list_changes(pending);
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, version));
-                }
+                drain_staged_groups(staged);
+                emitter.drain();
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 regroup_subscription,
+                delivery,
             ]))
         })
     }
@@ -715,53 +702,48 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         G: Clone + Eq + Hash + Send + Sync + 'static,
     {
         let never = ValueStream::new(|_| Ok(Subscription::empty()));
-        self.group_immutable_with_regrouper(group_key, never)
+        self.group_immutable_with_regrouper::<_, CollectionError>(group_key, never)
     }
 
-    fn group_immutable_with_regrouper<G>(
+    fn group_immutable_with_regrouper<G, E>(
         &self,
         group_key: impl Fn(&T) -> G + Send + Sync + 'static,
-        regrouper: ValueStream<()>,
+        regrouper: crate::primitives::ValueStream<(), E>,
     ) -> ChangeStream<ImmutableListGroupChange<T, G>>
     where
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let regrouper = regrouper.err_into::<CollectionError>();
         let source = self.clone();
         let group_key = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(ImmutableListGroupState::<T, G>::default()));
 
             let source_state = Arc::clone(&state);
             let source_selector = Arc::clone(&group_key);
-            let source_subscriber = Arc::clone(&subscriber);
+            let source_emitter = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let output = if let Ok(mut state) = source_state.lock() {
+                source_emitter.update(&source_state, |state| {
                     state.apply_source(batch, &*source_selector)
-                } else {
-                    None
-                };
-                if let Some(output) = output {
-                    source_subscriber(&output);
-                }
+                });
             })?;
 
             let regroup_state = Arc::clone(&state);
             let regroup_selector = Arc::clone(&group_key);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                let output = if let Ok(mut state) = regroup_state.lock() {
+                emitter.update(&regroup_state, |state| {
                     state.regroup_all(&*regroup_selector)
-                } else {
-                    None
-                };
-                if let Some(output) = output {
-                    subscriber(&output);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 regroup_subscription,
+                delivery,
             ]))
         })
     }
@@ -840,4 +822,3 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         })
     }
 }
-

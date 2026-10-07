@@ -1,10 +1,13 @@
+use crate::collections::emit::OrderedEmitter;
+use crate::collections::error::CollectionError;
+use crate::collections::key_order::KeyOrder;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::thread;
 use std::time::Duration;
 
@@ -13,8 +16,13 @@ use crate::collections::group::RayCacheGroup;
 use crate::collections::operators::{Comparer, apply_list_changes};
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
+use crate::primitives::timer::{OperatorTimer, schedule_timer};
+use crate::primitives::{ScheduledTask, Scheduler, default_scheduler};
 
-use super::{AsyncDisposeItem, DisposeItem, EvaluateItem, ItemValue, KeyedItemValue};
+use super::{
+    AsyncDisposeItem, DisposeItem, EvaluateItem, FilterRestart, ItemValue, KeyedItemValue,
+    RefreshBuffer, StartPhase, reconcile_merged_children,
+};
 
 type CacheItemAction<K, T> = Arc<dyn Fn(&T, &K) + Send + Sync>;
 type CacheItemEquality<T> = Arc<dyn Fn(&T, &T) -> bool + Send + Sync>;
@@ -25,7 +33,13 @@ type CacheTransformFactory<K, T, U> = Arc<dyn Fn(&T, &K) -> ValueStream<U> + Sen
 type CacheTransformApplyResult<K, T, U> = (Vec<CacheChange<K, U>>, Vec<(K, T, u64)>);
 type CacheGroupFactory<K, T, G> = Arc<dyn Fn(&T, &K) -> ValueStream<G> + Send + Sync>;
 type CacheGroupChange<K, T, G> = CacheChange<G, RayCacheGroup<G, K, T>>;
-type CacheGroupPending<K, T, G> = HashMap<G, (RayCacheGroup<G, K, T>, Vec<CacheChange<K, T>>)>;
+type CacheGroupPending<K, T, G> = HashMap<
+    G,
+    (
+        RayCacheGroup<G, K, T>,
+        crate::collections::connection::PendingChanges<CacheChange<K, T>>,
+    ),
+>;
 type CacheGroupApplyResult<K, T, G> = (
     Vec<CacheGroupChange<K, T, G>>,
     Vec<(K, T, u64)>,
@@ -56,136 +70,257 @@ where
     }
 }
 
+/// Per-item observables, lifecycle callbacks and disposal for cache change streams.
+///
+/// Every operator owns its per-item subscriptions: it subscribes when an item is added,
+/// re-subscribes when it is updated, disposes on removal or clear, and disposes everything when the
+/// downstream subscription is dropped. Selectors receive `(&item, &key)` and may return a stream of
+/// any error type that converts into `CollectionError`.
 pub trait CacheLifecycleExt<K, T> {
-    fn filter_on_observable(
+    /// Shows an item only while the latest value of its stream is `true`.
+    ///
+    /// An item is hidden until its stream emits `true`. Values emitted while the streams are being
+    /// subscribed are folded into the source batch. An item updated at the same position keeps its
+    /// previous inclusion until its new stream has been subscribed; an update that moves it hides
+    /// it until the new stream emits `true`.
+    fn filter_on_observable<E>(
         &self,
-        filter: impl Fn(&T, &K) -> ValueStream<bool> + Send + Sync + 'static,
-    ) -> ChangeStream<CacheChange<K, T>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static;
-
-    fn auto_refresh<S>(
-        &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        filter: impl Fn(&T, &K) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        S: Send + Sync + 'static;
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn auto_refresh_buffered<S>(
+    /// Emits a `Refresh` for an item whenever its stream emits, so downstream filters, sorts and
+    /// groups re-evaluate it.
+    ///
+    /// Every emission refreshes, including a synchronous initial one: prefer a stream that emits
+    /// only on change (such as `Signal::changes`).
+    fn auto_refresh<S, E>(
         &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    /// Like [`auto_refresh`](Self::auto_refresh), but collects item-triggered refreshes for
+    /// `buffer` and emits them as one batch, on the default scheduler.
+    ///
+    /// Source batches are forwarded immediately and stay in order with the refresh batches. Each
+    /// refresh index is the item's position when the refresh batch is delivered. Dropping the
+    /// subscription cancels a pending flush.
+    fn auto_refresh_buffered<S, E>(
+        &self,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        S: Send + Sync + 'static;
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn transform_on_observable<U>(
+    /// [`auto_refresh_buffered`](Self::auto_refresh_buffered) with its timer on `scheduler`.
+    fn auto_refresh_buffered_with_scheduler<S, E>(
         &self,
-        transform_factory: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+        buffer: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    /// Projects each item to the latest value of its stream.
+    ///
+    /// The item appears with an `Add` when its stream first emits, and later distinct values become
+    /// `Update`s. When the source item is updated, the previous projected value stays until the new
+    /// stream emits.
+    fn transform_on_observable<U, E>(
+        &self,
+        transform_factory: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static;
+        U: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn group_on_observable<G>(
+    /// Groups items by the latest value of a per-item stream, producing live groups like `group`.
+    ///
+    /// Items are not grouped until their stream emits. Empty groups are removed after each source
+    /// or child turn.
+    fn group_on_observable<G, E>(
         &self,
-        group_selector: impl Fn(&T, &K) -> ValueStream<G> + Send + Sync + 'static,
+        group_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<G, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        G: Clone + Eq + Hash + Send + Sync + 'static;
+        G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many<U>(
+    /// Merges the streams of every live item into one stream of their values.
+    fn merge_many<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many_items<U>(
+    /// Merges the streams of every live item, pairing each value with its item.
+    fn merge_many_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn merge_many_keyed_items<U>(
+    /// Merges the streams of every live item, pairing each value with its item and key.
+    fn merge_many_keyed_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_value_changed<U>(
+    /// Emits each value of every live item's stream.
+    fn when_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_value_changed_with_initial<U>(
+    /// Like [`when_value_changed`](Self::when_value_changed), but first emits `current_value` for
+    /// each current item.
+    fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Send + Sync + 'static;
+        U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_item_value_changed<U>(
+    /// Emits each value of every live item's stream, paired with its item.
+    fn when_item_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_item_value_changed_with_initial<U>(
+    /// Like [`when_item_value_changed`](Self::when_item_value_changed), but first emits
+    /// `current_value` for each current item.
+    fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_keyed_value_changed<U>(
+    /// Emits each value of every live item's stream, paired with its item and key.
+    fn when_keyed_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn when_keyed_value_changed_with_initial<U>(
+    /// Like [`when_keyed_value_changed`](Self::when_keyed_value_changed), but first emits
+    /// `current_value` for each current item.
+    fn when_keyed_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
+    /// Flattens each item's child list stream into one list of all children.
+    ///
+    /// A departing item's children are removed. Children emitted while a child stream is being
+    /// subscribed are folded into the parent batch, and an item updated with identical children
+    /// changes nothing.
     fn merge_many_list_change_sets<U>(
         &self,
         observable_selector: impl Fn(&T, &K) -> ChangeStream<ListChange<U>> + Send + Sync + 'static,
@@ -195,6 +330,9 @@ pub trait CacheLifecycleExt<K, T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Flattens each item's child cache stream into one cache of all children.
+    ///
+    /// On duplicate child keys, the first live parent in source order wins.
     fn merge_many_cache_change_sets<ChildKey, Child>(
         &self,
         observable_selector: impl Fn(&T, &K) -> ChangeStream<CacheChange<ChildKey, Child>>
@@ -208,6 +346,8 @@ pub trait CacheLifecycleExt<K, T> {
         ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
         Child: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`merge_many_cache_change_sets`](Self::merge_many_cache_change_sets), but `compare`
+    /// picks the winner for duplicate child keys, recomputing it when a winner changes or leaves.
     fn merge_many_cache_change_sets_by<ChildKey, Child>(
         &self,
         observable_selector: impl Fn(&T, &K) -> ChangeStream<CacheChange<ChildKey, Child>>
@@ -222,11 +362,17 @@ pub trait CacheLifecycleExt<K, T> {
         ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
         Child: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Calls `DisposeItem::dispose` on items that leave or are replaced by an unequal item, and on
+    /// the remaining items when the subscription is dropped.
+    ///
+    /// Each batch is forwarded before its items are finalized, so downstream observers never see a
+    /// disposed item.
     fn dispose_many(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: DisposeItem + Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`dispose_many`](Self::dispose_many), with `dispose` as the finalizer.
     fn dispose_many_with(
         &self,
         dispose: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -235,6 +381,8 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`dispose_many_with`](Self::dispose_many_with), with `same_item(previous, current)`
+    /// deciding whether an update kept the item (then it is not finalized).
     fn dispose_many_by(
         &self,
         same_item: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -244,6 +392,12 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Runs `AsyncDisposeItem::dispose_async` for items that leave or are replaced, on a worker
+    /// thread owned by the subscription.
+    ///
+    /// Source delivery never waits for the finalizers. `disposals_completed` receives a stream that
+    /// fires once every queued finalizer, including those queued by teardown, has finished. A
+    /// finalizer that panics is skipped.
     fn async_dispose_many(
         &self,
         disposals_completed: impl Fn(ValueStream<()>) + Send + Sync + 'static,
@@ -252,6 +406,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: AsyncDisposeItem + Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`async_dispose_many`](Self::async_dispose_many), with `dispose` as the finalizer.
     fn async_dispose_many_with<Fut>(
         &self,
         dispose: impl Fn(T, K) -> Fut + Send + Sync + 'static,
@@ -262,6 +417,8 @@ pub trait CacheLifecycleExt<K, T> {
         T: Clone + PartialEq + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static;
 
+    /// Like [`async_dispose_many_with`](Self::async_dispose_many_with), with `same_item(previous,
+    /// current)` deciding whether an update kept the item.
     fn async_dispose_many_by<Fut>(
         &self,
         same_item: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -273,11 +430,15 @@ pub trait CacheLifecycleExt<K, T> {
         T: Clone + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static;
 
+    /// Calls `EvaluateItem::evaluate` for each refreshed item before forwarding the refresh.
+    ///
+    /// Other changes pass through untouched.
     fn invoke_evaluate(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: EvaluateItem + Clone + Send + Sync + 'static;
 
+    /// Calls `evaluate` for each refreshed item before forwarding the refresh.
     fn invoke_evaluate_with(
         &self,
         evaluate: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -286,6 +447,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each added item and forwards the batches unchanged.
     fn on_item_added(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -294,6 +456,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each removed item, including clears, and forwards the batches unchanged.
     fn on_item_removed(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -302,6 +465,8 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`on_item_removed`](Self::on_item_removed); with `invoke_on_unsubscribe`, also calls
+    /// `action` for every remaining item when the subscription is dropped.
     fn on_item_removed_with_unsubscribe(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -311,6 +476,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action(current, previous, key)` for each update and forwards the batches unchanged.
     fn on_item_updated(
         &self,
         action: impl Fn(&T, &T, &K) + Send + Sync + 'static,
@@ -319,6 +485,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each refreshed item and forwards the batches unchanged.
     fn on_item_refreshed(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -327,6 +494,10 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Keeps one subscription per live item, created by `subscription_factory`.
+    ///
+    /// The subscription is disposed when its item is removed or updated (an update creates a new
+    /// one), and every remaining one when the downstream subscription is dropped.
     fn subscribe_many(
         &self,
         subscription_factory: impl Fn(&T, &K) -> Subscription + Send + Sync + 'static,
@@ -337,152 +508,133 @@ pub trait CacheLifecycleExt<K, T> {
 }
 
 impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
-    fn filter_on_observable(
+    fn filter_on_observable<E>(
         &self,
-        filter: impl Fn(&T, &K) -> ValueStream<bool> + Send + Sync + 'static,
+        filter: impl Fn(&T, &K) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let filter = move |argument_0: &T, argument_1: &K| {
+            filter(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let filter: CacheFilterFactory<K, T> = Arc::new(filter);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(FilterOnObservableCacheState::<K, T>::default()));
             let state_for_source = Arc::clone(&state);
             let filter_for_source = Arc::clone(&filter);
-            let subscriber_for_source = Arc::clone(&subscriber);
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, starts) = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    (Vec::new(), HashMap::new())
+                let starts = {
+                    let Ok(mut state) = state_for_source.lock() else {
+                        return;
+                    };
+                    state.phase.begin();
+                    let (changes, starts) = state.apply_source(batch);
+                    state.phase.pending.extend(changes);
+                    starts
                 };
-
-                if !changes.is_empty() {
-                    subscriber_for_source(&ChangeSet::new(changes, batch.version));
-                }
                 start_cache_filter_subscriptions(
                     &state_for_source,
-                    &subscriber_for_source,
+                    &emitter,
                     starts,
                     &*filter_for_source,
                 );
+                emitter.update(&state_for_source, |state| state.finish_start());
             })?;
 
             let cleanup = Subscription::new(move || {
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
+                let released = match state.lock() {
+                    Ok(mut state) => state.clear_subscriptions(),
+                    Err(_) => HashMap::new(),
+                };
+                drop(released);
             });
 
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
+            Ok(Subscription::many(vec![
+                source_subscription,
+                cleanup,
+                delivery,
+            ]))
         })
     }
 
-    fn auto_refresh<S>(
+    fn auto_refresh<S, E>(
         &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        let source = self.clone();
-        let reevaluator: CacheRefreshFactory<K, T, S> = Arc::new(reevaluator);
-        ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(AutoRefreshCacheState::<K, T>::default()));
-            let state_for_source = Arc::clone(&state);
-            let reevaluator_for_source = Arc::clone(&reevaluator);
-            let subscriber_for_source = Arc::clone(&subscriber);
-            let source_subscription = source.subscribe(move |batch| {
-                let starts = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    HashMap::new()
-                };
-
-                subscriber_for_source(batch);
-                start_cache_refresh_subscriptions(
-                    &state_for_source,
-                    &subscriber_for_source,
-                    starts,
-                    &*reevaluator_for_source,
-                );
-            })?;
-
-            let cleanup = Subscription::new(move || {
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
-            });
-
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
-        })
+        let reevaluator = move |argument_0: &T, argument_1: &K| {
+            reevaluator(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        cache_auto_refresh(self.clone(), Arc::new(reevaluator), None)
     }
 
-    fn auto_refresh_buffered<S>(
+    fn auto_refresh_buffered<S, E>(
         &self,
-        reevaluator: impl Fn(&T, &K) -> ValueStream<S> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        if buffer.is_zero() {
-            return self.auto_refresh(reevaluator);
-        }
-
-        let source = self.clone();
-        let reevaluator: CacheRefreshFactory<K, T, S> = Arc::new(reevaluator);
-        ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(AutoRefreshCacheState::<K, T>::default()));
-            let active = Arc::new(AtomicBool::new(true));
-            let state_for_source = Arc::clone(&state);
-            let active_for_source = Arc::clone(&active);
-            let reevaluator_for_source = Arc::clone(&reevaluator);
-            let subscriber_for_source = Arc::clone(&subscriber);
-            let source_subscription = source.subscribe(move |batch| {
-                let starts = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    HashMap::new()
-                };
-
-                subscriber_for_source(batch);
-                start_cache_refresh_subscriptions_buffered(
-                    &state_for_source,
-                    &subscriber_for_source,
-                    Arc::clone(&active_for_source),
-                    starts,
-                    &*reevaluator_for_source,
-                    buffer,
-                );
-            })?;
-
-            let cleanup = Subscription::new(move || {
-                active.store(false, AtomicOrdering::Release);
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
-            });
-
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
-        })
+        self.auto_refresh_buffered_with_scheduler(reevaluator, buffer, default_scheduler())
     }
 
-    fn transform_on_observable<U>(
+    fn auto_refresh_buffered_with_scheduler<S, E>(
         &self,
-        transform_factory: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+        buffer: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
+        let reevaluator = move |argument_0: &T, argument_1: &K| {
+            reevaluator(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        cache_auto_refresh(
+            self.clone(),
+            Arc::new(reevaluator),
+            RefreshBuffer::new(buffer, scheduler),
+        )
+    }
+
+    fn transform_on_observable<U, E>(
+        &self,
+        transform_factory: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ChangeStream<CacheChange<K, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let transform_factory = move |argument_0: &T, argument_1: &K| {
+            transform_factory(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let transform_factory: CacheTransformFactory<K, T, U> = Arc::new(transform_factory);
         ChangeStream::new(move |subscriber| {
@@ -520,15 +672,23 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn merge_many<U>(
+    fn merge_many<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
         ValueStream::new(move |subscriber| {
@@ -544,63 +704,95 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn when_value_changed<U>(
+    fn when_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many(observable_selector)
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        self.merge_many::<_, CollectionError>(observable_selector)
     }
 
-    fn when_value_changed_with_initial<U>(
+    fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let current_value = Arc::new(current_value);
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             observable_selector(item, key).start_with(current_value(item, key))
         })
     }
 
-    fn merge_many_items<U>(
+    fn merge_many_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let item_for_value = item.clone();
             observable_selector(item, key)
                 .map(move |value| ItemValue::new(item_for_value.clone(), value.clone()))
         })
     }
 
-    fn merge_many_keyed_items<U>(
+    fn merge_many_keyed_items<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let item_for_value = item.clone();
             let key_for_value = key.clone();
             observable_selector(item, key).map(move |value| {
@@ -609,31 +801,47 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn when_item_value_changed<U>(
+    fn when_item_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many_items(observable_selector)
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        self.merge_many_items::<_, CollectionError>(observable_selector)
     }
 
-    fn when_item_value_changed_with_initial<U>(
+    fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<ItemValue<T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let current_value = Arc::new(current_value);
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let initial = ItemValue::new(item.clone(), current_value(item, key));
             let item_for_value = item.clone();
             observable_selector(item, key)
@@ -642,31 +850,47 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn when_keyed_value_changed<U>(
+    fn when_keyed_value_changed<U, E>(
         &self,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        self.merge_many_keyed_items(observable_selector)
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        self.merge_many_keyed_items::<_, CollectionError>(observable_selector)
     }
 
-    fn when_keyed_value_changed_with_initial<U>(
+    fn when_keyed_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
-        observable_selector: impl Fn(&T, &K) -> ValueStream<U> + Send + Sync + 'static,
+        observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<KeyedItemValue<K, T, U>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let observable_selector = move |argument_0: &T, argument_1: &K| {
+            observable_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let current_value = Arc::new(current_value);
         let observable_selector: CacheValueStreamFactory<K, T, U> = Arc::new(observable_selector);
-        self.merge_many(move |item, key| {
+        self.merge_many::<_, CollectionError>(move |item, key| {
             let initial = KeyedItemValue::new(key.clone(), item.clone(), current_value(item, key));
             let item_for_value = item.clone();
             let key_for_value = key.clone();
@@ -682,15 +906,20 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn group_on_observable<G>(
+    fn group_on_observable<G, E>(
         &self,
-        group_selector: impl Fn(&T, &K) -> ValueStream<G> + Send + Sync + 'static,
+        group_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<G, E> + Send + Sync + 'static,
     ) -> ChangeStream<CacheGroupChange<K, T, G>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         G: Clone + Eq + Hash + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let group_selector = move |argument_0: &T, argument_1: &K| {
+            group_selector(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let group_selector: CacheGroupFactory<K, T, G> = Arc::new(group_selector);
         ChangeStream::new(move |subscriber| {
@@ -745,22 +974,26 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
             ));
             let state_for_source = Arc::clone(&state);
             let selector_for_source = Arc::clone(&observable_selector);
-            let subscriber_for_source = Arc::clone(&subscriber);
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+            let emitter_for_source = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, starts) = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_parent_changes(batch)
-                } else {
-                    (Vec::new(), Vec::new())
+                let starts = {
+                    let Ok(mut state) = state_for_source.lock() else {
+                        return;
+                    };
+                    state.phase.begin();
+                    let (changes, starts) = state.apply_parent_changes(batch);
+                    state.phase.pending.extend(changes);
+                    starts
                 };
-                if !changes.is_empty() {
-                    subscriber_for_source(&ChangeSet::new(changes, batch.version));
-                }
                 start_cache_list_change_set_subscriptions(
                     &state_for_source,
-                    &subscriber_for_source,
+                    &emitter_for_source,
                     &starts,
                     &*selector_for_source,
                 );
+                emitter_for_source
+                    .update(&state_for_source, |state| state.finish_start(batch.version));
             })?;
 
             let cleanup = Subscription::new(move || {
@@ -769,7 +1002,11 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
                 }
             });
 
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
+            Ok(Subscription::many(vec![
+                source_subscription,
+                cleanup,
+                delivery,
+            ]))
         })
     }
 
@@ -1165,22 +1402,25 @@ where
         >::new(comparer.clone())));
         let state_for_source = Arc::clone(&state);
         let selector_for_source = Arc::clone(&observable_selector);
-        let subscriber_for_source = Arc::clone(&subscriber);
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let emitter_for_source = emitter.clone();
         let source_subscription = source.subscribe(move |batch| {
-            let (changes, starts) = if let Ok(mut state) = state_for_source.lock() {
-                state.apply_parent_changes(batch)
-            } else {
-                (Vec::new(), Vec::new())
+            let starts = {
+                let Ok(mut state) = state_for_source.lock() else {
+                    return;
+                };
+                state.phase.begin();
+                let (changes, starts) = state.apply_parent_changes(batch);
+                state.phase.pending.extend(changes);
+                starts
             };
-            if !changes.is_empty() {
-                subscriber_for_source(&ChangeSet::new(changes, batch.version));
-            }
             start_cache_cache_change_set_subscriptions(
                 &state_for_source,
-                &subscriber_for_source,
+                &emitter_for_source,
                 &starts,
                 &selector_for_source,
             );
+            emitter_for_source.update(&state_for_source, |state| state.finish_start(batch.version));
         })?;
 
         let cleanup = Subscription::new(move || {
@@ -1189,7 +1429,11 @@ where
             }
         });
 
-        Ok(Subscription::many(vec![source_subscription, cleanup]))
+        Ok(Subscription::many(vec![
+            source_subscription,
+            cleanup,
+            delivery,
+        ]))
     })
 }
 
@@ -1200,21 +1444,30 @@ struct MergeManyCacheCacheChild<ChildKey, Child> {
 
 struct MergeManyCacheCacheChangeSetsState<K, ChildKey, Child> {
     children: HashMap<K, MergeManyCacheCacheChild<ChildKey, Child>>,
-    parent_order: Vec<K>,
+    parent_order: KeyOrder<K>,
     result: HashMap<ChildKey, Child>,
-    result_order: Vec<ChildKey>,
+    result_order: KeyOrder<ChildKey>,
     comparer: Option<Comparer<Child>>,
     version: u64,
+    /// The batch being started: deferred results and the child keys to recompute.
+    phase: StartPhase<CacheChange<ChildKey, Child>>,
+    deferred: Vec<ChildKey>,
+    deferred_seen: HashSet<ChildKey>,
+    deferred_refreshes: HashMap<ChildKey, Vec<Child>>,
 }
 
 impl<K, ChildKey, Child> MergeManyCacheCacheChangeSetsState<K, ChildKey, Child> {
     fn new(comparer: Option<Comparer<Child>>) -> Self {
         Self {
             children: HashMap::new(),
-            parent_order: Vec::new(),
+            parent_order: KeyOrder::new(),
             result: HashMap::new(),
-            result_order: Vec::new(),
+            result_order: KeyOrder::new(),
             comparer,
+            phase: StartPhase::default(),
+            deferred: Vec::new(),
+            deferred_seen: HashSet::new(),
+            deferred_refreshes: HashMap::new(),
             version: 0,
         }
     }
@@ -1330,6 +1583,9 @@ where
                     self.result_order.clear();
                     touched.clear();
                     touched_seen.clear();
+                    self.deferred.clear();
+                    self.deferred_seen.clear();
+                    self.deferred_refreshes.clear();
                 }
                 CacheChange::Clear { previous } => {
                     for (key, _) in previous {
@@ -1348,7 +1604,7 @@ where
             }
         }
 
-        self.recompute_keys(touched, &HashMap::new(), &mut changes);
+        self.recompute_or_defer(touched, HashMap::new(), &mut changes);
         drop(removed_subscriptions);
         (changes, starts)
     }
@@ -1399,11 +1655,50 @@ where
         }
 
         let mut changes = Vec::new();
-        self.recompute_keys(touched, &refreshes, &mut changes);
+        self.recompute_or_defer(touched, refreshes, &mut changes);
         if changes.is_empty() {
             return None;
         }
         Some(ChangeSet::new(changes, self.next_version(batch.version)))
+    }
+
+    /// Recomputes `keys` now, or after the batch's children have started.
+    fn recompute_or_defer(
+        &mut self,
+        keys: Vec<ChildKey>,
+        refreshes: HashMap<ChildKey, Vec<Child>>,
+        changes: &mut Vec<CacheChange<ChildKey, Child>>,
+    ) {
+        if self.phase.is_active() {
+            for key in keys {
+                push_unique_key(&mut self.deferred, &mut self.deferred_seen, key);
+            }
+            for (key, items) in refreshes {
+                self.deferred_refreshes
+                    .entry(key)
+                    .or_default()
+                    .extend(items);
+            }
+        } else {
+            self.recompute_keys(keys, &refreshes, changes);
+        }
+    }
+
+    /// Ends a source batch's start phase: emits its changes, recomputing the deferred keys once
+    /// (a parent restarted with identical children changes nothing).
+    fn finish_start(
+        &mut self,
+        source_version: u64,
+    ) -> Option<ChangeSet<CacheChange<ChildKey, Child>>> {
+        let mut changes = self.phase.end()?;
+        let keys = std::mem::take(&mut self.deferred);
+        self.deferred_seen.clear();
+        let refreshes = std::mem::take(&mut self.deferred_refreshes);
+        self.recompute_keys(keys, &refreshes, &mut changes);
+        if changes.is_empty() {
+            return None;
+        }
+        Some(ChangeSet::new(changes, self.next_version(source_version)))
     }
 
     fn recompute_keys(
@@ -1419,7 +1714,7 @@ where
             match (previous, next) {
                 (None, Some(current)) => {
                     if !self.result.contains_key(&key) {
-                        self.result_order.push(key.clone());
+                        let _ = self.result_order.push(key.clone());
                     }
                     self.result.insert(key.clone(), current.clone());
                     changes.push(CacheChange::Add {
@@ -1454,9 +1749,7 @@ where
                 }
                 (Some(previous), None) => {
                     let _ = self.result.remove(&key);
-                    if let Some(index) = previous_index {
-                        let _ = self.result_order.remove(index);
-                    }
+                    let _ = self.result_order.remove(&key);
                     changes.push(CacheChange::Remove {
                         key,
                         previous,
@@ -1519,9 +1812,7 @@ where
     }
 
     fn result_index(&self, key: &ChildKey) -> Option<usize> {
-        self.result_order
-            .iter()
-            .position(|existing| existing == key)
+        self.result_order.index_of(key)
     }
 
     fn ordered_result_items(&self) -> Vec<(ChildKey, Child)> {
@@ -1534,7 +1825,7 @@ where
 
 fn start_cache_cache_change_set_subscriptions<K, T, ChildKey, Child>(
     state: &Arc<Mutex<MergeManyCacheCacheChangeSetsState<K, ChildKey, Child>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<ChildKey, Child>>,
+    emitter: &OrderedEmitter<ChangeSet<CacheChange<ChildKey, Child>>>,
     starts: &[(K, T)],
     selector: &CacheCacheChangeStreamFactory<K, T, ChildKey, Child>,
 ) where
@@ -1543,7 +1834,16 @@ fn start_cache_cache_change_set_subscriptions<K, T, ChildKey, Child>(
     ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
     Child: Clone + PartialEq + Send + Sync + 'static,
 {
-    for (key, parent) in starts {
+    // A parent added and updated in one batch starts only its latest child stream, so the
+    // superseded stream's items never reach the merged output.
+    let mut latest = Vec::<&(K, T)>::new();
+    for start in starts.iter().rev() {
+        if !latest.iter().any(|kept| kept.0 == start.0) {
+            latest.push(start);
+        }
+    }
+    latest.reverse();
+    for (key, parent) in latest {
         let is_live = state
             .lock()
             .map(|state| state.is_live(key))
@@ -1554,17 +1854,12 @@ fn start_cache_cache_change_set_subscriptions<K, T, ChildKey, Child>(
 
         let stream = selector(parent, key);
         let state_for_child = Arc::clone(state);
-        let subscriber_for_child = Arc::clone(subscriber);
+        let emitter_for_child = emitter.clone();
         let key_for_child = key.clone();
         if let Ok(subscription) = stream.subscribe(move |batch| {
-            let batch = if let Ok(mut state) = state_for_child.lock() {
+            emitter_for_child.update(&state_for_child, |state| {
                 state.apply_child_changes(&key_for_child, batch)
-            } else {
-                None
-            };
-            if let Some(batch) = batch {
-                subscriber_for_child(&batch);
-            }
+            });
         }) && let Ok(mut state) = state.lock()
         {
             state.set_subscription(key, subscription);
@@ -1579,17 +1874,22 @@ struct MergeManyCacheListChild<U> {
 
 struct MergeManyCacheListChangeSetsState<K, U> {
     children: HashMap<K, MergeManyCacheListChild<U>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     merged: Vec<U>,
     version: u64,
+    /// The batch being started, and the restarted parents' previous items (still merged).
+    phase: StartPhase<ListChange<U>>,
+    retiring: Vec<(K, Vec<U>)>,
 }
 
 impl<K, U> Default for MergeManyCacheListChangeSetsState<K, U> {
     fn default() -> Self {
         Self {
             children: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             merged: Vec::new(),
+            phase: StartPhase::default(),
+            retiring: Vec::new(),
             version: 0,
         }
     }
@@ -1629,11 +1929,7 @@ where
                             subscription: None,
                         },
                     ) {
-                        remove_many_from_merged_list(
-                            &mut self.merged,
-                            &previous.items,
-                            &mut changes,
-                        );
+                        self.retire_or_remove(key, previous.items, &mut changes);
                         if let Some(subscription) = previous.subscription {
                             removed_subscriptions.push(subscription);
                         }
@@ -1658,11 +1954,7 @@ where
                             subscription: None,
                         },
                     ) {
-                        remove_many_from_merged_list(
-                            &mut self.merged,
-                            &previous.items,
-                            &mut changes,
-                        );
+                        self.retire_or_remove(key, previous.items, &mut changes);
                         if let Some(subscription) = previous.subscription {
                             removed_subscriptions.push(subscription);
                         }
@@ -1670,6 +1962,7 @@ where
                     starts.push((key.clone(), current.clone()));
                 }
                 CacheChange::Remove { key, .. } => {
+                    self.drop_retiring(key, &mut changes);
                     if let Some(previous) = self.children.remove(key) {
                         remove_many_from_merged_list(
                             &mut self.merged,
@@ -1688,6 +1981,7 @@ where
                             old: std::mem::take(&mut self.merged),
                         });
                     }
+                    self.retiring.clear();
                     for (_, child) in self.children.drain() {
                         if let Some(subscription) = child.subscription {
                             removed_subscriptions.push(subscription);
@@ -1697,6 +1991,7 @@ where
                 }
                 CacheChange::Clear { previous } => {
                     for (key, _) in previous {
+                        self.drop_retiring(key, &mut changes);
                         if let Some(child) = self.children.remove(key) {
                             remove_many_from_merged_list(
                                 &mut self.merged,
@@ -1723,6 +2018,12 @@ where
         parent_key: &K,
         batch: &ChangeSet<ListChange<U>>,
     ) -> Option<ChangeSet<ListChange<U>>> {
+        if self.phase.is_active() && self.retiring.iter().any(|(key, _)| key == parent_key) {
+            // A restarted parent's new child is reconciled when the batch has started.
+            let child = self.children.get_mut(parent_key)?;
+            apply_list_changes(&mut child.items, &batch.changes);
+            return None;
+        }
         let previous_items = self.children.get(parent_key)?.items.clone();
         let mut changes = Vec::new();
         apply_child_list_changes_to_merged_list(
@@ -1734,10 +2035,50 @@ where
         if let Some(child) = self.children.get_mut(parent_key) {
             apply_list_changes(&mut child.items, &batch.changes);
         }
+        if self.phase.is_active() {
+            self.phase.pending.extend(changes);
+            return None;
+        }
         if changes.is_empty() {
             return None;
         }
         Some(ChangeSet::new(changes, self.next_version(batch.version)))
+    }
+
+    /// Keeps a restarted parent's previous items merged until its batch has started, or
+    /// removes them at once outside a start phase.
+    fn retire_or_remove(&mut self, key: &K, items: Vec<U>, changes: &mut Vec<ListChange<U>>) {
+        if self.phase.is_active() && !self.retiring.iter().any(|(retired, _)| retired == key) {
+            self.retiring.push((key.clone(), items));
+        } else {
+            remove_many_from_merged_list(&mut self.merged, &items, changes);
+        }
+    }
+
+    /// Removes the previous items of a restarted parent that is now gone.
+    fn drop_retiring(&mut self, key: &K, changes: &mut Vec<ListChange<U>>) {
+        if let Some(position) = self.retiring.iter().position(|(retired, _)| retired == key) {
+            let (_, items) = self.retiring.remove(position);
+            remove_many_from_merged_list(&mut self.merged, &items, changes);
+        }
+    }
+
+    /// Ends a source batch's start phase: reconciles the restarted parents' previous and new
+    /// items (identical children change nothing) and emits the batch once.
+    fn finish_start(&mut self, source_version: u64) -> Option<ChangeSet<ListChange<U>>> {
+        let mut changes = self.phase.end()?;
+        for (key, previous) in std::mem::take(&mut self.retiring) {
+            let current = self
+                .children
+                .get(&key)
+                .map(|child| child.items.clone())
+                .unwrap_or_default();
+            reconcile_merged_children(&mut self.merged, &previous, &current, &mut changes);
+        }
+        if changes.is_empty() {
+            return None;
+        }
+        Some(ChangeSet::new(changes, self.next_version(source_version)))
     }
 
     fn is_live(&self, key: &K) -> bool {
@@ -1769,7 +2110,7 @@ where
 
 fn start_cache_list_change_set_subscriptions<K, T, U>(
     state: &Arc<Mutex<MergeManyCacheListChangeSetsState<K, U>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<ListChange<U>>,
+    emitter: &OrderedEmitter<ChangeSet<ListChange<U>>>,
     starts: &[(K, T)],
     selector: &dyn Fn(&T, &K) -> ChangeStream<ListChange<U>>,
 ) where
@@ -1777,7 +2118,16 @@ fn start_cache_list_change_set_subscriptions<K, T, U>(
     T: Clone + Send + Sync + 'static,
     U: Clone + PartialEq + Send + Sync + 'static,
 {
-    for (key, parent) in starts {
+    // A parent added and updated in one batch starts only its latest child stream, so the
+    // superseded stream's items never reach the merged output.
+    let mut latest = Vec::<&(K, T)>::new();
+    for start in starts.iter().rev() {
+        if !latest.iter().any(|kept| kept.0 == start.0) {
+            latest.push(start);
+        }
+    }
+    latest.reverse();
+    for (key, parent) in latest {
         let is_live = state
             .lock()
             .map(|state| state.is_live(key))
@@ -1788,17 +2138,12 @@ fn start_cache_list_change_set_subscriptions<K, T, U>(
 
         let stream = selector(parent, key);
         let state_for_child = Arc::clone(state);
-        let subscriber_for_child = Arc::clone(subscriber);
+        let emitter_for_child = emitter.clone();
         let key_for_child = key.clone();
         if let Ok(subscription) = stream.subscribe(move |batch| {
-            let batch = if let Ok(mut state) = state_for_child.lock() {
+            emitter_for_child.update(&state_for_child, |state| {
                 state.apply_child_changes(&key_for_child, batch)
-            } else {
-                None
-            };
-            if let Some(batch) = batch {
-                subscriber_for_child(&batch);
-            }
+            });
         }) && let Ok(mut state) = state.lock()
         {
             state.set_subscription(key, subscription);
@@ -1917,7 +2262,7 @@ struct TransformOnObservableCacheEntry<U> {
 
 struct TransformOnObservableCacheState<K, U> {
     entries: HashMap<K, TransformOnObservableCacheEntry<U>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     version: u64,
     next_token: u64,
 }
@@ -1926,7 +2271,7 @@ impl<K, U> Default for TransformOnObservableCacheState<K, U> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             version: 0,
             next_token: 0,
         }
@@ -2256,9 +2601,9 @@ struct GroupOnObservableCacheEntry<T, G> {
 
 struct GroupOnObservableCacheState<K, T, G> {
     entries: HashMap<K, GroupOnObservableCacheEntry<T, G>>,
-    source_order: Vec<K>,
+    source_order: KeyOrder<K>,
     groups: HashMap<G, RayCacheGroup<G, K, T>>,
-    group_order: Vec<G>,
+    group_order: KeyOrder<G>,
     empty_groups: HashSet<G>,
     version: u64,
     next_token: u64,
@@ -2268,9 +2613,9 @@ impl<K, T, G> Default for GroupOnObservableCacheState<K, T, G> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            source_order: Vec::new(),
+            source_order: KeyOrder::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             empty_groups: HashSet::new(),
             version: 0,
             next_token: 0,
@@ -2457,7 +2802,11 @@ where
     }
 
     fn finalize_empty_groups(&mut self, group_changes: &mut Vec<CacheGroupChange<K, T, G>>) {
-        let empty_groups = self.empty_groups.iter().cloned().collect::<Vec<_>>();
+        let empty_groups = ordered_empty_groups(&self.empty_groups, &self.group_order, |key| {
+            group_changes
+                .iter()
+                .any(|change| matches!(change, CacheChange::Add { key: added, .. } if added == key))
+        });
         for group_key in empty_groups {
             let Some(group) = self.groups.get(&group_key).cloned() else {
                 let _ = self.empty_groups.remove(&group_key);
@@ -2475,7 +2824,7 @@ where
                 continue;
             }
 
-            let previous_index = self.group_order.iter().position(|key| key == &group_key);
+            let previous_index = self.group_order.index_of(&group_key);
             let _ = self.groups.remove(&group_key);
             remove_cache_order_key(&mut self.group_order, &group_key);
             let _ = self.empty_groups.remove(&group_key);
@@ -2617,7 +2966,7 @@ fn pending_group_changes<'a, K, T, G>(
     pending: &'a mut CacheGroupPending<K, T, G>,
     group_key: &G,
     group: &RayCacheGroup<G, K, T>,
-) -> &'a mut Vec<CacheChange<K, T>>
+) -> &'a mut crate::collections::connection::PendingChanges<CacheChange<K, T>>
 where
     G: Clone + Eq + Hash,
     K: Clone,
@@ -2625,7 +2974,12 @@ where
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), Vec::new()))
+        .or_insert_with(|| {
+            (
+                group.clone(),
+                crate::collections::connection::PendingChanges::new(),
+            )
+        })
         .1
 }
 
@@ -2636,13 +2990,37 @@ fn remove_pending_group_add<K, T, G>(
 where
     G: Eq,
 {
-    let Some(index) = group_changes
-        .iter()
-        .position(|change| matches!(change, CacheChange::Add { key, .. } if key == group_key))
+    let Some((position, dropped)) =
+        group_changes
+            .iter()
+            .enumerate()
+            .find_map(|(position, change)| match change {
+                CacheChange::Add {
+                    key, current_index, ..
+                } if key == group_key => Some((position, *current_index)),
+                _ => None,
+            })
     else {
         return false;
     };
-    let _ = group_changes.remove(index);
+    let _ = group_changes.remove(position);
+    // Later changes were indexed with the dropped group still in the output.
+    if let Some(dropped) = dropped {
+        for change in group_changes.iter_mut().skip(position) {
+            if let CacheChange::Add {
+                current_index: Some(index),
+                ..
+            }
+            | CacheChange::Remove {
+                previous_index: Some(index),
+                ..
+            } = change
+                && *index > dropped
+            {
+                *index -= 1;
+            }
+        }
+    }
     true
 }
 
@@ -2655,7 +3033,7 @@ fn merge_group_pending<K, T, G>(
     for (group_key, (group, mut changes)) in source {
         target
             .entry(group_key)
-            .or_insert_with(|| (group, Vec::new()))
+            .or_insert_with(|| (group, crate::collections::connection::PendingChanges::new()))
             .1
             .append(&mut changes);
     }
@@ -2772,20 +3150,42 @@ struct FilterOnObservableCacheEntry<T> {
     item: T,
     included: bool,
     subscription: Option<Subscription>,
+    restart: Option<FilterRestart<T>>,
+}
+
+impl<T: Clone> FilterOnObservableCacheEntry<T> {
+    fn new(item: T) -> Self {
+        Self {
+            item,
+            included: false,
+            subscription: None,
+            restart: None,
+        }
+    }
+
+    /// The item the output holds (a restarted entry still shows its previous item).
+    fn shown(&self) -> T {
+        self.restart
+            .as_ref()
+            .and_then(|restart| restart.shown.clone())
+            .unwrap_or_else(|| self.item.clone())
+    }
 }
 
 struct FilterOnObservableCacheState<K, T> {
     items: HashMap<K, FilterOnObservableCacheEntry<T>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     version: u64,
+    phase: StartPhase<CacheChange<K, T>>,
 }
 
 impl<K, T> Default for FilterOnObservableCacheState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             version: 0,
+            phase: StartPhase::default(),
         }
     }
 }
@@ -2816,11 +3216,7 @@ where
                     }
                     if let Some(previous) = self.items.insert(
                         key.clone(),
-                        FilterOnObservableCacheEntry {
-                            item: current.clone(),
-                            included: false,
-                            subscription: None,
-                        },
+                        FilterOnObservableCacheEntry::new(current.clone()),
                     ) && let Some(subscription) = previous.subscription
                     {
                         removed_subscriptions.push(subscription);
@@ -2834,37 +3230,45 @@ where
                     ..
                 } => {
                     let previous_index = self.visible_index_of(key);
+                    let previous_position = self.order.index_of(key);
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
                     } else if !self.items.contains_key(key) {
-                        self.order.push(key.clone());
+                        let _ = self.order.push(key.clone());
                     }
-                    if let Some(previous) = self.items.insert(
-                        key.clone(),
-                        FilterOnObservableCacheEntry {
-                            item: current.clone(),
-                            included: false,
-                            subscription: None,
-                        },
-                    ) {
-                        if previous.included {
-                            changes.push(CacheChange::Remove {
-                                key: key.clone(),
-                                previous: previous.item,
-                                previous_index,
+                    let moved = previous_position != self.order.index_of(key);
+                    let mut entry = FilterOnObservableCacheEntry::new(current.clone());
+                    if let Some(previous) = self.items.remove(key) {
+                        if moved {
+                            // A moved key restarts from scratch (it leaves the output first).
+                            if previous.included {
+                                changes.push(CacheChange::Remove {
+                                    key: key.clone(),
+                                    previous: previous.shown(),
+                                    previous_index,
+                                });
+                            }
+                        } else {
+                            // The previous result holds until the new child has started.
+                            entry.included = previous.included;
+                            entry.restart = Some(FilterRestart {
+                                shown: previous.included.then(|| previous.shown()),
+                                next: None,
                             });
                         }
                         if let Some(subscription) = previous.subscription {
                             removed_subscriptions.push(subscription);
                         }
                     }
+                    self.items.insert(key.clone(), entry);
                     starts.insert(key.clone(), current.clone());
                 }
                 CacheChange::Refresh { key, current, .. } => {
                     let current_index = self.visible_index_of(key);
                     if let Some(entry) = self.items.get_mut(key) {
                         entry.item = current.clone();
-                        if entry.included {
+                        // A restarted entry settles when its batch has started.
+                        if entry.included && entry.restart.is_none() {
                             changes.push(CacheChange::Refresh {
                                 key: key.clone(),
                                 current: current.clone(),
@@ -2889,9 +3293,10 @@ where
                                 (previous_index, next_index)
                             && previous_index != current_index
                         {
+                            // A move carries the item the output holds.
                             changes.push(CacheChange::Move {
                                 key: key.clone(),
-                                current: current.clone(),
+                                current: entry.shown(),
                                 current_index,
                                 previous_index,
                             });
@@ -2904,7 +3309,7 @@ where
                         if entry.included {
                             changes.push(CacheChange::Remove {
                                 key: key.clone(),
-                                previous: entry.item,
+                                previous: entry.shown(),
                                 previous_index,
                             });
                         }
@@ -2935,10 +3340,11 @@ where
                             let entry = self.items.remove(key)?;
                             remove_cache_order_key(&mut self.order, key);
                             starts.remove(key);
+                            let shown = entry.included.then(|| (key.clone(), entry.shown()));
                             if let Some(subscription) = entry.subscription {
                                 removed_subscriptions.push(subscription);
                             }
-                            entry.included.then_some((key.clone(), entry.item))
+                            shown
                         })
                         .collect::<Vec<_>>();
                     if !removed.is_empty() {
@@ -2953,6 +3359,11 @@ where
     }
 
     fn apply_filter(&mut self, key: &K, included: bool) -> Option<ChangeSet<CacheChange<K, T>>> {
+        if let Some(restart) = self.items.get_mut(key)?.restart.as_mut() {
+            // Settled when the start phase ends.
+            restart.next = Some(included);
+            return None;
+        }
         let was_included = self.items.get(key)?.included;
         if was_included == included {
             return None;
@@ -2966,7 +3377,6 @@ where
         let entry = self.items.get_mut(key)?;
         entry.included = included;
         let item = entry.item.clone();
-        self.version = self.version.saturating_add(1);
         let change = if included {
             CacheChange::Add {
                 key: key.clone(),
@@ -2980,7 +3390,72 @@ where
                 previous_index: index,
             }
         };
+        if self.phase.is_active() {
+            self.phase.pending.push(change);
+            return None;
+        }
+        self.version = self.version.saturating_add(1);
         Some(ChangeSet::new(vec![change], self.version))
+    }
+
+    /// Ends a source batch's start phase: settles the restarted keys (an update with an
+    /// unchanged result is an `Update`, not a remove and an add) and emits the batch once.
+    fn finish_start(&mut self) -> Option<ChangeSet<CacheChange<K, T>>> {
+        let mut changes = self.phase.end()?;
+        let restarted = self
+            .order
+            .iter()
+            .filter(|key| {
+                self.items
+                    .get(*key)
+                    .is_some_and(|entry| entry.restart.is_some())
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        for key in restarted {
+            let Some(restart) = self
+                .items
+                .get_mut(&key)
+                .and_then(|entry| entry.restart.take())
+            else {
+                continue;
+            };
+            let included = restart.next.unwrap_or(false);
+            let before = self.visible_index_of(&key);
+            let Some(entry) = self.items.get_mut(&key) else {
+                continue;
+            };
+            entry.included = included;
+            let current = entry.item.clone();
+            match (restart.shown, included) {
+                (Some(previous), true) => changes.push(CacheChange::Update {
+                    key,
+                    current,
+                    previous,
+                    current_index: before,
+                    previous_index: before,
+                }),
+                (Some(previous), false) => changes.push(CacheChange::Remove {
+                    key,
+                    previous,
+                    previous_index: before,
+                }),
+                (None, true) => {
+                    let index = self.visible_index_of(&key);
+                    changes.push(CacheChange::Add {
+                        key,
+                        current,
+                        current_index: index,
+                    });
+                }
+                (None, false) => {}
+            }
+        }
+        if changes.is_empty() {
+            return None;
+        }
+        self.version = self.version.saturating_add(1);
+        Some(ChangeSet::new(changes, self.version))
     }
 
     fn is_live(&self, key: &K) -> bool {
@@ -2994,9 +3469,10 @@ where
         }
     }
 
-    fn clear_subscriptions(&mut self) {
-        self.items.clear();
+    /// Ends the operator: returns the entries to drop after unlocking.
+    fn clear_subscriptions(&mut self) -> HashMap<K, FilterOnObservableCacheEntry<T>> {
         self.order.clear();
+        std::mem::take(&mut self.items)
     }
 
     fn visible_index_of(&self, key: &K) -> Option<usize> {
@@ -3036,7 +3512,7 @@ where
             .iter()
             .filter_map(|key| {
                 let entry = self.items.get(key)?;
-                entry.included.then(|| (key.clone(), entry.item.clone()))
+                entry.included.then(|| (key.clone(), entry.shown()))
             })
             .collect()
     }
@@ -3044,7 +3520,7 @@ where
 
 fn start_cache_filter_subscriptions<K, T>(
     state: &Arc<Mutex<FilterOnObservableCacheState<K, T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
+    emitter: &OrderedEmitter<ChangeSet<CacheChange<K, T>>>,
     starts: HashMap<K, T>,
     filter: &dyn Fn(&T, &K) -> ValueStream<bool>,
 ) where
@@ -3062,17 +3538,12 @@ fn start_cache_filter_subscriptions<K, T>(
 
         let stream = filter(&item, &key);
         let state_for_filter = Arc::clone(state);
-        let subscriber_for_filter = Arc::clone(subscriber);
+        let emitter_for_filter = emitter.clone();
         let key_for_filter = key.clone();
         if let Ok(subscription) = stream.subscribe(move |included| {
-            let change = if let Ok(mut state) = state_for_filter.lock() {
+            emitter_for_filter.update(&state_for_filter, |state| {
                 state.apply_filter(&key_for_filter, *included)
-            } else {
-                None
-            };
-            if let Some(change) = change {
-                subscriber_for_filter(&change);
-            }
+            });
         }) && let Ok(mut state) = state.lock()
         {
             state.set_subscription(&key, subscription);
@@ -3087,10 +3558,10 @@ struct AutoRefreshCacheEntry<T> {
 
 struct AutoRefreshCacheState<K, T> {
     items: HashMap<K, AutoRefreshCacheEntry<T>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     pending_refresh_keys: Vec<K>,
     pending_refresh_seen: HashSet<K>,
-    refresh_timer_started: bool,
+    timer: OperatorTimer,
     version: u64,
 }
 
@@ -3098,10 +3569,10 @@ impl<K, T> Default for AutoRefreshCacheState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             pending_refresh_keys: Vec::new(),
             pending_refresh_seen: HashSet::new(),
-            refresh_timer_started: false,
+            timer: OperatorTimer::default(),
             version: 0,
         }
     }
@@ -3112,7 +3583,12 @@ where
     K: Clone + Eq + Hash,
     T: Clone,
 {
-    fn apply_source(&mut self, batch: &ChangeSet<CacheChange<K, T>>) -> HashMap<K, T> {
+    /// Applies a source batch, returning the items to subscribe to and the subscriptions of
+    /// the removed ones (drop them after unlocking).
+    fn apply_source(
+        &mut self,
+        batch: &ChangeSet<CacheChange<K, T>>,
+    ) -> (HashMap<K, T>, Vec<Subscription>) {
         self.version = self.version.max(batch.version);
         let mut starts = HashMap::new();
         let mut removed_subscriptions = Vec::new();
@@ -3148,7 +3624,7 @@ where
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
                     } else if !self.items.contains_key(key) {
-                        self.order.push(key.clone());
+                        let _ = self.order.push(key.clone());
                     }
                     if let Some(previous) = self.items.insert(
                         key.clone(),
@@ -3210,13 +3686,12 @@ where
             }
         }
 
-        drop(removed_subscriptions);
-        starts
+        (starts, removed_subscriptions)
     }
 
     fn refresh_for(&mut self, key: &K) -> Option<ChangeSet<CacheChange<K, T>>> {
         let current = self.items.get(key)?.item.clone();
-        let current_index = self.order.iter().position(|existing| existing == key);
+        let current_index = self.order.index_of(key);
         self.version = self.version.saturating_add(1);
         Some(ChangeSet::new(
             vec![CacheChange::Refresh {
@@ -3228,34 +3703,29 @@ where
         ))
     }
 
-    fn queue_refresh(&mut self, key: &K) -> bool {
+    /// Queues a refresh of `key`, returning the timer generation to schedule when this
+    /// starts a buffering window.
+    fn queue_refresh(&mut self, key: &K) -> Option<u64> {
         if !self.is_live(key) {
-            return false;
+            return None;
         }
 
         if self.pending_refresh_seen.insert(key.clone()) {
             self.pending_refresh_keys.push(key.clone());
         }
-
-        if self.refresh_timer_started {
-            false
-        } else {
-            self.refresh_timer_started = true;
-            true
-        }
+        self.timer.arm()
     }
 
     fn flush_queued_refreshes(&mut self) -> Option<ChangeSet<CacheChange<K, T>>> {
         let keys = std::mem::take(&mut self.pending_refresh_keys);
         self.pending_refresh_seen.clear();
-        self.refresh_timer_started = false;
 
         let mut changes = Vec::new();
         for key in keys {
             let Some(entry) = self.items.get(&key) else {
                 continue;
             };
-            let current_index = self.order.iter().position(|existing| existing == &key);
+            let current_index = self.order.index_of(&key);
             changes.push(CacheChange::Refresh {
                 key,
                 current: entry.item.clone(),
@@ -3275,161 +3745,179 @@ where
         self.items.contains_key(key)
     }
 
-    fn set_subscription(&mut self, key: &K, subscription: Subscription) {
-        if let Some(entry) = self.items.get_mut(key) {
-            let previous = entry.subscription.replace(subscription);
-            drop(previous);
+    /// Keeps `subscription` for a live key; returns what to drop after unlocking.
+    fn set_subscription(&mut self, key: &K, subscription: Subscription) -> Option<Subscription> {
+        match self.items.get_mut(key) {
+            Some(entry) => entry.subscription.replace(subscription),
+            None => Some(subscription),
         }
     }
 
-    fn clear_subscriptions(&mut self) {
-        self.items.clear();
+    /// Ends the operator: returns the entries and the pending timer to drop after unlocking.
+    fn close(&mut self) -> (HashMap<K, AutoRefreshCacheEntry<T>>, Option<ScheduledTask>) {
         self.order.clear();
         self.pending_refresh_keys.clear();
         self.pending_refresh_seen.clear();
-        self.refresh_timer_started = false;
+        (std::mem::take(&mut self.items), self.timer.close())
     }
 }
 
-fn start_cache_refresh_subscriptions<K, T, S>(
-    state: &Arc<Mutex<AutoRefreshCacheState<K, T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
-    starts: HashMap<K, T>,
-    reevaluator: &dyn Fn(&T, &K) -> ValueStream<S>,
-) where
+fn cache_auto_refresh<K, T, S>(
+    source: ChangeStream<CacheChange<K, T>>,
+    reevaluator: CacheRefreshFactory<K, T, S>,
+    buffer: Option<RefreshBuffer>,
+) -> ChangeStream<CacheChange<K, T>>
+where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
     S: Send + Sync + 'static,
 {
-    for (key, item) in starts {
-        let is_live = state
-            .lock()
-            .map(|state| state.is_live(&key))
-            .unwrap_or(false);
-        if !is_live {
-            continue;
-        }
+    ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let state = Arc::new(Mutex::new(AutoRefreshCacheState::<K, T>::default()));
+        let refresher = CacheRefresher {
+            state: Arc::downgrade(&state),
+            emitter: emitter.clone(),
+            buffer: buffer.clone(),
+        };
 
-        let stream = reevaluator(&item, &key);
-        let state_for_trigger = Arc::clone(state);
-        let subscriber_for_trigger = Arc::clone(subscriber);
-        let key_for_trigger = key.clone();
-        if let Ok(subscription) = stream.subscribe(move |_| {
-            let refresh = if let Ok(mut state) = state_for_trigger.lock() {
-                state.refresh_for(&key_for_trigger)
+        let state_for_source = Arc::clone(&state);
+        let reevaluator = Arc::clone(&reevaluator);
+        let source_subscription = source.subscribe(move |batch| {
+            let mut applied = (HashMap::new(), Vec::new());
+            emitter.update(&state_for_source, |state| {
+                if state.timer.is_closed() {
+                    return None;
+                }
+                applied = state.apply_source(batch);
+                Some(batch.clone())
+            });
+            let (starts, removed) = applied;
+            drop(removed);
+            refresher.start(&state_for_source, starts, &*reevaluator);
+        })?;
+
+        Ok(Subscription::new(move || {
+            drop(source_subscription);
+            let closed = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .close();
+            drop(closed);
+            drop(delivery);
+        }))
+    })
+}
+
+/// Emits the refreshes of one cache `auto_refresh` subscription, at once or buffered.
+struct CacheRefresher<K, T> {
+    state: Weak<Mutex<AutoRefreshCacheState<K, T>>>,
+    emitter: OrderedEmitter<ChangeSet<CacheChange<K, T>>>,
+    buffer: Option<RefreshBuffer>,
+}
+
+impl<K, T> Clone for CacheRefresher<K, T> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            emitter: self.emitter.clone(),
+            buffer: self.buffer.clone(),
+        }
+    }
+}
+
+impl<K, T> CacheRefresher<K, T>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn start<S>(
+        &self,
+        state: &Mutex<AutoRefreshCacheState<K, T>>,
+        starts: HashMap<K, T>,
+        reevaluator: &dyn Fn(&T, &K) -> ValueStream<S>,
+    ) where
+        S: Send + Sync + 'static,
+    {
+        for (key, item) in starts {
+            let is_live = state
+                .lock()
+                .map(|state| state.is_live(&key))
+                .unwrap_or(false);
+            if !is_live {
+                continue;
+            }
+
+            let refresher = self.clone();
+            let key_for_trigger = key.clone();
+            if let Ok(subscription) =
+                reevaluator(&item, &key).subscribe(move |_| refresher.refresh(&key_for_trigger))
+            {
+                let replaced = match state.lock() {
+                    Ok(mut state) => state.set_subscription(&key, subscription),
+                    Err(_) => Some(subscription),
+                };
+                drop(replaced);
+            }
+        }
+    }
+
+    fn refresh(&self, key: &K) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        let Some(buffer) = &self.buffer else {
+            self.emitter.update(&state, |state| state.refresh_for(key));
+            return;
+        };
+        let generation = match state.lock() {
+            Ok(mut state) => state.queue_refresh(key),
+            Err(_) => None,
+        };
+        if let Some(generation) = generation {
+            let refresher = self.clone();
+            schedule_timer(
+                &*buffer.scheduler,
+                &state,
+                |state| &mut state.timer,
+                generation,
+                buffer.delay,
+                move || refresher.flush(generation),
+            );
+        }
+    }
+
+    fn flush(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        self.emitter.update(&state, |state| {
+            if state.timer.fire(generation) {
+                state.flush_queued_refreshes()
             } else {
                 None
-            };
-            if let Some(refresh) = refresh {
-                subscriber_for_trigger(&refresh);
             }
-        }) && let Ok(mut state) = state.lock()
-        {
-            state.set_subscription(&key, subscription);
-        }
+        });
     }
 }
 
-fn start_cache_refresh_subscriptions_buffered<K, T, S>(
-    state: &Arc<Mutex<AutoRefreshCacheState<K, T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
-    active: Arc<AtomicBool>,
-    starts: HashMap<K, T>,
-    reevaluator: &dyn Fn(&T, &K) -> ValueStream<S>,
-    buffer: Duration,
-) where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
-    S: Send + Sync + 'static,
-{
-    for (key, item) in starts {
-        let is_live = state
-            .lock()
-            .map(|state| state.is_live(&key))
-            .unwrap_or(false);
-        if !is_live {
-            continue;
-        }
+fn insert_cache_order_key<K: Clone + Eq + Hash>(
+    order: &mut KeyOrder<K>,
+    key: K,
+    index: Option<usize>,
+) {
+    // Without an index an existing key moves to the end (as a fresh insertion would).
+    let _ = order.insert(index.unwrap_or(usize::MAX), key);
+}
 
-        let stream = reevaluator(&item, &key);
-        let state_for_trigger = Arc::clone(state);
-        let subscriber_for_trigger = Arc::clone(subscriber);
-        let active_for_trigger = Arc::clone(&active);
-        let key_for_trigger = key.clone();
-        if let Ok(subscription) = stream.subscribe(move |_| {
-            if !active_for_trigger.load(AtomicOrdering::Acquire) {
-                return;
-            }
-
-            let start_timer = if let Ok(mut state) = state_for_trigger.lock() {
-                state.queue_refresh(&key_for_trigger)
-            } else {
-                false
-            };
-
-            if start_timer {
-                let state_for_flush = Arc::clone(&state_for_trigger);
-                let subscriber_for_flush = Arc::clone(&subscriber_for_trigger);
-                let active_for_flush = Arc::clone(&active_for_trigger);
-                thread::spawn(move || {
-                    thread::sleep(buffer);
-                    flush_cache_refresh_buffer(
-                        state_for_flush,
-                        subscriber_for_flush,
-                        active_for_flush,
-                    );
-                });
-            }
-        }) && let Ok(mut state) = state.lock()
-        {
-            state.set_subscription(&key, subscription);
-        }
+fn move_cache_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K, index: usize) {
+    if let Some(previous_index) = order.index_of(key) {
+        let _ = order.move_to(previous_index, index);
     }
 }
 
-fn flush_cache_refresh_buffer<K, T>(
-    state: Arc<Mutex<AutoRefreshCacheState<K, T>>>,
-    subscriber: crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
-    active: Arc<AtomicBool>,
-) where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
-{
-    if !active.load(AtomicOrdering::Acquire) {
-        return;
-    }
-
-    let refresh = if let Ok(mut state) = state.lock() {
-        state.flush_queued_refreshes()
-    } else {
-        None
-    };
-
-    if let Some(refresh) = refresh
-        && active.load(AtomicOrdering::Acquire)
-    {
-        subscriber(&refresh);
-    }
-}
-
-fn insert_cache_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
-    }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
-}
-
-fn move_cache_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
-    }
-}
-
-fn remove_cache_order_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
+fn remove_cache_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K) {
+    let _ = order.remove(key);
 }
 
 #[derive(Default)]
@@ -3500,7 +3988,11 @@ where
     let (sender, receiver) = mpsc::channel::<Fut>();
     thread::spawn(move || {
         for disposal in receiver {
-            futures::executor::block_on(disposal);
+            // A panicking finalizer must not stop the later ones, or the completion.
+            let finished = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                futures::executor::block_on(disposal);
+            }));
+            drop(finished);
         }
         completion.complete();
     });
@@ -3515,20 +4007,24 @@ fn enqueue_async_disposals<K, T, Fut>(
     Fut: Future<Output = ()> + Send + 'static,
 {
     for (key, item) in items {
-        let _ = sender.send(dispose(item, key));
+        // A finalizer factory that panics skips its item only.
+        let created = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispose(item, key)));
+        if let Ok(disposal) = created {
+            let _ = sender.send(disposal);
+        }
     }
 }
 
 struct TrackedCache<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
 
 impl<K, T> Default for TrackedCache<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
         }
     }
 }
@@ -3574,7 +4070,7 @@ where
                     }
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
-                    } else if !self.order.iter().any(|existing| existing == key) {
+                    } else if !self.order.contains_key(key) {
                         self.order.push(key.clone());
                     }
                 }
@@ -3586,7 +4082,7 @@ where
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
-                    } else if !self.order.iter().any(|existing| existing == key) {
+                    } else if !self.order.contains_key(key) {
                         self.order.push(key.clone());
                     }
                 }
@@ -3697,9 +4193,7 @@ where
     }
 
     fn remove_order_key(&mut self, key: &K) {
-        if let Some(index) = self.order.iter().position(|existing| existing == key) {
-            let _ = self.order.remove(index);
-        }
+        let _ = self.order.remove(key);
     }
 }
 
@@ -3804,4 +4298,27 @@ fn apply_cache_subscriptions<K, T>(
             CacheChange::Refresh { .. } | CacheChange::Move { .. } => {}
         }
     }
+}
+
+/// Empty groups in finalization order: groups created in this batch (with a pending addition)
+/// first, so later removals are indexed without them, then by their position in the group
+/// order, so the removals are deterministic.
+fn ordered_empty_groups<G: Clone + Eq + Hash>(
+    empty_groups: &HashSet<G>,
+    group_order: &[G],
+    pending_add: impl Fn(&G) -> bool,
+) -> Vec<G> {
+    let positions = group_order
+        .iter()
+        .enumerate()
+        .map(|(position, key)| (key, position))
+        .collect::<HashMap<_, _>>();
+    let mut ordered = empty_groups.iter().cloned().collect::<Vec<_>>();
+    ordered.sort_by_key(|key| {
+        (
+            !pending_add(key),
+            positions.get(key).copied().unwrap_or(usize::MAX),
+        )
+    });
+    ordered
 }

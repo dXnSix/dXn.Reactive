@@ -26,24 +26,25 @@ where
         }
     }
 
+    /// Re-evaluates every item and emits only the inclusion flips (adjacent flips coalesce
+    /// into ranges): items that stay included are neither replaced nor moved.
     fn refilter(&mut self, predicate: &dyn Fn(&S, &T) -> bool) -> Option<ChangeSet<ListChange<T>>> {
         let state = self.state.as_ref()?;
-        let previous = self
-            .entries
-            .iter()
-            .filter(|entry| entry.included)
-            .map(|entry| entry.item.clone())
-            .collect::<Vec<_>>();
+        let mut changes = Vec::new();
+        let mut index = 0;
         for entry in &mut self.entries {
-            entry.included = predicate(state, &entry.item);
+            let included = predicate(state, &entry.item);
+            match (entry.included, included) {
+                (true, true) => index += 1,
+                (true, false) => push_diff_remove(&mut changes, index, entry.item.clone()),
+                (false, true) => {
+                    push_diff_add(&mut changes, index, entry.item.clone());
+                    index += 1;
+                }
+                (false, false) => {}
+            }
+            entry.included = included;
         }
-        let next = self
-            .entries
-            .iter()
-            .filter(|entry| entry.included)
-            .map(|entry| entry.item.clone())
-            .collect::<Vec<_>>();
-        let changes = diff_list(&previous, &next);
         if changes.is_empty() {
             None
         } else {
@@ -322,9 +323,9 @@ where
 
 struct CacheDynamicFilterState<K, T, S> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     filtered: HashMap<K, T>,
-    filtered_order: Vec<K>,
+    filtered_order: KeyOrder<K>,
     state: Option<S>,
     version: u64,
 }
@@ -333,12 +334,11 @@ impl<K, T, S> Default for CacheDynamicFilterState<K, T, S> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             filtered: HashMap::new(),
-            filtered_order: Vec::new(),
+            filtered_order: KeyOrder::new(),
             state: None,
             version: 0,
         }
     }
 }
-

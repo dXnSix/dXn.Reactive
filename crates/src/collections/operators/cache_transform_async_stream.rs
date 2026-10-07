@@ -10,63 +10,31 @@ where
     U: Clone + Send + Sync + 'static,
     Fut: Future<Output = U> + Send + 'static,
 {
-    let source = source.clone();
-    ChangeStream::new(move |subscriber| {
-        let (sender, receiver) = mpsc::channel::<CacheAsyncMessage<K, T>>();
-        let active = Arc::new(AtomicBool::new(true));
-
-        let worker_active = Arc::clone(&active);
-        let worker_subscriber = Arc::clone(&subscriber);
-        let worker_transform = Arc::clone(&transform);
-        thread::spawn(move || {
-            let mut state = CacheAsyncTransformState::<K, T, U>::default();
-            while worker_active.load(AtomicOrdering::Acquire) {
-                let Ok(message) = receiver.recv() else {
-                    break;
-                };
-
-                let output = match message {
-                    CacheAsyncMessage::Source(batch) => futures::executor::block_on(
-                        state.apply_source(&batch, &*worker_transform, options),
-                    ),
-                    CacheAsyncMessage::Force(predicate) => futures::executor::block_on(
-                        state.force_transform(&predicate, &*worker_transform, options),
-                    ),
-                    CacheAsyncMessage::Stop => break,
-                };
-
-                if let Some(output) = output
-                    && worker_active.load(AtomicOrdering::Acquire)
-                {
-                    worker_subscriber(&output);
+    cache_async_worker_stream(source, options, force_transform, move || {
+        let transform = Arc::clone(&transform);
+        let mut state = CacheAsyncTransformState::<K, T, U>::default();
+        move |message: CacheAsyncWork<K, T>, cancellation: &Mutex<AsyncCancellation<K>>| {
+            futures::executor::block_on(async {
+                match message {
+                    CacheAsyncWork::Source(batch, sequence) => {
+                        state
+                            .apply_source(&batch, &*transform, options, sequence, cancellation)
+                            .await
+                    }
+                    CacheAsyncWork::Force(predicate, sequence) => {
+                        state
+                            .force_transform(
+                                &predicate,
+                                &*transform,
+                                options,
+                                sequence,
+                                cancellation,
+                            )
+                            .await
+                    }
                 }
-            }
-        });
-
-        let source_active = Arc::clone(&active);
-        let source_sender = sender.clone();
-        let source_subscription = source.subscribe(move |batch| {
-            if source_active.load(AtomicOrdering::Acquire) {
-                let _ = source_sender.send(CacheAsyncMessage::Source(batch.clone()));
-            }
-        })?;
-
-        let mut subscriptions = vec![source_subscription];
-        if let Some(force_transform) = force_transform.clone() {
-            let force_active = Arc::clone(&active);
-            let force_sender = sender.clone();
-            subscriptions.push(force_transform.subscribe(move |predicate| {
-                if force_active.load(AtomicOrdering::Acquire) {
-                    let _ = force_sender.send(CacheAsyncMessage::Force(Arc::clone(predicate)));
-                }
-            })?);
+            })
         }
-
-        Ok(Subscription::new(move || {
-            active.store(false, AtomicOrdering::Release);
-            let _ = sender.send(CacheAsyncMessage::Stop);
-            drop(subscriptions);
-        }))
     })
 }
 
@@ -84,82 +52,165 @@ where
     E: Send + Sync + 'static,
     Fut: Future<Output = std::result::Result<U, E>> + Send + 'static,
 {
-    let source = source.clone();
-    ChangeStream::new(move |subscriber| {
-        let (sender, receiver) = mpsc::channel::<CacheAsyncSafeMessage<K, T>>();
-        let active = Arc::new(AtomicBool::new(true));
-
-        let worker_active = Arc::clone(&active);
-        let worker_subscriber = Arc::clone(&subscriber);
-        let worker_transform = Arc::clone(&transform);
-        let worker_on_error = Arc::clone(&on_error);
-        thread::spawn(move || {
-            let mut state = CacheAsyncSafeTransformState::<K, T, U>::default();
-            while worker_active.load(AtomicOrdering::Acquire) {
-                let Ok(message) = receiver.recv() else {
-                    break;
-                };
-
-                let output = match message {
-                    CacheAsyncSafeMessage::Source(batch) => futures::executor::block_on(
-                        state.apply_source(&batch, &*worker_transform, &*worker_on_error, options),
-                    ),
-                    CacheAsyncSafeMessage::Force(predicate) => {
-                        futures::executor::block_on(state.force_transform(
-                            &predicate,
-                            &*worker_transform,
-                            &*worker_on_error,
-                            options,
-                        ))
+    cache_async_worker_stream(source, options, force_transform, move || {
+        let transform = Arc::clone(&transform);
+        let on_error = Arc::clone(&on_error);
+        let mut state = CacheAsyncSafeTransformState::<K, T, U>::default();
+        move |message: CacheAsyncWork<K, T>, cancellation: &Mutex<AsyncCancellation<K>>| {
+            futures::executor::block_on(async {
+                match message {
+                    CacheAsyncWork::Source(batch, sequence) => {
+                        state
+                            .apply_source(
+                                &batch,
+                                &*transform,
+                                &*on_error,
+                                options,
+                                sequence,
+                                cancellation,
+                            )
+                            .await
                     }
-                    CacheAsyncSafeMessage::Stop => break,
-                };
-
-                if let Some(output) = output
-                    && worker_active.load(AtomicOrdering::Acquire)
-                {
-                    worker_subscriber(&output);
+                    CacheAsyncWork::Force(predicate, sequence) => {
+                        state
+                            .force_transform(
+                                &predicate,
+                                &*transform,
+                                &*on_error,
+                                options,
+                                sequence,
+                                cancellation,
+                            )
+                            .await
+                    }
                 }
+            })
+        }
+    })
+}
+
+/// A message for a cache async transform's worker, with its sequence number.
+enum CacheAsyncWork<K, T> {
+    Source(ChangeSet<CacheChange<K, T>>, u64),
+    Force(CacheForceTransform<K, T>, u64),
+}
+
+/// Runs a cache async transform on one worker thread per subscription. The source callback
+/// numbers each batch and cancels the in-flight futures of keys it removes or replaces; the
+/// worker processes the batches in order (`process`, created on the worker) and emits
+/// through the ordered emitter. Disposal cancels every future, so the worker exits promptly,
+/// and nothing is emitted afterwards.
+fn cache_async_worker_stream<K, T, U, P>(
+    source: &ChangeStream<CacheChange<K, T>>,
+    options: TransformAsyncOptions,
+    force_transform: Option<ValueStream<CacheForceTransform<K, T>>>,
+    processor: impl Fn() -> P + Send + Sync + 'static,
+) -> ChangeStream<CacheChange<K, U>>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+    P: FnMut(
+            CacheAsyncWork<K, T>,
+            &Mutex<AsyncCancellation<K>>,
+        ) -> Option<ChangeSet<CacheChange<K, U>>>
+        + Send
+        + 'static,
+{
+    let source = source.clone();
+    let processor = Arc::new(processor);
+    ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let (sender, receiver) = mpsc::channel::<CacheAsyncWork<K, T>>();
+        let cancellation = Arc::new(Mutex::new(AsyncCancellation::<K>::default()));
+
+        let worker_cancellation = Arc::clone(&cancellation);
+        let mut process = processor();
+        spawn_async_worker(move || {
+            // Ends when every sender is gone (disposal) or the subscription closed.
+            for message in receiver {
+                let sequence = match &message {
+                    CacheAsyncWork::Source(_, sequence) | CacheAsyncWork::Force(_, sequence) => {
+                        *sequence
+                    }
+                };
+                let output = process(message, &worker_cancellation);
+                let mut cancellation = lock_cancellation(&worker_cancellation);
+                if cancellation.closed {
+                    break;
+                }
+                cancellation.processed(sequence);
+                if let Some(output) = output {
+                    emitter.push(output);
+                }
+                drop(cancellation);
+                emitter.drain();
             }
         });
 
-        let source_active = Arc::clone(&active);
-        let source_sender = sender.clone();
+        let source_cancellation = Arc::clone(&cancellation);
+        let source_sender = Mutex::new(sender.clone());
         let source_subscription = source.subscribe(move |batch| {
-            if source_active.load(AtomicOrdering::Acquire) {
-                let _ = source_sender.send(CacheAsyncSafeMessage::Source(batch.clone()));
+            let sequence = {
+                let mut cancellation = lock_cancellation(&source_cancellation);
+                if cancellation.closed {
+                    return;
+                }
+                let sequence = cancellation.next_message();
+                for change in &batch.changes {
+                    match change {
+                        CacheChange::Add { key, .. }
+                        | CacheChange::Update { key, .. }
+                        | CacheChange::Remove { key, .. } => {
+                            cancellation.supersede(key, sequence);
+                        }
+                        CacheChange::Refresh { key, .. } if options.transform_on_refresh => {
+                            cancellation.supersede(key, sequence);
+                        }
+                        CacheChange::Clear { previous } if previous.is_empty() => {
+                            cancellation.clear(sequence);
+                        }
+                        CacheChange::Clear { previous } => {
+                            for (key, _) in previous {
+                                cancellation.supersede(key, sequence);
+                            }
+                        }
+                        CacheChange::Refresh { .. } | CacheChange::Move { .. } => {}
+                    }
+                }
+                sequence
+            };
+            if let Ok(sender) = source_sender.lock() {
+                let _ = sender.send(CacheAsyncWork::Source(batch.clone(), sequence));
             }
         })?;
 
         let mut subscriptions = vec![source_subscription];
         if let Some(force_transform) = force_transform.clone() {
-            let force_active = Arc::clone(&active);
-            let force_sender = sender.clone();
+            let force_cancellation = Arc::clone(&cancellation);
+            let force_sender = Mutex::new(sender.clone());
             subscriptions.push(force_transform.subscribe(move |predicate| {
-                if force_active.load(AtomicOrdering::Acquire) {
-                    let _ = force_sender.send(CacheAsyncSafeMessage::Force(Arc::clone(predicate)));
+                let sequence = {
+                    let mut cancellation = lock_cancellation(&force_cancellation);
+                    if cancellation.closed {
+                        return;
+                    }
+                    cancellation.next_message()
+                };
+                if let Ok(sender) = force_sender.lock() {
+                    let _ = sender.send(CacheAsyncWork::Force(Arc::clone(predicate), sequence));
                 }
             })?);
         }
+        drop(sender);
 
         Ok(Subscription::new(move || {
-            active.store(false, AtomicOrdering::Release);
-            let _ = sender.send(CacheAsyncSafeMessage::Stop);
+            lock_cancellation(&cancellation).close();
+            // Dropping the input subscriptions drops the remaining senders: the worker ends.
             drop(subscriptions);
+            drop(delivery);
         }))
     })
-}
-
-enum CacheAsyncMessage<K, T> {
-    Source(ChangeSet<CacheChange<K, T>>),
-    Force(CacheForceTransform<K, T>),
-    Stop,
-}
-
-enum CacheAsyncSafeMessage<K, T> {
-    Source(ChangeSet<CacheChange<K, T>>),
-    Force(CacheForceTransform<K, T>),
-    Stop,
 }
 
 struct CacheAsyncJob<K, T> {
@@ -178,7 +229,7 @@ struct CacheAsyncTransformResult<K, T, U> {
 
 struct CacheAsyncTransformState<K, T, U> {
     source_items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     projected: HashMap<K, U>,
     version: u64,
 }
@@ -187,10 +238,9 @@ impl<K, T, U> Default for CacheAsyncTransformState<K, T, U> {
     fn default() -> Self {
         Self {
             source_items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             projected: HashMap::new(),
             version: 0,
         }
     }
 }
-

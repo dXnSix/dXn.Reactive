@@ -24,7 +24,7 @@ Current source is the source of truth:
 
 The crate root is the scalar ViewModel state layer. It handles current values, computed values, commands, transient events, and activation lifetimes; it is UI-neutral. UI bindings belong to consumers: RayX's GPUI glue (`GpuiBinding`, `ReactiveContextExt`) lives in `../RayX/crates/rayx/src/reactive_gpui.rs` and is exported with this crate as `rayx::reactive`.
 
-`rayx_reactive::primitives` is the neutral stream/disposal layer shared by scalar state and collections. It owns `ValueStream<T, E>`, `Subscription`, `CompositeSubscription`, `DeliveryQueue<T>`, `ConnectionStatus`, `ReactiveError`, and `Result<T>`.
+`rayx_reactive::primitives` is the neutral stream/disposal layer shared by scalar state and collections. It owns `ValueStream<T, E>`, `Subscription`, `CompositeSubscription`, `DeliveryQueue<T>`, `ConnectionStatus`, `ReactiveError`, `Result<T>`, and the schedulers (`Scheduler`, `ScheduledTask`, `ThreadScheduler`, `ManualScheduler`, `default_scheduler()`) that every timed operator runs on.
 
 `rayx_reactive::collections` is the DynamicData-style collection layer. It owns `SourceList`, `SourceCache`, `ChangeStream`, `ChangeSet`, collection operators, observable collection materialization, grouping, sorting, paging, and lifecycle operators.
 
@@ -42,13 +42,13 @@ Use `Signal<T>` for one current value. Use `Computed<T>` for one derived current
 - `Signal<T>`: writable current-value state.
 - `ReadSignal<T>`: cloneable read-only state handle.
 - `SignalChange<T>`: previous/current/version payload emitted by `changes()`.
-- `Computed<T>`: derived signal that owns source subscriptions.
-- `ValueStream<T>`: cold scalar stream; every subscription activates the source.
-- `ReactiveValueStreamExt`: scalar stream operators: `filter`, `filter_map`, `distinct_until_changed`, and `skip`.
+- `Computed<T>`: glitch-free derived value that owns its input subscriptions (`derive`, `derive_distinct`, `combine2`, `combine3`, `from_stream`).
+- `ValueStream<T, E = ReactiveError>`: cold stream; every subscription activates the source. `map_err`/`err_into` convert its setup error.
+- `ReactiveValueStreamExt<T, E>`: operators for streams of any error type: `filter`, `filter_map`, `distinct_until_changed(_by)`, `skip`, `take`, `first`, `take_until`, `merge`, `combine_latest`, `with_latest_from`, `switch_map`, `scan`, `pairwise`, `share`, `share_replay`, and the timed `debounce`, `throttle`, `sample` (each with `*_with_scheduler`).
 - `Effect`: owned stream subscription for side effects.
-- `DisposeBag` and `DisposeWith`: lifetime bucket for subscriptions.
-- `ViewModelActivator` and `ActivationToken`: reference-counted activation lifetime for ViewModels.
-- `Command` and `AsyncCommand`: executable actions with `can_execute` and state signals.
+- `DisposeBag` and `DisposeWith`: lifetime bucket for subscriptions, `Disposable`s, `Effect`s and `CompositeSubscription`s.
+- `ViewModelActivator` and `ActivationToken`: reference-counted activation lifetime for ViewModels (`is_active`, `when_activated_scoped`).
+- `Command` and `AsyncCommand`: executable actions with `can_execute`, `state`, `is_executing` and an `ExecutionPolicy`.
 - `EventBus<T>` and `EventStream<T>`: non-replaying transient event streams.
 
 ## Default Choice Rules
@@ -57,7 +57,7 @@ Use `Signal<T>` for one current value. Use `Computed<T>` for one derived current
 - Prefer `ReadSignal<T>` on public ViewModel APIs unless the caller is meant to mutate the value.
 - Prefer `signal.read(...)` over `signal.get()` for large values when a borrow-scoped projection is enough.
 - Prefer `signal.set(next)` when equality suppression is desired; use `replace(next)` when every assignment is semantically meaningful.
-- Prefer `Computed::derive` or `Computed::combine2` for scalar state derived from one or two signals; use collection operators for many items.
+- Prefer `Computed::derive`, `combine2` or `combine3` for scalar state derived from up to three signals, and `derive_distinct` when equal results must not republish; use collection operators for many items.
 - Prefer `DisposeBag` or `ViewModelActivator` to own subscriptions instead of storing loose `Subscription` values in ad hoc fields.
 - In RayX, prefer `notify_on(signal.values())` or `bind_stream_value(...)` for GPUI updates instead of manual refresh flags.
 - Prefer `SourceCache<K, T>` for keyed ViewModel rows and `SourceList<T>` for ordered feeds; do not store large mutable lists inside a single `Signal<Vec<T>>` when incremental collection operators are needed.
@@ -67,7 +67,7 @@ Use `Signal<T>` for one current value. Use `Computed<T>` for one derived current
 ```rust
 use rayx_reactive::prelude::*;
 
-#[derive(Clone)]
+// `Computed` is not `Clone`; share the ViewModel through `Arc` when needed.
 struct SearchViewModel {
     query: Signal<String>,
     can_clear: Computed<bool>,

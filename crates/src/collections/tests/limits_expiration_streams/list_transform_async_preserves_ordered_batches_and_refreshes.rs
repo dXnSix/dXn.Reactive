@@ -90,7 +90,11 @@ fn cache_transform_async_batches_with_bounded_concurrency() -> Result<(), Box<dy
                                 break;
                             }
                         }
-                        std::thread::sleep(Duration::from_millis(25));
+                        // Hold the slot until two transforms overlapped (or a generous
+                        // deadline passed), so a slow runner cannot serialize them by timing.
+                        let _ = wait_until(GENEROUS_DEADLINE, || {
+                            max_active.load(AtomicOrdering::SeqCst) >= 2
+                        });
                         active.fetch_sub(1, AtomicOrdering::SeqCst);
                         let _ = sender.send(value);
                     });

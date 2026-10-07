@@ -1,32 +1,60 @@
+use crate::collections::source_lock::SourceLock;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex, TryLockError};
+use std::sync::Arc;
 
 use crate::collections::change::{CacheChange, ChangeSet};
-use crate::collections::connection::{StartupConnection, VersionedChangeSet};
+use crate::collections::connection::{PendingChanges, StartupConnection, VersionedChangeSet};
 use crate::collections::delivery::DeliveryQueue;
-use crate::collections::error::{CollectionError, Result};
+use crate::collections::error::Result;
+use crate::collections::key_order::KeyOrder;
 use crate::collections::stream::{ChangeStream, StreamSubscriber};
 use crate::collections::subscription::Subscription;
 
 struct GroupCacheState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     version: u64,
 }
 
 struct RayCacheGroupInner<K, T> {
-    state: Mutex<GroupCacheState<K, T>>,
+    state: SourceLock<GroupCacheState<K, T>>,
     changes: DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Cache groups alive on this thread (tests observe operator-owned group registries).
+    static LIVE_CACHE_GROUPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The number of cache groups created and not yet dropped on this thread.
+#[cfg(test)]
+pub(crate) fn live_cache_groups_for_test() -> usize {
+    LIVE_CACHE_GROUPS.with(std::cell::Cell::get)
+}
+
+#[cfg(test)]
+impl<K, T> Drop for RayCacheGroupInner<K, T> {
+    fn drop(&mut self) {
+        LIVE_CACHE_GROUPS.with(|live| live.set(live.get().saturating_sub(1)));
+    }
+}
+
+/// A live group of cache items sharing one group key, as emitted by the cache `group`
+/// operators.
+///
+/// The outer stream changes only when a group appears or disappears; membership changes flow
+/// through the group's own [`connect`](Self::connect) stream. Cloning shares the group.
 #[derive(Clone)]
 pub struct RayCacheGroup<G, K, T> {
     key: G,
     inner: Arc<RayCacheGroupInner<K, T>>,
 }
 
+/// A snapshot of one cache group, as emitted by `group_immutable`: its key and its
+/// `(key, item)` pairs at the time of the batch.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImmutableCacheGroup<G, K, T> {
     key: G,
@@ -34,18 +62,22 @@ pub struct ImmutableCacheGroup<G, K, T> {
 }
 
 impl<G, K, T> ImmutableCacheGroup<G, K, T> {
+    /// Creates a snapshot of the group `key` holding `key_values`.
     pub fn new(key: G, key_values: Vec<(K, T)>) -> Self {
         Self { key, key_values }
     }
 
+    /// The group key.
     pub fn key(&self) -> &G {
         &self.key
     }
 
+    /// The group's `(key, item)` pairs.
     pub fn key_values(&self) -> &[(K, T)] {
         &self.key_values
     }
 
+    /// Consumes the snapshot and returns its `(key, item)` pairs.
     pub fn into_key_values(self) -> Vec<(K, T)> {
         self.key_values
     }
@@ -56,12 +88,14 @@ where
     G: Clone,
 {
     pub(crate) fn new(key: G) -> Self {
+        #[cfg(test)]
+        LIVE_CACHE_GROUPS.with(|live| live.set(live.get() + 1));
         Self {
             key,
             inner: Arc::new(RayCacheGroupInner {
-                state: Mutex::new(GroupCacheState {
+                state: SourceLock::new(GroupCacheState {
                     items: HashMap::new(),
-                    order: Vec::new(),
+                    order: KeyOrder::new(),
                     version: 0,
                 }),
                 changes: DeliveryQueue::new(),
@@ -69,6 +103,7 @@ where
         }
     }
 
+    /// The group key.
     pub fn key(&self) -> G {
         self.key.clone()
     }
@@ -80,22 +115,14 @@ where
     T: Clone + Send + Sync + 'static,
     G: Clone + Send + Sync + 'static,
 {
+    /// The number of items in the group.
     pub fn count(&self) -> Result<usize> {
-        Ok(self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
-            .items
-            .len())
+        Ok(self.inner.state.lock()?.items.len())
     }
 
+    /// The group's items, in group order.
     pub fn items(&self) -> Result<Vec<T>> {
-        let state = self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
+        let state = self.inner.state.lock()?;
         Ok(state
             .order
             .iter()
@@ -103,22 +130,14 @@ where
             .collect())
     }
 
+    /// The keys of the group's items, in group order.
     pub fn keys(&self) -> Result<Vec<K>> {
-        Ok(self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
-            .order
-            .clone())
+        Ok(self.inner.state.lock()?.order.to_vec())
     }
 
+    /// The group's `(key, item)` pairs, in group order.
     pub fn key_values(&self) -> Result<Vec<(K, T)>> {
-        let state = self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
+        let state = self.inner.state.lock()?;
         Ok(state
             .order
             .iter()
@@ -132,17 +151,12 @@ where
             .collect())
     }
 
+    /// The item with `key`, if it belongs to the group.
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
-        Ok(self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
-            .items
-            .get(key)
-            .cloned())
+        Ok(self.inner.state.lock()?.items.get(key).cloned())
     }
 
+    /// A stream of the group's membership: the current items first, then every later change.
     pub fn connect(&self) -> ChangeStream<CacheChange<K, T>> {
         let group = self.clone();
         ChangeStream::new(move |subscriber| group.connect_subscriber(subscriber))
@@ -191,34 +205,35 @@ where
         key: K,
         item: T,
         index: Option<usize>,
-        pending: &mut Vec<CacheChange<K, T>>,
+        pending: &mut PendingChanges<CacheChange<K, T>>,
     ) -> Result<()> {
-        let mut state = self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
+        let mut state = self.inner.state.lock()?;
         if let Some(previous) = state.items.insert(key.clone(), item.clone()) {
-            let previous_index = state.order.iter().position(|existing| existing == &key);
-            if let Some(index) = index {
-                move_group_order_key(&mut state.order, &key, index);
+            let previous_index = state.order.index_of(&key);
+            if let (Some(index), Some(previous_index)) = (index, previous_index) {
+                let _ = state.order.move_to(previous_index, index);
             }
-            let current_index = state.order.iter().position(|existing| existing == &key);
-            pending.push(CacheChange::Update {
-                key,
-                current: item,
-                previous,
-                current_index,
-                previous_index,
-            });
+            let current_index = state.order.index_of(&key);
+            pending.push(
+                next_version(&mut state.version),
+                CacheChange::Update {
+                    key,
+                    current: item,
+                    previous,
+                    current_index,
+                    previous_index,
+                },
+            );
         } else {
-            insert_group_order_key(&mut state.order, key.clone(), index);
-            let current_index = state.order.iter().position(|existing| existing == &key);
-            pending.push(CacheChange::Add {
-                key,
-                current: item,
-                current_index,
-            });
+            let current_index = Some(state.order.insert(index.unwrap_or(usize::MAX), key.clone()));
+            pending.push(
+                next_version(&mut state.version),
+                CacheChange::Add {
+                    key,
+                    current: item,
+                    current_index,
+                },
+            );
         }
         Ok(())
     }
@@ -226,23 +241,21 @@ where
     pub(crate) fn remove_pending(
         &self,
         key: &K,
-        pending: &mut Vec<CacheChange<K, T>>,
+        pending: &mut PendingChanges<CacheChange<K, T>>,
     ) -> Result<Option<T>> {
-        let mut state = self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
+        let mut state = self.inner.state.lock()?;
         let Some(previous) = state.items.remove(key) else {
             return Ok(None);
         };
-        let previous_index = state.order.iter().position(|existing| existing == key);
-        remove_group_order_key(&mut state.order, key);
-        pending.push(CacheChange::Remove {
-            key: key.clone(),
-            previous: previous.clone(),
-            previous_index,
-        });
+        let previous_index = state.order.remove(key);
+        pending.push(
+            next_version(&mut state.version),
+            CacheChange::Remove {
+                key: key.clone(),
+                previous: previous.clone(),
+                previous_index,
+            },
+        );
         Ok(Some(previous))
     }
 
@@ -250,22 +263,21 @@ where
         &self,
         key: &K,
         current: T,
-        pending: &mut Vec<CacheChange<K, T>>,
+        pending: &mut PendingChanges<CacheChange<K, T>>,
     ) -> Result<bool> {
-        let mut state = self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
+        let mut state = self.inner.state.lock()?;
         if !state.items.contains_key(key) {
             return Ok(false);
         }
         state.items.insert(key.clone(), current.clone());
-        pending.push(CacheChange::Refresh {
-            key: key.clone(),
-            current,
-            current_index: state.order.iter().position(|existing| existing == key),
-        });
+        pending.push(
+            next_version(&mut state.version),
+            CacheChange::Refresh {
+                key: key.clone(),
+                current,
+                current_index: state.order.index_of(key),
+            },
+        );
         Ok(true)
     }
 
@@ -273,57 +285,90 @@ where
         &self,
         key: &K,
         to_index: usize,
-        pending: &mut Vec<CacheChange<K, T>>,
+        pending: &mut PendingChanges<CacheChange<K, T>>,
     ) -> Result<bool> {
-        let mut state = self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
-        let Some(previous_index) = state.order.iter().position(|existing| existing == key) else {
+        let mut state = self.inner.state.lock()?;
+        let Some(previous_index) = state.order.index_of(key) else {
             return Ok(false);
         };
         let to_index = to_index.min(state.order.len().saturating_sub(1));
         if previous_index == to_index {
             return Ok(true);
         }
-        let moved_key = state.order.remove(previous_index);
-        state.order.insert(to_index, moved_key.clone());
-        if let Some(current) = state.items.get(&moved_key).cloned() {
-            pending.push(CacheChange::Move {
-                key: moved_key,
-                current,
-                current_index: to_index,
-                previous_index,
-            });
+        let _ = state.order.move_to(previous_index, to_index);
+        if let Some(current) = state.items.get(key).cloned() {
+            pending.push(
+                next_version(&mut state.version),
+                CacheChange::Move {
+                    key: key.clone(),
+                    current,
+                    current_index: to_index,
+                    previous_index,
+                },
+            );
         }
         Ok(true)
     }
 
-    pub(crate) fn is_empty(&self) -> Result<bool> {
-        Ok(self
-            .inner
-            .state
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?
-            .items
-            .is_empty())
+    /// The position `key` takes among the group's other keys, which are ordered by `rank`:
+    /// O(1) for a key ranked after them all (the common load), a binary search otherwise.
+    pub(crate) fn rank_position(&self, key: &K, rank: &dyn Fn(&K) -> usize) -> Result<usize> {
+        let state = self.inner.state.lock()?;
+        let keys = state.order.as_slice();
+        let own = state.order.index_of(key);
+        let others = keys.len() - usize::from(own.is_some());
+        let other = |index: usize| match own {
+            Some(own) if index >= own => &keys[index + 1],
+            _ => &keys[index],
+        };
+        let target = rank(key);
+        if others == 0 || rank(other(others - 1)) < target {
+            return Ok(others);
+        }
+        let (mut low, mut high) = (0, others);
+        while low < high {
+            let middle = low + (high - low) / 2;
+            if rank(other(middle)) < target {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        Ok(low)
     }
 
-    pub(crate) fn publish_pending(&self, changes: Vec<CacheChange<K, T>>) -> Result<()> {
-        if changes.is_empty() {
-            return Ok(());
+    pub(crate) fn is_empty(&self) -> Result<bool> {
+        Ok(self.inner.state.lock()?.items.is_empty())
+    }
+
+    /// Publishes changes staged by the `*_pending` methods. Each change was versioned when
+    /// it was applied, so a connection whose snapshot already contains some of them drops
+    /// exactly those.
+    pub(crate) fn publish_pending(&self, changes: PendingChanges<CacheChange<K, T>>) -> Result<()> {
+        if self.stage_pending(changes)? {
+            self.drain_pending()?;
         }
-        let batch = {
-            let mut state = self
-                .inner
-                .state
-                .lock()
-                .map_err(|_| CollectionError::Poisoned)?;
-            state.version = state.version.saturating_add(1);
-            ChangeSet::new(changes, state.version)
+        Ok(())
+    }
+
+    /// Queues changes staged by the `*_pending` methods without delivering them, and returns
+    /// whether there were any. An operator calls it while still holding the lock under which
+    /// it computed them, and [`drain_pending`](Self::drain_pending) after releasing that lock,
+    /// so the group's subscribers see the operator's batches in computation order and never
+    /// run under the operator's lock.
+    pub(crate) fn stage_pending(&self, changes: PendingChanges<CacheChange<K, T>>) -> Result<bool> {
+        let Some(versioned) = changes.into_versioned() else {
+            return Ok(false);
         };
-        Ok(self.inner.changes.enqueue(VersionedChangeSet::new(batch))?)
+        // Pushed under the state lock so batches keep their commit order.
+        let _state = self.inner.state.lock()?;
+        self.inner.changes.push(versioned)?;
+        Ok(true)
+    }
+
+    /// Delivers changes queued by [`stage_pending`](Self::stage_pending).
+    pub(crate) fn drain_pending(&self) -> Result<()> {
+        Ok(self.inner.changes.drain()?)
     }
 
     fn connect_subscriber(
@@ -348,12 +393,10 @@ where
         after_subscribe();
 
         let (snapshot, snapshot_version) = {
-            let state = self.inner.state.try_lock().map_err(|error| match error {
-                TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
+            let state = self.inner.state.lock()?;
             let snapshot = state
                 .order
+                .as_slice()
                 .iter()
                 .enumerate()
                 .filter_map(|(index, key)| {
@@ -404,22 +447,8 @@ where
 
 impl<G, K, T> Eq for RayCacheGroup<G, K, T> where G: Eq {}
 
-fn insert_group_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
-    }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
-}
-
-fn move_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
-    }
-}
-
-fn remove_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
+/// Advances a group's version for one applied change and returns it.
+fn next_version(version: &mut u64) -> u64 {
+    *version = version.saturating_add(1);
+    *version
 }

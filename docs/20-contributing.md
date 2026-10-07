@@ -12,11 +12,12 @@ crate follows, and how to validate changes.
 | `crates/` | the `rayx_reactive` crate |
 | `crates/src/lib.rs` | crate root and scalar prelude |
 | `crates/src/{signal,computed,effect,disposal,activation,command,event,stream_ext}.rs` | scalar state |
-| `crates/src/primitives/` | `ValueStream`, `Subscription`, `DeliveryQueue`, `ReactiveError` |
+| `crates/src/primitives/` | `ValueStream`, `Subscription`, `DeliveryQueue`, schedulers, `ReactiveError` |
 | `crates/src/collections/` | observable collections, one directory or file per operator family |
-| `crates/src/tests.rs` | scalar state tests |
+| `crates/src/tests.rs`, `crates/src/scalar_tests/` | scalar state tests |
+| `crates/src/primitives/tests/` | delivery queue and scheduler tests |
 | `crates/src/collections/tests/<group>/` | collection tests, grouped by feature |
-| `crates/tests/` | public-surface tests (`public_api.rs`, `primitives_public_api.rs`) |
+| `crates/tests/` | public-surface tests (`public_api.rs`, `primitives_public_api.rs`, `collections_public_api.rs`, `api_hygiene.rs`, `consumer_scenarios.rs`) |
 | `crates/benches/` | Criterion benchmarks |
 | `docs/` | this documentation |
 | `doc-examples/` | unpublished test crate that compiles and runs every Rust example in `README.md` and `docs/` |
@@ -41,7 +42,7 @@ crate follows, and how to validate changes.
 
 ## Validation
 
-The full validation set, which CI runs on Linux and Windows:
+The full validation set, which CI runs on Linux and Windows (macOS runs the tests too):
 
 ```bash
 cargo fmt --check
@@ -63,6 +64,13 @@ cargo check --workspace --target wasm32-unknown-unknown
 cargo package --workspace
 ```
 
+CI also builds the rustdoc with `missing_docs` denied, checks and tests the MSRV (Rust 1.95), and
+runs the `#[wasm_bindgen_test]` tests on `wasm32-unknown-unknown`:
+
+```bash
+cargo rustdoc -p rayx_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
+```
+
 While iterating, run only the tests for the area you changed:
 
 ```bash
@@ -81,7 +89,8 @@ Tests are organized by feature so that each behavior can be selected on its own:
 
 | Location | Covers |
 |---|---|
-| `crates/src/tests.rs` | signals, computed values, stream operators, events, disposal, activation, commands |
+| `crates/src/tests.rs`, `crates/src/scalar_tests/` | signals, computed values, stream operators, events, disposal, activation, commands |
+| `crates/src/primitives/tests/` | delivery ordering, panic safety, schedulers |
 | `crates/src/collections/tests/sources/` | source lists and caches, edits, connection |
 | `…/transforms_filters/` | filters and transforms |
 | `…/sorting_windowing/` | sorting, paging, virtualization |
@@ -93,6 +102,7 @@ Tests are organized by feature so that each behavior can be selected on its own:
 | `…/side_effects_options_bridges/` | side effects, option helpers, key bridges |
 | `…/aggregation_diagnostics_diff/` | aggregation, diagnostics and diffing (requires `diagnostics`) |
 | `…/connect_late_delivery/` | `connect()` startup and late-delivery semantics |
+| `…/source_lock_policy/`, `…/timed_stream_controls/`, `…/window_responses/`, … | one group per later feature or fix (`ls crates/src/collections/tests`) |
 | `crates/tests/` | the public API as seen by a downstream crate |
 | `doc-examples/` | every Rust example in `README.md` and `docs/` (generated; see [Documentation](#documentation)) |
 
@@ -103,9 +113,10 @@ passes, then the existing groups that exercise the touched code, then the full v
 Test conventions:
 
 - Return `Result<(), Box<dyn std::error::Error>>` from tests and use `?`.
-- Assert exact change sets where practical. Avoid assertions that depend on the order of different
-  subscribers or on hash order.
-- For timers and worker threads, wait for state with a deadline rather than fixed sleeps.
+- Assert exact change sets where practical. Avoid assertions that depend on thread interleaving
+  or on hash order.
+- Drive timed operators with a `ManualScheduler`; for worker threads, wait for state with a
+  deadline rather than fixed sleeps.
 - Process-global diagnostics (`retained_implicit_batch_count`) cannot be asserted exactly while
   tests run in parallel. Test the connection's own state, or an isolated counter.
 - Tests that must also run on WebAssembly use

@@ -168,10 +168,8 @@ let log = Arc::new(Mutex::new(Vec::<String>::new()));
     vm.activator.when_activated(move |bag| {
         let log = Arc::clone(&log);
         remaining
-            .subscribe(move |count| log.lock().unwrap().push(format!("{count} left")))
-            // Activation callbacks return a ReactiveError; collection streams fail with a
-            // CollectionError, so convert explicitly.
-            .map_err(|_| ReactiveError::Poisoned)?
+            // `?` converts the CollectionError into the callback's ReactiveError.
+            .subscribe(move |count| log.lock().unwrap().push(format!("{count} left")))?
             .dispose_with(bag);
         Ok(())
     })?;

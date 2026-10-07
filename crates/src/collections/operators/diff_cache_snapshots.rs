@@ -47,21 +47,25 @@ where
                 {
                     let moved_key = working_order.remove(previous_index);
                     working_order.insert(target_index.min(working_order.len()), moved_key);
+                    // A move carries the item as it is; a changed value follows as an update.
                     changes.push(CacheChange::Move {
                         key: key.clone(),
-                        current: current.clone(),
+                        current: previous_item.clone(),
                         current_index: target_index,
                         previous_index,
                     });
                 }
 
                 if previous_item != current {
+                    // After a move the key's position is its post-move one (the index
+                    // contract); the update keeps it in place.
+                    let position = working_order.iter().position(|existing| existing == key);
                     changes.push(CacheChange::Update {
                         key: key.clone(),
                         current: current.clone(),
                         previous: previous_item.clone(),
-                        current_index: Some(target_index),
-                        previous_index: current_position,
+                        current_index: position,
+                        previous_index: position,
                     });
                 }
             }
@@ -71,32 +75,18 @@ where
     changes
 }
 
-fn source_order_positions<K>(order: &[K]) -> HashMap<K, usize>
-where
-    K: Clone + Eq + Hash,
-{
-    order
-        .iter()
-        .enumerate()
-        .map(|(index, key)| (key.clone(), index))
-        .collect()
-}
-
 fn compare_cache_entries<K, T>(
     left: &(K, T),
     right: &(K, T),
     comparer: &Comparer<T>,
-    source_positions: &HashMap<K, usize>,
+    source_order: &KeyOrder<K>,
 ) -> Ordering
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
 {
     comparer(&left.1, &right.1).then_with(|| {
-        let left_index = source_positions.get(&left.0).copied().unwrap_or(usize::MAX);
-        let right_index = source_positions
-            .get(&right.0)
-            .copied()
-            .unwrap_or(usize::MAX);
+        let left_index = source_order.index_of(&left.0).unwrap_or(usize::MAX);
+        let right_index = source_order.index_of(&right.0).unwrap_or(usize::MAX);
         left_index.cmp(&right_index)
     })
 }
@@ -173,7 +163,7 @@ where
 
 fn apply_cache_changes_to_ordered_state<K, T>(
     items: &mut HashMap<K, T>,
-    order: &mut Vec<K>,
+    order: &mut KeyOrder<K>,
     changes: &[CacheChange<K, T>],
 ) where
     K: Clone + Eq + Hash,
@@ -186,8 +176,13 @@ fn apply_cache_changes_to_ordered_state<K, T>(
                 current,
                 current_index,
             } => {
-                items.insert(key.clone(), current.clone());
-                insert_cache_key(order, key.clone(), *current_index);
+                let is_new = items.insert(key.clone(), current.clone()).is_none();
+                // A new key at the end (the common load) is appended without scanning.
+                if is_new && current_index.is_none_or(|index| index >= order.len()) {
+                    let _ = order.push(key.clone());
+                } else {
+                    insert_cache_key(order, key.clone(), *current_index);
+                }
             }
             CacheChange::Update {
                 key,
@@ -202,13 +197,9 @@ fn apply_cache_changes_to_ordered_state<K, T>(
             } => {
                 items.insert(key.clone(), current.clone());
                 if let Some(index) = current_index {
-                    if order.iter().any(|existing| existing == key) {
-                        move_cache_key(order, key, *index);
-                    } else {
-                        insert_cache_key(order, key.clone(), Some(*index));
-                    }
-                } else if !order.iter().any(|existing| existing == key) {
-                    order.push(key.clone());
+                    insert_cache_key(order, key.clone(), Some(*index));
+                } else if !order.contains_key(key) {
+                    let _ = order.push(key.clone());
                 }
             }
             CacheChange::Move {
@@ -222,20 +213,20 @@ fn apply_cache_changes_to_ordered_state<K, T>(
             }
             CacheChange::Remove { key, .. } => {
                 let _ = items.remove(key);
-                if let Some(index) = order.iter().position(|existing| existing == key) {
-                    let _ = order.remove(index);
-                }
+                let _ = order.remove(key);
             }
             CacheChange::Clear { previous } => {
-                if previous.is_empty() {
+                // Clearing every key (the usual `Clear`) empties the state at once.
+                let everything = previous.is_empty()
+                    || (previous.len() == items.len()
+                        && previous.iter().all(|(key, _)| items.contains_key(key)));
+                if everything {
                     items.clear();
                     order.clear();
                 } else {
                     for (key, _) in previous {
                         let _ = items.remove(key);
-                        if let Some(index) = order.iter().position(|existing| existing == key) {
-                            let _ = order.remove(index);
-                        }
+                        let _ = order.remove(key);
                     }
                 }
             }
@@ -243,6 +234,8 @@ fn apply_cache_changes_to_ordered_state<K, T>(
     }
 }
 
+/// Keys list changes. With unique keys the list's positions are the keyed output's
+/// positions, so every change carries them and applies in order (the index contract).
 fn add_key_changes<K, T>(
     changes: &[ListChange<T>],
     key_selector: &dyn Fn(&T) -> K,
@@ -254,19 +247,24 @@ where
     let mut keyed = Vec::new();
     for change in changes {
         match change {
-            ListChange::Add { item, .. } => keyed.push(CacheChange::Add {
+            ListChange::Add { index, item } => keyed.push(CacheChange::Add {
                 key: key_selector(item),
                 current: item.clone(),
-                current_index: None,
+                current_index: Some(*index),
             }),
-            ListChange::AddRange { items, .. } => {
-                keyed.extend(items.iter().map(|item| CacheChange::Add {
-                    key: key_selector(item),
-                    current: item.clone(),
-                    current_index: None,
-                }));
+            ListChange::AddRange { index, items } => {
+                keyed.extend(
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(offset, item)| CacheChange::Add {
+                            key: key_selector(item),
+                            current: item.clone(),
+                            current_index: Some(index + offset),
+                        }),
+                );
             }
-            ListChange::Replace { old, new, .. } => {
+            ListChange::Replace { index, old, new } => {
                 let previous_key = key_selector(old);
                 let current_key = key_selector(new);
                 if previous_key == current_key {
@@ -274,19 +272,19 @@ where
                         key: current_key,
                         current: new.clone(),
                         previous: old.clone(),
-                        current_index: None,
-                        previous_index: None,
+                        current_index: Some(*index),
+                        previous_index: Some(*index),
                     });
                 } else {
                     keyed.push(CacheChange::Remove {
                         key: previous_key,
                         previous: old.clone(),
-                        previous_index: None,
+                        previous_index: Some(*index),
                     });
                     keyed.push(CacheChange::Add {
                         key: current_key,
                         current: new.clone(),
-                        current_index: None,
+                        current_index: Some(*index),
                     });
                 }
             }
@@ -296,22 +294,33 @@ where
                 current_index: *to,
                 previous_index: *from,
             }),
-            ListChange::Remove { old, .. } => keyed.push(CacheChange::Remove {
+            ListChange::Remove { index, old } => keyed.push(CacheChange::Remove {
                 key: key_selector(old),
                 previous: old.clone(),
-                previous_index: None,
+                previous_index: Some(*index),
             }),
-            ListChange::RemoveRange { old, .. } | ListChange::Clear { old } => {
+            // Each removal of a range leaves the next item at the same position.
+            ListChange::RemoveRange { index, old } => {
                 keyed.extend(old.iter().map(|item| CacheChange::Remove {
                     key: key_selector(item),
                     previous: item.clone(),
-                    previous_index: None,
+                    previous_index: Some(*index),
                 }));
             }
-            ListChange::Refresh { item, .. } => keyed.push(CacheChange::Refresh {
+            ListChange::Clear { old } => {
+                if !old.is_empty() {
+                    keyed.push(CacheChange::Clear {
+                        previous: old
+                            .iter()
+                            .map(|item| (key_selector(item), item.clone()))
+                            .collect(),
+                    });
+                }
+            }
+            ListChange::Refresh { index, item } => keyed.push(CacheChange::Refresh {
                 key: key_selector(item),
                 current: item.clone(),
-                current_index: None,
+                current_index: Some(*index),
             }),
         }
     }
@@ -320,15 +329,148 @@ where
 
 struct CacheRemoveKeyState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
 
 impl<K, T> Default for CacheRemoveKeyState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
         }
     }
 }
 
+/// Where a new key goes in `working` so the keys keep `target` order: before the first key
+/// that comes after it in `target` (keys `target` does not list are skipped).
+fn provisional_position<K: Eq + Hash>(working: &[K], ranks: &HashMap<&K, usize>, key: &K) -> usize {
+    let Some(rank) = ranks.get(key).copied() else {
+        return working.len();
+    };
+    // A key ranked after the last one (the common append) needs no scan.
+    if working
+        .last()
+        .is_none_or(|last| ranks.get(last).is_some_and(|other| *other < rank))
+    {
+        return working.len();
+    }
+    working
+        .iter()
+        .position(|existing| ranks.get(existing).is_some_and(|other| *other > rank))
+        .unwrap_or(working.len())
+}
+
+/// Moves the keys of `working` into `target` order with as few moves as possible, emitting a
+/// `Move` for each moved key that `item` knows.
+fn moves_into_order<K, T>(
+    working: &mut Vec<K>,
+    target: &[K],
+    item: impl Fn(&K) -> Option<T>,
+    changes: &mut Vec<CacheChange<K, T>>,
+) where
+    K: Clone + Eq + Hash,
+{
+    for (key, from, to) in minimal_moves(working, target) {
+        if let Some(current) = item(&key) {
+            changes.push(CacheChange::Move {
+                key,
+                current,
+                current_index: to,
+                previous_index: from,
+            });
+        }
+    }
+}
+
+/// Reorders `working` (whose keys `target` all lists) into `target` order and returns the
+/// moves as `(key, from, to)` in application order. The longest run of keys already in target
+/// order stays in place, so only the keys whose relative order changed move: moving one key of
+/// many is one move, not a move per shifted key.
+pub(crate) fn minimal_moves<K>(working: &mut Vec<K>, target: &[K]) -> Vec<(K, usize, usize)>
+where
+    K: Clone + Eq + Hash,
+{
+    minimal_moves_within(working, target, usize::MAX).unwrap_or_default()
+}
+
+/// [`minimal_moves`], or `None` (leaving `working` alone) when the moves would shift more than
+/// `budget` positions in all (moves times length): a reorder of most of a large collection.
+pub(crate) fn minimal_moves_within<K>(
+    working: &mut Vec<K>,
+    target: &[K],
+    budget: usize,
+) -> Option<Vec<(K, usize, usize)>>
+where
+    K: Clone + Eq + Hash,
+{
+    // Most batches leave the order alone: one comparison, no bookkeeping.
+    if working.as_slice() == target {
+        return Some(Vec::new());
+    }
+    let ranks = target
+        .iter()
+        .enumerate()
+        .map(|(rank, key)| (key, rank))
+        .collect::<HashMap<_, _>>();
+    let sequence = working
+        .iter()
+        .filter_map(|key| ranks.get(key).map(|rank| (*rank, key)))
+        .collect::<Vec<_>>();
+    // Longest increasing subsequence of the ranks (patience sorting), kept in place.
+    let mut tails = Vec::<usize>::new();
+    let mut previous = vec![usize::MAX; sequence.len()];
+    for (index, (rank, _)) in sequence.iter().enumerate() {
+        let slot = tails.partition_point(|tail| sequence[*tail].0 < *rank);
+        if slot > 0 {
+            previous[index] = tails[slot - 1];
+        }
+        if slot == tails.len() {
+            tails.push(index);
+        } else {
+            tails[slot] = index;
+        }
+    }
+    let mut kept = HashSet::new();
+    let mut cursor = tails.last().copied().unwrap_or(usize::MAX);
+    while cursor != usize::MAX {
+        kept.insert(sequence[cursor].1.clone());
+        cursor = previous[cursor];
+    }
+
+    let mut positions = working.iter().cloned().collect::<KeyOrder<K>>();
+    let ordered = target
+        .iter()
+        .filter(|key| positions.contains_key(key))
+        .collect::<Vec<_>>();
+    let moving = ordered.len().saturating_sub(kept.len());
+    if moving.saturating_mul(working.len()) > budget {
+        return None;
+    }
+    let mut moves = Vec::new();
+    for (index, key) in ordered.iter().enumerate() {
+        if kept.contains(*key) {
+            continue;
+        }
+        let Some(from) = positions.index_of(key) else {
+            continue;
+        };
+        // Right after its predecessor in target order (already in place), counted without
+        // the moving key.
+        let to = match index.checked_sub(1) {
+            Some(before) => positions.index_of(ordered[before]).map_or(0, |position| {
+                if position > from {
+                    position
+                } else {
+                    position + 1
+                }
+            }),
+            None => 0,
+        };
+        let _ = positions.move_to(from, to);
+        if from != to {
+            moves.push(((*key).clone(), from, to));
+        }
+    }
+    *working = positions.into_iter().collect();
+    Some(moves)
+}

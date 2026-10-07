@@ -3,7 +3,9 @@ use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
 use crate::collections::change::{CacheChange, ChangeSet};
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::group::RayCacheGroup;
+use crate::collections::key_order::KeyOrder;
 use crate::collections::stream::ChangeStream;
 use crate::collections::subscription::Subscription;
 
@@ -27,7 +29,12 @@ type JoinSelector<K, L, R, U> = dyn Fn(&K, Option<&L>, Option<&R>) -> Option<U>;
 type JoinManySelector<K, L, RK, R, U> =
     dyn Fn(&K, Option<&L>, &RayCacheGroup<K, RK, R>) -> Option<U>;
 
+/// Joins of two keyed cache streams.
+///
+/// The output is a cache stream keyed by the left key. When either side changes, only the
+/// affected keys are selected again.
 pub trait CacheJoinExt<K, L> {
+    /// Emits `selector(key, left, right)` for every key present on both sides.
     fn inner_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -39,6 +46,7 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Emits `selector(key, left, right)` for every left key, with the right item if present.
     fn left_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -50,6 +58,7 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Emits `selector(key, left, right)` for every right key, with the left item if present.
     fn right_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -61,6 +70,7 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Emits `selector(key, left, right)` for every key present on either side.
     fn full_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -72,6 +82,11 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every left key with at least one right item.
+    ///
+    /// The group is a live [`RayCacheGroup`] of the matching right items. When right-side
+    /// membership changes, only the affected left keys are selected again.
     fn inner_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -85,6 +100,8 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every left key; the group may be empty.
     fn left_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -98,6 +115,9 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every key with right items, with the left item if
+    /// present.
     fn right_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -111,6 +131,8 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every key present on either side.
     fn full_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -319,39 +341,30 @@ where
 {
     let selector = Arc::new(selector);
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(JoinState::<K, L, R, U>::new(kind)));
 
         let left_subscription = {
             let state = Arc::clone(&state);
             let selector = Arc::clone(&selector);
-            let subscriber = Arc::clone(&subscriber);
+            let emitter = emitter.clone();
             left.subscribe(move |batch| {
-                let changes = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.apply_left(batch, &*selector)
-                };
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                emitter.update(&state, |state| {
+                    let changes = state.apply_left(batch, &*selector);
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
             })
         };
 
         let right_subscription = {
             let state = Arc::clone(&state);
             let selector = Arc::clone(&selector);
-            let subscriber = Arc::clone(&subscriber);
+            let emitter = emitter.clone();
             right.subscribe(move |batch| {
-                let changes = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.apply_right(batch, &*selector)
-                };
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                emitter.update(&state, |state| {
+                    let changes = state.apply_right(batch, &*selector);
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
             })
         };
 
@@ -359,11 +372,13 @@ where
             Ok(Subscription::many(vec![
                 left_subscription?,
                 right_subscription?,
+                delivery,
             ]))
         } else {
             Ok(Subscription::many(vec![
                 right_subscription?,
                 left_subscription?,
+                delivery,
             ]))
         }
     })
@@ -387,22 +402,18 @@ where
     let right_key_selector = Arc::new(right_key_selector);
     let selector = Arc::new(selector);
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(JoinManyState::<K, L, RK, R, U>::new(kind)));
 
         let left_subscription = {
             let state = Arc::clone(&state);
             let selector = Arc::clone(&selector);
-            let subscriber = Arc::clone(&subscriber);
+            let emitter = emitter.clone();
             left.subscribe(move |batch| {
-                let changes = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.apply_left(batch, &*selector)
-                };
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                emitter.update(&state, |state| {
+                    let changes = state.apply_left(batch, &*selector);
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
             })
         };
 
@@ -410,17 +421,25 @@ where
             let state = Arc::clone(&state);
             let selector = Arc::clone(&selector);
             let right_key_selector = Arc::clone(&right_key_selector);
-            let subscriber = Arc::clone(&subscriber);
+            let emitter = emitter.clone();
             right.subscribe(move |batch| {
-                let changes = {
+                let staged = {
                     let Ok(mut state) = state.lock() else {
                         return;
                     };
-                    state.apply_right(batch, &*right_key_selector, &*selector)
+                    let changes = state.apply_right(batch, &*right_key_selector, &*selector);
+                    if !changes.is_empty() {
+                        emitter.push(ChangeSet::new(changes, batch.version));
+                    }
+                    state.take_staged()
                 };
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
+                for group in staged {
+                    // A poisoned group reports it to its own readers.
+                    match group.drain_pending() {
+                        Ok(()) | Err(_) => {}
+                    }
                 }
+                emitter.drain();
             })
         };
 
@@ -428,11 +447,13 @@ where
             Ok(Subscription::many(vec![
                 left_subscription?,
                 right_subscription?,
+                delivery,
             ]))
         } else {
             Ok(Subscription::many(vec![
                 right_subscription?,
                 left_subscription?,
+                delivery,
             ]))
         }
     })
@@ -440,6 +461,5 @@ where
 
 struct OrderedCache<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
-

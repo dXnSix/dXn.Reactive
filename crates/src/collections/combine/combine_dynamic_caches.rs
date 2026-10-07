@@ -8,6 +8,7 @@ where
 {
     let sources = sources.clone();
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(DynamicCacheCombineState::<K, T>::new(operator)));
         let child_subscriptions = Arc::new(Mutex::new(HashMap::<u64, Subscription>::new()));
         let suppress_child_output = Arc::new(AtomicBool::new(false));
@@ -15,7 +16,7 @@ where
         let parent_state = Arc::clone(&state);
         let parent_child_subscriptions = Arc::clone(&child_subscriptions);
         let parent_suppress_child_output = Arc::clone(&suppress_child_output);
-        let parent_subscriber = Arc::clone(&subscriber);
+        let parent_emitter = emitter.clone();
         let parent_subscription = sources.connect().subscribe(move |batch| {
             parent_suppress_child_output.store(true, Ordering::Release);
             let actions = {
@@ -38,23 +39,17 @@ where
                     continue;
                 };
                 let child_state = Arc::clone(&parent_state);
-                let child_subscriber = Arc::clone(&parent_subscriber);
+                let child_emitter = parent_emitter.clone();
                 let child_suppress_output = Arc::clone(&parent_suppress_child_output);
                 let Ok(subscription) = stream.subscribe(move |batch| {
-                    let output = {
-                        let Ok(mut state) = child_state.lock() else {
-                            return;
-                        };
+                    child_emitter.update(&child_state, |state| {
                         if child_suppress_output.load(Ordering::Acquire) {
                             state.update_child_source_only(child_id, batch);
                             None
                         } else {
                             state.update_child(child_id, batch)
                         }
-                    };
-                    if let Some(output) = output {
-                        child_subscriber(&output);
-                    }
+                    });
                 }) else {
                     continue;
                 };
@@ -64,15 +59,9 @@ where
             }
 
             parent_suppress_child_output.store(false, Ordering::Release);
-            let output = {
-                let Ok(mut state) = parent_state.lock() else {
-                    return;
-                };
+            parent_emitter.update(&parent_state, |state| {
                 state.recompute_all(batch.version)
-            };
-            if let Some(output) = output {
-                parent_subscriber(&output);
-            }
+            });
         })?;
 
         Ok(Subscription::new(move || {
@@ -80,6 +69,7 @@ where
             if let Ok(mut subscriptions) = child_subscriptions.lock() {
                 subscriptions.clear();
             }
+            drop(delivery);
         }))
     })
 }
@@ -93,6 +83,7 @@ where
 {
     let sources = sources.clone();
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(DynamicListCombineState::<T>::new(operator)));
         let child_subscriptions = Arc::new(Mutex::new(HashMap::<u64, Subscription>::new()));
         let suppress_child_output = Arc::new(AtomicBool::new(false));
@@ -100,7 +91,7 @@ where
         let parent_state = Arc::clone(&state);
         let parent_child_subscriptions = Arc::clone(&child_subscriptions);
         let parent_suppress_child_output = Arc::clone(&suppress_child_output);
-        let parent_subscriber = Arc::clone(&subscriber);
+        let parent_emitter = emitter.clone();
         let parent_subscription = sources.connect().subscribe(move |batch| {
             parent_suppress_child_output.store(true, Ordering::Release);
             let actions = {
@@ -123,23 +114,17 @@ where
                     continue;
                 };
                 let child_state = Arc::clone(&parent_state);
-                let child_subscriber = Arc::clone(&parent_subscriber);
+                let child_emitter = parent_emitter.clone();
                 let child_suppress_output = Arc::clone(&parent_suppress_child_output);
                 let Ok(subscription) = stream.subscribe(move |batch| {
-                    let output = {
-                        let Ok(mut state) = child_state.lock() else {
-                            return;
-                        };
+                    child_emitter.update(&child_state, |state| {
                         if child_suppress_output.load(Ordering::Acquire) {
                             state.update_child_source_only(child_id, batch);
                             None
                         } else {
                             state.update_child(child_id, batch)
                         }
-                    };
-                    if let Some(output) = output {
-                        child_subscriber(&output);
-                    }
+                    });
                 }) else {
                     continue;
                 };
@@ -149,15 +134,9 @@ where
             }
 
             parent_suppress_child_output.store(false, Ordering::Release);
-            let output = {
-                let Ok(mut state) = parent_state.lock() else {
-                    return;
-                };
+            parent_emitter.update(&parent_state, |state| {
                 state.recompute_all(batch.version)
-            };
-            if let Some(output) = output {
-                parent_subscriber(&output);
-            }
+            });
         })?;
 
         Ok(Subscription::new(move || {
@@ -165,6 +144,7 @@ where
             if let Ok(mut subscriptions) = child_subscriptions.lock() {
                 subscriptions.clear();
             }
+            drop(delivery);
         }))
     })
 }

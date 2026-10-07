@@ -329,9 +329,12 @@ fn stream_batch_coalesces_recurring_timed_windows() -> Result<(), Box<dyn std::e
     let source = SourceList::new(Vec::<u32>::new());
     let received = Arc::new(Mutex::new(Vec::<ChangeSet<ListChange<u32>>>::new()));
     let received_for_subscriber = Arc::clone(&received);
+    // A manual clock: each window closes exactly when the test advances it.
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .changes()
-        .batch(Duration::from_millis(20))
+        .batch_with_scheduler(Duration::from_millis(20), scheduler)
         .subscribe(move |batch| {
             if let Ok(mut received) = received_for_subscriber.lock() {
                 received.push(batch.clone());
@@ -342,7 +345,10 @@ fn stream_batch_coalesces_recurring_timed_windows() -> Result<(), Box<dyn std::e
     source.edit(|items| items.push(2))?;
     assert!(lock_vec(&received)?.is_empty());
 
-    std::thread::sleep(Duration::from_millis(60));
+    // The window opened with the first batch.
+    clock.advance_by(Duration::from_millis(19));
+    assert!(lock_vec(&received)?.is_empty());
+    clock.advance_by(Duration::from_millis(1));
     {
         let received = lock_vec(&received)?;
         assert_eq!(received.len(), 1);
@@ -351,7 +357,9 @@ fn stream_batch_coalesces_recurring_timed_windows() -> Result<(), Box<dyn std::e
     }
 
     source.edit(|items| items.push(3))?;
-    std::thread::sleep(Duration::from_millis(60));
+    clock.advance_by(Duration::from_millis(19));
+    assert_eq!(lock_vec(&received)?.len(), 1);
+    clock.advance_by(Duration::from_millis(1));
     let received = lock_vec(&received)?;
     assert_eq!(received.len(), 2);
     assert_eq!(received[1].version, 3);

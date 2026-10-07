@@ -5,28 +5,34 @@ use std::ops::{Add, Sub};
 use std::sync::{Arc, Mutex};
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::operators::apply_list_changes;
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
 
+/// A read-only snapshot of a cache's entries in key order, emitted by `query_when_changed`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CacheQuery<K, T> {
     key_values: Vec<(K, T)>,
 }
 
 impl<K, T> CacheQuery<K, T> {
+    /// Creates a snapshot of `key_values`, kept in the given order.
     pub fn new(key_values: Vec<(K, T)>) -> Self {
         Self { key_values }
     }
 
+    /// Returns the number of entries.
     pub fn count(&self) -> usize {
         self.key_values.len()
     }
 
+    /// Returns whether the snapshot has no entries.
     pub fn is_empty(&self) -> bool {
         self.key_values.is_empty()
     }
 
+    /// Returns the `(key, item)` pairs in order.
     pub fn key_values(&self) -> &[(K, T)] {
         &self.key_values
     }
@@ -37,10 +43,12 @@ where
     K: Clone,
     T: Clone,
 {
+    /// Returns the keys in order.
     pub fn keys(&self) -> Vec<K> {
         self.key_values.iter().map(|(key, _)| key.clone()).collect()
     }
 
+    /// Returns the items in order.
     pub fn items(&self) -> Vec<T> {
         self.key_values
             .iter()
@@ -53,12 +61,14 @@ impl<K, T> CacheQuery<K, T>
 where
     K: Eq,
 {
+    /// Returns whether an entry with `key` is present.
     pub fn contains_key(&self, key: &K) -> bool {
         self.key_values
             .iter()
             .any(|(candidate, _)| candidate == key)
     }
 
+    /// Returns the item stored under `key`, if any.
     pub fn lookup(&self, key: &K) -> Option<&T> {
         self.key_values
             .iter()
@@ -66,11 +76,18 @@ where
     }
 }
 
+/// Aggregates and snapshot queries over a list change stream, as value streams.
+///
+/// `count`, `is_empty`, `is_not_empty`, `sum_by`, `avg_by` and `std_dev_by` update a running result
+/// from each change. `max_by`, `min_by`, `query_when_changed*` and the `to_*collection` family keep
+/// a full copy and recompute after every batch, so they are costly for large, busy lists.
 pub trait ListAggregationExt<T> {
+    /// Emits a snapshot of the items after every batch.
     fn query_when_changed(&self) -> ValueStream<Vec<T>>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits `selector` applied to a snapshot of the items after every batch.
     fn query_when_changed_with<U>(
         &self,
         selector: impl Fn(&[T]) -> U + Send + Sync + 'static,
@@ -79,10 +96,12 @@ pub trait ListAggregationExt<T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static;
 
+    /// Emits the items after every batch.
     fn to_collection(&self) -> ValueStream<Vec<T>>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the items sorted by `compare` after every batch.
     fn to_sorted_collection(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
@@ -90,6 +109,8 @@ pub trait ListAggregationExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the items sorted by the key `selector` returns, descending when `descending` is
+    /// `true`, after every batch.
     fn to_sorted_collection_by<S>(
         &self,
         selector: impl Fn(&T) -> S + Send + Sync + 'static,
@@ -99,23 +120,31 @@ pub trait ListAggregationExt<T> {
         T: Clone + Send + Sync + 'static,
         S: Ord + Send + Sync + 'static;
 
+    /// Emits the number of items whenever it changes.
     fn count(&self) -> ValueStream<usize>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits whether the list is empty: once for the snapshot, then only when it changes.
     fn is_empty(&self) -> ValueStream<bool>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits whether the list has items: once for the snapshot, then only when it changes.
     fn is_not_empty(&self) -> ValueStream<bool>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the running sum of `selector` over the items.
+    ///
+    /// Floating-point sums use a compensated running sum and count infinities and NaN apart, so the
+    /// result recovers once such a value leaves.
     fn sum_by<N>(&self, selector: impl Fn(&T) -> N + Send + Sync + 'static) -> ValueStream<N>
     where
         T: Clone + Send + Sync + 'static,
         N: Copy + Default + Add<Output = N> + Sub<Output = N> + Send + Sync + 'static;
 
+    /// Emits the mean of `selector` over the items, or `empty_value` when the list is empty.
     fn avg_by(
         &self,
         selector: impl Fn(&T) -> f64 + Send + Sync + 'static,
@@ -124,6 +153,8 @@ pub trait ListAggregationExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the standard deviation of `selector` over the items, or `fallback_value` when it is
+    /// undefined.
     fn std_dev_by(
         &self,
         selector: impl Fn(&T) -> f64 + Send + Sync + 'static,
@@ -132,6 +163,9 @@ pub trait ListAggregationExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the greatest value of `selector`, or `empty_value` when empty, only when it changes.
+    ///
+    /// NaN orders as the greatest value and equals itself.
     fn max_by<S>(
         &self,
         selector: impl Fn(&T) -> S + Send + Sync + 'static,
@@ -141,6 +175,9 @@ pub trait ListAggregationExt<T> {
         T: Clone + Send + Sync + 'static,
         S: Clone + PartialOrd + Send + Sync + 'static;
 
+    /// Emits the smallest value of `selector`, or `empty_value` when empty, only when it changes.
+    ///
+    /// NaN orders as the greatest value and equals itself.
     fn min_by<S>(
         &self,
         selector: impl Fn(&T) -> S + Send + Sync + 'static,
@@ -253,22 +290,14 @@ impl<T> ListAggregationExt<T> for ChangeStream<ListChange<T>> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        let counts = self.count();
-        ValueStream::new(move |subscriber| {
-            subscriber(&true);
-            counts.subscribe(move |count| subscriber(&(*count == 0)))
-        })
+        emptiness(self.count(), |count| count == 0)
     }
 
     fn is_not_empty(&self) -> ValueStream<bool>
     where
         T: Clone + Send + Sync + 'static,
     {
-        let counts = self.count();
-        ValueStream::new(move |subscriber| {
-            subscriber(&false);
-            counts.subscribe(move |count| subscriber(&(*count > 0)))
-        })
+        emptiness(self.count(), |count| count > 0)
     }
 
     fn sum_by<N>(&self, selector: impl Fn(&T) -> N + Send + Sync + 'static) -> ValueStream<N>
@@ -366,4 +395,3 @@ impl<T> ListAggregationExt<T> for ChangeStream<ListChange<T>> {
         distinct_values(values)
     }
 }
-

@@ -25,7 +25,11 @@ but no mutators. Both are `Clone`.
 | `cache_stream.as_observable_list()?` (`CacheStreamObservableListExt`) | an ordered list of the cache stream's values, following its indexes |
 
 Wrappers built from a stream own their populating subscription. It stays active while any clone of
-the wrapper is alive and is disposed with the last one.
+the wrapper is alive and is disposed with the last one. If writing a batch into the private source
+fails (for example with `Contended` on wasm32), the batch is kept and retried as soon as the lock
+that blocked it is released (and in any case before the next batch), so the view converges;
+`errors()` reports each failed attempt. A wrapper over an existing
+source (`from_source`) never reports errors.
 
 The wrappers are the recommended **public surface** of a service or ViewModel: expose derived,
 read-only collections and keep the mutable source private.
@@ -86,6 +90,31 @@ source, each batch inside one destination edit. Cache population uses `add_or_up
 the destination keeps the **stream's keys and positions**, not keys recomputed by the
 destination's selector. That matters after `change_key` or `transform`.
 
+A batch whose destination edit fails is never dropped: it is kept, in order, and retried when the
+destination's lock is next released, and in any case before the next batch. Batches are never
+applied concurrently or out of order. A retry runs on the thread that releases the lock, so the
+destination's subscribers can be called from that thread; marshal to the UI thread in the
+subscriber when that matters. A failure that cannot clear (`Poisoned`) is reported and its batch
+dropped, so a dead destination never accumulates batches.
+`populate_into_with_errors(&destination, |error| …)` also reports each failed attempt:
+
+```rust
+use rayx_reactive::collections::prelude::*;
+use std::sync::{Arc, Mutex};
+
+let source = SourceList::new(vec![1, 2]);
+let destination = SourceList::<i32>::default();
+let errors = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&errors);
+let _feed = source
+    .connect()
+    .populate_into_with_errors(&destination, move |error| sink.lock().unwrap().push(error.clone()))?;
+
+source.push(3)?;
+assert_eq!(destination.items()?, [1, 2, 3]);
+assert!(errors.lock().unwrap().is_empty()); // nothing failed here
+```
+
 ## Feeding sources from value streams
 
 ### Into an existing source
@@ -97,7 +126,12 @@ destination's selector. That matters after `change_key` or `transform`.
 | `SourceCache::populate_from(&stream)` | adds or updates every item |
 | `SourceCache::populate_from_batches(&stream_of_vecs)` | adds or updates each emitted batch in one edit |
 
-All return the `Subscription` that keeps the feed connected.
+All return the `Subscription` that keeps the feed connected. As with `populate_into`, an item whose
+edit fails is kept and retried the same way; the `populate_from_with_errors` and
+`populate_from_batches_with_errors` variants report each failed attempt. The `to_*_change_set*`
+adapters apply the same rule to their private sources, and their `_with_errors` variants
+(`to_list_change_set_with_errors`, `to_cache_change_set_batches_with_errors`, …) report failures,
+including those of an adapter's size limit.
 
 ### As a new change stream
 
@@ -118,7 +152,8 @@ own private backing source:
 | `ChangeSetAdapterOptions::new()` | no bounds |
 | `ChangeSetAdapterOptions::limit_size_to(n)` / `.with_limit_size_to(n)` | keep at most `n` items, evicting the oldest (for caches, the least recently added or updated); **`n == 0` panics** |
 | `ChangeSetAdapterOptions::expire_after(selector)` / `.with_expire_after(selector)` | remove each item after the `Option<Duration>` its selector returns (`None` never expires) |
-| `ChangeSetAdapterOptions::expire_after_with_polling(selector, interval)` / `.with_polling_interval(interval)` | check expirations on a fixed interval instead of per-item timers |
+| `ChangeSetAdapterOptions::expire_after_with_polling(selector, interval)` / `.with_polling_interval(interval)` | check expirations every `interval` instead of at each due time |
+| `ChangeSetAdapterOptions::expire_after_with_scheduler(…)`, `…_with_polling_with_scheduler(…)` / `.with_scheduler(scheduler)` | run the expiration timer on `scheduler` (default: `default_scheduler()`) |
 
 The adapters subscribe their output **before** their input, so a stream that emits synchronously
 on subscription (like `Signal::values()`) is never lost. If you build such a bridge by hand, keep
@@ -128,14 +163,6 @@ the same order.
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::EventBus;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct Trade {
     symbol: &'static str,
@@ -143,7 +170,7 @@ struct Trade {
 }
 
 let trades = EventBus::<Trade>::new();
-let latest = collection_stream(trades.stream().values())
+let latest = trades.stream().values()
     .to_cache_change_set_with_options(
         |trade| trade.symbol,
         ChangeSetAdapterOptions::limit_size_to(2),
@@ -211,20 +238,12 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 // Each poll of a remote endpoint produces a full snapshot.
 let latest_poll = Signal::new(vec![(1, "queued"), (2, "running")]);
 
 let reasons = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&reasons);
-let _subscription = collection_stream(latest_poll.values())
+let _subscription = latest_poll.values()
     .edit_diff(|job: &(u32, &str)| job.0)
     .subscribe(move |batch| {
         sink.lock().unwrap().push(batch.changes.iter().map(|change| change.reason()).collect::<Vec<_>>());
@@ -251,6 +270,11 @@ assert_eq!(
 
 All three panic if `n == 0`; validate user-provided sizes first.
 
+The stream variant updates its state per change (an addition costs O(1) clones, however large the
+limit). It forwards refreshes and updates of the keys it holds, including updates to an equal
+value; an update of a key it evicted earlier adds that key back as the newest and evicts the
+oldest. Its indexes are positions in its own output.
+
 The source variants return a **cold** `ValueStream`. The limit is enforced only while it is
 subscribed, and subscribing trims the source immediately:
 
@@ -274,7 +298,13 @@ assert_eq!(recent.len()?, 3);
 ```
 
 Source limiters perform their removals after releasing their own state, as separate source edits.
-Do not implement limits yourself by editing a source from inside its own edit.
+They pick the oldest items inside that edit, only from state that has seen every batch the source
+committed before it (otherwise the next delivered batch triggers the eviction again), retry an
+edit that failed because the source was busy, and emit exactly the items the edit removed.
+Eviction therefore follows delivery: while several threads commit faster than the source delivers
+its batches, the source can hold more than `n` items until the limiter has received them.
+`limit_size_to_with_errors(n, |error| …)` also reports each failed eviction edit. Do not
+implement limits yourself by editing a source from inside its own edit.
 
 ## Expiration
 
@@ -285,26 +315,48 @@ Do not implement limits yourself by editing a source from inside its own edit.
 | `SourceCacheExpireAfterExt::expire_after(…)` | while subscribed, **removes** expired entries from the source and emits them as `Vec<(K, T)>` |
 | `SourceListExpireAfterExt::expire_after(…)` | same for lists, emitting `Vec<T>` |
 
-The selector returns `Option<Duration>` per item: the time to live, or `None` to keep the item
-indefinitely. Updating a cache item restarts its timer. Without polling, a timer thread wakes at the
-next deadline. With `*_with_polling`, expirations are meant to be checked on a fixed interval;
-the polling variants currently never expire anything, and stream-level `expire_after` can
-desynchronize downstream after the first expiry. Both are listed under
-[Known issues](README.md#known-issues).
+Every one of them has `*_with_scheduler` variants (`expire_after_with_scheduler(selector,
+scheduler)`, `expire_after_with_polling_with_scheduler(selector, interval, scheduler)`); the plain
+methods use `default_scheduler()` (see [schedulers](16-concurrency-and-platforms.md#schedulers)).
+
+The selector returns `Option<Duration>` per item: the time to live, counted from when the operator
+sees the item, or `None` to keep the item indefinitely. Adding, updating (caches) or replacing
+(lists) an item restarts its time to live; a refresh or move does not. Without polling, the timer
+fires at the next due time. With `*_with_polling`, it checks every `interval` while items wait,
+so an item goes at most one interval after it is due, however often the source changes.
+
+Stream expiration hides expired items from its own output only: they stay in the source. Later
+source changes are translated to the output, so its indexes skip the expired items, an update
+(cache) or replacement (list) of an expired item adds it back, and its refreshes, moves and
+removals are dropped.
+
+Source expiration removes due items inside one source edit, and only if it has seen every batch
+the source committed before that edit; otherwise (for example while notifications are suspended)
+it waits for those batches. If the edit fails because the source is busy, it retries when the
+source is released. It reports exactly the items its edit removed.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
+use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use std::sync::Arc;
 use std::time::Duration;
 
+let clock = ManualScheduler::new();
+let scheduler: Arc<dyn Scheduler> = Arc::new(clock.clone());
 let toasts = SourceCache::new(|toast: &(u32, &'static str)| toast.0);
 let _expiry = toasts
-    .expire_after(|toast| (toast.1 != "sticky").then_some(Duration::from_millis(30)))
+    .expire_after_with_scheduler(
+        |toast| (toast.1 != "sticky").then_some(Duration::from_millis(30)),
+        scheduler,
+    )
     .subscribe(|_expired| {})?;
 
 toasts.add_or_update_range([(1, "saved"), (2, "sticky")])?;
-std::thread::sleep(Duration::from_millis(300));
+clock.advance_by(Duration::from_millis(30));
 assert_eq!(toasts.keys()?, [2]);
 ```
+
+With `expire_after(…)` the same removal happens on the default scheduler's timer thread.
 
 Use **source** expiration when the canonical data should forget expired items (caches of remote
 data, notifications). Use **stream** expiration when only one view should hide them.
@@ -322,26 +374,23 @@ data, notifications). Use **stream** expiration when only one view should hide t
 
 When a new inner collection arrives, the previous one's items are cleared from the output, its
 subscription is disposed, and the new one is connected. Late notifications from older inner
-collections are ignored. Use `switch` for "the rows of the selected project", "the messages of the
-active channel", or any view whose backing collection is chosen at runtime.
+collections are ignored: nothing from a superseded inner reaches the output after its `Clear`, and
+output batches are delivered one at a time, in order. Disposing the switch leaves no inner
+subscription behind, even when the outer stream emits concurrently. If subscribing to an inner
+collection fails, the output stays empty until the outer stream emits again (then it retries);
+`switch_with_errors(|error| …)` reports such failures. Use `switch` for "the rows of the selected
+project", "the messages of the active channel", or any view whose backing collection is chosen at
+runtime.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 let general = SourceList::new(vec!["hi", "hello"]);
 let random = SourceList::new(vec!["lol"]);
 let active_channel = Signal::new(general.clone());
 
-let messages = collection_stream(active_channel.values()).switch().as_observable_list()?;
+let messages = active_channel.values().switch().as_observable_list()?;
 assert_eq!(messages.items()?, ["hi", "hello"]);
 
 active_channel.replace(random.clone())?; // `replace`: SourceList has no PartialEq
@@ -355,10 +404,15 @@ assert_eq!(messages.items()?, ["lol", "rofl"]);
 Each subscription to a change stream builds its own operator chain. When several consumers need
 the same expensive pipeline, `ref_count()` (lists and caches) shares one upstream subscription:
 
-- The first subscriber connects upstream and materializes the result.
-- Later subscribers receive a structured snapshot of the current state, then live batches.
+- The first subscriber connects upstream and materializes the result. A subscriber arriving from
+  another thread while it connects waits for the outcome (on wasm32 it gets `Contended` instead of
+  blocking). If connecting fails, the subscription returns the error and is rolled back, and the
+  next subscriber, including one that was waiting, connects again.
+- Later subscribers receive a structured snapshot of the current state, then live batches; a batch
+  published while a subscriber is connecting is buffered for it, so its snapshot always comes first.
 - The upstream subscription stays alive while at least one subscriber exists, and is dropped,
-  together with its state, when the last subscriber leaves.
+  together with its state, when the last subscriber leaves. A batch still in flight from the
+  released upstream is ignored, so the next subscriber starts from the source's actual state.
 
 ```rust
 use rayx_reactive::collections::prelude::*;

@@ -1,17 +1,28 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
-use std::sync::{Arc, Condvar, Mutex};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, Weak};
+use std::time::Duration;
 
 use crate::collections::cache::SourceCache;
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
+use crate::collections::emit::OrderedEmitter;
+use crate::collections::error::CollectionError;
+use crate::collections::key_order::KeyOrder;
 use crate::collections::list::SourceList;
 use crate::collections::stream::ChangeStream;
 use crate::collections::stream::ValueStream;
 use crate::collections::subscription::Subscription;
+use crate::primitives::timer::{OperatorTimer, schedule_timer};
+use crate::primitives::{ScheduledTask, Scheduler, default_scheduler};
 
+/// Time-based expiration for a cache stream: expired items disappear from this view only.
+///
+/// The selector returns each item's time to live, counted from when the operator sees the
+/// item, or `None` to keep it indefinitely; adding or updating an item restarts it. Expired
+/// items stay in the source: a later update adds them back, and their refreshes, moves and
+/// removals are dropped. The plain methods use the default scheduler.
 pub trait CacheExpireAfterExt<K, T> {
+    /// Removes each item from the output once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -20,6 +31,8 @@ pub trait CacheExpireAfterExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due items every
+    /// `polling_interval` while items wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -28,9 +41,38 @@ pub trait CacheExpireAfterExt<K, T> {
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after`](Self::expire_after) with its timer on `scheduler`.
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after_with_polling`](Self::expire_after_with_polling) with its timer on
+    /// `scheduler`.
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static;
 }
 
+/// Time-based expiration for a list stream: expired items disappear from this view only.
+///
+/// The selector returns each item's time to live, counted from when the operator sees the
+/// item, or `None` to keep it indefinitely; adding or replacing an item restarts it. Expired
+/// items stay in the source, and the output's indexes skip them. The plain methods use the
+/// default scheduler.
 pub trait ListExpireAfterExt<T> {
+    /// Removes each item from the output once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -38,6 +80,8 @@ pub trait ListExpireAfterExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due items every
+    /// `polling_interval` while items wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -45,9 +89,36 @@ pub trait ListExpireAfterExt<T> {
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after`](Self::expire_after) with its timer on `scheduler`.
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after_with_polling`](Self::expire_after_with_polling) with its timer on
+    /// `scheduler`.
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static;
 }
 
+/// Time-based expiration for a `SourceCache`: expired entries are removed from the source.
+///
+/// The returned stream is cold: expiration is enforced only while it is subscribed. Due
+/// entries are removed in one source edit, which is retried when the source is busy, and each
+/// removed batch is emitted as `(key, item)` pairs. The plain methods use the default
+/// scheduler.
 pub trait SourceCacheExpireAfterExt<K, T> {
+    /// Removes each entry from the source once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -56,6 +127,8 @@ pub trait SourceCacheExpireAfterExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due entries every
+    /// `polling_interval` while entries wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -64,9 +137,37 @@ pub trait SourceCacheExpireAfterExt<K, T> {
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after`](Self::expire_after) with its timer on `scheduler`.
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<(K, T)>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after_with_polling`](Self::expire_after_with_polling) with its timer on
+    /// `scheduler`.
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<(K, T)>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static;
 }
 
+/// Time-based expiration for a `SourceList`: expired items are removed from the source.
+///
+/// The returned stream is cold: expiration is enforced only while it is subscribed. Due
+/// items are removed in one source edit, which is retried when the source is busy, and each
+/// removed batch is emitted. The plain methods use the default scheduler.
 pub trait SourceListExpireAfterExt<T> {
+    /// Removes each item from the source once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -74,10 +175,32 @@ pub trait SourceListExpireAfterExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due items every
+    /// `polling_interval` while items wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
         polling_interval: Duration,
+    ) -> ValueStream<Vec<T>>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after`](Self::expire_after) with its timer on `scheduler`.
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<T>>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// [`expire_after_with_polling`](Self::expire_after_with_polling) with its timer on
+    /// `scheduler`.
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
     ) -> ValueStream<Vec<T>>
     where
         T: Clone + Send + Sync + 'static;
@@ -92,7 +215,7 @@ impl<K, T> CacheExpireAfterExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        expire_cache_stream(self, Arc::new(time_selector), None)
+        self.expire_after_with_scheduler(time_selector, default_scheduler())
     }
 
     fn expire_after_with_polling(
@@ -104,7 +227,44 @@ impl<K, T> CacheExpireAfterExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        expire_cache_stream(self, Arc::new(time_selector), Some(polling_interval))
+        self.expire_after_with_polling_with_scheduler(
+            time_selector,
+            polling_interval,
+            default_scheduler(),
+        )
+    }
+
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_stream::<CacheExpirationState<K, T>>(
+            self,
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, None),
+        )
+    }
+
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_stream::<CacheExpirationState<K, T>>(
+            self,
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, Some(polling_interval)),
+        )
     }
 }
 
@@ -116,7 +276,7 @@ impl<T> ListExpireAfterExt<T> for ChangeStream<ListChange<T>> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        expire_list_stream(self, Arc::new(time_selector), None)
+        self.expire_after_with_scheduler(time_selector, default_scheduler())
     }
 
     fn expire_after_with_polling(
@@ -127,7 +287,42 @@ impl<T> ListExpireAfterExt<T> for ChangeStream<ListChange<T>> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        expire_list_stream(self, Arc::new(time_selector), Some(polling_interval))
+        self.expire_after_with_polling_with_scheduler(
+            time_selector,
+            polling_interval,
+            default_scheduler(),
+        )
+    }
+
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_stream::<ListExpirationState<T>>(
+            self,
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, None),
+        )
+    }
+
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_stream::<ListExpirationState<T>>(
+            self,
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, Some(polling_interval)),
+        )
     }
 }
 
@@ -140,7 +335,7 @@ impl<K, T> SourceCacheExpireAfterExt<K, T> for SourceCache<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        expire_source_cache(self, Arc::new(time_selector), None)
+        self.expire_after_with_scheduler(time_selector, default_scheduler())
     }
 
     fn expire_after_with_polling(
@@ -152,7 +347,44 @@ impl<K, T> SourceCacheExpireAfterExt<K, T> for SourceCache<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        expire_source_cache(self, Arc::new(time_selector), Some(polling_interval))
+        self.expire_after_with_polling_with_scheduler(
+            time_selector,
+            polling_interval,
+            default_scheduler(),
+        )
+    }
+
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<(K, T)>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_source::<SourceCacheExpiration<K, T>>(
+            self.clone(),
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, None),
+        )
+    }
+
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<(K, T)>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_source::<SourceCacheExpiration<K, T>>(
+            self.clone(),
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, Some(polling_interval)),
+        )
     }
 }
 
@@ -164,7 +396,7 @@ impl<T> SourceListExpireAfterExt<T> for SourceList<T> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        expire_source_list(self, Arc::new(time_selector), None)
+        self.expire_after_with_scheduler(time_selector, default_scheduler())
     }
 
     fn expire_after_with_polling(
@@ -175,270 +407,319 @@ impl<T> SourceListExpireAfterExt<T> for SourceList<T> {
     where
         T: Clone + Send + Sync + 'static,
     {
-        expire_source_list(self, Arc::new(time_selector), Some(polling_interval))
+        self.expire_after_with_polling_with_scheduler(
+            time_selector,
+            polling_interval,
+            default_scheduler(),
+        )
+    }
+
+    fn expire_after_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_source::<SourceListExpiration<T>>(
+            self.clone(),
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, None),
+        )
+    }
+
+    fn expire_after_with_polling_with_scheduler(
+        &self,
+        time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ValueStream<Vec<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        expire_source::<SourceListExpiration<T>>(
+            self.clone(),
+            Arc::new(time_selector),
+            ExpiryClock::new(scheduler, Some(polling_interval)),
+        )
     }
 }
 
 type TimeSelector<T> = Arc<dyn Fn(&T) -> Option<Duration> + Send + Sync>;
 
-fn expire_cache_stream<K, T>(
-    source: &ChangeStream<CacheChange<K, T>>,
-    time_selector: TimeSelector<T>,
-    polling_interval: Option<Duration>,
-) -> ChangeStream<CacheChange<K, T>>
+/// Locks an expiration operator's state for disposal, which must release it even if poisoned.
+fn lock_expiry<S>(state: &Mutex<S>) -> std::sync::MutexGuard<'_, S> {
+    state
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Stream `expire_after`: forwards the source's changes, translated to its own output (which
+/// lacks the expired items), and removes items when they expire.
+fn expire_stream<S>(
+    source: &ChangeStream<S::Change>,
+    time_selector: TimeSelector<S::Item>,
+    clock: ExpiryClock,
+) -> ChangeStream<S::Change>
 where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
+    S: StreamExpiration,
 {
     let source = source.clone();
     ChangeStream::new(move |subscriber| {
-        let runtime = Arc::new((
-            Mutex::new(ExpirationRuntime {
-                cancelled: false,
-                state: CacheExpirationState::<K, T>::default(),
-            }),
-            Condvar::new(),
-        ));
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let state = Arc::new(Mutex::new(S::default()));
+        let expiry = StreamExpiry {
+            state: Arc::downgrade(&state),
+            emitter: emitter.clone(),
+            clock: clock.clone(),
+        };
 
-        let timer_runtime = Arc::clone(&runtime);
-        let timer_subscriber = Arc::clone(&subscriber);
-        let timer = thread::spawn(move || {
-            run_expiration_timer(
-                timer_runtime,
-                polling_interval,
-                move |state, now| state.expire_due(now),
-                move |batch| {
-                    timer_subscriber(&batch);
-                },
-            );
-        });
-
-        let source_runtime = Arc::clone(&runtime);
-        let source_time_selector = Arc::clone(&time_selector);
+        let source_state = Arc::clone(&state);
+        let time_selector = Arc::clone(&time_selector);
         let source_subscription = source.subscribe(move |batch| {
-            {
-                let (lock, _) = &*source_runtime;
-                let Ok(mut runtime) = lock.lock() else {
+            let planned = {
+                let Ok(mut state) = source_state.lock() else {
                     return;
                 };
-                runtime.state.apply_source(batch, &*source_time_selector);
-            }
-            subscriber(batch);
-            source_runtime.1.notify_one();
+                if state.timer().is_closed() {
+                    return;
+                }
+                let now = expiry.clock.scheduler.now();
+                emitter.push(state.apply_source(batch, &*time_selector, now));
+                let next = state.next_due();
+                state.timer().plan(next, now, expiry.clock.polling)
+            };
+            // Scheduled before delivering, so a panicking subscriber cannot leave the timer
+            // armed but never scheduled.
+            expiry.schedule(&source_state, planned);
+            emitter.drain();
         })?;
 
         Ok(Subscription::new(move || {
             drop(source_subscription);
-            let (lock, condvar) = &*runtime;
-            if let Ok(mut runtime) = lock.lock() {
-                runtime.cancelled = true;
-                condvar.notify_one();
-            }
-            let _ = timer.join();
+            let (task, released) = {
+                let mut state = lock_expiry(&state);
+                let task = state.timer().close();
+                let released = std::mem::take(&mut *state);
+                // The fresh state stays closed: a batch still in flight must not arm a timer.
+                drop(state.timer().close());
+                (task, released)
+            };
+            drop(task);
+            drop(released);
+            drop(delivery);
         }))
     })
 }
 
-fn expire_list_stream<T>(
-    source: &ChangeStream<ListChange<T>>,
-    time_selector: TimeSelector<T>,
-    polling_interval: Option<Duration>,
-) -> ChangeStream<ListChange<T>>
-where
-    T: Clone + Send + Sync + 'static,
-{
-    let source = source.clone();
-    ChangeStream::new(move |subscriber| {
-        let runtime = Arc::new((
-            Mutex::new(ExpirationRuntime {
-                cancelled: false,
-                state: ListExpirationState::<T>::default(),
-            }),
-            Condvar::new(),
-        ));
+/// The timer side of one stream `expire_after` subscription.
+struct StreamExpiry<S: StreamExpiration> {
+    state: Weak<Mutex<S>>,
+    emitter: OrderedEmitter<ChangeSet<S::Change>>,
+    clock: ExpiryClock,
+}
 
-        let timer_runtime = Arc::clone(&runtime);
-        let timer_subscriber = Arc::clone(&subscriber);
-        let timer = thread::spawn(move || {
-            run_expiration_timer(
-                timer_runtime,
-                polling_interval,
-                move |state, now| state.expire_due(now),
-                move |batch| {
-                    timer_subscriber(&batch);
-                },
+impl<S: StreamExpiration> Clone for StreamExpiry<S> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            emitter: self.emitter.clone(),
+            clock: self.clock.clone(),
+        }
+    }
+}
+
+impl<S: StreamExpiration> StreamExpiry<S> {
+    fn schedule(&self, state: &Mutex<S>, planned: TimerUpdate) {
+        drop(planned.cancelled);
+        if let Some((generation, delay)) = planned.next {
+            let expiry = self.clone();
+            schedule_timer(
+                &*self.clock.scheduler,
+                state,
+                |state| state.timer().operator_timer(),
+                generation,
+                delay,
+                move || expiry.fire(generation),
             );
-        });
+        }
+    }
 
-        let source_runtime = Arc::clone(&runtime);
-        let source_time_selector = Arc::clone(&time_selector);
-        let source_subscription = source.subscribe(move |batch| {
-            {
-                let (lock, _) = &*source_runtime;
-                let Ok(mut runtime) = lock.lock() else {
-                    return;
-                };
-                runtime.state.apply_source(batch, &*source_time_selector);
+    fn fire(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        let planned = {
+            let Ok(mut guard) = state.lock() else {
+                return;
+            };
+            if !guard.timer().fire(generation) {
+                return;
             }
-            subscriber(batch);
-            source_runtime.1.notify_one();
-        })?;
-
-        Ok(Subscription::new(move || {
-            drop(source_subscription);
-            let (lock, condvar) = &*runtime;
-            if let Ok(mut runtime) = lock.lock() {
-                runtime.cancelled = true;
-                condvar.notify_one();
+            let now = self.clock.scheduler.now();
+            if let Some(output) = guard.expire_due(now) {
+                self.emitter.push(output);
             }
-            let _ = timer.join();
-        }))
-    })
+            let next = guard.next_due();
+            guard.timer().plan(next, now, self.clock.polling)
+        };
+        // The next expiry is scheduled before this one is delivered (see `expire_stream`).
+        self.schedule(&state, planned);
+        self.emitter.drain();
+    }
 }
 
-fn expire_source_cache<K, T>(
-    source: &SourceCache<K, T>,
-    time_selector: TimeSelector<T>,
-    polling_interval: Option<Duration>,
-) -> ValueStream<Vec<(K, T)>>
+/// Source `expire_after`: removes due items from the source inside its edit, and reports the
+/// items that edit removed.
+fn expire_source<S>(
+    source: S::Source,
+    time_selector: TimeSelector<S::Item>,
+    clock: ExpiryClock,
+) -> ValueStream<Vec<S::Removed>>
 where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
+    S: SourceExpiration,
 {
-    let source = source.clone();
     ValueStream::new(move |subscriber| {
-        let runtime = Arc::new((
-            Mutex::new(ExpirationRuntime {
-                cancelled: false,
-                state: SourceCacheExpirationState::<K, T>::default(),
-            }),
-            Condvar::new(),
-        ));
+        let (emitter, delivery) =
+            OrderedEmitter::new(move |removed: &Vec<S::Removed>| subscriber(removed))?;
+        let state = Arc::new(Mutex::new(S::default()));
+        let expiry = SourceExpiry {
+            state: Arc::downgrade(&state),
+            source: source.clone(),
+            emitter,
+            clock: clock.clone(),
+        };
 
-        let timer_runtime = Arc::clone(&runtime);
-        let timer_source = source.clone();
-        let timer_subscriber = Arc::clone(&subscriber);
-        let timer = thread::spawn(move || {
-            run_expiration_timer(
-                timer_runtime,
-                polling_interval,
-                move |state, now| state.collect_due(now),
-                move |due_keys| {
-                    let Ok(batch) = timer_source.edit(|cache| {
-                        for key in &due_keys {
-                            let _ = cache.remove_key(key);
-                        }
-                    }) else {
-                        return;
-                    };
-                    let removed = removed_cache_items(&batch);
-                    if !removed.is_empty() {
-                        timer_subscriber(&removed);
-                    }
-                },
-            );
-        });
-
-        let source_runtime = Arc::clone(&runtime);
-        let source_time_selector = Arc::clone(&time_selector);
+        let source_state = Arc::clone(&state);
+        let time_selector = Arc::clone(&time_selector);
         let source_subscription = source.connect().subscribe(move |batch| {
-            {
-                let (lock, _) = &*source_runtime;
-                let Ok(mut runtime) = lock.lock() else {
+            let planned = {
+                let Ok(mut state) = source_state.lock() else {
                     return;
                 };
-                runtime.state.apply_source(batch, &*source_time_selector);
-            }
-            source_runtime.1.notify_one();
+                if state.timer().is_closed() {
+                    return;
+                }
+                let now = expiry.clock.scheduler.now();
+                state.apply_source(batch, &*time_selector, now);
+                let mirror = state.mirror();
+                mirror.version = batch.version;
+                if std::mem::take(&mut mirror.catch_up) {
+                    // An expiry waited for this state: run it now.
+                    state.timer().plan_now()
+                } else {
+                    let next = state.next_due();
+                    state.timer().plan(next, now, expiry.clock.polling)
+                }
+            };
+            expiry.schedule(&source_state, planned);
         })?;
 
         Ok(Subscription::new(move || {
             drop(source_subscription);
-            let (lock, condvar) = &*runtime;
-            if let Ok(mut runtime) = lock.lock() {
-                runtime.cancelled = true;
-                condvar.notify_one();
-            }
-            let _ = timer.join();
+            let (task, released) = {
+                let mut state = lock_expiry(&state);
+                let task = state.timer().close();
+                let released = std::mem::take(&mut *state);
+                // The fresh state stays closed: a batch still in flight must not arm a timer.
+                drop(state.timer().close());
+                (task, released)
+            };
+            drop(task);
+            drop(released);
+            drop(delivery);
         }))
     })
 }
 
-fn expire_source_list<T>(
-    source: &SourceList<T>,
-    time_selector: TimeSelector<T>,
-    polling_interval: Option<Duration>,
-) -> ValueStream<Vec<T>>
-where
-    T: Clone + Send + Sync + 'static,
-{
-    let source = source.clone();
-    ValueStream::new(move |subscriber| {
-        let runtime = Arc::new((
-            Mutex::new(ExpirationRuntime {
-                cancelled: false,
-                state: SourceListExpirationState::<T>::default(),
-            }),
-            Condvar::new(),
-        ));
+/// The timer side of one source `expire_after` subscription.
+struct SourceExpiry<S: SourceExpiration> {
+    state: Weak<Mutex<S>>,
+    source: S::Source,
+    emitter: OrderedEmitter<Vec<S::Removed>>,
+    clock: ExpiryClock,
+}
 
-        let timer_runtime = Arc::clone(&runtime);
-        let timer_source = source.clone();
-        let timer_subscriber = Arc::clone(&subscriber);
-        let timer = thread::spawn(move || {
-            run_expiration_timer(
-                timer_runtime,
-                polling_interval,
-                move |state, now| state.collect_due(now),
-                move |due_indexes| {
-                    let Ok(batch) = timer_source.edit(|list| {
-                        for index in &due_indexes {
-                            let _ = list.remove(*index);
-                        }
-                    }) else {
-                        return;
-                    };
-                    let removed = removed_list_items(&batch);
-                    if !removed.is_empty() {
-                        timer_subscriber(&removed);
-                    }
-                },
+impl<S: SourceExpiration> Clone for SourceExpiry<S> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            source: self.source.clone(),
+            emitter: self.emitter.clone(),
+            clock: self.clock.clone(),
+        }
+    }
+}
+
+impl<S: SourceExpiration> SourceExpiry<S> {
+    fn schedule(&self, state: &Mutex<S>, planned: TimerUpdate) {
+        drop(planned.cancelled);
+        if let Some((generation, delay)) = planned.next {
+            let expiry = self.clone();
+            schedule_timer(
+                &*self.clock.scheduler,
+                state,
+                |state| state.timer().operator_timer(),
+                generation,
+                delay,
+                move || expiry.fire(generation),
             );
-        });
+        }
+    }
 
-        let source_runtime = Arc::clone(&runtime);
-        let source_time_selector = Arc::clone(&time_selector);
-        let source_subscription = source.connect().subscribe(move |batch| {
-            {
-                let (lock, _) = &*source_runtime;
-                let Ok(mut runtime) = lock.lock() else {
-                    return;
-                };
-                runtime.state.apply_source(batch, &*source_time_selector);
+    fn fire(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        let current = state
+            .lock()
+            .is_ok_and(|mut state| state.timer().fire(generation));
+        if !current {
+            return;
+        }
+
+        let now = self.clock.scheduler.now();
+        // Due items are taken inside the edit, from state that has seen every committed
+        // batch; if it has not, the expiry waits for it (`catch_up`).
+        let removed = match S::expire(&self.source, &state, now) {
+            Ok(removed) => removed,
+            Err(CollectionError::Contended | CollectionError::NestedUpdate) => {
+                // Nothing was taken: retry once the source is free.
+                let retry = self.clone();
+                self.source.on_next_release(Box::new(move || retry.retry()));
+                return;
             }
-            source_runtime.1.notify_one();
-        })?;
+            Err(_) => return,
+        };
 
-        Ok(Subscription::new(move || {
-            drop(source_subscription);
-            let (lock, condvar) = &*runtime;
-            if let Ok(mut runtime) = lock.lock() {
-                runtime.cancelled = true;
-                condvar.notify_one();
+        // The next expiry is scheduled before this one is reported, so a panicking
+        // subscriber cannot stop expiration.
+        let planned = match state.lock() {
+            Ok(mut state) => {
+                if state.mirror().catch_up {
+                    TimerUpdate::default()
+                } else {
+                    let next = state.next_due();
+                    state.timer().plan(next, now, self.clock.polling)
+                }
             }
-            let _ = timer.join();
-        }))
-    })
+            Err(_) => TimerUpdate::default(),
+        };
+        self.schedule(&state, planned);
+        if !removed.is_empty() {
+            self.emitter.update(&state, |_| Some(removed));
+        }
+    }
+
+    fn retry(&self) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        let planned = match state.lock() {
+            Ok(mut state) => state.timer().plan_now(),
+            Err(_) => return,
+        };
+        self.schedule(&state, planned);
+    }
 }
-
-struct ExpirationRuntime<S> {
-    cancelled: bool,
-    state: S,
-}
-
-trait ExpirationState {
-    type Change: Clone + Send + Sync + 'static;
-
-    fn next_due(&mut self, now: Instant) -> Option<Instant>;
-}
-

@@ -12,7 +12,7 @@ Three grouping styles trade convenience against granularity:
 |---|---|---|---|
 | **Live groups** | `group`, `group_with_key`, `group_with_regrouper`, `group_with_key_and_regrouper`, `group_dynamic`, `group_dynamic_with_regrouper` | a stream of group *objects*, each with its own live `connect()` | each group is rendered separately (sections, swimlanes, tree headers) and must update independently |
 | **Immutable groups** | `group_immutable`, `group_immutable_with_key`, `group_immutable_with_regrouper`, `group_immutable_with_key_and_regrouper` | replacement *snapshots* of each touched group | downstream wants plain values and no per-group subscriptions |
-| **Snapshot grouping** | `group_by` | a list of `RayGroup { key, items }`, sorted by group key | small data where a full grouped snapshot per batch is acceptable |
+| **Snapshot grouping** | `group_by` | a list of `RayGroup { key, items }`, sorted by group key, members in source order | small data where a full grouped snapshot per batch is acceptable |
 
 ### Live cache groups
 
@@ -189,7 +189,9 @@ parent/children relationships such as orders and order lines:
 | `right_join_many` | `Fn(&K, Option<&L>, &RayCacheGroup<K, RK, R>) -> U` |
 | `full_join_many` | `Fn(&K, Option<&L>, &RayCacheGroup<K, RK, R>) -> U` |
 
-When right-side membership changes, the selector re-runs only for the affected left keys.
+When right-side membership changes, the selector re-runs only for the affected left keys. Group
+members keep the right source's order (a right `Update` that moves its item moves it inside its
+group too). A left key's group is dropped when the key leaves and no right item belongs to it.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -307,7 +309,14 @@ The output is a keyed stream of nodes; by default it contains only **root** node
 
 The operator attaches late-arriving parents to their existing children, promotes children to
 roots when their parent is removed, and re-parents nodes when an update changes their pivot key.
-Node identity is preserved throughout, so a tree view can keep expansion state per node.
+A node keeps its identity when it is promoted, re-parented, refreshed or moved and when a late
+parent arrives. An update of the node's *item* replaces the node: the `Update` carries a new node
+that takes over the children, and the old node's `children()` stop changing. A tree view keys its
+per-node state (such as expansion) by node key and rebinds a node's `children()` on `Update`. A
+node's `children()` keep the source order: a new child is inserted at its position (one `Add`),
+and a child that moves in the source moves once among its siblings. Items that are each other's
+parents form a cycle that never reaches a root; disposing the tree subscription empties the
+`children()` of the nodes on such a cycle so that they are freed.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -355,7 +364,9 @@ These reduce a cache to a single `ValueStream<bool>` from a per-item stream:
 
 `selector(&item, &key)` returns the item's `ValueStream<U>` (collection flavor). Items whose stream
 has not emitted yet count as `false`. An empty cache is `true` for *all* and `false` for *any*.
-Duplicate results are suppressed. They are available on change streams (`CacheTrueForExt`) and
+The result is evaluated after a batch's item streams have been subscribed, so values they emit
+while subscribing count at once (no `false` flicker for passing items), and duplicate results are
+suppressed. They are available on change streams (`CacheTrueForExt`) and
 directly on sources (`SourceCacheTrueForExt`). Typical uses are "all rows valid", "any row
 dirty", and "all uploads finished". The [item lifecycle chapter](12-item-lifecycle.md#all-and-any-over-per-item-streams)
 has an example.

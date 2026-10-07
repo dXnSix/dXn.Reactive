@@ -46,100 +46,77 @@ Scalar state and collections use different error types for their streams (see
 | Stream | Type |
 |---|---|
 | `signal.values()`, `computed.values()`, `event_stream.values()` | `rayx_reactive::ValueStream<T>` (error `ReactiveError`) |
-| collection operator inputs and outputs | `rayx_reactive::collections::ValueStream<T>` (error `CollectionError`) |
+| collection operator outputs | `rayx_reactive::collections::ValueStream<T>` (error `CollectionError`) |
 
-Which operators take which:
-
-| Accepts any error convertible into `CollectionError` (pass `signal.values()` directly) | Requires the collection flavor (adapt first) |
-|---|---|
-| `filter_with_state`, `filter_dynamic` | `sort_dynamic*`, `sort_keyed_dynamic*`, `*_with_resort`, `page_dynamic*`, `page_keyed_dynamic*`, `virtualize_dynamic*`, `virtualize_keyed_dynamic*`, `sort_and_*_dynamic*`, `batch_if*`, `buffer_if*`, `group_dynamic*`, `*_with_regrouper`, `transform_*_forced*`, `transform_to_tree_with_predicate`, `switch`, per-item selectors (`auto_refresh`, `filter_on_observable`, `merge_many`, `true_for_*`, …), `to_*_change_set*`, `edit_diff*` bridges, `populate_from*` |
-
-The adapter is one function. Because `CollectionError` implements `From<ReactiveError>`, the
-conversion is lossless:
+Every collection operator that takes a stream (comparers, resort triggers, page and virtual
+requests, pause streams, regroupers, group selectors, forced-transform triggers, tree predicates,
+`switch`, `populate_from*`, the `to_*_change_set*` and `edit_diff*` bridges) and every per-item
+selector that returns one (`filter_on_observable`, `auto_refresh*`, `transform_on_observable`,
+`group_on_observable`, `merge_many*`, `when_*value_changed*`, `true_for_*`,
+`query_when_changed_on*`) accepts a `ValueStream<_, E>` of any error type `E` with
+`CollectionError: From<E>`. Pass `signal.values()` directly:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 
-/// Adapts a scalar-state stream to the collection stream flavor.
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 let rows = SourceList::new((1..=100).collect::<Vec<u32>>());
 let page = Signal::new(PageRequest::new(0, 10));
-let visible = rows.connect().page_dynamic(collection_stream(page.values())).as_observable_list()?;
+let visible = rows.connect().page_dynamic(page.values()).as_observable_list()?;
 
 page.set(PageRequest::new(3, 10))?;
 assert_eq!(visible.items()?.first(), Some(&31));
 ```
 
-The opposite direction lets collection outputs use the scalar operators (`filter`, `skip`,
-`distinct_until_changed`) or `Effect::watch`. It is lossy, because `ReactiveError` has a single
-variant:
+The other direction works too: the scalar operators (`filter`, `skip`, `distinct_until_changed`
+and the [combinators](04-streams-and-subscriptions.md#operators)) and `Effect::watch` accept
+streams of any error type, so collection outputs plug into them unchanged. To change a stream's
+error type explicitly, use `map_err` or `err_into`:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::{Effect, ReactiveError, ReactiveValueStreamExt};
 use std::sync::{Arc, Mutex};
 
-/// Adapts a collection stream to the scalar flavor. Setup errors collapse to `Poisoned`.
-fn reactive_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::collections::ValueStream<T>,
-) -> rayx_reactive::ValueStream<T> {
-    rayx_reactive::ValueStream::new(move |subscriber| {
-        stream
-            .subscribe(move |value| subscriber(value))
-            .map_err(|_| ReactiveError::Poisoned)
-    })
-}
-
 let inbox = SourceList::<&str>::default();
 let unread_badges = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&unread_badges);
-let _badge = Effect::watch(
-    &reactive_stream(inbox.connect().count()).filter(|count| *count > 0),
-    move |count| sink.lock().unwrap().push(*count),
-)?;
+let _badge = Effect::watch(&inbox.connect().count().filter(|count| *count > 0), move |count| {
+    sink.lock().unwrap().push(*count)
+})?;
 
 inbox.add_range(["a", "b"])?;
 inbox.clear()?;
 assert_eq!(*unread_badges.lock().unwrap(), [2]); // 0 was filtered out
+
+// Converting the error type keeps the original error.
+let scalar_flavor: rayx_reactive::ValueStream<usize, ReactiveError> =
+    inbox.connect().count().err_into();
+let _subscription = scalar_flavor.subscribe(|_| {})?;
 ```
 
 ### Mirroring a collection value into a signal
 
 Commands and `Computed` read `ReadSignal`s. To use a collection aggregate there (for example "the
-command is enabled when every row is valid"), mirror it into a signal and keep the subscription
-next to the signal:
+command is enabled when the cart has items"), hold the stream's latest value with
+`Computed::from_stream`. The `Computed` owns the subscription:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{Command, Signal, Subscription};
+use rayx_reactive::prelude::{Command, Computed};
 
 struct Cart {
     lines: SourceCache<u32, (u32, u32)>, // (sku, quantity)
-    has_items: Signal<bool>,
+    has_items: Computed<bool>,
     checkout: Command,
-    _mirror: Subscription,
 }
 
 impl Cart {
     fn new() -> Result<Self> {
         let lines = SourceCache::new(|line: &(u32, u32)| line.0);
-        let has_items = Signal::new(false);
-        let mirror = {
-            let has_items = has_items.clone();
-            lines.connect().is_not_empty().subscribe(move |value| {
-                let _ = has_items.set(*value);
-            })?
-        };
-        let checkout = Command::with_can_execute(has_items.read_only(), || Ok(()));
-        Ok(Self { lines, has_items, checkout, _mirror: mirror })
+        let has_items = Computed::from_stream(&lines.connect().is_not_empty(), false)?;
+        let checkout = Command::with_can_execute(has_items.read_signal(), || Ok(()));
+        Ok(Self { lines, has_items, checkout })
     }
 }
 
@@ -147,6 +124,7 @@ let cart = Cart::new()?;
 assert!(!cart.checkout.can_execute().get()?);
 cart.lines.add_or_update((7, 1))?;
 assert!(cart.checkout.can_execute().get()?);
+assert!(cart.has_items.get()?);
 ```
 
 ## Binding to a UI
@@ -215,14 +193,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::Arc;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct Employee {
     id: u32,
@@ -261,8 +231,8 @@ impl EmployeeGridViewModel {
             .filter_with_state(search.values(), |search: &String, employee: &Employee| {
                 employee.name.to_lowercase().contains(&search.to_lowercase())
             })
-            .sort_keyed_dynamic(collection_stream(comparers))
-            .page_keyed_dynamic(collection_stream(page.values()))
+            .sort_keyed_dynamic(comparers)
+            .page_keyed_dynamic(page.values())
             .as_observable_list()?;
 
         Ok(Self { search, sort, page, rows })
@@ -344,18 +314,10 @@ filter-based approach also reacts to the selection changing.
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::EventBus;
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 let log_lines = EventBus::<String>::new();
 
 // Keep the last 3 lines; newest first for display.
-let feed = collection_stream(log_lines.stream().values())
+let feed = log_lines.stream().values()
     .to_list_change_set_with_options(ChangeSetAdapterOptions::limit_size_to(3))
     .reverse()
     .as_observable_list()?;
@@ -374,14 +336,6 @@ Each field owns a `valid` signal. The form is submittable when all fields are va
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::{Command, Computed, Signal, Subscription};
 use std::sync::Arc;
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 struct Field {
     name: &'static str,
@@ -412,7 +366,7 @@ let all_valid = Signal::new(false);
 let _mirror: Subscription = {
     let all_valid = all_valid.clone();
     fields
-        .true_for_all_value(|field, _| collection_stream(field.valid.values()), |valid| *valid)
+        .true_for_all_value(|field, _| field.valid.values(), |valid| *valid)
         .subscribe(move |value| {
             let _ = all_valid.set(*value);
         })?

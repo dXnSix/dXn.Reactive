@@ -1,13 +1,14 @@
+use crate::collections::source_lock::SourceLock;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex, TryLockError};
+use std::sync::Arc;
 
 #[cfg(any(test, feature = "diagnostics"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::collections::change::{CacheChange, ChangeSet};
 use crate::collections::connection::VersionedChangeSet;
-use crate::collections::error::{CollectionError, Result};
+use crate::collections::error::Result;
 use crate::collections::subscription::Subscription;
 
 type KeyedSubscriber<K, T> = Arc<dyn Fn(&VersionedChangeSet<CacheChange<K, T>>) + Send + Sync>;
@@ -42,7 +43,7 @@ pub(crate) struct KeyedDeliverySnapshot {
 }
 
 pub(crate) struct KeyedChangeHub<K, T> {
-    registry: Arc<Mutex<KeyedRegistry<K, T>>>,
+    registry: Arc<SourceLock<KeyedRegistry<K, T>>>,
     #[cfg(any(test, feature = "diagnostics"))]
     metrics: Arc<KeyedDeliveryMetrics>,
 }
@@ -66,7 +67,7 @@ impl<K, T> Default for KeyedChangeHub<K, T> {
 impl<K, T> KeyedChangeHub<K, T> {
     pub(crate) fn new() -> Self {
         Self {
-            registry: Arc::new(Mutex::new(KeyedRegistry {
+            registry: Arc::new(SourceLock::new(KeyedRegistry {
                 buckets: HashMap::new(),
                 next_subscriber_id: 0,
             })),
@@ -87,10 +88,7 @@ where
         subscriber: impl Fn(&VersionedChangeSet<CacheChange<K, T>>) + Send + Sync + 'static,
     ) -> Result<Subscription> {
         let subscriber_id = {
-            let mut registry = self.registry.try_lock().map_err(|error| match error {
-                TryLockError::Poisoned(_) => CollectionError::Poisoned,
-                TryLockError::WouldBlock => CollectionError::NestedUpdate,
-            })?;
+            let mut registry = self.registry.lock()?;
             registry.next_subscriber_id = registry.next_subscriber_id.saturating_add(1);
             let subscriber_id = registry.next_subscriber_id;
             registry
@@ -103,22 +101,42 @@ where
 
         let registry = Arc::clone(&self.registry);
         Ok(Subscription::new(move || {
-            let Ok(mut registry) = registry.lock() else {
-                return;
+            // The removed subscriber (and an emptied bucket) are dropped after unlocking: the
+            // subscriber closure may own other watches on the same cache.
+            let removed = {
+                let Ok(mut registry) = registry.lock_blocking() else {
+                    return;
+                };
+                let removed = registry
+                    .buckets
+                    .get_mut(&key)
+                    .and_then(|bucket| bucket.remove(&subscriber_id));
+                let bucket = registry
+                    .buckets
+                    .get(&key)
+                    .is_some_and(HashMap::is_empty)
+                    .then(|| registry.buckets.remove(&key))
+                    .flatten();
+                (removed, bucket)
             };
-            let remove_bucket = registry.buckets.get_mut(&key).is_some_and(|bucket| {
-                let _ = bucket.remove(&subscriber_id);
-                bucket.is_empty()
-            });
-            if remove_bucket {
-                let _ = registry.buckets.remove(&key);
-            }
+            drop(removed);
         }))
     }
 
     pub(crate) fn publish(&self, versioned: &VersionedChangeSet<CacheChange<K, T>>) {
-        let mut partitioned = HashMap::<K, Vec<CacheChange<K, T>>>::new();
-        for change in &versioned.change_set().changes {
+        // Without watches there is nothing to partition. A watch registered after this check
+        // takes its snapshot after this batch was committed, so the snapshot covers it.
+        let watched = self
+            .registry
+            .lock_blocking()
+            .is_ok_and(|registry| !registry.buckets.is_empty());
+        if !watched {
+            return;
+        }
+        // Changes keep the version they were committed at, so a watch that subscribed
+        // during notification suspension can drop the segments its snapshot covers.
+        let mut partitioned = HashMap::<K, Vec<(u64, CacheChange<K, T>)>>::new();
+        for (version, change) in versioned.versioned_changes() {
             match change {
                 CacheChange::Add { key, .. }
                 | CacheChange::Update { key, .. }
@@ -128,16 +146,16 @@ where
                     partitioned
                         .entry(key.clone())
                         .or_default()
-                        .push(change.clone());
+                        .push((version, change.clone()));
                 }
                 CacheChange::Clear { previous } => {
                     for (key, item) in previous {
-                        partitioned
-                            .entry(key.clone())
-                            .or_default()
-                            .push(CacheChange::Clear {
+                        partitioned.entry(key.clone()).or_default().push((
+                            version,
+                            CacheChange::Clear {
                                 previous: vec![(key.clone(), item.clone())],
-                            });
+                            },
+                        ));
                     }
                 }
             }
@@ -154,7 +172,7 @@ where
         }
 
         let routes = {
-            let Ok(registry) = self.registry.lock() else {
+            let Ok(registry) = self.registry.lock_blocking() else {
                 return;
             };
             partitioned
@@ -185,9 +203,17 @@ where
             );
         }
 
+        let segmented = versioned.has_change_versions();
+        let version = versioned.version();
         for (changes, subscribers) in routes {
-            let versioned =
-                VersionedChangeSet::new(ChangeSet::new(changes, versioned.change_set().version));
+            let versioned = if segmented {
+                VersionedChangeSet::from_versioned_changes(changes, version)
+            } else {
+                VersionedChangeSet::new(ChangeSet::new(
+                    changes.into_iter().map(|(_, change)| change).collect(),
+                    version,
+                ))
+            };
             for subscriber in subscribers {
                 subscriber(&versioned);
             }
@@ -206,10 +232,7 @@ where
 
     #[cfg(test)]
     pub(crate) fn snapshot(&self) -> Result<KeyedDeliverySnapshot> {
-        let registry = self
-            .registry
-            .lock()
-            .map_err(|_| CollectionError::Poisoned)?;
+        let registry = self.registry.lock_blocking()?;
         Ok(KeyedDeliverySnapshot {
             partitioned_batches: self.metrics.partitioned_batches.load(Ordering::Relaxed),
             partitioned_changes: self.metrics.partitioned_changes.load(Ordering::Relaxed),

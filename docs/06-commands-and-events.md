@@ -15,13 +15,16 @@ ViewModels expose two kinds of outward-facing behavior besides state:
 
 - `can_execute(): ReadSignal<bool>`, whether the command may run now. Bind a button's enabled
   state to it.
-- `state(): ReadSignal<CommandState>`, the outcome of the most recent execution.
+- `state(): ReadSignal<CommandState>`, the state of the most recently started execution.
+- `is_executing(): ReadSignal<bool>`, `true` while at least one execution is in flight. Bind a
+  busy indicator to it.
 - `execute(): CommandResult`, which runs the action if enabled.
 
 | Constructor | Enablement |
 |---|---|
 | `Command::new(action)` | always enabled |
 | `Command::with_can_execute(signal, action)` | follows a `ReadSignal<bool>`, typically from a `Computed` |
+| `.with_execution_policy(policy)` | chooses what happens to overlapping executions ([below](#concurrency-policy)) |
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -41,7 +44,7 @@ assert!(clear.can_execute().get()?);
 clear.execute()?;
 assert!(!clear.can_execute().get()?); // follows the derived signal
 assert_eq!(clear.execute(), Err(CommandError::Disabled));
-assert_eq!(clear.state().get()?, CommandState::Cancelled);
+assert_eq!(clear.state().get()?, CommandState::Succeeded); // a disabled call publishes nothing
 ```
 
 ### `CommandState`
@@ -51,11 +54,17 @@ assert_eq!(clear.state().get()?, CommandState::Cancelled);
 | `Idle` | Created; never executed. |
 | `Running` | The action has started. |
 | `Succeeded` | The action returned `Ok(())`. |
-| `Failed(message)` | The action returned an error; `message` is the error's `Display` text. |
-| `Cancelled` | `execute` was called while `can_execute` was `false`. |
+| `Failed(message)` | The action returned an error (`message` is the error's `Display` text), or panicked (`message` starts with `panicked: `). |
+| `Cancelled` | An `AsyncCommand::execute()` future was dropped after it started and before it finished (for example by `select!` or a timeout). |
 
-Each execution publishes `Running` and then `Succeeded` or `Failed`, even when the previous
-execution ended the same way, so a view observing `state().values()` sees every run.
+An execution that starts while none is running publishes `Running`, and the most recently started
+execution publishes its terminal state when it ends, even when the previous one ended the same way.
+Sequential runs therefore each show as `Running` then their outcome; overlapping runs (allowed by
+the default `ExecutionPolicy::Concurrent`) show as one `Running` and the latest run's outcome.
+Calling `execute` while
+disabled returns `CommandError::Disabled` and publishes nothing. A panicking action publishes
+`Failed("panicked: …")`, resets `is_executing()`, and the panic continues to the caller (or out of
+the future).
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -137,9 +146,35 @@ closure, before the `async move` block, as shown above. The future must be `Send
 
 ### Concurrency policy
 
-Neither command type prevents overlapping executions. Calling `execute` again while an async
-execution is in flight starts a second run, and `state()` reflects whichever run wrote last. When
-an action must not overlap, express that policy in state:
+By default (`ExecutionPolicy::Concurrent`) calling `execute` again while an execution is in flight
+starts a second run. Only the most recently started execution publishes its terminal state: an
+earlier run that finishes later does not overwrite it, and `state()` stays `Running` until the
+latest run ends. `is_executing()` stays `true` while any run is in flight.
+
+`ExecutionPolicy::IgnoreWhileRunning` refuses overlapping calls instead: `execute` returns
+`CommandError::Disabled` without starting the action or changing any state.
+
+```rust
+use rayx_reactive::prelude::*;
+use futures::FutureExt;
+
+let save = AsyncCommand::new(futures::future::pending::<CommandResult>)
+    .with_execution_policy(ExecutionPolicy::IgnoreWhileRunning);
+
+futures::executor::block_on(async {
+    let mut first = Box::pin(save.execute());
+    assert!((&mut first).now_or_never().is_none()); // started, still running
+    assert!(save.is_executing().get().unwrap());
+    assert_eq!(save.execute().await, Err(CommandError::Disabled)); // refused
+    drop(first); // dropping an in-flight execution cancels it
+});
+
+assert_eq!(save.state().get()?, CommandState::Cancelled);
+assert!(!save.is_executing().get()?);
+```
+
+To disable the button itself while a command runs, derive `can_execute` from `is_executing()` of
+another command, or keep a `busy` signal:
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -167,9 +202,8 @@ futures::executor::block_on(submit.execute())?;
 assert!(!busy.get()?);
 ```
 
-This makes the button disable itself while the command runs. If the gap between the
-`can_execute` check and `busy.set(true)` matters (several threads calling `execute`), guard the
-action with an atomic flag or route executions through a single task.
+This makes the button disable itself while the command runs. `IgnoreWhileRunning` closes the gap
+between the `can_execute` check and `busy.set(true)` when several threads call `execute`.
 
 ### Commands take no parameters
 
@@ -192,10 +226,11 @@ after they subscribe. This is the defining difference from a signal.
 | Method | Behavior |
 |---|---|
 | `EventBus::new()` / `default()` | A new bus. Cloning shares the bus. |
-| `emit(event)` | Delivers to current subscribers through a FIFO delivery queue. |
+| `emit(event)` | Delivers to current subscribers through a FIFO delivery queue, in emit order even when several threads emit. |
 | `stream()` | Returns an `EventStream<T>`. |
 
-`EventStream<T>` offers `subscribe(…)`, `map(…)` (returning another `EventStream`), and
+Events need not be `Clone`: `emit` moves the event into the queue and lends it to each subscriber.
+`EventStream<T>` is cheap to clone and offers `subscribe(…)`, `map(…)` (returning another `EventStream`), and
 `values()`, which exposes the underlying `ValueStream` so you can use the full set of
 [stream operators](04-streams-and-subscriptions.md#operators).
 
@@ -267,7 +302,8 @@ assert_eq!(*shown.lock().unwrap(), ["Saved"]);
 
 ## Pitfalls
 
-- **Expecting single-flight execution.** Commands do not serialize runs; add a `busy` signal.
+- **Expecting single-flight execution by default.** Commands run concurrently unless you choose
+  `ExecutionPolicy::IgnoreWhileRunning`.
 - **Blocking inside `Command::execute`.** It runs on the caller's thread, often the UI thread. Use
   `AsyncCommand` for I/O.
 - **Using events for state.** Late subscribers miss it; use a signal.

@@ -133,9 +133,10 @@ If your application runs on Tokio or another runtime, use that runtime's test ha
 
 ## Timers, worker threads and async operators
 
-`batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered`, `expire_after*`,
-`transform_async*`, `transform_many_async*` and `async_dispose_many*` deliver from other threads.
-Wait for the expected **state** with a deadline instead of sleeping for a fixed time:
+`transform_async*`, `transform_many_async*` and `async_dispose_many*` deliver from worker threads,
+and the timed operators (`batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered`,
+`expire_after*`) from the default scheduler's timer thread. Wait for the expected **state** with a
+deadline instead of sleeping for a fixed time:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -165,15 +166,42 @@ assert_eq!(doubled.lookup(&3)?, Some(6));
 ```
 
 Use a generous timeout (seconds, not milliseconds). It costs nothing when the condition holds
-early and prevents flaky failures on loaded CI machines. To test logic that sits *around* a timed
-operator, consider making the timing injectable, for example by using `batch_if` with a pause
-signal in tests instead of `batch(duration)`.
+early and prevents flaky failures on loaded CI machines.
+
+Timed operators need no waiting at all when the test owns the clock: pass a `ManualScheduler` to
+their `*_with_scheduler` variant and move time with `advance_by`, which runs the due timers on the
+test thread:
+
+```rust
+use rayx_reactive::collections::prelude::*;
+use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+let clock = ManualScheduler::new();
+let scheduler: Arc<dyn Scheduler> = Arc::new(clock.clone());
+let rows = SourceList::new(vec![1_u32, 2]);
+let batches = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&batches);
+let _subscription = rows
+    .connect()
+    .buffer_initial_with_scheduler(Duration::from_millis(50), scheduler)
+    .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.len()))?;
+
+rows.push(3)?;
+assert!(batches.lock().unwrap().is_empty()); // still inside the startup window
+clock.advance_by(Duration::from_millis(50));
+assert_eq!(*batches.lock().unwrap(), [2]); // the snapshot's `AddRange` plus the push
+assert_eq!(clock.pending(), 0);
+```
 
 ## Concurrency tests
 
 Use `std::sync::Barrier` to make threads start together, join them, then assert final state.
 Assert outcomes that are deterministic (final contents, counts, "each item exactly once"), not
-interleavings. Remember that concurrent source writes can return `NestedUpdate`; see
+interleavings. On native targets concurrent source writes wait for each other and all succeed,
+and each stream delivers in commit order, so a mirror of a source ends equal to it; `NestedUpdate`
+only signals same-thread re-entry. See
 [Sources under contention](16-concurrency-and-platforms.md#sources-under-contention).
 
 ## Using diagnostics in tests
@@ -189,15 +217,16 @@ connections in the process, so exact assertions on it are unreliable when tests 
 |---|---|
 | The recorder stays empty | the subscription was dropped (`subscribe(…)?;` without binding it, or bound to `_`) |
 | An expected initial value is missing | subscribed to `changes()` instead of `values()`/`connect()`, or the source was empty (no snapshot batch) |
-| Order differs between runs | the assertion depends on the order of *different* subscribers, or on hash-ordered output (for example finalizers on unsubscribe); sort before comparing |
-| Flaky failures around timers | fixed sleeps; use `wait_until` with a generous deadline |
+| Order differs between runs | the assertion depends on how threads interleave, or on hash-ordered output (for example finalizers on unsubscribe); sort before comparing (subscribers of one source or signal are called in subscription order) |
+| Flaky failures around timers | fixed sleeps; use a `ManualScheduler`, or `wait_until` with a generous deadline |
 | A test hangs | a subscriber writes back unconditionally (an infinite update loop), or a `Signal::read` closure writes to the same signal |
 
 ## Testing on WebAssembly
 
 The crate's own tests use `wasm-bindgen-test` on `wasm32` targets
-(`#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]`). Only the
-synchronous subset is meaningful there; see [WebAssembly](16-concurrency-and-platforms.md#webassembly).
+(`#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]`), and CI runs them
+on Node. Only the synchronous subset, and timed operators on a `ManualScheduler`, are meaningful
+there; see [WebAssembly](16-concurrency-and-platforms.md#webassembly).
 
 ---
 

@@ -29,7 +29,7 @@ Cache:
 
 List filtering tracks upstream inclusion state and translates source indexes to visible indexes. It preserves incremental add/range/replace/move/remove/range/refresh/clear semantics where possible.
 
-Cache filtering tracks included keys and re-evaluates on `Refresh`. A refresh can become an add, remove, or refresh depending on current predicate result.
+Cache filtering tracks included keys and re-evaluates on `Refresh`. A refresh can become an add, remove, or refresh depending on current predicate result. Output indexes are positions in the filter's own output (never source positions), and it never emits `Remove`/`Clear` for keys it did not include. The same holds for `transform_safe*`, forced transforms and the dynamic filters.
 
 Use `filter_immutable` only for immutable values and deterministic predicates. It avoids a state cache, strips output indexes, drops moves, maps updates directly, and may be faster when those constraints are true.
 
@@ -37,10 +37,12 @@ Use `filter_immutable` only for immutable values and deterministic predicates. I
 
 List and cache expose:
 
-- `filter_dynamic(ValueStream<Predicate<T>>)`
-- `filter_with_state(ValueStream<S>, |state, item| bool)`
+- `filter_dynamic(ValueStream<Predicate<T>, E>)`
+- `filter_with_state(ValueStream<S, E>, |state, item| bool)`
 
-No source items pass until the predicate/state stream emits its first value. After a state exists, source changes are incremental. Later state emissions re-query tracked items and emit structured diffs.
+Both accept any stream error `E` with `CollectionError: From<E>`, so `signal.values()` plugs in directly.
+
+No source items pass until the predicate/state stream emits its first value. After a state exists, source changes are incremental. A later state re-tests every tracked item and emits only the inclusion flips (removals and additions at their output positions), never a reset: items that stay included are neither replaced nor moved, so shifting a range predicate from `[1000, 2000)` to `[1001, 2001)` emits one `Remove` and one `Add`.
 
 Use `filter_with_state` when the dynamic input is a typed mode, search text, permission set, or user preference. Use `filter_dynamic` when you already have a predicate stream.
 
@@ -48,12 +50,12 @@ Use `filter_with_state` when the dynamic input is a typed mode, search text, per
 
 Cache update filters:
 
-- `ignore_update_when(|previous, current| bool)`
-- `include_update_when(|previous, current| bool)`
+- `ignore_update_when(|current, previous| bool)`
+- `include_update_when(|current, previous| bool)`
 - `ignore_same_value_update()`
 - `CacheArcStreamExt::ignore_same_reference_update()` for `Arc<T>` payloads.
 
-These evaluate only `Update` changes. Adds, removes, refreshes, moves, and clears pass through unchanged. Batches that become empty are suppressed.
+The predicate receives `(current, previous)`, in that order: `ignore_update_when(|current, previous| current.revision == previous.revision)`. These evaluate only `Update` changes. Adds, removes, refreshes, moves, and clears pass through unchanged. Batches that become empty are suppressed.
 
 Use these before expensive downstream transforms when update noise is common.
 
@@ -75,11 +77,12 @@ List transforms:
 - `transform_with_previous_on_refresh(...)`
 - `transform_async(|item| future)`
 - `transform_async_on_refresh(...)`
-- `transform_async_with_previous(..., transform_on_refresh)`
+- `transform_async_with_previous(|item, previous_projection, index| future, transform_on_refresh)`
+- `transform_async_with_options(|item| future, TransformAsyncOptions)`
 
 Default list `Refresh` forwards the existing projection. Use the `on_refresh` variants only when a refresh should recompute the projection.
 
-Async list transforms process source batches in order and preserve indexed list semantics. Use them for truly asynchronous work, not for ordinary CPU mapping.
+Async list transforms (no `U: PartialEq` bound) run on one worker thread per subscription and **deliver on that worker thread**. Source batches are processed in order, one output batch per source batch; a batch's futures run concurrently (unbounded, or up to `maximum_concurrency` with `_with_options`) and their results are applied in index order. A future is dropped when a later batch removes or replaces its item, and every future on disposal; nothing is emitted afterwards. A panicking future leaves its item out (indexes are translated). Not available on `wasm32-unknown-unknown`. Use them for truly asynchronous work, not for ordinary CPU mapping.
 
 ## Cache Transforms
 
@@ -98,7 +101,9 @@ Default cache `Refresh` forwards the existing projection. `Move` also forwards t
 
 `transform_immutable` maps each incoming change directly and does not keep a projected cache. Use it for immutable payloads and pure transforms.
 
-`transform_inline` creates a projected value once, mutates it on updates, and emits refreshes. Use it for view-model-like projections where object identity should stay stable.
+`transform_inline` creates a projected value once, mutates it on updates, and emits refreshes (a positional update becomes a `Move` plus `Refresh`). Use it for view-model-like projections where object identity should stay stable.
+
+An index-less `Update` (from an upstream that does not know positions) updates the key in place in sorts, safe and forced transforms and trees.
 
 ## Safe Transforms
 
@@ -132,18 +137,20 @@ Prefer forced transforms over fake source updates.
 
 Cache async transforms:
 
-- `transform_async`
-- `transform_async_with_key`
-- `transform_async_with_previous(transform, TransformAsyncOptions)`
+- `transform_async(|item| future)`
+- `transform_async_with_key(|item, key| future)`
+- `transform_async_with_previous(|item, previous_item, key| future, TransformAsyncOptions)`
 - `transform_async_with_previous_forced(...)`
-- safe async variants.
+- safe async variants (`transform_safe_async*`) reporting `TransformError` through `on_error`.
 
 `TransformAsyncOptions` has:
 
-- `maximum_concurrency: Option<usize>`
+- `maximum_concurrency: Option<usize>`: `None` is unbounded; `Some(0)` counts as 1 (one future at a time).
 - `transform_on_refresh: bool`
 
-Source callbacks enqueue batches and return quickly. A cache async batch emits one output changeset after the batch completes. Use bounded concurrency for large batches or I/O-heavy work.
+Constructors: `TransformAsyncOptions::DEFAULT` / `default()` (unbounded, no refresh re-run), `new(maximum_concurrency, transform_on_refresh)`, `transform_on_refresh()`.
+
+Source callbacks enqueue batches to one worker thread per subscription and return quickly; output is delivered **on the worker thread**, one output batch per source batch, through the ordered emitter. A future is dropped when a later batch removes or updates its key, and every future on disposal; a superseded future that has not started is never run. A panicking future keeps the key's previous projection, and the safe variants report it as a `TransformPanic` when `E` can carry one (or a `String` or boxed error). Output indexes are positions in the operator's own output, so skipped and failed items do not shift them. The futures run outside any async runtime; not available on `wasm32-unknown-unknown`. Use bounded concurrency for large batches or I/O-heavy work.
 
 ## Transform Many
 
@@ -164,8 +171,11 @@ Cache:
 - `transform_many_async_stream_by(..., compare)`
 - `transform_many_safe_async_stream(...)`
 - `transform_many_safe_async_stream_by(...)`
+- a `*_with_options(.., TransformAsyncOptions)` form of each of the eight async variants, honoring `maximum_concurrency` (every parent is re-transformed on refresh regardless of `transform_on_refresh`)
 
-Async cache transform-many uses per-parent generations, child subscriptions, ordered child keys, and duplicate child-key selection. Stale child materialization after parent update/remove is ignored.
+Synchronous cache `transform_many` gives a child key produced by several parents to the first live parent in parent order (another takes over when it leaves) and emits in a deterministic order without indexes.
+
+Async cache transform-many runs all parents of one subscription on one worker thread (not a thread per parent) and delivers on it through the ordered emitter. Per-parent generations drop the future of an updated or removed parent, so stale children are never published. A panicking transform gives its parent no children. A source that releases its callback (a finite stream) still gets every pending transform finished.
 
 Use iterable overloads when each parent materializes a bounded child collection. Use stream overloads when each parent owns a live child change stream.
 
@@ -179,7 +189,13 @@ Cache to list:
 
 - `CacheStreamExt::remove_key()`
 
-`add_key` converts list changes into keyed cache changes. Replacing an item with a different key becomes remove plus add. `remove_key` converts cache changes into list changes with a maintained ordered key mirror.
+`add_key` converts list changes into keyed cache changes whose indexes are the list positions (keys must be unique in the list). Replacing an item with a different key becomes remove plus add. `remove_key` converts cache changes into list changes, positioning rows by its own ordered key mirror.
+
+Re-keying:
+
+- `CacheStreamExt::change_key(|item| new_key)` / `change_key_with_source_key(|key, item| new_key)`
+
+A change of destination key emits `Remove` plus `Add`; when several source keys map to one destination key, the latest added or updated item is shown and removing it falls back to a remaining one; a refresh never changes which source provides the key. It emits no indexes, so sort after `change_key`, not before.
 
 Use these at boundaries. Prefer native cache pipelines when identity matters through most of the workflow.
 

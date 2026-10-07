@@ -116,7 +116,7 @@ where
                     let Some(group) = self.groups.get(&group_key).cloned() else {
                         continue;
                     };
-                    if let Some(group_index) = self.group_index_for_key(key, &group_key) {
+                    if let Some(group_index) = self.group_index_for_key(key, &group) {
                         let changes = live_pending_group_changes(&mut pending, &group_key, &group);
                         let _ = group.move_pending(key, group_index, changes);
                     }
@@ -209,7 +209,7 @@ where
             return;
         };
         let group = self.get_or_add_group(&group_key, group_changes);
-        let group_index = self.group_index_for_key(key, &group_key);
+        let group_index = self.group_index_for_key(key, &group);
         let changes = live_pending_group_changes(pending, &group_key, &group);
         let _ = group.add_or_update_pending(key.clone(), item, group_index, changes);
     }
@@ -237,7 +237,21 @@ where
     }
 
     fn finalize_empty_groups(&mut self, group_changes: &mut Vec<CacheGroupChange<K, T, G>>) {
-        let empty_groups = self.empty_groups.iter().cloned().collect::<Vec<_>>();
+        // Pending additions first (later removals are indexed without them), then by group
+        // order, so the removals are deterministic.
+        let positions = self
+            .group_order
+            .iter()
+            .enumerate()
+            .map(|(position, key)| (key.clone(), position))
+            .collect::<HashMap<_, _>>();
+        let mut empty_groups = self.empty_groups.iter().cloned().collect::<Vec<_>>();
+        empty_groups.sort_by_key(|key| {
+            let pending = group_changes.iter().any(
+                |change| matches!(change, CacheChange::Add { key: added, .. } if added == key),
+            );
+            (!pending, positions.get(key).copied().unwrap_or(usize::MAX))
+        });
         for group_key in empty_groups {
             let Some(group) = self.groups.get(&group_key).cloned() else {
                 let _ = self.empty_groups.remove(&group_key);
@@ -255,7 +269,7 @@ where
                 continue;
             }
 
-            let previous_index = self.group_order.iter().position(|key| key == &group_key);
+            let previous_index = self.group_order.index_of(&group_key);
             let _ = self.groups.remove(&group_key);
             remove_group_order_key(&mut self.group_order, &group_key);
             let _ = self.empty_groups.remove(&group_key);
@@ -267,13 +281,11 @@ where
         }
     }
 
-    fn group_index_for_key(&self, key: &K, group_key: &G) -> Option<usize> {
-        self.source_order
-            .iter()
-            .filter(|candidate| {
-                self.entries.get(*candidate).map(|entry| &entry.group_key) == Some(group_key)
-            })
-            .position(|candidate| candidate == key)
+    /// `key`'s position in `group`, whose members keep source order.
+    fn group_index_for_key(&self, key: &K, group: &RayCacheGroup<G, K, T>) -> Option<usize> {
+        self.source_order.index_of(key)?;
+        let rank = |candidate: &K| self.source_order.index_of(candidate).unwrap_or(usize::MAX);
+        group.rank_position(key, &rank).ok()
     }
 
     fn next_version(&mut self) -> u64 {
@@ -289,8 +301,8 @@ struct ImmutableCacheGroupEntry<T, G> {
 
 struct ImmutableCacheGroupState<K, T, G> {
     entries: HashMap<K, ImmutableCacheGroupEntry<T, G>>,
-    source_order: Vec<K>,
-    group_order: Vec<G>,
+    source_order: KeyOrder<K>,
+    group_order: KeyOrder<G>,
     version: u64,
 }
 
@@ -298,10 +310,9 @@ impl<K, T, G> Default for ImmutableCacheGroupState<K, T, G> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            source_order: Vec::new(),
-            group_order: Vec::new(),
+            source_order: KeyOrder::new(),
+            group_order: KeyOrder::new(),
             version: 0,
         }
     }
 }
-

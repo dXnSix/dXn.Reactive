@@ -1,9 +1,18 @@
+use crate::collections::error::CollectionError;
+/// Aggregates and snapshot queries over a cache change stream, as value streams.
+///
+/// `count`, `is_empty`, `is_not_empty`, `sum_by`, `avg_by` and `std_dev_by` update a running result
+/// from each change. `max_by`, `min_by`, the `query_when_changed*` family and the `to_*collection`
+/// family keep a full copy and recompute after every batch, so they are costly for large, busy
+/// caches.
 pub trait CacheAggregationExt<K, T> {
+    /// Emits a `CacheQuery` snapshot of the cache after every batch.
     fn query_when_changed(&self) -> ValueStream<CacheQuery<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits `selector` applied to a snapshot of the cache after every batch.
     fn query_when_changed_with<U>(
         &self,
         selector: impl Fn(&CacheQuery<K, T>) -> U + Send + Sync + 'static,
@@ -13,31 +22,46 @@ pub trait CacheAggregationExt<K, T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + Send + Sync + 'static;
 
-    fn query_when_changed_on<V>(
+    /// Emits a snapshot after every batch, and also whenever an item's trigger stream emits.
+    fn query_when_changed_on<V, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<CacheQuery<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
-        V: Send + Sync + 'static;
+        V: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
-    fn query_when_changed_on_with<V, U>(
+    /// Emits `selector` applied to a snapshot after every batch, and also whenever an item's
+    /// trigger stream emits.
+    fn query_when_changed_on_with<V, U, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
         selector: impl Fn(&CacheQuery<K, T>) -> U + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         V: Send + Sync + 'static,
-        U: Clone + Send + Sync + 'static;
+        U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
 
+    /// Emits the items in key order after every batch.
     fn to_collection(&self) -> ValueStream<Vec<T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the items sorted by `compare` after every batch.
     fn to_sorted_collection(
         &self,
         compare: impl Fn(&T, &T) -> Ordering + Send + Sync + 'static,
@@ -46,6 +70,8 @@ pub trait CacheAggregationExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the items sorted by the key `selector` returns, descending when `descending` is
+    /// `true`, after every batch.
     fn to_sorted_collection_by<S>(
         &self,
         selector: impl Fn(&T) -> S + Send + Sync + 'static,
@@ -56,27 +82,35 @@ pub trait CacheAggregationExt<K, T> {
         T: Clone + Send + Sync + 'static,
         S: Ord + Send + Sync + 'static;
 
+    /// Emits the number of entries whenever it changes.
     fn count(&self) -> ValueStream<usize>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits whether the cache is empty: once for the snapshot, then only when it changes.
     fn is_empty(&self) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits whether the cache has entries: once for the snapshot, then only when it changes.
     fn is_not_empty(&self) -> ValueStream<bool>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the running sum of `selector` over the entries.
+    ///
+    /// Floating-point sums use a compensated running sum and count infinities and NaN apart, so the
+    /// result recovers once such a value leaves.
     fn sum_by<N>(&self, selector: impl Fn(&T) -> N + Send + Sync + 'static) -> ValueStream<N>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         N: Copy + Default + Add<Output = N> + Sub<Output = N> + Send + Sync + 'static;
 
+    /// Emits the mean of `selector` over the entries, or `empty_value` when the cache is empty.
     fn avg_by(
         &self,
         selector: impl Fn(&T) -> f64 + Send + Sync + 'static,
@@ -86,6 +120,8 @@ pub trait CacheAggregationExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the standard deviation of `selector` over the entries, or `fallback_value` when it is
+    /// undefined.
     fn std_dev_by(
         &self,
         selector: impl Fn(&T) -> f64 + Send + Sync + 'static,
@@ -95,6 +131,9 @@ pub trait CacheAggregationExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Emits the greatest value of `selector`, or `empty_value` when empty, only when it changes.
+    ///
+    /// NaN orders as the greatest value and equals itself.
     fn max_by<S>(
         &self,
         selector: impl Fn(&T) -> S + Send + Sync + 'static,
@@ -105,6 +144,9 @@ pub trait CacheAggregationExt<K, T> {
         T: Clone + Send + Sync + 'static,
         S: Clone + PartialOrd + Send + Sync + 'static;
 
+    /// Emits the smallest value of `selector`, or `empty_value` when empty, only when it changes.
+    ///
+    /// NaN orders as the greatest value and equals itself.
     fn min_by<S>(
         &self,
         selector: impl Fn(&T) -> S + Send + Sync + 'static,
@@ -158,15 +200,23 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn query_when_changed_on<V>(
+    fn query_when_changed_on<V, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
     ) -> ValueStream<CacheQuery<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
         V: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
+        let item_changed_trigger = move |argument_0: &T, argument_1: &K| {
+            item_changed_trigger(argument_0, argument_1).err_into::<CollectionError>()
+        };
         let source = self.clone();
         let item_changed_trigger = Arc::new(item_changed_trigger);
         ValueStream::new(move |subscriber| {
@@ -223,9 +273,12 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         })
     }
 
-    fn query_when_changed_on_with<V, U>(
+    fn query_when_changed_on_with<V, U, E>(
         &self,
-        item_changed_trigger: impl Fn(&T, &K) -> ValueStream<V> + Send + Sync + 'static,
+        item_changed_trigger: impl Fn(&T, &K) -> crate::primitives::ValueStream<V, E>
+        + Send
+        + Sync
+        + 'static,
         selector: impl Fn(&CacheQuery<K, T>) -> U + Send + Sync + 'static,
     ) -> ValueStream<U>
     where
@@ -233,8 +286,13 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         T: Clone + Send + Sync + 'static,
         V: Send + Sync + 'static,
         U: Clone + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
     {
-        let queries = self.query_when_changed_on(item_changed_trigger);
+        let item_changed_trigger = move |argument_0: &T, argument_1: &K| {
+            item_changed_trigger(argument_0, argument_1).err_into::<CollectionError>()
+        };
+        let queries = self.query_when_changed_on::<_, CollectionError>(item_changed_trigger);
         let selector = Arc::new(selector);
         ValueStream::new(move |subscriber| {
             let selector = Arc::clone(&selector);
@@ -312,11 +370,7 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let counts = CacheAggregationExt::count(self);
-        ValueStream::new(move |subscriber| {
-            subscriber(&true);
-            counts.subscribe(move |count| subscriber(&(*count == 0)))
-        })
+        emptiness(CacheAggregationExt::count(self), |count| count == 0)
     }
 
     fn is_not_empty(&self) -> ValueStream<bool>
@@ -324,11 +378,7 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
-        let counts = CacheAggregationExt::count(self);
-        ValueStream::new(move |subscriber| {
-            subscriber(&false);
-            counts.subscribe(move |count| subscriber(&(*count > 0)))
-        })
+        emptiness(CacheAggregationExt::count(self), |count| count > 0)
     }
 
     fn sum_by<N>(&self, selector: impl Fn(&T) -> N + Send + Sync + 'static) -> ValueStream<N>
@@ -433,4 +483,3 @@ impl<K, T> CacheAggregationExt<K, T> for ChangeStream<CacheChange<K, T>> {
         distinct_values(values)
     }
 }
-

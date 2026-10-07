@@ -23,3 +23,49 @@ jobs:
       - run: cargo test --workspace --all-features
       - run: cargo check --workspace --target wasm32-unknown-unknown
       - run: cargo package --workspace
+
+  docs:
+    name: rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.99.0
+      - run: cargo rustdoc -p rayx_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
+
+  msrv:
+    name: MSRV (Rust 1.95)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95
+      # `rust-toolchain.toml` pins the development toolchain; the explicit `+1.95` overrides it.
+      - run: cargo +1.95 check -p rayx_reactive --all-features
+      - run: cargo +1.95 test -p rayx_reactive --all-features
+
+  wasm-tests:
+    name: wasm32 tests (wasm-bindgen-test)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install the wasm-bindgen test runner matching Cargo.lock
+        run: |
+          version=$(cargo pkgid -p wasm-bindgen | sed 's/.*@//')
+          cargo install wasm-bindgen-cli --version "$version" --locked
+      # Runs the `#[wasm_bindgen_test]` tests (Node); native-only tests are skipped there.
+      - run: cargo test -p rayx_reactive --target wasm32-unknown-unknown --all-features --lib --tests
+
+  macos:
+    name: test (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.99.0
+      - run: cargo test --workspace --all-features

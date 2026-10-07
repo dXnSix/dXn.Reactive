@@ -43,9 +43,11 @@ List stream sorting:
 - `sort_with_resort(compare, resort)`
 - `sort_dynamic_with_resort(comparers, resort)`
 
-Ordinary source batches mutate the sorted target incrementally. Comparer changes and explicit resort signals re-sort tracked source state.
+Ordinary source batches mutate the sorted target incrementally: inserts go before the first item that compares greater (equal items keep arrival order), and a `Replace`/`Refresh` that changes position becomes a move. List sorts find positions by a linear scan and identify items by equality, so each change costs O(n); sort a keyed cache for large collections with identity.
 
-Use `sort_with_resort` when mutable items can change their sort key and the source emits `Refresh`. Use dynamic comparers for user-selected sort columns/directions.
+A comparer change or a resort reorders the output with as few `Move` changes as possible and never replaces an item (reversing five items is four moves; equal items keep their identity). A reorder that would shift more than about four million positions in all (reversing more than about 2,000 items) falls back to a positional diff that replaces changed positions. The same applies to the list-shaped cache sorts below.
+
+Use `sort_with_resort` when mutable items can change their sort key in place without a source update. Use dynamic comparers for user-selected sort columns/directions. Comparer and resort streams accept any error type convertible into `CollectionError`, each stream with its own.
 
 ## List Paging And Virtualization
 
@@ -65,6 +67,8 @@ List stream windows:
 `page_*_with_response` returns `ValueStream<PageChangeSet<T>>` with `PageResponse`.
 
 `virtualize_*_with_response` returns `ValueStream<VirtualChangeSet<T>>` with `VirtualResponse`.
+
+Window output indexes are relative to the window; a page past the end is empty. Dynamic windows (`page_dynamic*`, `virtualize_dynamic*`) emit nothing until the first request arrives; there is no default `0..25` window.
 
 `top(0)` panics. Validate user-provided sizes before calling it.
 
@@ -96,9 +100,9 @@ Key-preserving sorted cache streams:
 - `sort_keyed_with_resort(compare, resort)`
 - `sort_keyed_dynamic_with_resort(comparers, resort)`
 
-These return `ChangeStream<CacheChange<K, T>>` with indexed cache changes. Use them for data grids, keyed rows, trees, and any UI state keyed by domain identity.
+These return `ChangeStream<CacheChange<K, T>>` with indexed cache changes. Use them for data grids, keyed rows, trees, and any UI state keyed by domain identity. Inserts use a binary search (O(log n) comparisons); the initial snapshot arrives as `Add`s valid when applied in order; each new comparer or resort re-sorts with as few moves as possible.
 
-Sorted keyed `Update` changes may carry different `previous_index` and `current_index`. Cache materializers must treat those as remove-at-previous plus insert-at-current, not in-place replacement.
+Sorted keyed `Update` changes may carry different `previous_index` and `current_index`. Cache materializers must treat those as remove-at-previous plus insert-at-current, not in-place replacement. A `Move` carries the item as it is; a later change to the same key in the batch uses the post-move position.
 
 ## Index Updates
 
@@ -106,7 +110,7 @@ Sorted keyed `Update` changes may carry different `previous_index` and `current_
 
 `CacheStreamExt::update_index_with(|item, index| ...)` accepts a closure.
 
-The operator maintains the full ordered cache state and updates every live item index before forwarding each batch. Use shared/interior-mutable items when external code must observe the side effect.
+The operator maintains the full ordered cache state and updates every live item index before forwarding each batch (O(n) per batch; place it after a keyed sort). Use shared/interior-mutable items when external code must observe the side effect.
 
 ## Keyed Cache Windows
 
@@ -141,7 +145,7 @@ Direct sorted cache windowing:
 - `sort_and_virtualize_dynamic_with_response_by(compare, requests)`
 - `sort_and_virtualize_dynamic_with_response(comparers, requests)`
 
-These keep source cache state, sorted order, and visible list window in one operator. They emit list-shaped changes, not keyed cache changes.
+These keep source cache state, sorted order, and visible list window in one operator, built on the keyed sort's state: they show the same items as `sort_keyed_*` followed by the keyed window and load with O(n log n) comparisons. They emit list-shaped changes, not keyed cache changes; window shifts are emitted as `Replace` changes per slot.
 
 Choose direct sort-and-window when a consumer needs only visible list items and does not need key-preserving cache output.
 
@@ -163,6 +167,8 @@ Choose `sort_keyed_*().page_keyed*()` when keys must survive the window.
 - `total_count`
 
 Use response variants when the UI needs pagination controls, scroll metrics, virtualized total count, or visible item counts without a separate aggregate subscription.
+
+Response semantics (list, keyed and `sort_and_*`): a response is emitted whenever any of its fields changes, with an **empty change set** when the visible items did not change (for example `total_count` grew outside the window), and once the source has loaded, even for an empty window. Update pagination/scroll metrics from every emission; do not skip empty change sets.
 
 ## DO
 

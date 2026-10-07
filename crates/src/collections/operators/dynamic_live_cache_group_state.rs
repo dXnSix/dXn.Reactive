@@ -162,7 +162,7 @@ fn live_pending_group_changes<'a, K, T, G>(
     pending: &'a mut CacheGroupPending<K, T, G>,
     group_key: &G,
     group: &RayCacheGroup<G, K, T>,
-) -> &'a mut Vec<CacheChange<K, T>>
+) -> &'a mut crate::collections::connection::PendingChanges<CacheChange<K, T>>
 where
     G: Clone + Eq + Hash,
     K: Clone,
@@ -170,19 +170,32 @@ where
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), Vec::new()))
+        .or_insert_with(|| {
+            (
+                group.clone(),
+                crate::collections::connection::PendingChanges::new(),
+            )
+        })
         .1
 }
 
-fn publish_pending_group_cache_changes<K, T, G>(pending: CacheGroupPending<K, T, G>)
+/// Queues each group's pending changes; call it while holding the operator's state lock,
+/// and [`drain_staged_groups`] with the result after releasing it.
+fn stage_pending_group_cache_changes<K, T, G>(
+    pending: CacheGroupPending<K, T, G>,
+) -> Vec<RayCacheGroup<G, K, T>>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
     G: Clone + Send + Sync + 'static,
 {
-    for (_, (group, changes)) in pending {
-        let _ = group.publish_pending(changes);
-    }
+    pending
+        .into_values()
+        .filter_map(|(group, changes)| match group.stage_pending(changes) {
+            Ok(true) => Some(group),
+            Ok(false) | Err(_) => None,
+        })
+        .collect()
 }
 
 fn remove_live_pending_group_add<K, T, G>(
@@ -192,38 +205,61 @@ fn remove_live_pending_group_add<K, T, G>(
 where
     G: Eq,
 {
-    let Some(index) = group_changes
-        .iter()
-        .position(|change| matches!(change, CacheChange::Add { key, .. } if key == group_key))
+    let Some((position, dropped)) =
+        group_changes
+            .iter()
+            .enumerate()
+            .find_map(|(position, change)| match change {
+                CacheChange::Add {
+                    key, current_index, ..
+                } if key == group_key => Some((position, *current_index)),
+                _ => None,
+            })
     else {
         return false;
     };
-    let _ = group_changes.remove(index);
+    let _ = group_changes.remove(position);
+    // Later changes were indexed with the dropped group still in the output.
+    if let Some(dropped) = dropped {
+        for change in group_changes.iter_mut().skip(position) {
+            if let CacheChange::Add {
+                current_index: Some(index),
+                ..
+            }
+            | CacheChange::Remove {
+                previous_index: Some(index),
+                ..
+            } = change
+                && *index > dropped
+            {
+                *index -= 1;
+            }
+        }
+    }
     true
 }
 
-fn insert_group_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
-    }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
+fn insert_group_order_key<K: Clone + Eq + Hash>(
+    order: &mut KeyOrder<K>,
+    key: K,
+    index: Option<usize>,
+) {
+    // Without an index an existing key moves to the end (as a fresh insertion would).
+    let _ = order.insert(index.unwrap_or(usize::MAX), key);
 }
 
 fn group_position<K: Eq>(order: &[K], key: &K) -> Option<usize> {
     order.iter().position(|existing| existing == key)
 }
 
-fn move_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
+fn move_group_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K, index: usize) {
+    if let Some(previous_index) = order.index_of(key) {
+        let _ = order.move_to(previous_index, index);
     }
 }
 
-fn remove_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
+fn remove_group_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K) {
+    let _ = order.remove(key);
 }
 
 fn total_pages(total_count: usize, page_size: usize) -> usize {
@@ -234,100 +270,9 @@ fn total_pages(total_count: usize, page_size: usize) -> usize {
     }
 }
 
-fn child_map<ChildKey, Child, Children>(
-    children: Children,
-    child_key: &dyn Fn(&Child) -> ChildKey,
-) -> HashMap<ChildKey, Child>
-where
-    ChildKey: Eq + Hash,
-    Children: IntoIterator<Item = Child>,
-{
-    children
-        .into_iter()
-        .map(|child| (child_key(&child), child))
-        .collect()
-}
-
-fn diff_child_maps<ChildKey, Child>(
-    previous: &HashMap<ChildKey, Child>,
-    next: &HashMap<ChildKey, Child>,
-    changes: &mut Vec<CacheChange<ChildKey, Child>>,
-) where
-    ChildKey: Clone + Eq + Hash,
-    Child: Clone + PartialEq,
-{
-    for (key, previous_child) in previous {
-        if !next.contains_key(key) {
-            changes.push(CacheChange::Remove {
-                key: key.clone(),
-                previous: previous_child.clone(),
-                previous_index: None,
-            });
-        }
-    }
-
-    for (key, next_child) in next {
-        match previous.get(key) {
-            Some(previous_child) if previous_child == next_child => {}
-            Some(previous_child) => changes.push(CacheChange::Update {
-                key: key.clone(),
-                current: next_child.clone(),
-                previous: previous_child.clone(),
-                current_index: None,
-                previous_index: None,
-            }),
-            None => changes.push(CacheChange::Add {
-                key: key.clone(),
-                current: next_child.clone(),
-                current_index: None,
-            }),
-        }
-    }
-}
-
-fn refresh_child_maps<ChildKey, Child>(
-    previous: &HashMap<ChildKey, Child>,
-    next: &HashMap<ChildKey, Child>,
-    changes: &mut Vec<CacheChange<ChildKey, Child>>,
-) where
-    ChildKey: Clone + Eq + Hash,
-    Child: Clone + PartialEq,
-{
-    for (key, previous_child) in previous {
-        if !next.contains_key(key) {
-            changes.push(CacheChange::Remove {
-                key: key.clone(),
-                previous: previous_child.clone(),
-                previous_index: None,
-            });
-        }
-    }
-
-    for (key, next_child) in next {
-        match previous.get(key) {
-            Some(previous_child) if previous_child == next_child => {
-                changes.push(CacheChange::Refresh {
-                    key: key.clone(),
-                    current: next_child.clone(),
-                    current_index: None,
-                });
-            }
-            Some(previous_child) => changes.push(CacheChange::Update {
-                key: key.clone(),
-                current: next_child.clone(),
-                previous: previous_child.clone(),
-                current_index: None,
-                previous_index: None,
-            }),
-            None => changes.push(CacheChange::Add {
-                key: key.clone(),
-                current: next_child.clone(),
-                current_index: None,
-            }),
-        }
-    }
-}
-
+/// Applies every change of a list `change_set` to `target` in order.
+///
+/// Same semantics as [`apply_list_changes`]; it currently always returns `Ok`.
 pub fn apply_change_set_to_vec<T: Clone>(
     target: &mut Vec<T>,
     change_set: &ChangeSet<ListChange<T>>,
@@ -336,6 +281,7 @@ pub fn apply_change_set_to_vec<T: Clone>(
     Ok(())
 }
 
+/// Locks a shared vector, mapping a poisoned mutex to [`CollectionError::Poisoned`].
 pub fn lock_vec<T>(target: &Arc<Mutex<Vec<T>>>) -> Result<std::sync::MutexGuard<'_, Vec<T>>> {
     target.lock().map_err(|_| CollectionError::Poisoned)
 }

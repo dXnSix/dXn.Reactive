@@ -85,8 +85,10 @@ Semantics:
 - **No item passes until the first state or predicate arrives.** Because `Signal::values()` emits
   immediately, this is invisible when a signal drives the filter.
 - Source changes are filtered incrementally against the latest state.
-- A new state or predicate re-tests every tracked item and emits a structured diff (removals and
-  additions), not a reset.
+- A new state or predicate re-tests every tracked item and emits only the items whose inclusion
+  flipped: removals and additions at their output positions, never a reset. Items that stay
+  included are neither replaced nor moved, so shifting a window predicate from `[1000, 2000)` to
+  `[1001, 2001)` emits one `Remove` and one `Add`.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -157,8 +159,8 @@ Noisy feeds often send updates that do not matter downstream. These operators in
 
 | Operator | Drops an update when |
 |---|---|
-| `ignore_update_when(\|previous, current\| bool)` | the closure returns `true` |
-| `include_update_when(\|previous, current\| bool)` | the closure returns `false` |
+| `ignore_update_when(\|current, previous\| bool)` | the closure returns `true` |
+| `include_update_when(\|current, previous\| bool)` | the closure returns `false` |
 | `ignore_same_value_update()` | `previous == current` (`T: PartialEq`) |
 | `ignore_same_reference_update()` | `Arc::ptr_eq(previous, current)`, for `Arc<T>` items (`CacheArcStreamExt`) |
 
@@ -177,7 +179,7 @@ let updates = Arc::new(Mutex::new(0));
 let sink = Arc::clone(&updates);
 let _subscription = sensors
     .connect()
-    .ignore_update_when(|previous, current| (previous.celsius - current.celsius).abs() < 0.5)
+    .ignore_update_when(|current, previous| (current.celsius - previous.celsius).abs() < 0.5)
     .subscribe(move |batch| *sink.lock().unwrap() += batch.changes.len())?;
 
 sensors.add_or_update(Sensor { id: 1, celsius: 20.0 })?; // add: passes
@@ -418,22 +420,14 @@ force stream:
 | `transform_with_forced(f, force)` | `ValueStream<CacheForceTransform<K, T>>` | items for which the emitted predicate `Fn(&T, &K) -> bool` returns `true` |
 | `transform_with_previous_forced`, `transform_safe_with_forced*`, `transform_async_with_previous_forced`, `transform_safe_async_with_previous_forced` | as above | |
 
-Force streams use the collection `ValueStream` flavor (`CollectionError`). The example adapts a
-signal's stream with the small `collection_stream` helper explained in
-[Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators):
+Force streams accept any stream whose error converts into `CollectionError`, so a signal's or an
+event bus's stream is passed directly
+([Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators)):
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, RwLock};
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 let rate = Arc::new(RwLock::new(1.0_f64)); // external state the projection reads
 let rate_changed = Signal::new(0_u32);     // bumped whenever `rate` changes
@@ -447,7 +441,7 @@ let converted = {
         .connect()
         .transform_with_forced_all(
             move |item| item.1 * *rate.read().unwrap(),
-            collection_stream(rate_changed.changes().map(|_| ())),
+            rate_changed.changes().map(|_| ()),
         )
         .as_observable_cache(|_| "")?
 };
@@ -465,7 +459,7 @@ resolving a reference.
 
 | Collection | Operators |
 |---|---|
-| list | `transform_async(f)`, `transform_async_on_refresh(f)`, `transform_async_with_previous(f, transform_on_refresh)` |
+| list | `transform_async(f)`, `transform_async_on_refresh(f)`, `transform_async_with_previous(f, transform_on_refresh)`, `transform_async_with_options(f, options)` |
 | cache | `transform_async(f)`, `transform_async_with_key(f)`, `transform_async_with_previous(f, options)`, `transform_async_with_previous_forced(f, force, options)`, and `transform_safe_async*` variants |
 
 How they execute:
@@ -477,8 +471,18 @@ How they execute:
 - Output is delivered **on the worker thread**. Marshal to your UI thread in the subscriber, as you
   would for any background work.
 - `TransformAsyncOptions { maximum_concurrency, transform_on_refresh }` bounds how many futures of
-  one batch run concurrently (`None` means unbounded) and whether refreshes re-run the future.
-  `TransformAsyncOptions::DEFAULT` is unbounded with no refresh transforms.
+  one batch run concurrently (`None` means unbounded; `Some(0)` counts as 1) and whether
+  refreshes re-run the future. `TransformAsyncOptions::DEFAULT` is unbounded with no refresh
+  transforms. List results are applied in index order whatever order the futures finish in.
+- A future is **dropped** when a later source batch removes or replaces its item (or updates its
+  key) and when the subscription is disposed; the worker then exits promptly and nothing more is
+  delivered.
+- A **panicking** future does not stop the worker. The item is left out (a cache keeps a key's
+  previous projection; list indexes skip the item), and later batches are processed. The safe
+  variants report the panic through `on_error` when their error type can carry it: `E` is
+  `TransformPanic`, `String` (the message), `Box<dyn Error + Send + Sync>` or
+  `Arc<dyn Error + Send + Sync>`, or the panic payload is itself an `E`
+  (`std::panic::panic_any`). Output indexes are positions among the items the operator shows.
 - The futures run outside any async runtime. Do not rely on runtime context such as Tokio's
   reactor or timers inside them; spawn such work on your runtime and await its handle, or use
   runtime-agnostic I/O.
@@ -517,7 +521,9 @@ Async transforms need OS threads, so they are not available on `wasm32-unknown-u
   order. When a parent is replaced or refreshed, its children are **diffed**, so unchanged children
   are not re-emitted.
 - **Cache:** `transform_many(child_key, |parent| children)` produces a keyed child cache. An updated
-  parent emits removes and adds only for children that actually changed.
+  parent emits removes and adds only for children that actually changed. A child key produced by
+  several parents belongs to the first live parent in parent order (another parent takes over
+  when it leaves), and changes are emitted in a deterministic order without indexes.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -547,17 +553,23 @@ Async cache variants produce children from a future (`transform_many_async`,
 `transform_many_async_by` with a duplicate-key comparer, and the `transform_many_safe_async*`
 fallible forms), or from a live **child change stream** per parent (`transform_many_async_stream*`).
 They track a generation per parent, so a slow future or stream from a parent that has since been
-updated or removed can never publish stale children.
+updated or removed can never publish stale children; such a future is dropped. All parents of one
+subscription run on **one worker thread**, with at most `maximum_concurrency` transforms in flight
+when given through the `_with_options` variants (`transform_many_async_with_options(child_key,
+f, options)` and likewise for the other seven); the plain forms run every pending transform
+concurrently. A panicking transform gives its parent no children (the safe forms report it as
+above). Output is serialized with the source's own changes, so a slow subscriber never sees
+children of parents that were already removed.
 
 ## Re-keying and bridging
 
 | Operator | From → to | Purpose |
 |---|---|---|
-| `ListStreamExt::add_key(selector)` | list → cache | give list items an identity; output indexes are `None` |
+| `ListStreamExt::add_key(selector)` | list → cache | give list items an identity (keys must be unique); output indexes are the list positions |
 | `CacheStreamExt::remove_key()` | cache → list | drop keys, keeping the cache order |
-| `change_key(selector)` | cache → cache | re-key items by a value-derived key |
+| `change_key(selector)` | cache → cache | re-key items by a value-derived key; an item whose key changes is removed under the old key and added under the new one, and when several items map to one key the latest added or updated one is shown (removing it falls back to a remaining one). It emits no indexes, so sort **after** `change_key`, not before. |
 | `change_key_with_source_key(selector)` | cache → cache | re-key using the old key and the item |
-| `ensure_unique_keys()` | cache → cache | keep one change per key per batch (the last non-refresh change wins), drop moves, and re-derive add/update/remove against the operator's own state |
+| `ensure_unique_keys()` | cache → cache | collapse each batch to one change per key against the operator's own ordered state, moving only the keys whose order changed (a moved key's new value travels with its move; the one exception is a key that is moved and also refreshed, which gets both changes) |
 | `start_with_item(key, item)` | cache → cache | emit a synthetic add for one item at subscription |
 
 ```rust

@@ -106,9 +106,10 @@ fn cache_transform_safe_async_reports_errors_and_recovers() -> Result<(), Box<dy
         })?;
 
     source.add_or_update(Row { id: 1, value: 13 })?;
+    // An update arriving before the first transform ran would cancel it: let it fail first.
+    assert!(wait_for_len(&errors, 1));
     source.add_or_update(Row { id: 1, value: 14 })?;
 
-    assert!(wait_for_len(&errors, 1));
     assert!(wait_for_len(&received, 1));
 
     let errors = lock_vec(&errors)?;

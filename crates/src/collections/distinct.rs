@@ -5,7 +5,13 @@ use std::sync::{Arc, Mutex};
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::stream::ChangeStream;
 
+/// Distinct selected values of a list stream.
 pub trait ListDistinctExt<T> {
+    /// Emits the distinct values of `selector` across all items, as a list.
+    ///
+    /// Reference counts are kept per value, so a value is added when it first appears and
+    /// removed when its last item disappears; other changes publish nothing. Use it for filter
+    /// facets, tag clouds and category pickers.
     fn distinct_values<V>(
         &self,
         selector: impl Fn(&T) -> V + Send + Sync + 'static,
@@ -44,7 +50,12 @@ impl<T> ListDistinctExt<T> for ChangeStream<ListChange<T>> {
     }
 }
 
+/// Distinct selected values of a cache stream.
 pub trait CacheDistinctExt<K, T> {
+    /// Emits the distinct values of `selector` across all items, as a list.
+    ///
+    /// Reference counts are kept per value, so a value is added when it first appears and
+    /// removed when its last item disappears; other changes publish nothing.
     fn distinct_values<V>(
         &self,
         selector: impl Fn(&T) -> V + Send + Sync + 'static,

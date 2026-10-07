@@ -11,12 +11,11 @@ everything when the downstream subscription is dropped. Do not maintain your own
 subscriptions next to a collection: these operators already handle every edge case (moves, clears,
 replacements, unsubscribe during delivery).
 
-## Per-item streams use the collection flavor
+## Per-item streams
 
-Operator selectors return `rayx_reactive::collections::ValueStream<U>` (error type
-`CollectionError`). When items expose `Signal`s, adapt their streams with the `collection_stream`
-helper from [Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators).
-Every example in this chapter defines it inline.
+Operator selectors return a `ValueStream<U, E>` of any error type `E` that converts into
+`CollectionError`. When items expose `Signal`s, return `signal.values()` or `signal.changes()`
+directly ([Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators)).
 
 Cache selectors receive `(&item, &key)`; list selectors receive `&item`.
 
@@ -30,14 +29,6 @@ are not replaced.
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 #[derive(Clone)]
 struct Download {
@@ -60,7 +51,7 @@ downloads.add_or_update_range([first.clone(), second.clone()])?;
 // and the refresh makes the filter re-test it.
 let active = downloads
     .connect()
-    .auto_refresh(|download, _id| collection_stream(download.progress.changes()))
+    .auto_refresh(|download, _id| download.progress.changes())
     .filter(|download| download.progress.get().unwrap_or(0) < 100)
     .as_observable_cache(|download| download.id)?;
 assert_eq!(active.keys()?, [1, 2]);
@@ -76,25 +67,25 @@ Use `changes()`, or another stream that emits only on change, as above.
 `auto_refresh_buffered(selector, duration)` forwards normal source changes immediately, but
 collects child-triggered refreshes for `duration` and emits them as one batch. Use it for
 high-frequency per-item signals such as progress, live metrics or validation-on-keystroke.
-It runs a timer thread, so see [platform notes](16-concurrency-and-platforms.md#worker-threads-and-timers).
+Its timer runs on the default [scheduler](16-concurrency-and-platforms.md#schedulers);
+`auto_refresh_buffered_with_scheduler(selector, duration, scheduler)` takes another one. The
+buffered refreshes leave the operator in order with the source batches, one at a time, and each
+refresh index is the item's position when the refresh batch is delivered. Dropping the
+subscription cancels a pending flush without waiting for it.
 
 ## Filtering on per-item streams
 
 `filter_on_observable(|item, key| ValueStream<bool>)` (lists and caches) shows an item only while
-its stream's latest value is `true`. An item is hidden until its stream emits `true`. An update or
-replacement resets the item's inclusion and waits for the new stream.
+its stream's latest value is `true`. An item is hidden until its stream emits `true`. The values a
+stream emits while it is being subscribed are folded into the source batch, so subscribing over
+`n` items emits one batch. An updated (cache, at the same position) or replaced (list) item keeps
+its previous inclusion until its new stream has been subscribed: if it still passes, the change is
+one `Update`/`Replace`; otherwise it is removed (or added). A cache update that moves the item
+hides it until the new stream emits `true`.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 #[derive(Clone)]
 struct Layer {
@@ -115,7 +106,7 @@ layers.add_or_update_range([background.clone(), overlay.clone()])?;
 
 let shown = layers
     .connect()
-    .filter_on_observable(|layer, _id| collection_stream(layer.visible.values()))
+    .filter_on_observable(|layer, _id| layer.visible.values())
     .as_observable_cache(|layer| layer.id)?;
 assert_eq!(shown.keys()?, [1]);
 
@@ -159,14 +150,6 @@ use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
-
 #[derive(Clone)]
 struct Field {
     name: &'static str,
@@ -187,7 +170,7 @@ let edits = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&edits);
 let _subscription = form
     .connect()
-    .merge_many_keyed_items(|field, _name| collection_stream(field.text.changes().map(|change| change.current.clone())))
+    .merge_many_keyed_items(|field, _name| field.text.changes().map(|change| change.current.clone()))
     .subscribe(move |edit| sink.lock().unwrap().push((edit.key, edit.value.clone())))?;
 
 email.text.set("ada@example.com".into())?;
@@ -204,6 +187,11 @@ the children into one flat stream:
 | `merge_many_list_change_sets(\|parent\| ChangeStream<ListChange<U>>)` | one list of all children; a departing parent's children are removed |
 | `merge_many_cache_change_sets(\|parent\| ChangeStream<CacheChange<CK, U>>)` | one cache of all children; on duplicate child keys the first live parent (in source order) wins |
 | `merge_many_cache_change_sets_by(selector, compare)` | as above, but `compare` picks the winner for duplicate child keys and recomputes fallbacks when a winner changes or leaves |
+
+Children that a child stream emits while it is being subscribed are folded into the parent batch,
+so the startup is one batch, and a parent updated (or replaced) with identical children changes
+nothing: its previous children stay until the new stream has been subscribed and are then
+reconciled with the new ones.
 
 The free functions `merge_list_change_sets(streams)`, `merge_cache_change_sets(streams)` and
 `merge_cache_change_sets_by(streams, compare)` merge a fixed set of streams the same way.
@@ -260,7 +248,10 @@ collection or are replaced.
 |---|---|
 | `dispose_many()` | `DisposeItem::dispose(&self)`, implemented by the item type |
 | `dispose_many_with(\|item, key\| …)` | a closure |
-| `dispose_many_by(same_item, dispose)` (cache) | a closure, skipped on updates where `same_item(previous, current)` says the resource was kept |
+| `dispose_many_by(same_item, dispose)` | a closure, skipped on updates (cache) and replacements (list) where `same_item(previous, current)` says the resource was kept |
+
+`dispose_many` and `dispose_many_with` skip an update or replacement by an **equal** item (they
+require `T: PartialEq`); use `dispose_many_by` for another notion of sameness.
 
 Ordering is deliberate: the batch is **forwarded first**, then removed and replaced items are
 finalized, so downstream observers never see a disposed item. On unsubscribe, every remaining item
@@ -302,6 +293,8 @@ completed)`.
   Source delivery never waits for them.
 - `completed` receives a `ValueStream<()>` that fires once every queued finalizer, including those
   queued by teardown, has finished. Use it to delay shutdown until cleanup completes.
+- A finalizer that panics (creating its future or while it runs) is skipped: the later finalizers
+  still run and `completed` still fires.
 
 ## Evaluating on refresh
 
@@ -322,21 +315,15 @@ let rows = source
 
 `true_for_all`, `true_for_all_value`, `true_for_any` and `true_for_any_value` reduce per-item
 streams to one boolean (see [chapter 11](11-grouping-joins-trees.md#collection-wide-predicates-true_for_all-and-true_for_any)).
-A newly added item counts as `false` until its stream emits, so a synchronously emitting stream can
-produce a brief `false` → `true` pair:
+The result is evaluated once a batch's item streams have been subscribed, so a value a stream emits
+while subscribing (such as `values()`' current value) counts at once, with no `false` flicker:
+adding a passing item to a passing collection emits nothing. An item whose stream has not emitted
+yet counts as `false`:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
 use rayx_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
-
-fn collection_stream<T: Send + Sync + 'static>(
-    stream: rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::collections::ValueStream<T> {
-    rayx_reactive::collections::ValueStream::new(move |subscriber| {
-        Ok(stream.subscribe(move |value| subscriber(value))?)
-    })
-}
 
 #[derive(Clone)]
 struct Upload {
@@ -354,7 +341,7 @@ let uploads = SourceCache::new(|upload: &Upload| upload.id);
 let history = Arc::new(Mutex::new(Vec::new()));
 let sink = Arc::clone(&history);
 let _subscription = uploads
-    .true_for_all_value(|upload, _id| collection_stream(upload.done.values()), |done| *done)
+    .true_for_all_value(|upload, _id| upload.done.values(), |done| *done)
     .subscribe(move |all_done| sink.lock().unwrap().push(*all_done))?;
 
 let upload = Upload { id: 1, done: Signal::new(false) };

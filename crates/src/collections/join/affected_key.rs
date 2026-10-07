@@ -1,3 +1,4 @@
+use crate::collections::connection::PendingChanges;
 impl<K, L, RK, R, U> JoinManyState<K, L, RK, R, U>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -11,11 +12,29 @@ where
             kind,
             left: OrderedCache::default(),
             right_items: HashMap::new(),
-            right_order: Vec::new(),
+            right_order: KeyOrder::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             result: OrderedCache::default(),
+            staged: Vec::new(),
         }
+    }
+
+    /// Queues `pending` on `group` (the join's lock is held); delivered by
+    /// [`take_staged`](Self::take_staged)'s caller after the lock is released.
+    fn stage_group(
+        &mut self,
+        group: &RayCacheGroup<K, RK, R>,
+        pending: PendingChanges<CacheChange<RK, R>>,
+    ) {
+        if matches!(group.stage_pending(pending), Ok(true)) {
+            self.staged.push(group.clone());
+        }
+    }
+
+    /// The groups whose staged changes must be delivered once the join's lock is released.
+    fn take_staged(&mut self) -> Vec<RayCacheGroup<K, RK, R>> {
+        std::mem::take(&mut self.staged)
     }
 
     fn apply_left(
@@ -29,11 +48,32 @@ where
 
         let affected = affected_cache_keys(&self.left, &batch.changes);
         apply_cache_changes(&mut self.left, &batch.changes);
+        let keys = affected
+            .iter()
+            .map(|affected| affected.key.clone())
+            .collect::<Vec<_>>();
 
         let mut changes = Vec::new();
+        // Group membership changes as keys are updated, so the order is taken afterwards;
+        // additions use the order as it was when the batch started.
+        let ranks = order_ranks(&self.desired_order());
         for affected in affected {
-            self.update_key(affected.key, affected.refresh, selector, &mut changes);
+            self.update_key(
+                affected.key,
+                affected.refresh,
+                selector,
+                &ranks,
+                &mut changes,
+            );
         }
+        // A removed left key frees its group when no right item uses it.
+        for key in &keys {
+            if !self.left.items.contains_key(key) {
+                self.cleanup_group_if_unused(key);
+            }
+        }
+        let desired = self.desired_order();
+        reorder_result(&mut self.result, &desired, &mut changes);
         changes
     }
 
@@ -47,15 +87,26 @@ where
             return Vec::new();
         }
 
-        let mut affected = Vec::<AffectedKey<K>>::new();
+        let mut affected = AffectedKeys::<K>::default();
         for change in &batch.changes {
             self.apply_right_change(change, right_key_selector, &mut affected);
         }
 
         let mut changes = Vec::new();
-        for affected in affected {
-            self.update_key(affected.key, affected.refresh, selector, &mut changes);
+        // Group membership changes as keys are updated, so the order is taken afterwards;
+        // additions use the order as it was when the batch started.
+        let ranks = order_ranks(&self.desired_order());
+        for affected in affected.keys {
+            self.update_key(
+                affected.key,
+                affected.refresh,
+                selector,
+                &ranks,
+                &mut changes,
+            );
         }
+        let desired = self.desired_order();
+        reorder_result(&mut self.result, &desired, &mut changes);
         changes
     }
 
@@ -63,7 +114,7 @@ where
         &mut self,
         change: &CacheChange<RK, R>,
         right_key_selector: &dyn Fn(&R) -> K,
-        affected: &mut Vec<AffectedKey<K>>,
+        affected: &mut AffectedKeys<K>,
     ) {
         match change {
             CacheChange::Add {
@@ -88,6 +139,12 @@ where
                 current_index,
                 ..
             } => {
+                // The right order moves first: the item's position in its group follows it.
+                if let Some(index) = current_index {
+                    move_or_insert_key(&mut self.right_order, key.clone(), *index);
+                } else if !self.right_order.contains_key(key) {
+                    let _ = self.right_order.push(key.clone());
+                }
                 let previous_group_key = self
                     .right_items
                     .get(key)
@@ -108,11 +165,6 @@ where
                     self.add_or_update_group_item(key, current.clone(), &next_group_key);
                     upsert_affected_key(affected, next_group_key, false);
                 }
-                if let Some(index) = current_index {
-                    move_or_insert_key(&mut self.right_order, key.clone(), *index);
-                } else if !self.right_order.iter().any(|existing| existing == key) {
-                    self.right_order.push(key.clone());
-                }
             }
             CacheChange::Remove { key, previous, .. } => {
                 let group_key = self
@@ -132,9 +184,9 @@ where
                 self.right_items
                     .insert(key.clone(), (group_key.clone(), current.clone()));
                 let group = self.group_for(&group_key);
-                let mut pending = Vec::new();
+                let mut pending = PendingChanges::new();
                 let _ = group.refresh_pending(key, current.clone(), &mut pending);
-                let _ = group.publish_pending(pending);
+                self.stage_group(&group, pending);
                 upsert_affected_key(affected, group_key, true);
             }
             CacheChange::Move {
@@ -152,11 +204,11 @@ where
                 self.right_items
                     .insert(key.clone(), (group_key.clone(), current.clone()));
                 let group = self.group_for(&group_key);
-                let mut pending = Vec::new();
+                let mut pending = PendingChanges::new();
                 if let Some(group_index) = self.group_index_for_right_key(key, &group_key) {
                     let _ = group.move_pending(key, group_index, &mut pending);
                 }
-                let _ = group.publish_pending(pending);
+                self.stage_group(&group, pending);
                 upsert_affected_key(affected, group_key, false);
             }
             CacheChange::Clear { previous } => {
@@ -190,13 +242,13 @@ where
 
     fn add_or_update_group_item(&mut self, key: &RK, item: R, group_key: &K) {
         let group = self.group_for(group_key);
-        let mut pending = Vec::new();
+        let mut pending = PendingChanges::new();
         let group_index = self.group_index_for_right_key(key, group_key);
         let _ = group.add_or_update_pending(key.clone(), item, group_index, &mut pending);
-        let _ = group.publish_pending(pending);
+        self.stage_group(&group, pending);
     }
 
-    fn remove_right_item(&mut self, key: &RK, affected: &mut Vec<AffectedKey<K>>) {
+    fn remove_right_item(&mut self, key: &RK, affected: &mut AffectedKeys<K>) {
         let Some((group_key, _)) = self.right_items.remove(key) else {
             remove_key(&mut self.right_order, key);
             return;
@@ -211,9 +263,9 @@ where
         let Some(group) = self.groups.get(group_key).cloned() else {
             return;
         };
-        let mut pending = Vec::new();
+        let mut pending = PendingChanges::new();
         let _ = group.remove_pending(key, &mut pending);
-        let _ = group.publish_pending(pending);
+        self.stage_group(&group, pending);
     }
 
     fn update_key(
@@ -221,6 +273,7 @@ where
         key: K,
         refresh: bool,
         selector: &JoinManySelector<K, L, RK, R, U>,
+        ranks: &HashMap<K, usize>,
         changes: &mut Vec<CacheChange<K, U>>,
     ) {
         let previous = self.result.items.get(&key).cloned();
@@ -231,7 +284,7 @@ where
             (Some(previous), None) => {
                 let previous_index = self.result_index(&key);
                 let _ = self.result.items.remove(&key);
-                remove_key(&mut self.result.order, &key);
+                let _ = self.result.order.remove(&key);
                 changes.push(CacheChange::Remove {
                     key,
                     previous,
@@ -239,39 +292,25 @@ where
                 });
             }
             (None, Some(current)) => {
-                let current_index = self.desired_index(&key);
+                let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
-                insert_key(&mut self.result.order, key.clone(), current_index);
-                let current_index = self.result_index(&key);
+                let _ = self.result.order.insert(index, key.clone());
                 changes.push(CacheChange::Add {
                     key,
                     current,
-                    current_index,
+                    current_index: Some(index),
                 });
             }
             (Some(previous), Some(current)) => {
+                // Updated in place; the batch's final reorder moves it if its position changed.
                 let previous_index = self.result_index(&key);
-                let desired_index = self.desired_index(&key);
-                if let Some(index) = desired_index
-                    && previous_index != Some(index)
-                {
-                    move_or_insert_key(&mut self.result.order, key.clone(), index);
-                    changes.push(CacheChange::Move {
-                        key: key.clone(),
-                        current: current.clone(),
-                        current_index: index,
-                        previous_index: previous_index.unwrap_or(index),
-                    });
-                }
-
                 if previous != current {
                     self.result.items.insert(key.clone(), current.clone());
-                    let current_index = self.result_index(&key);
                     changes.push(CacheChange::Update {
                         key,
                         current,
                         previous,
-                        current_index,
+                        current_index: previous_index,
                         previous_index,
                     });
                 } else if refresh {
@@ -303,12 +342,6 @@ where
             JoinManyKind::Full => left.is_some() || group_has_items,
         };
         include.then(|| selector(key, left, group)).flatten()
-    }
-
-    fn desired_index(&self, key: &K) -> Option<usize> {
-        self.desired_order()
-            .iter()
-            .position(|existing| existing == key)
     }
 
     fn desired_order(&self) -> Vec<K> {
@@ -349,7 +382,7 @@ where
         }
         let group = RayCacheGroup::new(key.clone());
         self.groups.insert(key.clone(), group.clone());
-        self.group_order.push(key.clone());
+        let _ = self.group_order.push(key.clone());
         group
     }
 
@@ -365,23 +398,16 @@ where
         }
     }
 
+    /// The position of `key` in its group, whose members keep the right source order.
     fn group_index_for_right_key(&self, key: &RK, group_key: &K) -> Option<usize> {
-        self.right_order
-            .iter()
-            .filter(|candidate| {
-                self.right_items
-                    .get(*candidate)
-                    .map(|(candidate_group, _)| candidate_group == group_key)
-                    .unwrap_or(false)
-            })
-            .position(|candidate| candidate == key)
+        self.right_order.index_of(key)?;
+        let group = self.groups.get(group_key)?;
+        let rank = |candidate: &RK| self.right_order.index_of(candidate).unwrap_or(usize::MAX);
+        group.rank_position(key, &rank).ok()
     }
 
     fn result_index(&self, key: &K) -> Option<usize> {
-        self.result
-            .order
-            .iter()
-            .position(|existing| existing == key)
+        self.result.order.index_of(key)
     }
 }
 
@@ -397,26 +423,31 @@ fn affected_cache_keys<K, T>(
 where
     K: Clone + Eq + Hash,
 {
+    // Deduplicated through a position map, so a large batch stays linear.
     let mut affected = Vec::<AffectedKey<K>>::new();
+    let mut positions = HashMap::<K, usize>::new();
+    let mut upsert = |key: K, refresh: bool| match positions.get(&key) {
+        Some(&index) => affected[index].refresh = refresh,
+        None => {
+            positions.insert(key.clone(), affected.len());
+            affected.push(AffectedKey { key, refresh });
+        }
+    };
     for change in changes {
         match change {
             CacheChange::Add { key, .. }
             | CacheChange::Update { key, .. }
             | CacheChange::Move { key, .. }
-            | CacheChange::Remove { key, .. } => {
-                upsert_affected_key(&mut affected, key.clone(), false);
-            }
-            CacheChange::Refresh { key, .. } => {
-                upsert_affected_key(&mut affected, key.clone(), true);
-            }
+            | CacheChange::Remove { key, .. } => upsert(key.clone(), false),
+            CacheChange::Refresh { key, .. } => upsert(key.clone(), true),
             CacheChange::Clear { previous } => {
                 if previous.is_empty() {
                     for key in state.order.iter().cloned() {
-                        upsert_affected_key(&mut affected, key, false);
+                        upsert(key, false);
                     }
                 } else {
                     for (key, _) in previous {
-                        upsert_affected_key(&mut affected, key.clone(), false);
+                        upsert(key.clone(), false);
                     }
                 }
             }
@@ -425,14 +456,30 @@ where
     affected
 }
 
-fn upsert_affected_key<K>(affected: &mut Vec<AffectedKey<K>>, key: K, refresh: bool)
-where
-    K: Eq,
-{
-    if let Some(affected) = affected.iter_mut().find(|affected| affected.key == key) {
-        affected.refresh = refresh;
-    } else {
-        affected.push(AffectedKey { key, refresh });
+/// Affected keys in first-touch order, deduplicated through a position map.
+struct AffectedKeys<K> {
+    keys: Vec<AffectedKey<K>>,
+    positions: HashMap<K, usize>,
+}
+
+impl<K> Default for AffectedKeys<K> {
+    fn default() -> Self {
+        Self {
+            keys: Vec::new(),
+            positions: HashMap::new(),
+        }
     }
 }
 
+fn upsert_affected_key<K>(affected: &mut AffectedKeys<K>, key: K, refresh: bool)
+where
+    K: Clone + Eq + Hash,
+{
+    match affected.positions.get(&key) {
+        Some(&index) => affected.keys[index].refresh = refresh,
+        None => {
+            affected.positions.insert(key.clone(), affected.keys.len());
+            affected.keys.push(AffectedKey { key, refresh });
+        }
+    }
+}

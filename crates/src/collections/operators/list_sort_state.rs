@@ -2,7 +2,7 @@ impl<K, T, U> Default for CacheInlineTransformState<K, T, U> {
     fn default() -> Self {
         Self {
             source_items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             projected: HashMap::new(),
             version: 0,
         }
@@ -45,11 +45,24 @@ where
                     key,
                     current,
                     current_index,
+                    previous_index,
                     ..
                 } => {
                     self.source_items.insert(key.clone(), current.clone());
                     insert_cache_key(&mut self.order, key.clone(), *current_index);
                     if let Some(current_projected) = self.projected.get_mut(key) {
+                        // The projection is updated in place, so a positional update becomes
+                        // a move of the item as it is, then a refresh at the new position.
+                        if let (Some(from), Some(to)) = (previous_index, current_index)
+                            && from != to
+                        {
+                            changes.push(CacheChange::Move {
+                                key: key.clone(),
+                                current: current_projected.clone(),
+                                current_index: *to,
+                                previous_index: *from,
+                            });
+                        }
                         update(current_projected, current);
                         changes.push(CacheChange::Refresh {
                             key: key.clone(),
@@ -216,7 +229,8 @@ where
         let comparer = self.comparer.as_ref()?;
         let mut next = self.all.clone();
         next.sort_by(|left, right| comparer(left, right));
-        let changes = diff_list(&self.sorted, &next);
+        let changes = resort_moves(&self.sorted, &next, &**comparer)
+            .unwrap_or_else(|| diff_list(&self.sorted, &next));
         if changes.is_empty() {
             return None;
         }
@@ -365,10 +379,76 @@ where
     }
 }
 
+/// The work a list resort may spend on emitting moves (see [`resort_moves`]): reversing about
+/// 2,000 items.
+const RESORT_MOVE_BUDGET: usize = 1 << 22;
+
+/// The moves that reorder `previous` into `next` (the same items resorted by `comparer`),
+/// keeping each item's identity: as few moves as possible, never a replacement. Items are
+/// matched within their comparer tie runs, by equality. `None` when `next` is not a
+/// reordering of `previous` (or `previous` is empty), or when matching and moving would cost
+/// more than [`RESORT_MOVE_BUDGET`].
+fn resort_moves<T>(
+    previous: &[T],
+    next: &[T],
+    comparer: &dyn Fn(&T, &T) -> Ordering,
+) -> Option<Vec<ListChange<T>>>
+where
+    T: Clone + PartialEq,
+{
+    if previous.is_empty() || previous.len() != next.len() {
+        return None;
+    }
+    if previous == next {
+        return Some(Vec::new());
+    }
+    // Equality checks while matching tied items, then shifted positions while moving: past
+    // this budget a resort falls back to a positional diff.
+    let mut budget = RESORT_MOVE_BUDGET;
+    // Previous positions in `comparer` order: the tie runs line up with `next`'s.
+    let mut ranked = (0..previous.len()).collect::<Vec<_>>();
+    ranked.sort_by(|left, right| comparer(&previous[*left], &previous[*right]));
+    let mut target = Vec::with_capacity(next.len());
+    let mut start = 0;
+    while start < next.len() {
+        let mut end = start + 1;
+        while end < next.len() && comparer(&next[start], &next[end]) == Ordering::Equal {
+            end += 1;
+        }
+        let candidates = &ranked[start..end];
+        if comparer(&previous[candidates[0]], &next[start]) != Ordering::Equal {
+            return None;
+        }
+        let mut used = vec![false; candidates.len()];
+        for (offset, item) in next[start..end].iter().enumerate() {
+            let slot = if !used[offset] && previous[candidates[offset]] == *item {
+                offset
+            } else {
+                budget = budget.checked_sub(candidates.len())?;
+                (0..candidates.len())
+                    .find(|slot| !used[*slot] && previous[candidates[*slot]] == *item)?
+            };
+            used[slot] = true;
+            target.push(candidates[slot]);
+        }
+        start = end;
+    }
+    let mut working = (0..previous.len()).collect::<Vec<_>>();
+    Some(
+        minimal_moves_within(&mut working, &target, budget)?
+            .into_iter()
+            .map(|(origin, from, to)| ListChange::Move {
+                from,
+                to,
+                item: previous[origin].clone(),
+            })
+            .collect(),
+    )
+}
+
 struct CacheSortState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
-    source_positions: HashMap<K, usize>,
+    order: KeyOrder<K>,
     sorted: Vec<(K, T)>,
     sorted_positions: HashMap<K, usize>,
     comparer: Option<Comparer<T>>,
@@ -379,8 +459,7 @@ impl<K, T> Default for CacheSortState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
-            source_positions: HashMap::new(),
+            order: KeyOrder::new(),
             sorted: Vec::new(),
             sorted_positions: HashMap::new(),
             comparer: None,

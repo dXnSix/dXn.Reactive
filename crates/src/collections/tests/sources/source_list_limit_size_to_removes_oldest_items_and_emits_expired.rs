@@ -143,8 +143,14 @@ fn source_cache_expire_after_removes_from_source_and_emits_removed_items()
     let source = SourceCache::new(|row: &Row| row.id);
     let expired = Arc::new(Mutex::new(Vec::<Vec<(u32, Row)>>::new()));
     let expired_for_subscriber = Arc::clone(&expired);
+    // A manual clock keeps the due time exact (no wall-clock sleep).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
-        .expire_after(|row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))))
+        .expire_after_with_scheduler(
+            |row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))),
+            scheduler,
+        )
         .subscribe(move |items| {
             if let Ok(mut expired) = expired_for_subscriber.lock() {
                 expired.push(items.clone());
@@ -156,7 +162,7 @@ fn source_cache_expire_after_removes_from_source_and_emits_removed_items()
         cache.add_or_update(Row { id: 2, value: 0 });
     })?;
 
-    std::thread::sleep(Duration::from_millis(120));
+    clock.advance_by(Duration::from_millis(20));
     assert_eq!(
         source
             .key_values()?
@@ -182,8 +188,14 @@ fn source_list_expire_after_removes_from_source_and_emits_removed_items()
     let source = SourceList::<Row>::default();
     let expired = Arc::new(Mutex::new(Vec::<Vec<Row>>::new()));
     let expired_for_subscriber = Arc::clone(&expired);
+    // A manual clock keeps the due time exact (no wall-clock sleep).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
-        .expire_after(|row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))))
+        .expire_after_with_scheduler(
+            |row| (row.value != 0).then_some(Duration::from_millis(u64::from(row.value))),
+            scheduler,
+        )
         .subscribe(move |items| {
             if let Ok(mut expired) = expired_for_subscriber.lock() {
                 expired.push(items.clone());
@@ -194,7 +206,7 @@ fn source_list_expire_after_removes_from_source_and_emits_removed_items()
         list.add_range([Row { id: 1, value: 20 }, Row { id: 2, value: 0 }]);
     })?;
 
-    std::thread::sleep(Duration::from_millis(120));
+    clock.advance_by(Duration::from_millis(20));
     assert_eq!(
         source
             .items()?

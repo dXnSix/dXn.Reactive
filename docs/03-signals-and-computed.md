@@ -31,7 +31,8 @@ assert_eq!(original.get()?, 2);
 ```
 
 To be observed, a signal's value must be `Clone + Send + Sync + 'static`. `set` additionally
-requires `PartialEq`.
+requires `PartialEq`. `Signal<T>` implements `Default` when `T` does, and `Debug` (printing the
+value, or `<locked>` instead of waiting when another thread holds the lock).
 
 ### Reading
 
@@ -40,6 +41,7 @@ requires `PartialEq`.
 | `get()` | `Result<T>` | Clones the current value. |
 | `read(\|value\| …)` | `Result<R>` | Runs a closure against a borrowed value while the lock is held. Avoids cloning large values. |
 | `version()` | `Result<u64>` | `0` until the first committed write, then incremented on every write. |
+| `try_get()` / `try_read(\|value\| …)` | `Result<Option<_>>` | Like `get`/`read`, but return `Ok(None)` instead of waiting when another thread holds the signal's lock. Use them on a browser main thread, which must not block ([chapter 16](16-concurrency-and-platforms.md#webassembly)). On a `Computed`'s read signal they return the last published value without recomputing. |
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -91,6 +93,12 @@ Choose deliberately:
 - **`update`** to modify a collection-like or struct value in place without cloning it first. It
   always publishes, even if the closure changed nothing.
 
+A panic inside an `update` closure, or inside your `T::eq` or `T::clone` during a write,
+propagates to the caller and leaves the signal unchanged: the previous value and version are kept,
+and later calls work normally instead of reporting `Poisoned`. Writes are also frugal with clones:
+without subscribers, `set` and `replace` clone the value once (for the returned change) and
+`update` twice.
+
 ### Versions
 
 Every committed write increments the version. The first write produces version `1`; `0` means
@@ -134,9 +142,16 @@ as long as you want updates: dropping it unsubscribes.
 
 - Changes are delivered in commit order through a FIFO queue.
 - If a subscriber writes to the signal while it is being notified, the new change is queued and
-  delivered after the current notification finishes. It is never delivered recursively.
-- `values()` registers for changes *before* it reads the baseline. A write that a subscriber makes
-  during its own initial callback is therefore delivered after the baseline, not lost:
+  delivered after the current notification finishes. It is never delivered recursively (the one
+  exception is a write made while handling a `start_with` initial value, see
+  [chapter 4](04-streams-and-subscriptions.md#start_with-and-signals)).
+- Several writer threads are delivered in commit (version) order: a write pushes its change while
+  it still holds the signal's lock.
+- `values()` registers for changes *before* it reads the baseline, and the baseline and live
+  changes reach each subscriber one at a time through a per-subscriber queue. A subscriber never
+  receives an older version after a newer one, so the last value it sees is the signal's current
+  value even when another thread writes during the subscription. A write that a subscriber makes
+  during its own initial callback is delivered after the baseline, not lost:
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -191,13 +206,16 @@ assert_eq!(read.get()?, 3);
 
 ## `Computed<T>`
 
-`Computed<T>` is a derived signal. It subscribes to its inputs, recomputes on every input change,
+`Computed<T>` is a derived signal. It subscribes to its inputs, recomputes when an input changes,
 and owns those subscriptions for as long as it lives.
 
 | Constructor | Inputs |
 |---|---|
 | `Computed::derive(source, \|a\| …)` | one `ReadSignal<A>` |
+| `Computed::derive_distinct(source, \|a\| …)` | one `ReadSignal<A>`; publishes only when the result changes (`T: PartialEq`) |
 | `Computed::combine2(first, second, \|a, b\| …)` | two `ReadSignal`s |
+| `Computed::combine3(first, second, third, \|a, b, c\| …)` | three `ReadSignal`s |
+| `Computed::from_stream(&stream, initial)` | any `ValueStream<T, E>`: holds its latest value, starting from `initial` (for example a collection `count()`, see [chapter 15](15-application-patterns.md)) |
 
 | Method | Purpose |
 |---|---|
@@ -219,10 +237,43 @@ quantity.set(2)?;
 assert_eq!(total.get()?, 25.0); // updated synchronously by the write
 ```
 
+### Glitch-free and fresh
+
+Every value a `Computed` publishes is computed from the latest value of each input; it never
+combines an old value of one input with a new value of another. When one write reaches a
+`Computed` through several paths (a *diamond*), it publishes once:
+
+```rust
+use rayx_reactive::prelude::*;
+use std::sync::{Arc, Mutex};
+
+let a = Signal::new(1);
+let b = Computed::derive(a.read_only(), |x| x * 10)?;
+let pair = Computed::combine2(a.read_only(), b.read_signal(), |x, y| (*x, *y))?;
+
+let seen = Arc::new(Mutex::new(Vec::new()));
+let sink = Arc::clone(&seen);
+let _subscription = pair.changes().subscribe(move |change| sink.lock().unwrap().push(change.current))?;
+
+a.set(2)?;
+assert_eq!(*seen.lock().unwrap(), [(2, 20)]); // one emission, never (2, 10)
+```
+
+Each published value remembers the input versions it was computed from. `get()`, and
+`get`/`read`/`version` on its `read_signal()`, compare them with the inputs' current versions and
+recompute when they differ, so a read right after an input write returns the new result even when
+another thread is still delivering that write. Input changes are processed by one thread at a time
+(changes arriving meanwhile are folded into its next evaluation), while a read may evaluate on its
+own thread. Either way a value is published only if no input moved on while it was evaluated and
+nothing newer was published, so publications follow the inputs' version order.
+
+A panic inside the closure propagates to the writer whose change triggered it; the `Computed`
+keeps working and recomputes on the next input change.
+
 ### More than two inputs
 
 `Computed` deliberately has no implicit dependency tracking: it observes exactly the signals you
-pass. For three or more inputs, compose computed values:
+pass. Use `combine3` for three inputs; for more, compose computed values:
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -242,11 +293,11 @@ assert_eq!(volume.get()?, 12.0);
 Alternatively, keep related inputs together in one `Signal<SomeStruct>` and derive from it, or
 model a large aggregate with a collection and its [aggregation operators](13-stream-control-and-aggregation.md#aggregation).
 
-### Equal results are still published
+### Equal results
 
-A `Computed` republishes after **every** input change, even when the derived result is equal to
-the previous one. If downstream work is expensive, add
-[`distinct_until_changed`](04-streams-and-subscriptions.md#operators):
+`derive`, `combine2` and `combine3` republish after every input change, even when the derived
+result is equal to the previous one. Use `derive_distinct` to publish only real changes, or add
+[`distinct_until_changed`](04-streams-and-subscriptions.md#operators) to one subscriber:
 
 ```rust
 use rayx_reactive::prelude::*;
@@ -271,6 +322,11 @@ number.set(5)?;
 
 assert_eq!(*raw.lock().unwrap(), [true, true, false]);
 assert_eq!(*distinct.lock().unwrap(), [true, false]);
+
+let parity = Computed::derive_distinct(number.read_only(), |n| n % 2)?;
+let parity_version = parity.read_signal().version()?;
+number.set(7)?; // 5 -> 7: still odd, nothing published
+assert_eq!(parity.read_signal().version()?, parity_version);
 ```
 
 ### Lifetime
@@ -293,9 +349,10 @@ assert_eq!(output.get()?, 2); // frozen at the last derived value
 
 ### Construction is race-free
 
-`Computed::derive` and `combine2` snapshot their inputs by version, subscribe, and then reconcile
-against a second snapshot. An input change that lands while the `Computed` is being constructed,
-including one made by the derive closure itself, is applied rather than lost.
+Constructors evaluate the closure once, subscribe to the inputs, and then compare the inputs'
+versions with the ones that evaluation used. Only when an input changed in between (including a
+change made by the closure itself) do they evaluate again, so the change is applied rather than
+lost. The new value starts at version `0`.
 
 ## Choosing scalar state shapes
 
@@ -303,7 +360,7 @@ including one made by the derive closure itself, is applied rather than lost.
 |---|---|
 | One value that changes over time | `Signal<T>` |
 | A value other components may read but not write | expose `ReadSignal<T>` |
-| A value calculated from one or two other values | `Computed<T>` |
+| A value calculated from one to three other values | `Computed<T>` |
 | A one-off notification that should not be replayed ("saved", "navigate to …") | [`EventBus<T>`](06-commands-and-events.md#events) |
 | Many items with identity, order, filtering or sorting | [`SourceCache` or `SourceList`](07-collections-fundamentals.md), not `Signal<Vec<T>>` |
 | A large immutable payload | `Signal<Arc<T>>` or a signal holding an id, so that clones are cheap |

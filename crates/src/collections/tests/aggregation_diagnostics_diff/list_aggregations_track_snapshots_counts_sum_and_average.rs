@@ -114,7 +114,8 @@ fn list_aggregations_track_snapshots_counts_sum_and_average()
         &[vec![3, 2, 1], vec![4, 3, 2, 1], vec![4, 3, 2], vec![]]
     );
     assert_eq!(&*lock_vec(&counts)?, &[3, 4, 3, 0]);
-    assert_eq!(&*lock_vec(&empties)?, &[true, false, false, false, true]);
+    // One initial value from the snapshot, then only distinct changes.
+    assert_eq!(&*lock_vec(&empties)?, &[false, true]);
     assert_eq!(&*lock_vec(&sums)?, &[6, 10, 9, 0]);
     assert_eq!(&*lock_vec(&averages)?, &[2.0, 2.5, 3.0, -1.0]);
     let std_devs = lock_vec(&std_devs)?;
@@ -338,7 +339,7 @@ fn cache_aggregations_track_query_counts_sum_and_average() -> Result<(), Box<dyn
         ]
     );
     assert_eq!(&*lock_vec(&counts)?, &[2, 1, 0]);
-    assert_eq!(&*lock_vec(&not_empty)?, &[false, true, true, false]);
+    assert_eq!(&*lock_vec(&not_empty)?, &[false, true, false]);
     assert_eq!(&*lock_vec(&sums)?, &[30, 50, 30, 0]);
     assert_eq!(&*lock_vec(&averages)?, &[15.0, 25.0, 30.0, -1.0]);
     let std_devs = lock_vec(&std_devs)?;

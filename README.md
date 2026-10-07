@@ -21,7 +21,8 @@ a service, or a test.
 ## Highlights
 
 - **Signals and computed values.** `Signal<T>` holds a current value with versioning and
-  equality-aware writes. `Computed<T>` derives a value from one or two signals.
+  equality-aware writes. `Computed<T>` derives a glitch-free value from up to three signals, or
+  holds the latest value of a stream.
 - **Commands and events.** `Command` and `AsyncCommand` wrap actions with `can_execute`
   enablement and observable `CommandState`. `EventBus<T>` carries fire-and-forget notifications that
   are not replayed to late subscribers.
@@ -38,8 +39,9 @@ a service, or a test.
 - **Safe re-entrancy.** Delivery runs through FIFO queues: a subscriber that writes back into state
   enqueues instead of recursing, and nested edits of the same source are rejected with an error.
 - **Thread-safe and runtime-free.** Handles are `Send + Sync`. Signals, sources and streams are
-  cheap `Arc`-backed clones. No executor is required; async operators bring their own worker
-  threads.
+  cheap `Arc`-backed clones, and concurrent writers are delivered in commit order. No executor is
+  required: async operators bring their own worker threads, and time-based operators run on a
+  pluggable `Scheduler` (a shared timer thread by default, a virtual clock in tests).
 - **No `unsafe`.** The crate forbids `unsafe_code`.
 
 ## Platform support
@@ -50,12 +52,13 @@ a service, or a test.
 |---|---|
 | Linux (x86_64) | Built, linted and tested in CI |
 | Windows (x86_64, MSVC) | Built, linted and tested in CI |
-| macOS | Not run in CI. No platform-specific code, so it is expected to work. |
-| `wasm32-unknown-unknown` | Compiles in CI (`cargo check`). The synchronous core works. Time-based and async operators need OS threads and a monotonic clock, so do not use them on this target. See [Concurrency and platforms](docs/16-concurrency-and-platforms.md#webassembly). |
+| macOS (Apple silicon) | Tested in CI |
+| `wasm32-unknown-unknown` | Checked and tested (`wasm-bindgen-test` on Node) in CI. The synchronous core works; time-based operators work with your own `Scheduler`; async operators need OS threads, so do not use them on this target. See [Concurrency and platforms](docs/16-concurrency-and-platforms.md#webassembly). |
 
 - **Rust:** edition 2024, MSRV **1.95** (development and CI pin 1.99.0 through `rust-toolchain.toml`).
 - **Threading:** every public handle is `Send + Sync`. Subscribers run synchronously on the thread
-  that published the change, or on the operator's worker thread for timed and async operators.
+  that published the change, on the scheduler's timer for timed operators, or on the operator's
+  worker thread for async operators.
 
 ## Installation
 
@@ -299,7 +302,8 @@ any UI technology.
 ## Contributing
 
 Bug reports and pull requests are welcome. See [Contributing](docs/20-contributing.md) for the
-validation commands, the test layout and the co-development workflow with RayX.
+validation commands, the test layout and how changes are validated independently of consumers
+such as RayX.
 
 ## License
 

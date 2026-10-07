@@ -28,12 +28,14 @@ fn cache_change_key_preserves_reasons_and_remaps_keys() -> Result<(), Box<dyn st
     source.clear()?;
 
     let received = lock_vec(&received)?;
+    // Destination positions are unknown, so no indexes are emitted; a change of destination
+    // key removes the old key and adds the new one (KEY-1.1).
     assert_eq!(
         received[0].changes,
         vec![CacheChange::Add {
             key: 1,
             current: Row { id: 1, value: 10 },
-            current_index: Some(0),
+            current_index: None,
         }]
     );
     assert_eq!(
@@ -42,26 +44,31 @@ fn cache_change_key_preserves_reasons_and_remaps_keys() -> Result<(), Box<dyn st
             key: 1,
             current: Row { id: 1, value: 12 },
             previous: Row { id: 1, value: 10 },
-            current_index: Some(0),
-            previous_index: Some(0),
+            current_index: None,
+            previous_index: None,
         }]
     );
     assert_eq!(
         received[2].changes,
-        vec![CacheChange::Update {
-            key: 2,
-            current: Row { id: 1, value: 25 },
-            previous: Row { id: 1, value: 12 },
-            current_index: Some(0),
-            previous_index: Some(0),
-        }]
+        vec![
+            CacheChange::Remove {
+                key: 1,
+                previous: Row { id: 1, value: 12 },
+                previous_index: None,
+            },
+            CacheChange::Add {
+                key: 2,
+                current: Row { id: 1, value: 25 },
+                current_index: None,
+            },
+        ]
     );
     assert!(matches!(
         received[3].changes[0],
         CacheChange::Refresh {
             key: 2,
             current: Row { id: 1, value: 25 },
-            current_index: Some(0),
+            current_index: None,
         }
     ));
     assert!(matches!(
@@ -69,7 +76,7 @@ fn cache_change_key_preserves_reasons_and_remaps_keys() -> Result<(), Box<dyn st
         CacheChange::Remove {
             key: 2,
             previous: Row { id: 1, value: 25 },
-            previous_index: Some(0),
+            previous_index: None,
         }
     ));
     assert_eq!(received[5].changes.len(), 2);
@@ -105,7 +112,7 @@ fn cache_change_key_with_source_key_can_use_original_key() -> Result<(), Box<dyn
         vec![CacheChange::Add {
             key: "7:42".to_owned(),
             current: Row { id: 7, value: 42 },
-            current_index: Some(0),
+            current_index: None,
         }]
     );
     Ok(())

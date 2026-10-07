@@ -4,6 +4,13 @@ use std::sync::{Arc, Mutex, Weak};
 
 use crate::collections::cache::SourceCache;
 
+/// A node of a tree built by `transform_to_tree`.
+///
+/// A node keeps its identity while it is promoted, re-parented, refreshed or moved, and when a
+/// late parent arrives. An update of its item replaces it: the new node (sent as the `Update`'s
+/// `current`) takes over the children, so a view that follows a node's `children()` rebinds on
+/// `Update`; per-node view state such as expansion is best keyed by the node's key. Cloning
+/// shares the node.
 pub struct TreeNode<K, T> {
     inner: Arc<TreeNodeInner<K, T>>,
 }
@@ -24,6 +31,7 @@ where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
 {
+    /// Creates a parentless node for `item` with key `key` and no children.
     pub fn new(key: K, item: T) -> Self {
         Self {
             inner: Arc::new(TreeNodeInner {
@@ -34,10 +42,12 @@ where
         }
     }
 
+    /// The node's key.
     pub fn key(&self) -> K {
         self.inner.key.clone()
     }
 
+    /// The node's current item.
     pub fn item(&self) -> T {
         match self.inner.state.lock() {
             Ok(state) => state.item.clone(),
@@ -45,6 +55,7 @@ where
         }
     }
 
+    /// The parent node, or `None` for a root.
     pub fn parent(&self) -> Option<Self> {
         self.inner
             .state
@@ -54,18 +65,22 @@ where
             .map(|inner| Self { inner })
     }
 
+    /// The parent's key, or `None` for a root.
     pub fn parent_key(&self) -> Option<K> {
         self.parent().map(|parent| parent.key())
     }
 
+    /// The child nodes, in source order, as a cache that can be connected to.
     pub fn children(&self) -> SourceCache<K, TreeNode<K, T>> {
         self.inner.children.clone()
     }
 
+    /// `true` when the node has no parent.
     pub fn is_root(&self) -> bool {
         self.parent().is_none()
     }
 
+    /// The number of ancestors: `0` for a root. On a parent cycle each ancestor counts once.
     pub fn depth(&self) -> usize {
         let mut depth = 0_usize;
         let mut seen = Vec::<K>::new();

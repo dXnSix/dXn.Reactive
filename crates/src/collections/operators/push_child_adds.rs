@@ -209,31 +209,6 @@ where
         .collect()
 }
 
-fn apply_cache_changes_to_map<K, T>(target: &mut HashMap<K, T>, changes: &[CacheChange<K, T>])
-where
-    K: Clone + Eq + Hash,
-    T: Clone,
-{
-    for change in changes {
-        match change {
-            CacheChange::Add { key, current, .. }
-            | CacheChange::Update { key, current, .. }
-            | CacheChange::Refresh { key, current, .. }
-            | CacheChange::Move { key, current, .. } => {
-                target.insert(key.clone(), current.clone());
-            }
-            CacheChange::Remove { key, .. } => {
-                let _ = target.remove(key);
-            }
-            CacheChange::Clear { previous } => {
-                for (key, _) in previous {
-                    let _ = target.remove(key);
-                }
-            }
-        }
-    }
-}
-
 fn treat_cache_move_as_remove_add<K, T>(change: &CacheChange<K, T>) -> Vec<CacheChange<K, T>>
 where
     K: Clone,
@@ -258,74 +233,6 @@ where
             },
         ],
         _ => vec![change.clone()],
-    }
-}
-
-fn change_cache_key<K, T, DestinationKey>(
-    change: &CacheChange<K, T>,
-    key_selector: &dyn Fn(&K, &T) -> DestinationKey,
-) -> CacheChange<DestinationKey, T>
-where
-    T: Clone,
-{
-    match change {
-        CacheChange::Add {
-            key,
-            current,
-            current_index,
-        } => CacheChange::Add {
-            key: key_selector(key, current),
-            current: current.clone(),
-            current_index: *current_index,
-        },
-        CacheChange::Update {
-            key,
-            current,
-            previous,
-            current_index,
-            previous_index,
-        } => CacheChange::Update {
-            key: key_selector(key, current),
-            current: current.clone(),
-            previous: previous.clone(),
-            current_index: *current_index,
-            previous_index: *previous_index,
-        },
-        CacheChange::Remove {
-            key,
-            previous,
-            previous_index,
-        } => CacheChange::Remove {
-            key: key_selector(key, previous),
-            previous: previous.clone(),
-            previous_index: *previous_index,
-        },
-        CacheChange::Refresh {
-            key,
-            current,
-            current_index,
-        } => CacheChange::Refresh {
-            key: key_selector(key, current),
-            current: current.clone(),
-            current_index: *current_index,
-        },
-        CacheChange::Move {
-            key,
-            current,
-            current_index,
-            previous_index,
-        } => CacheChange::Move {
-            key: key_selector(key, current),
-            current: current.clone(),
-            current_index: *current_index,
-            previous_index: *previous_index,
-        },
-        CacheChange::Clear { previous } => CacheChange::Clear {
-            previous: previous
-                .iter()
-                .map(|(key, item)| (key_selector(key, item), item.clone()))
-                .collect(),
-        },
     }
 }
 
@@ -374,6 +281,30 @@ where
     }
 }
 
+/// The value the last change for `watch_key` in `changes` carries (the removed item for a
+/// removal): one value per batch, reflecting the key's final state in it.
+fn last_value_for_key<'a, K, T>(changes: &'a [CacheChange<K, T>], watch_key: &K) -> Option<&'a T>
+where
+    K: Eq,
+{
+    changes
+        .iter()
+        .rev()
+        .find_map(|change| cache_value_for_key(change, watch_key))
+}
+
+/// The key's presence after the last change for it in `changes`.
+fn last_optional_for_key<K, T>(changes: &[CacheChange<K, T>], watch_key: &K) -> Option<Option<T>>
+where
+    K: Eq,
+    T: Clone,
+{
+    changes
+        .iter()
+        .rev()
+        .find_map(|change| cache_optional_for_key(change, watch_key))
+}
+
 fn cache_optional_for_key<K, T>(change: &CacheChange<K, T>, watch_key: &K) -> Option<Option<T>>
 where
     K: Eq,
@@ -401,20 +332,188 @@ where
     }
 }
 
+/// Emits one change per key for an upstream batch (a key that is moved and refreshed gets
+/// both). The upstream batch is applied to the operator's ordered mirror; the output then
+/// replays against the previous order: removals, moves of existing keys into the upstream
+/// order (as few as possible; an updated key moves with its new value as one `Update`),
+/// additions at their final positions, then in-place updates and refreshes.
+/// The common load: a batch of new keys appended at the end (no key twice) is applied and
+/// forwarded as is, without replaying against the previous order. `None` for any other batch
+/// (nothing applied).
+fn append_new_cache_keys<K, T>(
+    state: &mut HashMap<K, T>,
+    order: &mut KeyOrder<K>,
+    changes: &[CacheChange<K, T>],
+) -> Option<Vec<CacheChange<K, T>>>
+where
+    K: Clone + Eq + Hash,
+    T: Clone,
+{
+    let mut seen = HashSet::with_capacity(changes.len());
+    for (end, change) in (order.len()..).zip(changes) {
+        let CacheChange::Add {
+            key, current_index, ..
+        } = change
+        else {
+            return None;
+        };
+        if state.contains_key(key)
+            || !seen.insert(key)
+            || current_index.is_some_and(|index| index < end)
+        {
+            return None;
+        }
+    }
+    let mut added = Vec::with_capacity(changes.len());
+    for change in changes {
+        if let CacheChange::Add { key, current, .. } = change {
+            state.insert(key.clone(), current.clone());
+            let index = order.push(key.clone());
+            added.push(CacheChange::Add {
+                key: key.clone(),
+                current: current.clone(),
+                current_index: Some(index),
+            });
+        }
+    }
+    Some(added)
+}
+
 fn ensure_unique_cache_changes<K, T>(
     state: &mut HashMap<K, T>,
-    order: &mut Vec<K>,
+    order: &mut KeyOrder<K>,
     changes: &[CacheChange<K, T>],
 ) -> Vec<CacheChange<K, T>>
 where
     K: Clone + Eq + Hash,
     T: Clone + PartialEq,
 {
-    let selected = select_unique_cache_changes(changes);
-    let mut captured = Vec::new();
-    for change in &selected {
-        apply_change_aware_cache_change(state, order, change, &mut captured);
+    if let Some(added) = append_new_cache_keys(state, order, changes) {
+        return added;
     }
-    captured
-}
+    let mut touched = Vec::<K>::new();
+    let mut previous = HashMap::<K, Option<T>>::new();
+    let mut refreshed = HashSet::<K>::new();
+    let mut touch = |key: &K, state: &HashMap<K, T>, touched: &mut Vec<K>| {
+        if !previous.contains_key(key) {
+            previous.insert(key.clone(), state.get(key).cloned());
+            touched.push(key.clone());
+        }
+    };
+    let mut replayed = HashMap::<K, T>::new();
+    let mut replayed_order = KeyOrder::<K>::new();
+    std::mem::swap(&mut replayed, state);
+    std::mem::swap(&mut replayed_order, order);
+    let previous_order = replayed_order.to_vec();
+    for change in changes {
+        match change {
+            CacheChange::Add { key, .. }
+            | CacheChange::Update { key, .. }
+            | CacheChange::Remove { key, .. }
+            | CacheChange::Move { key, .. } => touch(key, &replayed, &mut touched),
+            CacheChange::Refresh { key, .. } => {
+                touch(key, &replayed, &mut touched);
+                refreshed.insert(key.clone());
+            }
+            CacheChange::Clear { previous: cleared } if cleared.is_empty() => {
+                for key in replayed_order.iter() {
+                    touch(key, &replayed, &mut touched);
+                }
+            }
+            CacheChange::Clear { previous: cleared } => {
+                for (key, _) in cleared {
+                    touch(key, &replayed, &mut touched);
+                }
+            }
+        }
+        apply_cache_changes_to_ordered_state(
+            &mut replayed,
+            &mut replayed_order,
+            std::slice::from_ref(change),
+        );
+    }
+    *state = replayed;
+    *order = replayed_order;
 
+    let mut working = previous_order;
+    let mut emitted = Vec::new();
+    for key in &touched {
+        if let Some(Some(old)) = previous.get(key)
+            && !state.contains_key(key)
+            && let Some(index) = working.iter().position(|existing| existing == key)
+        {
+            let _ = working.remove(index);
+            emitted.push(CacheChange::Remove {
+                key: key.clone(),
+                previous: old.clone(),
+                previous_index: Some(index),
+            });
+        }
+    }
+    let mut repositioned = HashSet::<K>::new();
+    // Existing keys move into the upstream order first (as few as possible); new keys are then
+    // inserted at their final positions, so every key gets a single change.
+    let existing = order
+        .iter()
+        .filter(|key| !matches!(previous.get(*key), Some(None)))
+        .cloned()
+        .collect::<Vec<_>>();
+    for (key, from, index) in minimal_moves(&mut working, &existing) {
+        let Some(current) = state.get(&key) else {
+            continue;
+        };
+        match previous.get(&key) {
+            Some(Some(old)) if old != current => {
+                emitted.push(CacheChange::Update {
+                    key: key.clone(),
+                    current: current.clone(),
+                    previous: old.clone(),
+                    current_index: Some(index),
+                    previous_index: Some(from),
+                });
+                repositioned.insert(key);
+            }
+            _ => emitted.push(CacheChange::Move {
+                key: key.clone(),
+                current: current.clone(),
+                current_index: index,
+                previous_index: from,
+            }),
+        }
+    }
+    for (index, key) in order.iter().enumerate() {
+        if let (Some(None), Some(current)) = (previous.get(key), state.get(key)) {
+            working.insert(index.min(working.len()), key.clone());
+            emitted.push(CacheChange::Add {
+                key: key.clone(),
+                current: current.clone(),
+                current_index: Some(index),
+            });
+        }
+    }
+    for key in &touched {
+        if repositioned.contains(key) {
+            continue;
+        }
+        let (Some(Some(old)), Some(current)) = (previous.get(key), state.get(key)) else {
+            continue;
+        };
+        let position = working.iter().position(|existing| existing == key);
+        if old != current {
+            emitted.push(CacheChange::Update {
+                key: key.clone(),
+                current: current.clone(),
+                previous: old.clone(),
+                current_index: position,
+                previous_index: position,
+            });
+        } else if refreshed.contains(key) {
+            emitted.push(CacheChange::Refresh {
+                key: key.clone(),
+                current: current.clone(),
+                current_index: position,
+            });
+        }
+    }
+    emitted
+}

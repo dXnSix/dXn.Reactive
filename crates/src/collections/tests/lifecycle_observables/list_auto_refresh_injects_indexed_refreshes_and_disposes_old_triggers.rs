@@ -360,10 +360,9 @@ fn cache_async_dispose_many_finalizes_without_blocking_forwarding_and_signals_co
 
     drop(subscription);
     assert!(wait_for_len(&disposed, 3));
-    let deadline = Instant::now() + Duration::from_millis(750);
-    while completion_count.load(AtomicOrdering::SeqCst) == 0 && Instant::now() < deadline {
-        std::thread::sleep(Duration::from_millis(5));
-    }
+    assert!(wait_until(GENEROUS_DEADLINE, || {
+        completion_count.load(AtomicOrdering::SeqCst) > 0
+    }));
 
     assert_eq!(&*lock_vec(&disposed)?, &[(1, 10), (2, 20), (1, 11)]);
     assert_eq!(completion_count.load(AtomicOrdering::SeqCst), 1);

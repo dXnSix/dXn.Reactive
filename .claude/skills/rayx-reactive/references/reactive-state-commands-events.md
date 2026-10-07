@@ -12,21 +12,22 @@ Primary source files:
 
 `Command` wraps a synchronous action with:
 
-- `can_execute: ReadSignal<bool>`
-- `state: Signal<CommandState>`
+- `can_execute() -> ReadSignal<bool>`
+- `state() -> ReadSignal<CommandState>`: the state of the most recently started execution.
+- `is_executing() -> ReadSignal<bool>`: `true` while at least one execution is in flight.
 - `execute() -> CommandResult`
 
-`AsyncCommand` wraps an async action with the same `can_execute` and state shape. The async action is boxed into a `BoxFuture`.
+`AsyncCommand` wraps an async action with the same shape; `execute()` is an `async fn` and the crate spawns nothing, so drive the future on the application's executor. Clones of a command share the action and execution state.
 
 `CommandState` values:
 
-- `Idle`
+- `Idle`: never executed.
 - `Running`
 - `Succeeded`
-- `Failed(String)`
-- `Cancelled`
+- `Failed(String)`: the error's `Display` text, or `"panicked: ..."` for a panicking action.
+- `Cancelled`: an `AsyncCommand::execute()` future was dropped after it started (`select!`, a timeout).
 
-`CommandError` values:
+`CommandError` values (`#[non_exhaustive]`, match with a wildcard):
 
 - `Disabled`
 - `Failed(String)`
@@ -34,22 +35,31 @@ Primary source files:
 
 Execution behavior:
 
-- If `can_execute` is false, state becomes `Cancelled` and `Disabled` is returned.
-- Before running the action, state becomes `Running`.
+- If `can_execute` is false, or the execution policy refuses an overlapping run, `execute` returns `Disabled` and publishes nothing (no state change).
+- An execution that starts while none is running publishes `Running`; the most recently started execution publishes its terminal state. Sequential runs each show `Running` then their outcome; overlapping runs (default `ExecutionPolicy::Concurrent`) show one `Running` and the latest run's outcome, so never expect one `Running` per `execute`.
 - On success, state becomes `Succeeded`.
 - On error, state becomes `Failed(error.to_string())` and the error is returned.
+- A panicking action publishes `Failed("panicked: ...")` and the panic continues to the caller (or out of the future).
 
-Current `Command` and `AsyncCommand` do not enforce single-flight execution. Use a `Signal<bool>` or higher-level runtime command service when concurrent execution must be rejected or cancelled.
+`ExecutionPolicy` controls overlap: `Concurrent` (default) starts another execution; `IgnoreWhileRunning` refuses with `Disabled` while one is running. Set it with `with_execution_policy(...)`, read it with `execution_policy()`.
+
+```rust
+let save = AsyncCommand::with_can_execute(can_save.read_signal(), move || save_document())
+    .with_execution_policy(ExecutionPolicy::IgnoreWhileRunning);
+// Bind a spinner to save.is_executing(), outcome text to save.state().
+```
 
 ## Command Enablement
 
 Use a `Computed<bool>` for enablement derived from scalar state. Pass `computed.read_signal()` into `with_can_execute`.
 
-Use `command.state()` to bind progress and error display. It returns `ReadSignal<CommandState>`.
+Use `command.state()` to bind outcome and error display and `command.is_executing()` for busy indicators. Do not infer "busy" from `state() == Running`: with overlapping executions only the latest one publishes.
+
+Observe a refused call through the returned `CommandError::Disabled`, not through the state.
 
 ## Events
 
-`EventBus<T>` is a non-replaying transient event source. It uses `DeliveryQueue<T>` internally.
+`EventBus<T>` is a non-replaying transient event source. It uses `DeliveryQueue<T>` internally, so `emit` needs no `T: Clone`, delivers in emit order, and an event emitted by a subscriber is delivered after the current one. An event emitted while nobody listens is dropped.
 
 Use events for:
 

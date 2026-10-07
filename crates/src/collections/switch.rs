@@ -1,251 +1,424 @@
+use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::collections::cache::SourceCache;
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
+use crate::collections::delivery::DeliveryQueue;
 use crate::collections::list::SourceList;
 use crate::collections::operators::apply_list_changes;
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
 
+/// Follows the latest inner list change stream of a stream of change streams.
 pub trait ListSwitchExt<T> {
+    /// Mirrors the most recent inner stream.
+    ///
+    /// When a new inner stream arrives, the previous one's items are cleared from the output and
+    /// its subscription is disposed before the new one is connected; nothing from a superseded
+    /// inner stream reaches the output after its clear. If subscribing to an inner stream fails,
+    /// the output stays empty until the outer stream emits again.
     fn switch(&self) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// Like `switch`, and reports an inner stream whose subscription failed to `on_error`;
+    /// the switch subscribes again when the outer stream emits next.
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Follows the latest inner cache change stream of a stream of change streams.
 pub trait CacheSwitchExt<K, T> {
+    /// Mirrors the most recent inner stream.
+    ///
+    /// When a new inner stream arrives, the previous one's items are cleared from the output and
+    /// its subscription is disposed before the new one is connected; nothing from a superseded
+    /// inner stream reaches the output after its clear. If subscribing to an inner stream fails,
+    /// the output stays empty until the outer stream emits again.
     fn switch(&self) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static;
+
+    /// Like `switch`, and reports an inner stream whose subscription failed to `on_error`;
+    /// the switch subscribes again when the outer stream emits next.
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 }
 
+/// Follows the latest `SourceList` of a stream of sources.
 pub trait SourceListSwitchExt<T> {
+    /// Mirrors the most recent source.
+    ///
+    /// When a new source arrives, the previous one's items are cleared from the output and its
+    /// subscription is disposed before the new one is connected. Use it for views whose backing
+    /// collection is chosen at runtime, such as the messages of the active channel.
     fn switch(&self) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static;
+
+    /// Like `switch`, and reports an inner stream whose subscription failed to `on_error`;
+    /// the switch subscribes again when the outer stream emits next.
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Follows the latest `SourceCache` of a stream of sources.
 pub trait SourceCacheSwitchExt<K, T> {
+    /// Mirrors the most recent source.
+    ///
+    /// When a new source arrives, the previous one's items are cleared from the output and its
+    /// subscription is disposed before the new one is connected. Use it for views whose backing
+    /// collection is chosen at runtime, such as the rows of the selected project.
     fn switch(&self) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static;
+
+    /// Like `switch`, and reports an inner stream whose subscription failed to `on_error`;
+    /// the switch subscribes again when the outer stream emits next.
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 }
 
-impl<T> ListSwitchExt<T> for ValueStream<ChangeStream<ListChange<T>>> {
-    fn switch(&self) -> ChangeStream<ListChange<T>>
-    where
-        T: Clone + Send + Sync + 'static,
-    {
-        switch_list_streams(self.clone())
-    }
-}
-
-impl<K, T> CacheSwitchExt<K, T> for ValueStream<ChangeStream<CacheChange<K, T>>> {
-    fn switch(&self) -> ChangeStream<CacheChange<K, T>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-    {
-        switch_cache_streams(self.clone())
-    }
-}
-
-impl<T> SourceListSwitchExt<T> for ValueStream<SourceList<T>> {
-    fn switch(&self) -> ChangeStream<ListChange<T>>
-    where
-        T: Clone + Send + Sync + 'static,
-    {
-        let sources = self.clone();
-        let streams = ValueStream::new(move |subscriber| {
-            sources.subscribe(move |source| {
-                let stream = source.connect();
-                subscriber(&stream);
-            })
-        });
-        switch_list_streams(streams)
-    }
-}
-
-impl<K, T> SourceCacheSwitchExt<K, T> for ValueStream<SourceCache<K, T>> {
-    fn switch(&self) -> ChangeStream<CacheChange<K, T>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-    {
-        let sources = self.clone();
-        let streams = ValueStream::new(move |subscriber| {
-            sources.subscribe(move |source| {
-                let stream = source.connect();
-                subscriber(&stream);
-            })
-        });
-        switch_cache_streams(streams)
-    }
-}
-
-fn switch_list_streams<T>(
-    sources: ValueStream<ChangeStream<ListChange<T>>>,
-) -> ChangeStream<ListChange<T>>
+impl<T, E> ListSwitchExt<T> for crate::primitives::ValueStream<ChangeStream<ListChange<T>>, E>
 where
-    T: Clone + Send + Sync + 'static,
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
 {
-    ChangeStream::new(move |subscriber| {
-        let runtime = Arc::new(Mutex::new(SwitchRuntime {
-            state: ListSwitchState::<T>::default(),
-            active_subscription: None,
-            generation: 0,
-        }));
+    fn switch(&self) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(
+            self.err_into::<CollectionError>(),
+            ListSwitchState::default(),
+            None,
+        )
+    }
 
-        let outer_runtime = Arc::clone(&runtime);
-        let outer_subscriber = Arc::clone(&subscriber);
-        let outer_subscription = sources.subscribe(move |inner| {
-            let inner = inner.clone();
-            let (previous_subscription, clear_batch, generation) = {
-                let Ok(mut runtime) = outer_runtime.lock() else {
-                    return;
-                };
-                runtime.generation = runtime.generation.saturating_add(1);
-                let generation = runtime.generation;
-                let previous_subscription = runtime.active_subscription.take();
-                let clear_batch = runtime.state.clear();
-                (previous_subscription, clear_batch, generation)
-            };
-            drop(previous_subscription);
-            if let Some(batch) = clear_batch {
-                outer_subscriber(&batch);
-            }
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(
+            self.err_into::<CollectionError>(),
+            ListSwitchState::default(),
+            Some(Arc::new(on_error)),
+        )
+    }
+}
 
-            let inner_runtime = Arc::clone(&outer_runtime);
-            let inner_subscriber = Arc::clone(&outer_subscriber);
-            let Ok(inner_subscription) = inner.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut runtime) = inner_runtime.lock() else {
-                        return;
-                    };
-                    if runtime.generation != generation {
-                        return;
-                    }
-                    runtime.state.apply(batch)
-                };
-                if let Some(batch) = batch {
-                    inner_subscriber(&batch);
-                }
-            }) else {
-                return;
-            };
+impl<K, T, E> CacheSwitchExt<K, T>
+    for crate::primitives::ValueStream<ChangeStream<CacheChange<K, T>>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
+    fn switch(&self) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(
+            self.err_into::<CollectionError>(),
+            CacheSwitchState::default(),
+            None,
+        )
+    }
 
-            let stale_subscription = {
-                let Ok(mut runtime) = outer_runtime.lock() else {
-                    return;
-                };
-                if runtime.generation == generation {
-                    runtime.active_subscription = Some(inner_subscription);
-                    None
-                } else {
-                    Some(inner_subscription)
-                }
-            };
-            drop(stale_subscription);
-        })?;
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(
+            self.err_into::<CollectionError>(),
+            CacheSwitchState::default(),
+            Some(Arc::new(on_error)),
+        )
+    }
+}
 
-        Ok(Subscription::new(move || {
-            drop(outer_subscription);
-            let active_subscription = runtime
-                .lock()
-                .ok()
-                .and_then(|mut runtime| runtime.active_subscription.take());
-            drop(active_subscription);
-        }))
+impl<T, E> SourceListSwitchExt<T> for crate::primitives::ValueStream<SourceList<T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
+    fn switch(&self) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(connections(self), ListSwitchState::default(), None)
+    }
+
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(
+            connections(self),
+            ListSwitchState::default(),
+            Some(Arc::new(on_error)),
+        )
+    }
+}
+
+impl<K, T, E> SourceCacheSwitchExt<K, T> for crate::primitives::ValueStream<SourceCache<K, T>, E>
+where
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
+    fn switch(&self) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(connections(self), CacheSwitchState::default(), None)
+    }
+
+    fn switch_with_errors(
+        &self,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+    {
+        switch_streams(
+            connections(self),
+            CacheSwitchState::default(),
+            Some(Arc::new(on_error)),
+        )
+    }
+}
+
+/// A stream of each source's `connect()` stream.
+fn connections<S, C, E>(
+    sources: &crate::primitives::ValueStream<S, E>,
+) -> ValueStream<ChangeStream<C>>
+where
+    S: Connectable<C> + Send + Sync + 'static,
+    C: Send + Sync + 'static,
+    E: Send + Sync + 'static,
+    CollectionError: From<E>,
+{
+    let sources = sources.err_into::<CollectionError>();
+    ValueStream::new(move |subscriber| {
+        sources.subscribe(move |source| {
+            let stream = source.connect_stream();
+            subscriber(&stream);
+        })
     })
 }
 
-fn switch_cache_streams<K, T>(
-    sources: ValueStream<ChangeStream<CacheChange<K, T>>>,
-) -> ChangeStream<CacheChange<K, T>>
+trait Connectable<C> {
+    fn connect_stream(&self) -> ChangeStream<C>;
+}
+
+impl<T> Connectable<ListChange<T>> for SourceList<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn connect_stream(&self) -> ChangeStream<ListChange<T>> {
+        self.connect()
+    }
+}
+
+impl<K, T> Connectable<CacheChange<K, T>> for SourceCache<K, T>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
 {
-    ChangeStream::new(move |subscriber| {
-        let runtime = Arc::new(Mutex::new(SwitchRuntime {
-            state: CacheSwitchState::<K, T>::default(),
-            active_subscription: None,
-            generation: 0,
-        }));
-
-        let outer_runtime = Arc::clone(&runtime);
-        let outer_subscriber = Arc::clone(&subscriber);
-        let outer_subscription = sources.subscribe(move |inner| {
-            let inner = inner.clone();
-            let (previous_subscription, clear_batch, generation) = {
-                let Ok(mut runtime) = outer_runtime.lock() else {
-                    return;
-                };
-                runtime.generation = runtime.generation.saturating_add(1);
-                let generation = runtime.generation;
-                let previous_subscription = runtime.active_subscription.take();
-                let clear_batch = runtime.state.clear();
-                (previous_subscription, clear_batch, generation)
-            };
-            drop(previous_subscription);
-            if let Some(batch) = clear_batch {
-                outer_subscriber(&batch);
-            }
-
-            let inner_runtime = Arc::clone(&outer_runtime);
-            let inner_subscriber = Arc::clone(&outer_subscriber);
-            let Ok(inner_subscription) = inner.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut runtime) = inner_runtime.lock() else {
-                        return;
-                    };
-                    if runtime.generation != generation {
-                        return;
-                    }
-                    runtime.state.apply(batch)
-                };
-                if let Some(batch) = batch {
-                    inner_subscriber(&batch);
-                }
-            }) else {
-                return;
-            };
-
-            let stale_subscription = {
-                let Ok(mut runtime) = outer_runtime.lock() else {
-                    return;
-                };
-                if runtime.generation == generation {
-                    runtime.active_subscription = Some(inner_subscription);
-                    None
-                } else {
-                    Some(inner_subscription)
-                }
-            };
-            drop(stale_subscription);
-        })?;
-
-        Ok(Subscription::new(move || {
-            drop(outer_subscription);
-            let active_subscription = runtime
-                .lock()
-                .ok()
-                .and_then(|mut runtime| runtime.active_subscription.take());
-            drop(active_subscription);
-        }))
-    })
+    fn connect_stream(&self) -> ChangeStream<CacheChange<K, T>> {
+        self.connect()
+    }
 }
+
+/// The switch's own materialized view of the current inner stream.
+trait SwitchState<C>: Send + Sync + 'static {
+    fn clear(&mut self) -> Option<ChangeSet<C>>;
+    fn apply(&mut self, batch: &ChangeSet<C>) -> Option<ChangeSet<C>>;
+}
+
+impl<T> SwitchState<ListChange<T>> for ListSwitchState<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn clear(&mut self) -> Option<ChangeSet<ListChange<T>>> {
+        ListSwitchState::clear(self)
+    }
+
+    fn apply(&mut self, batch: &ChangeSet<ListChange<T>>) -> Option<ChangeSet<ListChange<T>>> {
+        ListSwitchState::apply(self, batch)
+    }
+}
+
+impl<K, T> SwitchState<CacheChange<K, T>> for CacheSwitchState<K, T>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn clear(&mut self) -> Option<ChangeSet<CacheChange<K, T>>> {
+        CacheSwitchState::clear(self)
+    }
+
+    fn apply(
+        &mut self,
+        batch: &ChangeSet<CacheChange<K, T>>,
+    ) -> Option<ChangeSet<CacheChange<K, T>>> {
+        CacheSwitchState::apply(self, batch)
+    }
+}
+
+type ErrorSink = Arc<dyn Fn(&CollectionError) + Send + Sync>;
 
 struct SwitchRuntime<S> {
     state: S,
     active_subscription: Option<Subscription>,
     generation: u64,
+    disposed: bool,
 }
 
+fn lock<V>(mutex: &Mutex<V>) -> MutexGuard<'_, V> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Subscribes to the latest inner stream only. Output batches are computed under the
+/// runtime lock and pushed to an ordered per-subscription queue before it is released, so
+/// downstream sees them in computation order and never concurrently; a superseded inner's
+/// batches are rejected by generation, so none reaches downstream after the switch's
+/// `Clear`. Disposal marks the runtime disposed before releasing anything.
+fn switch_streams<C, S>(
+    sources: ValueStream<ChangeStream<C>>,
+    initial_state: S,
+    errors: Option<ErrorSink>,
+) -> ChangeStream<C>
+where
+    C: Clone + Send + Sync + 'static,
+    S: SwitchState<C> + Clone,
+{
+    ChangeStream::new(move |subscriber| {
+        let runtime = Arc::new(Mutex::new(SwitchRuntime {
+            state: initial_state.clone(),
+            active_subscription: None,
+            generation: 0,
+            disposed: false,
+        }));
+        let output = DeliveryQueue::<ChangeSet<C>>::new();
+        let delivering_runtime = Arc::clone(&runtime);
+        let delivery = output.subscribe(move |batch| {
+            if !lock(&delivering_runtime).disposed {
+                subscriber(batch);
+            }
+        })?;
+
+        let outer_runtime = Arc::clone(&runtime);
+        let outer_output = output.clone();
+        let errors = errors.clone();
+        let outer_subscription = sources.subscribe(move |inner| {
+            let (previous_subscription, generation) = {
+                let mut runtime = lock(&outer_runtime);
+                if runtime.disposed {
+                    return;
+                }
+                runtime.generation = runtime.generation.wrapping_add(1);
+                let generation = runtime.generation;
+                if let Some(batch) = runtime.state.clear() {
+                    report(&errors, outer_output.push(batch));
+                }
+                (runtime.active_subscription.take(), generation)
+            };
+            drop(previous_subscription);
+            report(&errors, outer_output.drain());
+
+            let inner_runtime = Arc::clone(&outer_runtime);
+            let inner_output = outer_output.clone();
+            let inner_errors = errors.clone();
+            let subscribed = inner.subscribe(move |batch| {
+                {
+                    let mut runtime = lock(&inner_runtime);
+                    if runtime.disposed || runtime.generation != generation {
+                        return;
+                    }
+                    if let Some(batch) = runtime.state.apply(batch) {
+                        report(&inner_errors, inner_output.push(batch));
+                    }
+                }
+                report(&inner_errors, inner_output.drain());
+            });
+            match subscribed {
+                Ok(inner_subscription) => {
+                    let stale = {
+                        let mut runtime = lock(&outer_runtime);
+                        if !runtime.disposed && runtime.generation == generation {
+                            runtime.active_subscription = Some(inner_subscription);
+                            None
+                        } else {
+                            Some(inner_subscription)
+                        }
+                    };
+                    drop(stale);
+                }
+                Err(error) => report(&errors, Err::<(), _>(error)),
+            }
+        })?;
+
+        Ok(Subscription::new(move || {
+            let active_subscription = {
+                let mut runtime = lock(&runtime);
+                runtime.disposed = true;
+                runtime.active_subscription.take()
+            };
+            drop(outer_subscription);
+            drop(active_subscription);
+            drop(delivery);
+        }))
+    })
+}
+
+/// Reports a failed delivery step (a poisoned output queue) or inner subscription.
+fn report<V, E>(errors: &Option<ErrorSink>, result: Result<V, E>)
+where
+    CollectionError: From<E>,
+{
+    if let (Err(error), Some(errors)) = (result, errors) {
+        errors(&CollectionError::from(error));
+    }
+}
+
+#[derive(Clone)]
 struct ListSwitchState<T> {
     items: Vec<T>,
     version: u64,
@@ -287,6 +460,7 @@ where
     }
 }
 
+#[derive(Clone)]
 struct CacheSwitchState<K, T> {
     items: HashMap<K, T>,
     order: Vec<K>,

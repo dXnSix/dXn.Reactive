@@ -4,7 +4,7 @@ agentx:
   scope: knowledge
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-05T23:30:00+02:00
+  updated: 2026-10-08T12:00:00+02:00
   topics:
     - rayx_reactive
     - taxonomy
@@ -19,7 +19,7 @@ Current source, tests, and manifests establish behavior. This tree records durab
 ## Domains
 
 - [scalar-state](scalar-state/INDEX.md): crate-root signals, computed values, effects, commands, events, activation, and disposal.
-- [primitives](primitives/INDEX.md): `rayx_reactive::primitives` shared value streams, subscriptions, and the ordered delivery queue.
+- [primitives](primitives/INDEX.md): `rayx_reactive::primitives` shared value streams, subscriptions, the ordered delivery queue, and schedulers.
 - [collections](collections/INDEX.md): `rayx_reactive::collections` DynamicData-style observable collections.
   - [sources](collections/sources/INDEX.md): `SourceList`/`SourceCache`, connection startup, keyed watches, diffs, materialization, and stream/source adapters.
   - [operators](collections/operators/INDEX.md): stream operators (filter, sort, transform, group, join, page/window, lifecycle, aggregation, combine, limit, expiration).

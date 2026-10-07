@@ -48,8 +48,13 @@ fn upsert_cache_update<K, T>(
     K: Eq,
 {
     if let Some(update) = updates.iter_mut().find(|update| update.key == key) {
-        update.preferred = preferred;
-        update.refresh = refresh;
+        if refresh {
+            // A refresh after an update in the same batch keeps the updated value.
+            update.refresh = true;
+        } else {
+            update.preferred = preferred;
+            update.refresh = false;
+        }
     } else {
         updates.push(CacheKeyUpdate {
             key,
@@ -167,21 +172,24 @@ where
                 {
                     let key_to_move = working_order.remove(previous_index);
                     working_order.insert(target_index.min(working_order.len()), key_to_move);
+                    // A move carries the item as it is; a changed value follows as an update.
                     changes.push(CacheChange::Move {
                         key: key.clone(),
-                        current: current.clone(),
+                        current: previous_item.clone(),
                         current_index: target_index,
                         previous_index,
                     });
                 }
 
                 if previous_item != current {
+                    // After the move the key is at its final position; update it in place.
+                    let position = working_order.iter().position(|existing| existing == key);
                     changes.push(CacheChange::Update {
                         key: key.clone(),
                         current: current.clone(),
                         previous: previous_item.clone(),
-                        current_index: Some(target_index),
-                        previous_index,
+                        current_index: position,
+                        previous_index: position,
                     });
                 }
             }

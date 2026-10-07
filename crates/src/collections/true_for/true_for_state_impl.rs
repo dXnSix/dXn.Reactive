@@ -4,12 +4,12 @@ where
     T: Clone,
     U: Clone,
 {
+    /// Applies a source batch, returning the child subscriptions to start and the old ones
+    /// to drop after unlocking; the result is evaluated once the children have started.
     fn apply_source(
         &mut self,
         batch: &ChangeSet<CacheChange<K, T>>,
-        mode: TrueForMode,
-        equality_condition: &(dyn Fn(&T, &U) -> bool + Send + Sync),
-    ) -> (Option<bool>, Vec<TrueForStart<K, T>>, Vec<Subscription>) {
+    ) -> (Vec<TrueForStart<K, T>>, Vec<Subscription>) {
         let mut starts = Vec::new();
         let mut old_subscriptions = Vec::new();
         for change in &batch.changes {
@@ -38,8 +38,7 @@ where
             }
         }
 
-        let next = self.evaluate_distinct(mode, equality_condition);
-        (next, starts, old_subscriptions)
+        (starts, old_subscriptions)
     }
 
     fn replace_item(
@@ -107,6 +106,10 @@ where
             return None;
         }
         entry.latest = Some(value);
+        if self.starting > 0 {
+            // A source batch is starting its children: it evaluates when they have started.
+            return None;
+        }
         self.evaluate_distinct(mode, equality_condition)
     }
 

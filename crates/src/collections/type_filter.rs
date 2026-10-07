@@ -5,14 +5,22 @@ use std::sync::Arc;
 use crate::collections::change::{CacheChange, ChangeSet};
 use crate::collections::stream::ChangeStream;
 
+/// A type-erased cache item, to be narrowed with [`CacheTypeFilterExt::of_type`].
 pub type AnyItem = Arc<dyn Any + Send + Sync>;
 
+/// Narrows a cache of [`AnyItem`]s to the items of one concrete type.
 pub trait CacheTypeFilterExt<K> {
+    /// Keeps the items that are a `U`, downcast without cloning, and suppresses batches that
+    /// end up empty.
+    ///
+    /// An update between a `U` and another type becomes an add or a remove.
     fn of_type<U>(&self) -> ChangeStream<CacheChange<K, Arc<U>>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         U: Any + Send + Sync + 'static;
 
+    /// Like [`of_type`](Self::of_type), forwarding empty batches unless
+    /// `suppress_empty_change_sets` is `true`.
     fn of_type_with_options<U>(
         &self,
         suppress_empty_change_sets: bool,

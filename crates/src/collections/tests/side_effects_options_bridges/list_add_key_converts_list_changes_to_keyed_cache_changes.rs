@@ -35,18 +35,19 @@ fn list_add_key_converts_list_changes_to_keyed_cache_changes()
     })?;
 
     let received = lock_vec(&received)?;
+    // Every change carries the list position it applies at (the index contract).
     assert_eq!(
         received[0].changes,
         vec![
             CacheChange::Add {
                 key: 1,
                 current: Row { id: 1, value: 10 },
-                current_index: None,
+                current_index: Some(0),
             },
             CacheChange::Add {
                 key: 2,
                 current: Row { id: 2, value: 20 },
-                current_index: None,
+                current_index: Some(1),
             },
         ]
     );
@@ -56,8 +57,8 @@ fn list_add_key_converts_list_changes_to_keyed_cache_changes()
             key: 2,
             current: Row { id: 2, value: 22 },
             previous: Row { id: 2, value: 20 },
-            current_index: None,
-            previous_index: None,
+            current_index: Some(1),
+            previous_index: Some(1),
         }]
     );
     assert_eq!(
@@ -66,12 +67,12 @@ fn list_add_key_converts_list_changes_to_keyed_cache_changes()
             CacheChange::Remove {
                 key: 1,
                 previous: Row { id: 1, value: 10 },
-                previous_index: None,
+                previous_index: Some(0),
             },
             CacheChange::Add {
                 key: 3,
                 current: Row { id: 3, value: 30 },
-                current_index: None,
+                current_index: Some(0),
             },
         ]
     );
@@ -89,7 +90,7 @@ fn list_add_key_converts_list_changes_to_keyed_cache_changes()
         vec![CacheChange::Refresh {
             key: 2,
             current: Row { id: 2, value: 22 },
-            current_index: None,
+            current_index: Some(0),
         }]
     );
     assert_eq!(
@@ -98,12 +99,12 @@ fn list_add_key_converts_list_changes_to_keyed_cache_changes()
             CacheChange::Remove {
                 key: 2,
                 previous: Row { id: 2, value: 22 },
-                previous_index: None,
+                previous_index: Some(0),
             },
             CacheChange::Remove {
                 key: 3,
                 previous: Row { id: 3, value: 30 },
-                previous_index: None,
+                previous_index: Some(0),
             },
         ]
     );

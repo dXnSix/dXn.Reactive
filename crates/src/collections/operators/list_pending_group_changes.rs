@@ -337,25 +337,38 @@ fn list_pending_group_changes<'a, T, G>(
     pending: &'a mut ListGroupPending<T, G>,
     group_key: &G,
     group: &RayListGroup<G, T>,
-) -> &'a mut Vec<ListChange<T>>
+) -> &'a mut crate::collections::connection::PendingChanges<ListChange<T>>
 where
     G: Clone + Eq + Hash,
     T: Clone,
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), Vec::new()))
+        .or_insert_with(|| {
+            (
+                group.clone(),
+                crate::collections::connection::PendingChanges::new(),
+            )
+        })
         .1
 }
 
-fn publish_pending_group_list_changes<T, G>(pending: ListGroupPending<T, G>)
+/// Queues each group's pending changes; call it while holding the operator's state lock,
+/// and [`drain_staged_groups`] with the result after releasing it.
+fn stage_pending_group_list_changes<T, G>(
+    pending: ListGroupPending<T, G>,
+) -> Vec<RayListGroup<G, T>>
 where
     T: Clone + Send + Sync + 'static,
     G: Clone + Send + Sync + 'static,
 {
-    for (_, (group, changes)) in pending {
-        let _ = group.publish_pending(changes);
-    }
+    pending
+        .into_values()
+        .filter_map(|(group, changes)| match group.stage_pending(changes) {
+            Ok(true) => Some(group),
+            Ok(false) | Err(_) => None,
+        })
+        .collect()
 }
 
 fn remove_pending_list_group_add<T, G>(
@@ -365,13 +378,28 @@ fn remove_pending_list_group_add<T, G>(
 where
     G: Clone + Eq,
 {
-    let Some(index) = group_changes.iter().position(|change| match change {
-        ListChange::Add { item, .. } => item.key() == group_key.clone(),
-        _ => false,
-    }) else {
+    let Some((position, dropped)) =
+        group_changes
+            .iter()
+            .enumerate()
+            .find_map(|(position, change)| match change {
+                ListChange::Add { index, item } if item.key() == group_key.clone() => {
+                    Some((position, *index))
+                }
+                _ => None,
+            })
+    else {
         return false;
     };
-    let _ = group_changes.remove(index);
+    let _ = group_changes.remove(position);
+    // Later changes were indexed with the dropped group still in the output.
+    for change in group_changes.iter_mut().skip(position) {
+        if let ListChange::Add { index, .. } | ListChange::Remove { index, .. } = change
+            && *index > dropped
+        {
+            *index -= 1;
+        }
+    }
     true
 }
 
@@ -382,9 +410,9 @@ struct LiveCacheGroupEntry<T, G> {
 
 struct LiveCacheGroupState<K, T, G> {
     entries: HashMap<K, LiveCacheGroupEntry<T, G>>,
-    source_order: Vec<K>,
+    source_order: KeyOrder<K>,
     groups: HashMap<G, RayCacheGroup<G, K, T>>,
-    group_order: Vec<G>,
+    group_order: KeyOrder<G>,
     empty_groups: HashSet<G>,
     version: u64,
 }
@@ -393,12 +421,49 @@ impl<K, T, G> Default for LiveCacheGroupState<K, T, G> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            source_order: Vec::new(),
+            source_order: KeyOrder::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             empty_groups: HashSet::new(),
             version: 0,
         }
     }
 }
 
+/// Delivers the changes staged for each group (see `stage_pending`).
+fn drain_staged_groups<Group: StagedGroup>(groups: Vec<Group>) {
+    for group in groups {
+        group.drain_staged();
+    }
+}
+
+/// A live group whose staged changes can be delivered.
+trait StagedGroup {
+    fn drain_staged(&self);
+}
+
+impl<G, T> StagedGroup for RayListGroup<G, T>
+where
+    G: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn drain_staged(&self) {
+        // A failure here means a poisoned group, whose readers report it themselves.
+        match self.drain_pending() {
+            Ok(()) | Err(_) => {}
+        }
+    }
+}
+
+impl<G, K, T> StagedGroup for RayCacheGroup<G, K, T>
+where
+    G: Clone + Send + Sync + 'static,
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn drain_staged(&self) {
+        match self.drain_pending() {
+            Ok(()) | Err(_) => {}
+        }
+    }
+}

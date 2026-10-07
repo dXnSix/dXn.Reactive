@@ -70,14 +70,19 @@ always stays consistent.
 | `Clear { previous }` | Every `(key, value)` pair was removed. |
 
 Cache indexes are `Option<usize>`. A `SourceCache` keeps its keys in insertion order (or the order
-you set with `move_key`) and fills in indexes. Sorted and windowed keyed operators rewrite them to
-positions in their own ordered output. Some operators cannot know positions and emit `None`.
-Several subset operators (for example cache `filter`) currently forward source positions instead;
-see [Known issues](README.md#known-issues).
-Consumers that only care about identity can ignore indexes.
+you set with `move_key`) and fills in indexes. Every operator follows one **index contract**
+(documented on `CacheChange`):
 
-An `Update` from an ordered keyed stream can carry `previous_index != current_index`. Treat that as
-"remove at the previous index, insert at the current index", not as an in-place replacement.
+- An index is a position in the **emitting operator's own output**, or `None` when the operator
+  cannot know positions. A subset operator (a filter, a window, a join) indexes its own output,
+  never its source's, and never removes a key it did not include.
+- Changes apply in order, each seeing the output as the changes before it in the batch left it.
+- An `Update` with `previous_index != current_index` means "remove at the previous index, insert
+  at the current index", not an in-place replacement.
+- A `Move` carries the item as it is (a changed value follows as an `Update`), and a later change
+  to the same key in the same batch uses the post-move position as its `previous_index`.
+
+Consumers that only care about identity can ignore indexes.
 
 ### Reasons
 
@@ -198,9 +203,9 @@ it once with `as_observable_list` / `as_observable_cache`.
 `connect()` is race-free. It registers for live batches *before* taking the snapshot, buffers live
 batches until the snapshot has been delivered, and drops any buffered batch whose version is
 already covered by the snapshot. With a single writer thread you never miss a change and never see
-one twice, even when the write happens on another thread during the connect. Concurrent writers on
-several threads and connecting during `suspend_notifications` are current exceptions; see
-[Known issues](README.md#known-issues).
+one twice, even when the write happens on another thread during the connect. The same holds with
+concurrent writers on several threads (batches are delivered in commit order) and when connecting
+during `suspend_notifications`.
 
 ### Empty sources emit no snapshot
 
@@ -210,7 +215,8 @@ render an initial "no items" state, or a stream control that waits for the first
 
 Scalar aggregates behave the same way: `count()` emits only when the count *changes*, so it never
 reports `0` for a source that has always been empty. Seed it with `start_with(0)`, or use
-`is_empty()`, which emits `true` immediately.
+`is_empty()`, which always emits one initial value: the snapshot's (`false` for a non-empty
+source), or `true` when the source is empty.
 
 ```rust
 use rayx_reactive::collections::prelude::*;

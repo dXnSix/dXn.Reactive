@@ -236,13 +236,15 @@ where
         T: Clone,
     {
         let generation = self.next_generation();
+        let (handle, registration) = futures::future::AbortHandle::new_pair();
         if let Some(previous) = self.children.insert(
             key.clone(),
             CacheAsyncTransformManyChild {
                 generation,
                 items: HashMap::new(),
-                order: Vec::new(),
+                order: KeyOrder::new(),
                 subscription: None,
+                _transform: AbortOnDrop(handle),
             },
         ) {
             self.touch_child_keys(&previous, touched, touched_seen);
@@ -254,6 +256,7 @@ where
             key: key.clone(),
             item,
             generation,
+            registration,
         });
     }
 
@@ -360,23 +363,28 @@ where
             .unwrap_or(false)
     }
 
-    fn set_subscription(&mut self, key: &K, generation: u64, subscription: Subscription) -> bool {
-        let Some(child) = self.children.get_mut(key) else {
-            return false;
-        };
-        if child.generation != generation {
-            return false;
+    /// Keeps `subscription` for a live generation; returns what to drop after unlocking.
+    fn set_subscription(
+        &mut self,
+        key: &K,
+        generation: u64,
+        subscription: Subscription,
+    ) -> Option<Subscription> {
+        match self.children.get_mut(key) {
+            Some(child) if child.generation == generation => {
+                child.subscription.replace(subscription)
+            }
+            _ => Some(subscription),
         }
-        let previous = child.subscription.replace(subscription);
-        drop(previous);
-        true
     }
 
-    fn clear(&mut self) {
-        self.children.clear();
+    /// Ends the operator: returns the children (whose drop aborts their transforms and
+    /// disposes their streams) to drop after unlocking.
+    fn clear(&mut self) -> HashMap<K, CacheAsyncTransformManyChild<ChildKey, Child>> {
         self.parent_order.clear();
         self.result.clear();
         self.result_order.clear();
+        std::mem::take(&mut self.children)
     }
 
     fn result_index(&self, key: &ChildKey) -> Option<usize> {
@@ -415,4 +423,3 @@ where
         (!changes.is_empty()).then(|| ChangeSet::new(changes, self.version))
     }
 }
-

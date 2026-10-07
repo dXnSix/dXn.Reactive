@@ -21,7 +21,9 @@ Also read:
 
 ## Boundary
 
-`rayx_reactive` and `rayx_reactive::collections` meet through `rayx_reactive::primitives::ValueStream`. `Signal<T>::values()` and `Computed<T>::values()` can feed collection operators that accept `ValueStream<T>`.
+`rayx_reactive` and `rayx_reactive::collections` meet through `rayx_reactive::primitives::ValueStream`. Every collection operator that takes a stream (dynamic predicates, comparers, resort triggers, page/virtual requests, pause flags, regroupers, per-item selectors) accepts `ValueStream<_, E>` with `CollectionError: From<E>`, so `Signal<T>::values()` and `Computed<T>::values()` (error `ReactiveError`) plug in directly; no adapter is needed. Two-stream operators take an independent error type per stream.
+
+Going the other way, `ValueStream::map_err`/`err_into` convert stream errors, `?` converts `CollectionError` into `ReactiveError::External` (and back), and `Effect::watch` accepts any stream error type.
 
 Do not make scalar state depend on collection APIs. ViewModels can own both scalar signals and collection sources, but the crate dependency boundary stays:
 
@@ -72,11 +74,18 @@ Common patterns:
 - `group_dynamic(group_selector_signal.values())`
 - `group_with_regrouper(..., refresh_signal.values())`
 
-Use `set` on the driving signal to suppress equal request/predicate state. Use `distinct_until_changed` if the source stream can duplicate values.
+Use `set` on the driving signal to suppress equal request/predicate state. Use `distinct_until_changed` if the source stream can duplicate values. A new predicate or state emits only the inclusion flips, and a new comparer emits minimal moves, so driving operators from signals stays incremental.
 
 ## Feeding Scalar State From Collections
 
-Collections expose scalar `ValueStream` outputs for counters, aggregates, watched values, page/virtual responses, status, diagnostics, and query snapshots. Bind those to the UI through the consumer's foreground binding (RayX: `ReactiveContextExt`), or copy them into a `Signal<T>` only when other scalar logic needs a current value.
+Collections expose scalar `ValueStream` outputs for counters, aggregates, watched values, page/virtual responses, status, diagnostics, and query snapshots. Bind those to the UI through the consumer's foreground binding (RayX: `ReactiveContextExt`). When scalar logic needs a current value, hold the stream with `Computed::from_stream` instead of copying it into a `Signal<T>` by hand:
+
+```rust
+// Keep both `Computed`s in the ViewModel: dropping one stops it following its input.
+let row_count = Computed::from_stream(&rows.connect().count(), 0)?;
+let has_rows = Computed::derive_distinct(row_count.read_signal(), |count| *count > 0)?;
+let clear = Command::with_can_execute(has_rows.read_signal(), move || clear_rows());
+```
 
 Prefer collection aggregate streams such as `count`, `sum_by`, `avg_by`, `min_by`, and `max_by` instead of materializing full snapshots and computing in a signal subscriber.
 

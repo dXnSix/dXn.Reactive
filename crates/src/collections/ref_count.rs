@@ -1,20 +1,39 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::hash::Hash;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::thread::{self, ThreadId};
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::error::{CollectionError, Result};
 use crate::collections::operators::apply_list_changes;
+use crate::collections::source_lock::non_blocking;
 use crate::collections::stream::{ChangeStream, StreamSubscriber};
 use crate::collections::subscription::Subscription;
 
+/// Shares one upstream subscription of a list stream among all subscribers.
 pub trait ListRefCountExt<T> {
+    /// Shares the upstream subscription while at least one subscriber exists.
+    ///
+    /// The first subscriber connects upstream and materializes the result; a subscriber arriving
+    /// on another thread while it connects waits for the outcome (on `wasm32` it gets
+    /// `Contended` instead). Later subscribers receive a snapshot of the current state, then
+    /// live batches. The upstream subscription and its state are dropped when the last
+    /// subscriber leaves, and a failed connection is rolled back so the next subscriber retries.
     fn ref_count(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Shares one upstream subscription of a cache stream among all subscribers.
 pub trait CacheRefCountExt<K, T> {
+    /// Shares the upstream subscription while at least one subscriber exists.
+    ///
+    /// The first subscriber connects upstream and materializes the result; a subscriber arriving
+    /// on another thread while it connects waits for the outcome (on `wasm32` it gets
+    /// `Contended` instead). Later subscribers receive a snapshot of the current state, then
+    /// live batches. The upstream subscription and its state are dropped when the last
+    /// subscriber leaves, and a failed connection is rolled back so the next subscriber retries.
     fn ref_count(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -40,61 +59,191 @@ impl<K, T> CacheRefCountExt<K, T> for ChangeStream<CacheChange<K, T>> {
     }
 }
 
+/// One subscriber of a shared upstream. Until its snapshot has been delivered, upstream
+/// batches are buffered for it, so it never sees a live batch before its snapshot.
+struct RefCountSubscriber<C> {
+    id: u64,
+    subscriber: StreamSubscriber<C>,
+    active: AtomicBool,
+    startup: Mutex<Option<VecDeque<ChangeSet<C>>>>,
+}
+
+impl<C: Clone> RefCountSubscriber<C> {
+    fn deliver(&self, batch: &ChangeSet<C>) {
+        if !self.active.load(Ordering::SeqCst) {
+            return;
+        }
+        {
+            let mut startup = lock(&self.startup);
+            if let Some(buffer) = startup.as_mut() {
+                buffer.push_back(batch.clone());
+                return;
+            }
+        }
+        (self.subscriber)(batch);
+    }
+
+    /// Delivers the snapshot, then what was buffered meanwhile, then goes live.
+    fn start(&self, snapshot: Option<ChangeSet<C>>) {
+        if let Some(snapshot) = snapshot
+            && self.active.load(Ordering::SeqCst)
+        {
+            (self.subscriber)(&snapshot);
+        }
+        loop {
+            let next = {
+                let mut startup = lock(&self.startup);
+                match startup.as_mut().and_then(VecDeque::pop_front) {
+                    Some(next) => next,
+                    None => {
+                        *startup = None;
+                        return;
+                    }
+                }
+            };
+            if self.active.load(Ordering::SeqCst) {
+                (self.subscriber)(&next);
+            }
+        }
+    }
+}
+
+fn lock<V>(mutex: &Mutex<V>) -> MutexGuard<'_, V> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Runs once when this thread is about to wait for another thread's upstream start.
+    pub(crate) static ON_JOIN_WAIT: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// The shared state and the signal that an upstream start attempt has finished.
+struct RefCountCore<C, S> {
+    shared: Mutex<RefCountShared<C, S>>,
+    start_finished: Condvar,
+}
+
+/// Rolls a start attempt back unless it is disarmed (it failed or unwound): every subscriber
+/// registered meanwhile joined from inside the attempt on the starting thread, so all are
+/// removed, and threads waiting for the attempt are woken to start the upstream themselves.
+struct StartAttempt<'a, C, S: RefCountState<C>> {
+    core: &'a RefCountCore<C, S>,
+    armed: bool,
+}
+
+impl<C, S: RefCountState<C>> Drop for StartAttempt<'_, C, S> {
+    fn drop(&mut self) {
+        if !self.armed {
+            return;
+        }
+        let removed = {
+            let mut shared = lock(&self.core.shared);
+            shared.starting = None;
+            shared.state.clear();
+            shared.epoch = shared.epoch.wrapping_add(1);
+            std::mem::take(&mut shared.subscribers)
+        };
+        for subscriber in &removed {
+            subscriber.active.store(false, Ordering::SeqCst);
+        }
+        self.core.start_finished.notify_all();
+    }
+}
+
 fn ref_count_stream<C, S>(source: ChangeStream<C>, state: S) -> ChangeStream<C>
 where
     C: Clone + Send + Sync + 'static,
     S: RefCountState<C> + Send + 'static,
 {
-    let shared = Arc::new(Mutex::new(RefCountShared {
-        state,
-        subscribers: HashMap::new(),
-        upstream: None,
-        next_subscriber_id: 0,
-        ref_count: 0,
-    }));
+    let core = Arc::new(RefCountCore {
+        shared: Mutex::new(RefCountShared {
+            state,
+            subscribers: Vec::new(),
+            upstream: None,
+            starting: None,
+            epoch: 0,
+            next_subscriber_id: 0,
+        }),
+        start_finished: Condvar::new(),
+    });
 
     ChangeStream::new(move |subscriber| {
-        let (subscriber_id, snapshot, should_start) = {
-            let mut shared = shared.lock().map_err(|_| CollectionError::Poisoned)?;
-            shared.next_subscriber_id = shared.next_subscriber_id.saturating_add(1);
-            let subscriber_id = shared.next_subscriber_id;
-            shared.ref_count = shared.ref_count.saturating_add(1);
-            let should_start = shared.ref_count == 1;
+        let current = thread::current().id();
+        let (entry, snapshot, start_epoch) = {
+            let mut shared = lock(&core.shared);
+            // Another thread is starting the upstream: wait for the outcome (its snapshot,
+            // or a failure that leaves the start to this subscriber). A subscriber joining
+            // from inside the start, on the starting thread, does not wait.
+            while shared.starting.is_some_and(|starter| starter != current) {
+                if non_blocking() {
+                    return Err(CollectionError::Contended);
+                }
+                #[cfg(test)]
+                if let Some(hook) = ON_JOIN_WAIT.with(|hook| hook.borrow_mut().take()) {
+                    hook();
+                }
+                shared = core
+                    .start_finished
+                    .wait(shared)
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+            }
+            shared.next_subscriber_id = shared.next_subscriber_id.wrapping_add(1);
+            let entry = Arc::new(RefCountSubscriber {
+                id: shared.next_subscriber_id,
+                subscriber: Arc::clone(&subscriber),
+                active: AtomicBool::new(true),
+                startup: Mutex::new(Some(VecDeque::new())),
+            });
+            // Registered and snapshotted under the same lock: every batch applied after the
+            // snapshot reaches this subscriber's buffer.
+            shared.subscribers.push(Arc::clone(&entry));
             let snapshot = shared.state.snapshot();
-            shared
-                .subscribers
-                .insert(subscriber_id, Arc::clone(&subscriber));
-            (subscriber_id, snapshot, should_start)
+            let start_epoch = (shared.upstream.is_none() && shared.starting.is_none()).then(|| {
+                shared.starting = Some(current);
+                shared.epoch = shared.epoch.wrapping_add(1);
+                shared.epoch
+            });
+            (entry, snapshot, start_epoch)
         };
 
-        if let Some(snapshot) = snapshot {
-            subscriber(&snapshot);
-        }
-
-        if should_start {
-            let upstream = start_upstream(Arc::clone(&shared), source.clone())?;
-            let stale_upstream = {
-                let mut shared = shared.lock().map_err(|_| CollectionError::Poisoned)?;
-                if shared.ref_count > 0 && shared.upstream.is_none() {
+        if let Some(epoch) = start_epoch {
+            let mut attempt = StartAttempt {
+                core: &core,
+                armed: true,
+            };
+            let upstream = start_upstream(Arc::clone(&core), source.clone(), epoch)?;
+            attempt.armed = false;
+            let stale = {
+                let mut shared = lock(&core.shared);
+                shared.starting = None;
+                if shared.epoch == epoch && !shared.subscribers.is_empty() {
                     shared.upstream = Some(upstream);
                     None
                 } else {
                     Some(upstream)
                 }
             };
-            drop(stale_upstream);
+            core.start_finished.notify_all();
+            drop(stale);
         }
 
-        let shared_for_dispose = Arc::clone(&shared);
+        entry.start(snapshot);
+
+        let dispose_core = Arc::clone(&core);
         Ok(Subscription::new(move || {
+            entry.active.store(false, Ordering::SeqCst);
             let upstream = {
-                let Ok(mut shared) = shared_for_dispose.lock() else {
-                    return;
-                };
-                shared.subscribers.remove(&subscriber_id);
-                shared.ref_count = shared.ref_count.saturating_sub(1);
-                if shared.ref_count == 0 {
+                let mut shared = lock(&dispose_core.shared);
+                shared.subscribers.retain(|other| other.id != entry.id);
+                if shared.subscribers.is_empty() {
+                    // A batch still in flight from this upstream carries the old epoch and is
+                    // ignored, so it cannot repopulate the state for the next subscriber.
                     shared.state.clear();
+                    shared.epoch = shared.epoch.wrapping_add(1);
                     shared.upstream.take()
                 } else {
                     None
@@ -106,8 +255,9 @@ where
 }
 
 fn start_upstream<C, S>(
-    shared: Arc<Mutex<RefCountShared<C, S>>>,
+    core: Arc<RefCountCore<C, S>>,
     source: ChangeStream<C>,
+    epoch: u64,
 ) -> Result<Subscription>
 where
     C: Clone + Send + Sync + 'static,
@@ -115,14 +265,15 @@ where
 {
     source.subscribe(move |batch| {
         let subscribers = {
-            let Ok(mut shared) = shared.lock() else {
+            let mut shared = lock(&core.shared);
+            if shared.epoch != epoch {
                 return;
-            };
+            }
             shared.state.apply(batch);
-            shared.subscribers.values().cloned().collect::<Vec<_>>()
+            shared.subscribers.clone()
         };
         for subscriber in subscribers {
-            subscriber(batch);
+            subscriber.deliver(batch);
         }
     })
 }
@@ -135,10 +286,14 @@ trait RefCountState<C> {
 
 struct RefCountShared<C, S> {
     state: S,
-    subscribers: HashMap<usize, StreamSubscriber<C>>,
+    subscribers: Vec<Arc<RefCountSubscriber<C>>>,
     upstream: Option<Subscription>,
-    next_subscriber_id: usize,
-    ref_count: usize,
+    /// The thread starting the upstream. Other threads wait for the attempt to finish; a
+    /// subscriber joining from inside it (on that thread) joins without waiting.
+    starting: Option<ThreadId>,
+    /// Identifies the current upstream connection; callbacks of older ones are ignored.
+    epoch: u64,
+    next_subscriber_id: u64,
 }
 
 struct ListRefCountState<T> {

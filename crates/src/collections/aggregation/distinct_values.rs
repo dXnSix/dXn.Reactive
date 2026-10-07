@@ -1,6 +1,7 @@
+/// Forwards values that differ from the previous one under [`total_cmp`] (NaN equals NaN).
 fn distinct_values<T>(source: ValueStream<T>) -> ValueStream<T>
 where
-    T: Clone + PartialEq + Send + Sync + 'static,
+    T: Clone + PartialOrd + Send + Sync + 'static,
 {
     ValueStream::new(move |subscriber| {
         let last = Arc::new(Mutex::new(None::<T>));
@@ -9,7 +10,7 @@ where
                 let Ok(mut last) = last.lock() else {
                     return;
                 };
-                if last.as_ref() == Some(value) {
+                if last.as_ref().is_some_and(|last| total_eq(last, value)) {
                     false
                 } else {
                     *last = Some(value.clone());
@@ -38,10 +39,11 @@ where
     };
 
     for value in values {
-        let should_replace = match value.partial_cmp(&best) {
-            Some(Ordering::Greater) => prefer_greater,
-            Some(Ordering::Less) => !prefer_greater,
-            _ => false,
+        // A total order: NaN is the greatest value whatever order the items arrive in.
+        let should_replace = match total_cmp(&value, &best) {
+            Ordering::Greater => prefer_greater,
+            Ordering::Less => !prefer_greater,
+            Ordering::Equal => false,
         };
         if should_replace {
             best = value;
@@ -52,24 +54,24 @@ where
 
 struct ListSumState<N> {
     values: Vec<N>,
-    total: N,
+    total: RunningTotal<N>,
 }
 
 impl<N> Default for ListSumState<N>
 where
-    N: Default,
+    N: Default + 'static,
 {
     fn default() -> Self {
         Self {
             values: Vec::new(),
-            total: N::default(),
+            total: RunningTotal::default(),
         }
     }
 }
 
 struct ListAverageState {
     values: Vec<f64>,
-    sum: f64,
+    sum: FloatSum,
     empty_value: f64,
 }
 
@@ -77,7 +79,7 @@ impl ListAverageState {
     fn new(empty_value: f64) -> Self {
         Self {
             values: Vec::new(),
-            sum: 0.0,
+            sum: FloatSum::default(),
             empty_value,
         }
     }
@@ -86,15 +88,14 @@ impl ListAverageState {
         if self.values.is_empty() {
             self.empty_value
         } else {
-            self.sum / self.values.len() as f64
+            self.sum.value() / self.values.len() as f64
         }
     }
 }
 
 struct ListStdDevState {
     values: Vec<f64>,
-    sum: f64,
-    sum_squares: f64,
+    totals: StdDevTotals,
     fallback_value: f64,
 }
 
@@ -102,8 +103,7 @@ impl ListStdDevState {
     fn new(fallback_value: f64) -> Self {
         Self {
             values: Vec::new(),
-            sum: 0.0,
-            sum_squares: 0.0,
+            totals: StdDevTotals::default(),
             fallback_value,
         }
     }
@@ -111,8 +111,8 @@ impl ListStdDevState {
     fn current(&self) -> f64 {
         std_dev_current(
             self.values.len(),
-            self.sum,
-            self.sum_squares,
+            self.totals.sum.value(),
+            self.totals.squares.value(),
             self.fallback_value,
         )
     }
@@ -189,24 +189,24 @@ where
 
 struct CacheSumState<K, N> {
     values: HashMap<K, N>,
-    total: N,
+    total: RunningTotal<N>,
 }
 
 impl<K, N> Default for CacheSumState<K, N>
 where
-    N: Default,
+    N: Default + 'static,
 {
     fn default() -> Self {
         Self {
             values: HashMap::new(),
-            total: N::default(),
+            total: RunningTotal::default(),
         }
     }
 }
 
 struct CacheAverageState<K> {
     values: HashMap<K, f64>,
-    sum: f64,
+    sum: FloatSum,
     empty_value: f64,
 }
 
@@ -214,7 +214,7 @@ impl<K> CacheAverageState<K> {
     fn new(empty_value: f64) -> Self {
         Self {
             values: HashMap::new(),
-            sum: 0.0,
+            sum: FloatSum::default(),
             empty_value,
         }
     }
@@ -223,15 +223,14 @@ impl<K> CacheAverageState<K> {
         if self.values.is_empty() {
             self.empty_value
         } else {
-            self.sum / self.values.len() as f64
+            self.sum.value() / self.values.len() as f64
         }
     }
 }
 
 struct CacheStdDevState<K> {
     values: HashMap<K, f64>,
-    sum: f64,
-    sum_squares: f64,
+    totals: StdDevTotals,
     fallback_value: f64,
 }
 
@@ -239,8 +238,7 @@ impl<K> CacheStdDevState<K> {
     fn new(fallback_value: f64) -> Self {
         Self {
             values: HashMap::new(),
-            sum: 0.0,
-            sum_squares: 0.0,
+            totals: StdDevTotals::default(),
             fallback_value,
         }
     }
@@ -248,8 +246,8 @@ impl<K> CacheStdDevState<K> {
     fn current(&self) -> f64 {
         std_dev_current(
             self.values.len(),
-            self.sum,
-            self.sum_squares,
+            self.totals.sum.value(),
+            self.totals.squares.value(),
             self.fallback_value,
         )
     }
@@ -298,7 +296,7 @@ fn update_list_sum<T, N>(
 ) -> Option<N>
 where
     T: Clone,
-    N: Copy + Default + Add<Output = N> + Sub<Output = N>,
+    N: Copy + Default + Add<Output = N> + Sub<Output = N> + 'static,
 {
     if changes.is_empty() {
         return None;
@@ -309,7 +307,7 @@ where
     };
     let ListSumState { values, total } = &mut *state;
     apply_list_numeric_changes(values, total, changes, selector);
-    Some(state.total)
+    Some(state.total.value())
 }
 
 fn update_list_average<T>(
@@ -327,9 +325,8 @@ where
     let Ok(mut state) = state.lock() else {
         return None;
     };
-    let mut sum = state.sum;
-    apply_list_numeric_changes(&mut state.values, &mut sum, changes, selector);
-    state.sum = sum;
+    let ListAverageState { values, sum, .. } = &mut *state;
+    apply_list_numeric_changes(values, sum, changes, selector);
     Some(state.current())
 }
 
@@ -348,41 +345,45 @@ where
     let Ok(mut state) = state.lock() else {
         return None;
     };
-    apply_list_std_dev_changes(&mut state, changes, selector);
+    let ListStdDevState { values, totals, .. } = &mut *state;
+    apply_list_numeric_changes(values, totals, changes, selector);
     Some(state.current())
 }
 
+/// Applies list changes to the selected values and their running total, recomputing the total
+/// from the values when a removal asks for it.
 fn apply_list_numeric_changes<T, N>(
     values: &mut Vec<N>,
-    total: &mut N,
+    total: &mut impl NumericTotal<N>,
     changes: &[ListChange<T>],
     selector: &dyn Fn(&T) -> N,
 ) where
     T: Clone,
-    N: Copy + Default + Add<Output = N> + Sub<Output = N>,
+    N: Copy,
 {
+    let mut recompute = false;
     for change in changes {
         match change {
             ListChange::Add { index, item } => {
                 let value = selector(item);
                 let index = (*index).min(values.len());
                 values.insert(index, value);
-                *total = *total + value;
+                total.add(value);
             }
             ListChange::AddRange { index, items } => {
                 let insert_at = (*index).min(values.len());
                 let new_values = items.iter().map(selector).collect::<Vec<_>>();
                 for value in &new_values {
-                    *total = *total + *value;
+                    total.add(*value);
                 }
                 values.splice(insert_at..insert_at, new_values);
             }
             ListChange::Replace { index, new, .. } | ListChange::Refresh { index, item: new } => {
                 if let Some(slot) = values.get_mut(*index) {
-                    *total = *total - *slot;
+                    recompute |= total.remove(*slot);
                     let value = selector(new);
                     *slot = value;
-                    *total = *total + value;
+                    total.add(value);
                 }
             }
             ListChange::Move { from, to, .. } => {
@@ -394,7 +395,7 @@ fn apply_list_numeric_changes<T, N>(
             ListChange::Remove { index, .. } => {
                 if *index < values.len() {
                     let value = values.remove(*index);
-                    *total = *total - value;
+                    recompute |= total.remove(value);
                 }
             }
             ListChange::RemoveRange { index, old } => {
@@ -402,15 +403,16 @@ fn apply_list_numeric_changes<T, N>(
                     let end = index.saturating_add(old.len()).min(values.len());
                     let removed = values.drain(*index..end).collect::<Vec<_>>();
                     for value in removed {
-                        *total = *total - value;
+                        recompute |= total.remove(value);
                     }
                 }
             }
             ListChange::Clear { .. } => {
                 values.clear();
-                *total = N::default();
+                total.reset();
+                recompute = false;
             }
         }
     }
+    recompute_total(total, recompute, values.iter().copied());
 }
-

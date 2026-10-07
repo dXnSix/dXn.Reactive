@@ -10,6 +10,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+documentation = "https://docs.rs/rayx_reactive"
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 default = []
@@ -49,6 +53,18 @@ harness = false
 
 [[bench]]
 name = "list_diff"
+harness = false
+
+[[bench]]
+name = "joins"
+harness = false
+
+[[bench]]
+name = "tree"
+harness = false
+
+[[bench]]
+name = "sort_and_page"
 harness = false
 
 [lints]
