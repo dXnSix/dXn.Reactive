@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 64,
+  "revision": 74,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -124,16 +124,28 @@
       ]
     },
     "t20-index-contract-harness": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t21-keyed-sort-positions": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t22-subset-operator-indexes": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t23-snapshot-diff-indexes": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t24-group-and-combiner-indexes": {
       "status": "pending"
@@ -256,6 +268,15 @@
         }
       },
       "recordedAt": "2026-10-07T00:56:18Z"
+    },
+    "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "465956c6e17393e08d4c1e8ed709d451d9fa5e34e635cad79272c4c2269d60c8"
+        }
+      },
+      "recordedAt": "2026-10-07T01:47:52Z"
     }
   },
   "checkResults": {
@@ -598,6 +619,74 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s06-emission-final-3c44ce2f5933.log",
       "logSha256": "eaa9bc964ce2cc888e86b6f67e3bb3a4d56eea721f3a67c6e9a4f48d426ee094",
       "inputsHash": "1513d73e05d28fc9cf11315f591ed7faca75ad840451308dbbfe97463fbf2f55"
+    },
+    "s07-index-contract/c-t20/final": {
+      "checkId": "c-t20",
+      "boundaryId": "s07-index-contract",
+      "phase": "final",
+      "batchId": "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4",
+      "definitionHash": "7c8dd1b854a064941010ddeb8c5d57243d29cb7c42f4ac124ef9f8439437f601",
+      "basisHash": "b71b6c39f8371440accd77a111486ad5ca931d356a0dec022511ca97e513db6e",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 12,
+      "durationSeconds": 0.4639,
+      "recordedAt": "2026-10-07T01:47:47Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s07-index-contract-final-b343b9835523.log",
+      "logSha256": "771523d9da486c8c12177e461f8dc96fcd8eb62ecb06c168ddb25c0f3fef60f9",
+      "inputsHash": "a358937953562f7df4796213de9506e23a49e4c4ea9fae2d002bf10c3c20a693"
+    },
+    "s07-index-contract/c-t21/final": {
+      "checkId": "c-t21",
+      "boundaryId": "s07-index-contract",
+      "phase": "final",
+      "batchId": "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4",
+      "definitionHash": "c6965df738ffeb79995d1ba928f76e2df887868419156d884fbbe166050ea586",
+      "basisHash": "5b79273e9253a664f5ea4ea9eeb2ed8a1300387be0ef11bcc078ac4c16dee913",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 5,
+      "durationSeconds": 1.0367,
+      "recordedAt": "2026-10-07T01:47:49Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s07-index-contract-final-08372b4e2e2c.log",
+      "logSha256": "8ac1bde217ac963848afb7ce6f3af89d9e69ab68099a089f048cbc38784da71c",
+      "inputsHash": "a358937953562f7df4796213de9506e23a49e4c4ea9fae2d002bf10c3c20a693"
+    },
+    "s07-index-contract/c-t22/final": {
+      "checkId": "c-t22",
+      "boundaryId": "s07-index-contract",
+      "phase": "final",
+      "batchId": "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4",
+      "definitionHash": "c67ddfbb6f71a9e3589167f0c1f1ef649d65f57f9b283731c9ce5e2ce83894fa",
+      "basisHash": "fe37178f9f04d4bc9c9fc720379d9c83fd0f488882000806ab19ea02f67f9727",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 14,
+      "durationSeconds": 1.6662,
+      "recordedAt": "2026-10-07T01:47:50Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s07-index-contract-final-e05a3bd10374.log",
+      "logSha256": "77b98d1ab798cc51fffbc901dccb8aeb9aa7b4d585950c40d3d878da72918fc8",
+      "inputsHash": "a358937953562f7df4796213de9506e23a49e4c4ea9fae2d002bf10c3c20a693"
+    },
+    "s07-index-contract/c-t23/final": {
+      "checkId": "c-t23",
+      "boundaryId": "s07-index-contract",
+      "phase": "final",
+      "batchId": "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4",
+      "definitionHash": "13caff87491b4f37b44fcace70ec412109ab1593a586599a81e16569773bca38",
+      "basisHash": "8229a71ca63db29fa819985e305900a1f111c1f0ba588efb5223915556dee272",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 11,
+      "durationSeconds": 2.0517,
+      "recordedAt": "2026-10-07T01:47:52Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s07-index-contract-final-9ce7581c2962.log",
+      "logSha256": "06d19652fe5526ca28ac70dbefc09447d95043190f8b70c5bc956e766e877465",
+      "inputsHash": "a358937953562f7df4796213de9506e23a49e4c4ea9fae2d002bf10c3c20a693"
     }
   },
   "reviews": {
@@ -1819,6 +1908,350 @@
         "S06-F3"
       ],
       "recordedAt": "2026-10-07T00:59:27Z"
+    },
+    "s07-index-contract": {
+      "reviewerId": "reviewer-s07-indep-7c3e",
+      "snapshotId": "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4",
+      "criterionIds": [
+        "IDX-1.1",
+        "IDX-2.1",
+        "IDX-2.2",
+        "IDX-3.1",
+        "IDX-3.2",
+        "IDX-3.3",
+        "IDX-3.4",
+        "IDX-4.1",
+        "IDX-4.2",
+        "IDX-4.3"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/change.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "sha256": "9b6cb06cb85d2003bce325d29d8f18878d2d72d17845cab62582d24b8d2b385a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_sort_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-2.1",
+            "IDX-2.2"
+          ],
+          "sha256": "2cfb6f4722a3a4d7fa0cfb6894767c70e36b2e1a8e645a3f2a78ac42dfc643d0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "3c3d6113e4d75649918a27e2183ee2e72a58d3f561da494c02dff42ec053676c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_inline_transform_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "7165018ff30c36c66f3c96bbc916b7a4b308e33c28de5926395139367c944d44"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_dynamic_filter_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2"
+          ],
+          "sha256": "6cbf6cc20402042e8702c079a9f400fe02cf8fdbd202e6d72e166c26d32887a9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/start_cache_async_transform_many_child.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "eebc23add2a249b01b456d2b66c275ed9988733f8b9736947a81f65c2dc2119b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_sort_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.3"
+          ],
+          "sha256": "2b298215cf509d590cdc8bc7c5504ac309460a821e2d9aab8b7faaf68b3af981"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/apply_list_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.4"
+          ],
+          "sha256": "2608ab8fdc072f4963c595c4d9528e52126ffbcd16df7a1408865cb9a94e91ce"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/diff_cache_snapshots.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2"
+          ],
+          "sha256": "beb8e8ef634d88c2464c548e7758f1b965d50a6ef48def2b1b213de52ab63773"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/limit/diff_limited_cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1"
+          ],
+          "sha256": "c11641435a2f92590e1e5ea7eb106a9a7033058fea3fb2fd9950c50a35c5155b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/cache_key_updates.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1"
+          ],
+          "sha256": "37762d33800d13005325c955dfe842f28149760842367a73442835650af76130"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.3"
+          ],
+          "sha256": "6c77a4f7e87940dc45299890f84724848baa318136b76cb42048c2bced8b3cd8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/affected_key.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.3"
+          ],
+          "sha256": "7fe4870b339516e6988ec4dd5111dc85907e48731c77063f481ca967e6be409b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/apply_cache_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.3"
+          ],
+          "sha256": "9e1a326483061b5970874ca09bf012146144f426cc5884eb306c394ce0ad25c8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/ungrouped_cache_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.2"
+          ],
+          "sha256": "77c61c674bfb95b61ab3eb26402e09a5901b4a628f874fe396fa649458045e75"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tree/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.2"
+          ],
+          "sha256": "c4d470849178835c7a3aa9ab1799af5ad2e88d45d10af6a7e45823acce668e56"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-2.2",
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "sha256": "76fe3aa9c5da64d040a801dc2e7c90d13be18bc58a1ebe58948aacee967496dc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/07-collections-fundamentals.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-1.1",
+            "IDX-3.1"
+          ],
+          "sha256": "106581c7c54147f2b9147404970a7e39f64e8029b0725fd9f4a77e20b089716a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/contract.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-2.2",
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "sha256": "02b3dadb3b3d063ecd3b12a01068a9211e77176aa543b881ee3df6ca3e817b63"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/index_contract_harness/validator.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "sha256": "6282315c648f55afa4c718b38c9ecf718994e634b6c1ca9ec33fe8b62cefa2a5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/index_contract_harness/list_operators.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "sha256": "d7708321ac07d72832aa5287ee49c0dbea37aa83cc4cd9221654726ff87fe09b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_sort_positions/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-2.1",
+            "IDX-2.2"
+          ],
+          "sha256": "19066a9d5eb469af0cbde07f25ec3b203b224d2052da0a2d11550ba0532e96e7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/fuzzed.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4"
+          ],
+          "sha256": "eca56d49bbddfd078931661a15f68ceb0b2d8463f32a84fab72107eec268061c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/repros.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4"
+          ],
+          "sha256": "d20dc9d96d4b7a458998069ef378560dc83f9136142fcfeee6a6070b4cdb8954"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/fuzzed.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "sha256": "cbc37b9f1f3d01d4f08cc9021fee11b61a877b4fbacc7a34ad416bd85493e325"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/repros.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "sha256": "44a36fcf19c694e37e4c03d62b86682ebe31baeed13f5eea9da148d3ebd8b282"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/select_unique_cache_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "ca8de34cab86d3503355effe70d361587f23634c35261e6aaac8db7513392cd9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/dynamic_inputs.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2"
+          ],
+          "sha256": "ee308b3b7e3bb10cb74fa7886eee5ef3e837556802a644b6b20b75b9a533461b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/load_scaling.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-4.3"
+          ],
+          "sha256": "9e76119801a51bb2733cbbd951bda52712f69799a4a240142a41f957333415fd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/independent_sources.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.3"
+          ],
+          "sha256": "43b0227cebf0843fcdcf47d0f45a0d5d3f841d40fc58679203c9570bcc2f337b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/transforms_filters/cache_filter_and_transform_emit_keyed_changes.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "1504dc74a084b71ec091abf2248ad79a2c554aa1a7be8246c8a01875cfbaf253"
+        }
+      ],
+      "summaryMarkdown": "Independent re-review of s07-index-contract at revision 72, snapshot 9b71bd4d. All four findings are resolved and re-verified.\n\nChecks:\n- The sprint groups pass: `index_contract_harness` 12, `keyed_sort_positions` 5, `subset_operator_indexes` 14 (four consecutive runs), `snapshot_diff_indexes` 11.\n- The existing groups `transforms_filters` 30, `joins` 4, `sorting_windowing` 26 and `grouping_tree_switching` 23 also pass, which covers the shared `insert_cache_key` change.\n- fmt, clippy (`-D warnings`) and the wasm32 check are clean.\n\nMy original probes all pass at 0/300 seeds (positionless upstream, value-dependent safe transforms, dynamic filter state, `sort_keyed_dynamic`, independent-source joins, the chain to a list). Initial loads are linear again. The new positionless test fails when the F1 fix is reverted in a scratch copy.\n\nNon-blocking notes:\n- Live join updates rebuild an O(n) rank map per batch (a t39/PRF-3.1 concern).\n- `load_scaling` is a timing ratio test with about 2x headroom over linear growth. It was stable here; watch it on CI.",
+      "findingIds": [
+        "S07-F1",
+        "S07-F2",
+        "S07-F3",
+        "S07-F4"
+      ],
+      "recordedAt": "2026-10-07T01:51:00Z"
     }
   },
   "checkpoints": {
@@ -1869,6 +2302,14 @@
       },
       "reviewHash": "92e76ffc79d038231c97415b826f4bbad3bc37e4700cd3f0b40e84f957de3af6",
       "recordedAt": "2026-10-07T01:00:02Z"
+    },
+    "s07-index-contract": {
+      "snapshotId": "9b71bd4d15a99fe70507394bae8cdedbab97cefff2216c94282e1a655f438ac4",
+      "commits": {
+        "reactive": "6633e25d720d7db5bd2592a3cb883ab2b29e1c34"
+      },
+      "reviewHash": "1524be0bfaca687006c3ba82bd3cbbe74837b18edf89c99bada5391dd54bd17f",
+      "recordedAt": "2026-10-07T01:51:46Z"
     }
   },
   "findings": [
@@ -2731,9 +3172,99 @@
           "symbol": "cache_operators_keep_emitting_after_a_subscriber_panic"
         }
       ]
+    },
+    {
+      "id": "S07-F1",
+      "boundaryId": "s07-index-contract",
+      "criterionIds": [
+        "IDX-3.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Cache transforms treat an `Update` with `current_index: None` as \"move to the end\", so `transform_safe*` now reorders rows over a positionless upstream (regression) and the forced transforms emit indexes that are not the keys' positions.** In `operators/cache_inline_transform_state.rs` both `apply_source` and `apply_source_safe` handle `Update` with `insert_cache_key(&mut self.order, key, *current_index)`; for an existing key and `None`, `insert_cache_key` removes the key and appends it. The contract (`change.rs`: \"Equal indexes (or `None`) update the key in place\") says the key stays put. Since this sprint `apply_source_safe` derives its output positions (`visible_index`) from that mirror, and `force_transform`/`force_transform_safe` always emit `Some` positions from it.\n\n- Expected (IDX-3.1, D-INDEX): `transform_safe*` and the forced transforms emit positions in their own output order. That order is the upstream order minus failed keys, and an in-place upstream update keeps the row in place.\n- Observed (bounded scratch probes on the working tree, public API only):\n  - `SourceCache [(1,10),(2,20),(3,30)]` with `.connect().filter_immutable(|_| true).transform_safe(Ok, ..).as_observable_list()`, then `add_or_update((1,11))`. The operator emits `Update { key: 1, current_index: Some(2), previous_index: Some(0) }` and the list becomes `[(2,20),(3,30),(1,11)]`. The upstream itself materializes as `[(1,11),(2,20),(3,30)]`, and HEAD e35b463 gives the same (it forwarded `None`). `transform_safe_on_refresh` behaves the same way.\n  - A positionless-upstream fuzz ran 300 seeds x 25 batches over the sprint's edit generator. The upstream was `cache.connect()` with every index stripped to `None` and moves dropped; the reference was a strict mirror of that upstream. Results:\n    - `transform_safe` diverged in 300/300 seeds (HEAD: 0/300).\n    - `transform_safe_with_forced_all`, with force fired mid-run, diverged in 299/300 (HEAD: 285).\n    - `transform_with_forced_all` violated the contract in 285/300, for example `Update { key: 4, previous_index: Some(0) }` while the key is at position 1. This is pre-existing, but IDX-3.1 names the forced transforms.\n    - `filter`, `filter_with_state`, `transform_inline` and `sort_keyed_by` passed 0-failure.\n- The sprint fuzzers miss this because their upstream is always a `SourceCache`, which fills in every index.\n\nRepair: in both `Update` arms, keep the key's position when `current_index` is `None` and append only when the key is absent. This is what `apply_cache_changes_to_ordered_state` and the dynamic filter already do; consider one shared helper. Add a positionless-upstream fuzz, for example a stream wrapper that strips indexes, or a `filter_immutable` upstream. Cover `transform_safe*` and the forced transforms (`transform_with_forced*`, `transform_safe_with_forced*`, with the force stream fired between batches) in `subset_operator_indexes`.\n\n**Resolution:** Re-verified at snapshot 9b71bd4d:\n- `insert_cache_key` (`operators/select_unique_cache_changes.rs`) and the tree's `insert_order_key` keep an existing key in place for `None` and append only absent keys.\n- My direct repro (`filter_immutable(|_| true).transform_safe(Ok)`, update key 1) now emits `Update { current_index: Some(0), previous_index: Some(0) }` and the list stays `[(1,11),(2,20),(3,30)]`; `transform_safe_on_refresh` and both forced variants also keep the order.\n- My positionless-upstream fuzz over `filter`, `filter_with_state`, `transform_safe`, `transform_with_forced_all`, `transform_safe_with_forced_all`, `transform_inline` and `sort_keyed_by` now fails 0/300 seeds for each operator (before the repair: 300, 285 and 299 failing seeds for the three transforms).\n- Discrimination: in a scratch copy with only the `(Some(_), None)` arm reverted to move-to-end, `dynamic_inputs::operators_over_a_positionless_upstream_keep_its_order` fails.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/dynamic_inputs.rs",
+          "symbol": "operators_over_a_positionless_upstream_keep_its_order"
+        }
+      ]
+    },
+    {
+      "id": "S07-F2",
+      "boundaryId": "s07-index-contract",
+      "criterionIds": [
+        "IDX-3.1",
+        "IDX-3.2",
+        "IDX-4.1",
+        "IDX-4.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Several fuzz paths the criteria name never run, which is how S07-F1 escaped.**\n- In `subset_operator_indexes::fuzzed`, `transform_safe` fails purely by key (keys 0, 5, 10 always fail). The paths where a key succeeds and then fails (the projection is kept and moved by `push_visible_move`) or fails and then succeeds (a mid-list `Add`) never run.\n- The forced transform streams are `Signal::new(()).values()`, which fires once at subscribe. `transform_safe_with_forced` (the predicate form), `transform_safe_on_refresh` and `transform_inline_on_refresh` are not fuzzed.\n- The dynamic-filter fuzz keeps its state constant, so a refilter (`set_state` -> `diff_cache_snapshots`, the Move+Update fix in IDX-3.2/4.1) never runs after subscription.\n- The joins in `snapshot_diff_indexes::fuzzed` join a source with its own filter, so right-side edits never arrive independently of left-side ones. `sort_keyed_dynamic` comparer changes are not covered.\n- No fuzz uses a positionless upstream.\n\n- Expected: each fixed path named in IDX-3.1/3.2/4.1/4.3 is exercised by a discriminating test.\n- Observed: scratch probes for each gap above pass on the working tree with 0/300 failing seeds. They fail heavily on HEAD:\n  - dynamic filter with toggled state: 187 and 282/300\n  - value-dependent `transform_safe` / `on_refresh` / `with_forced`: 275-300/300\n  - `transform_inline(_on_refresh)` over a plain source with indexed upserts: 291/300\n  - `sort_keyed_dynamic` toggling: 106/300\n  - left/inner/right/full joins over two independent sources, with and without a sorted left side: 250-300/300\n\n  So these would be strong regression tests, but the sprint groups do not contain them.\n\nRepair: add these cases to the sprint groups, all in-crate, with fixed seeds and the existing harness:\n- value-dependent safe-transform failures\n- force streams fired between batches\n- a dynamic filter whose state changes between batches\n- joins over two independent sources\n- `sort_keyed_dynamic` comparer changes\n- a positionless upstream\n\n**Resolution:** Re-verified that each gap now has a test, 300 seeds each:\n- `dynamic_inputs::safe_transforms_keep_order_through_failures_and_recoveries`: value-dependent failures with succeed->fail and fail->succeed, the last successful projection modelled from every source change, and force-all every third step.\n- `dynamic_inputs::forced_transforms_and_filters_with_inputs_between_batches`: the force stream and the `filter_with_state` state fire on every batch through `contract::per_batch`.\n- `keyed_sort_positions::keyed_dynamic_sorts_follow_comparer_changes_between_batches`: `sort_keyed_dynamic` with the comparer toggling every batch.\n- `snapshot_diff_indexes::independent_sources`: the four joins and `full_join_many` over two independently edited sources.\n- A positionless upstream (`contract::fuzz_cache_over`).\n\nAll groups pass. My independent probes for the same paths still pass at 0/300.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/dynamic_inputs.rs",
+          "symbol": "safe_transforms_keep_order_through_failures_and_recoveries"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/dynamic_inputs.rs",
+          "symbol": "forced_transforms_and_filters_with_inputs_between_batches"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_sort_positions/mod.rs",
+          "symbol": "keyed_dynamic_sorts_follow_comparer_changes_between_batches"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/independent_sources.rs"
+        }
+      ]
+    },
+    {
+      "id": "S07-F3",
+      "boundaryId": "s07-index-contract",
+      "criterionIds": [
+        "IDX-3.1",
+        "IDX-4.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Static `filter`, `transform_safe` and join snapshots became quadratic.** The static `filter` now runs on `CacheDynamicFilterState`. `visible_index_for_key` (a rank scan over the whole order) and `filtered_index` / `insert_cache_key` (`Vec::position`) are O(n) per change, and `transform_safe`'s `visible_index` is O(n) per `Add`. Join `provisional_index` builds a `HashMap` of the whole desired order for every added key, and `reorder_result` now runs per batch.\n\n- Expected: no large interim regression on initial loads, the common UI path. PRF-2.1 (t39) later requires O(1) amortized work per loaded item, but it names `filter_with_state` and the cache transforms, not the static `filter`.\n- Observed (release build, scratch probe, working tree vs HEAD e35b463):\n\n| Operation | n | HEAD | Working tree |\n|---|---|---|---|\n| `filter` snapshot | 10,000 | 0.69 ms | 330 ms |\n| `filter` snapshot | 50,000 | 3.4 ms | 8.68 s |\n| `transform_safe` snapshot | 4,000 | 2.7 ms | 92 ms |\n| `left_join` snapshot | 4,000 | 30 ms | 285 ms |\n\n  `full_join` improved (13.6 s -> 7.3 s).\n\nRepair (non-blocking here): add an append fast path now. When an `Add` lands at the end of the source order, the visible index is `filtered_order.len()` (the projected count for `transform_safe`). Compute the desired-rank map once per batch in the joins. Either way, extend t39/PRF-2.1's tallying tests to cover the static `filter`, `transform_safe` and join snapshot loads.\n\n**Resolution:** Re-measured with the same release-build probe:\n\n| Snapshot | HEAD | Before repair | Now |\n|---|---|---|---|\n| `filter`, 10k rows | 0.69 ms | 330 ms | 1.1 ms |\n| `filter`, 50k rows | 3.4 ms | 8.68 s | 5.5 ms |\n| `transform_safe`, 4k rows | 2.7 ms | 92 ms | 0.55 ms |\n| `left_join`, 4k rows | 30 ms | 285 ms | 4.0 ms |\n| `full_join`, 4k rows | 13.6 s | 7.3 s | 6.4 ms |\n\nSo the loads are linear. `load_scaling::initial_loads_scale_linearly` guards this with an 8x bound for 4x the rows, best of two. It passed in 4 of 4 runs of the group.\n\nNon-blocking note for t39: live single-key updates through a join now build the rank map and desired order once per batch, which is still O(n) per batch. 100 updates through `transform_safe` + `left_join` at n = 4,000 take 27 ms vs 6.3 ms at HEAD.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/load_scaling.rs",
+          "symbol": "initial_loads_scale_linearly"
+        }
+      ]
+    },
+    {
+      "id": "S07-F4",
+      "boundaryId": "s07-index-contract",
+      "criterionIds": [
+        "IDX-1.1",
+        "IDX-3.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Changelog, docs and formatting gaps.**\n- The constraints require that an existing test pinning a defective behavior is updated with a note in the changelog. The `### Change indexes` entry does not name `transforms_filters/cache_filter_and_transform_emit_keyed_changes` (expected `Some(1)` -> `Some(0)`). The Commands section shows the convention: \"the test `...` was updated accordingly\".\n- `docs/07` now says \"Every operator follows one index contract\" and dropped its link to Known issues. But `docs/README.md` Known issues still lists `add_key`, `ensure_unique_keys` and `ValueStream::edit_diff`, and the forced transforms also violate the contract (S07-F1). Restore the caveat and link.\n- Cosmetic: the `include!`d files are not checked by `cargo fmt`, and the new code contains lines rustfmt would rewrap:\n  - `cache_inline_transform_state.rs`: lines 302, 325 and 471 exceed 100 columns.\n  - `cache_dynamic_filter_state_impl.rs` lines 128-130: `CacheChange::Remove {` / `key, ..` / `}`.\n  - Double blank lines remain where `desired_index` was removed (`join/join_state.rs:133`, `join/affected_key.rs:313`) and before the new helpers in `operators/diff_cache_snapshots.rs:339`.\n\nRepair: add the changelog note, restore the Known-issues pointer in docs/07, and run rustfmt over the touched `include!`d fragments.\n\n**Resolution:** Re-verified:\n- `CHANGELOG.md` names `transforms_filters::cache_filter_and_transform_emit_keyed_changes`, and notes the index-less update fix and the load performance.\n- `docs/07` says operators follow the contract and links the remaining exceptions to Known issues.\n- The touched `include!`d files (`join_state.rs`, `affected_key.rs`, `apply_cache_changes.rs`, `diff_cache_snapshots.rs`, `cache_dynamic_filter_state_impl.rs`, `cache_inline_transform_state.rs`, `select_unique_cache_changes.rs`) have no lines over 100 columns and no double blank lines.\n- `cargo fmt --check` is clean.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/07-collections-fundamentals.md"
+        }
+      ]
     }
   ],
-  "handoffMarkdown": "Joins (join_same_key/join_many), static+dynamic combiners, sync forced transforms (cache_transform_stream/_safe_stream), transform_to_tree_with_predicate, merge_many_{list,cache}_change_sets (cache+list parents) emit through OrderedEmitter. Async forced transforms already serialize on one worker. Tests: ordered_emission_relations (9 tests, 200 rounds).",
+  "handoffMarkdown": "diff_cache_snapshots, combine diff_ordered_caches, limit diff_limited_cache and tree diff: Move carries the pre-update item and Update uses the post-move position. Joins (same-key and many): updates in place, adds at provisional_index, then reorder_result emits Moves into the left/combined order. Immutable groups replay removes/updates/adds then moves_into_order. Combiner keeps Update before Refresh (C-1). Group snapshot_diff_indexes: G-2/J-1/J-2/G-5 repros + fuzz for keyed windows, 5 joins, combiners, stream limit, immutable groups, trees.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",

@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-07T18:00:00+02:00
+  updated: 2026-10-08T02:00:00+02:00
   topics:
     - operators
     - keyed-sort
@@ -27,12 +27,15 @@ Keyed sort state keeps indexed source and sorted-key positions; large add-only b
 
 Multi-input operators share one ordered output per subscription through `emit.rs` (`OrderedEmitter` over `DeliveryQueue` push/drain); the live groups they own are staged under the operator lock and drained after it. Async transforms already serialize through one worker thread and emit from it.
 
+Cache indexes follow one contract (see `CacheChange` docs): keyed sort keeps synchronized source/sorted position maps with binary-search insertion; cache `filter` runs on the dynamic filter state; joins, snapshot diffs and immutable groups reorder with explicit moves; the cache-to-list bridge positions by its own key mirror. `tests/contract.rs` holds the strict mirrors and fuzzers.
+
 Page and window requests are zero-based (`PageRequest::default()` is `(0, 25)`), unlike DynamicData's one-based default.
 
 ## Backlinks
 
 - [Operators module](../../../../../crates/src/collections/operators/mod.rs)
 - [Ordered emitter](../../../../../crates/src/collections/emit.rs)
+- [Index contract harness](../../../../../crates/src/collections/tests/contract.rs)
 - [Lifecycle operators](../../../../../crates/src/collections/lifecycle/mod.rs)
 - [Joins](../../../../../crates/src/collections/join/mod.rs)
 - [Collection tests](../../../../../crates/src/collections/tests/mod.rs)

@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-07T18:00:00+02:00
+  updated: 2026-10-08T02:00:00+02:00
   topics:
     - operators
     - incremental
@@ -49,3 +49,6 @@ agentx:
 - Operator parameters that take a stream, and per-item selectors that return one, use a method-level error parameter `E` with `E: Send + Sync + 'static, CollectionError: From<E>` (one independent parameter per stream) and convert with `err_into::<CollectionError>()` at the top of the impl body. Inside such a method, calls to other `E`-generic operators need an explicit `CollectionError` turbofish: the in-scope `CollectionError: From<E>` where clause otherwise drives inference to the caller's `E`.
 - Operators with more than one input (dynamic predicate/comparer/request/selector/regrouper streams, joins, combiners, forced transforms, filtered trees, merge-many) emit through `collections::emit::OrderedEmitter`: compute the batch under the operator state lock, `push` before unlocking, `drain` after (`emitter.update(&state, |state| ...)` for the common case). Keep the emitter's delivery subscription last in the operator's `Subscription::many` so it is disposed after the inputs.
 - Never call a downstream subscriber, or a live group's subscribers, while holding an operator state lock: a panicking subscriber would poison the lock and silently stop the operator, and a subscriber that feeds the operator's inputs would deadlock. Live groups owned by an operator use `stage_pending` under the operator lock and `drain_pending` after it (`stage_pending_group_*_changes` + `drain_staged_groups`; `JoinManyState::stage_group`/`take_staged`).
+- Every cache operator follows the `CacheChange` index contract documented in `change.rs`: indexes are positions in the operator's own output (or `None`); an `Update` with differing indexes is remove-then-insert; a `Move` carries the item as currently held (a changed value follows as an `Update`); later changes to a moved key use its post-move position; an index-less `Update` keeps the key in place (`insert_cache_key` semantics). Subset operators never forward source positions and never emit `Remove`/`Clear` for keys they did not include.
+- Snapshot-style operators (keyed windows, joins, immutable groups, trees, combiners, stream limits) replay changes against their output: removals, in-place updates, additions at provisional positions, then explicit moves into the final order (`moves_into_order`, `reorder_result`). Never pair a `Move` with an `Update` whose `previous_index` is the pre-move position.
+- Every index fix gets differential fuzz coverage through `collections/tests/contract.rs` (`StrictList`/`StrictCache`, `fuzz_*`), including a positionless upstream (`filter_immutable(|_| true)`) and dynamic inputs fired between batches (`per_batch`). Keep appended loads linear (no per-key position scans on the append path).
