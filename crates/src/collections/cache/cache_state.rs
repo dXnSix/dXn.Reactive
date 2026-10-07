@@ -4,7 +4,7 @@ use std::convert::Infallible;
 use std::hash::Hash;
 use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use rxrust::prelude::{ObservableFactory, Observer, Shared};
 
@@ -14,6 +14,7 @@ use crate::collections::connection::{
 };
 use crate::collections::delivery::DeliveryQueue;
 use crate::collections::error::{CollectionError, Result};
+use crate::collections::key_order::KeyOrder;
 use crate::collections::keyed_delivery::KeyedChangeHub;
 #[cfg(test)]
 use crate::collections::keyed_delivery::KeyedDeliverySnapshot;
@@ -25,8 +26,8 @@ type CacheRx<K, T> =
 
 struct CacheState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
-    positions: HashMap<K, usize>,
+    /// Key order with O(1) key-to-position lookups (removals and moves scan no keys).
+    order: KeyOrder<K>,
     version: u64,
     editing: bool,
     suspend_depth: usize,
@@ -40,12 +41,11 @@ pub struct SourceCache<K, T> {
     state: Arc<SourceLock<CacheState<K, T>>>,
     changes: DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
     keyed_changes: KeyedChangeHub<K, T>,
-    preview: DeliveryQueue<ChangeSet<CacheChange<K, T>>>,
+    preview: DeliveryQueue<Arc<ChangeSet<CacheChange<K, T>>>>,
     count_changed: DeliveryQueue<(u64, usize)>,
     /// Suspension guards dropped while the state was locked, applied on release.
     pending_resumes: Arc<AtomicUsize>,
-    rx_changes: CacheRx<K, T>,
-    _rx_bridge: Arc<Subscription>,
+    /// The rxRust subject and its bridge, created by the first `changes_rx()` call.
+    rx_changes: Arc<OnceLock<(CacheRx<K, T>, Subscription)>>,
     _keyed_bridge: Arc<Subscription>,
 }
-

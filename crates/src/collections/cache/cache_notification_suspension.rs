@@ -21,7 +21,7 @@ where
 pub struct CacheUpdater<'a, K, T> {
     key_selector: Arc<dyn Fn(&T) -> K + Send + Sync>,
     items: &'a mut HashMap<K, T>,
-    order: &'a mut Vec<K>,
+    order: &'a mut KeyOrder<K>,
     changes: &'a mut Vec<CacheChange<K, T>>,
 }
 
@@ -29,7 +29,7 @@ pub struct CacheUpdater<'a, K, T> {
 /// read-modify-write inside one `edit` is atomic.
 impl<K, T> CacheUpdater<'_, K, T>
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
 {
     pub fn lookup(&self, key: &K) -> Option<&T> {
         self.items.get(key)
@@ -45,19 +45,19 @@ where
 
     /// Keys in cache order.
     pub fn keys(&self) -> &[K] {
-        self.order
+        self.order.as_slice()
     }
 }
 
 /// A read-only view of a cache's state, passed to `read`.
 pub struct CacheView<'a, K, T> {
     items: &'a HashMap<K, T>,
-    order: &'a [K],
+    order: &'a KeyOrder<K>,
 }
 
 impl<K, T> CacheView<'_, K, T>
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
 {
     pub fn lookup(&self, key: &K) -> Option<&T> {
         self.items.get(key)
@@ -77,7 +77,12 @@ where
 
     /// Keys in cache order.
     pub fn keys(&self) -> &[K] {
-        self.order
+        self.order.as_slice()
+    }
+
+    /// The position of `key` in cache order.
+    pub(crate) fn index_of(&self, key: &K) -> Option<usize> {
+        self.order.index_of(key)
     }
 
     /// Key/item pairs in cache order.
@@ -129,19 +134,13 @@ where
 
     pub fn add_or_update_key_at(&mut self, key: K, item: T, index: Option<usize>) {
         if let Some(previous) = self.items.insert(key.clone(), item.clone()) {
-            let previous_index = self.order.iter().position(|existing| existing == &key);
-            let current_index = if let Some(index) = index {
-                if let Some(previous_index) = previous_index {
-                    let moved_key = self.order.remove(previous_index);
-                    let index = index.min(self.order.len());
-                    self.order.insert(index, moved_key);
-                    Some(index)
-                } else {
-                    self.order.insert(index.min(self.order.len()), key.clone());
-                    Some(index.min(self.order.len().saturating_sub(1)))
+            let previous_index = self.order.index_of(&key);
+            let current_index = match (index, previous_index) {
+                (Some(index), Some(previous_index)) => {
+                    Some(self.order.move_to(previous_index, index))
                 }
-            } else {
-                previous_index
+                (Some(index), None) => Some(self.order.insert(index, key.clone())),
+                (None, previous_index) => previous_index,
             };
             self.changes.push(CacheChange::Update {
                 key,
@@ -151,8 +150,7 @@ where
                 previous_index,
             });
         } else {
-            let index = index.unwrap_or(self.order.len()).min(self.order.len());
-            self.order.insert(index, key.clone());
+            let index = self.order.insert(index.unwrap_or(usize::MAX), key.clone());
             self.changes.push(CacheChange::Add {
                 key,
                 current: item,
@@ -196,10 +194,7 @@ where
 
     pub fn remove_key(&mut self, key: &K) -> Option<T> {
         let previous = self.items.remove(key)?;
-        let previous_index = self.order.iter().position(|existing| existing == key);
-        if let Some(index) = previous_index {
-            let _ = self.order.remove(index);
-        }
+        let previous_index = self.order.remove(key);
         self.changes.push(CacheChange::Remove {
             key: key.clone(),
             previous: previous.clone(),
@@ -232,7 +227,7 @@ where
         let Some(current) = self.items.get(key).cloned() else {
             return false;
         };
-        let current_index = self.order.iter().position(|existing| existing == key);
+        let current_index = self.order.index_of(key);
         self.changes.push(CacheChange::Refresh {
             key: key.clone(),
             current,
@@ -248,7 +243,7 @@ where
             return false;
         };
         *slot = item.clone();
-        let current_index = self.order.iter().position(|existing| existing == key);
+        let current_index = self.order.index_of(key);
         self.changes.push(CacheChange::Refresh {
             key: key.clone(),
             current: item,
@@ -272,14 +267,19 @@ where
     }
 
     pub fn refresh(&mut self) {
-        let keys = self.order.clone();
-        for key in keys {
-            let _ = self.refresh_key(&key);
+        for (index, key) in self.order.as_slice().iter().enumerate() {
+            if let Some(current) = self.items.get(key) {
+                self.changes.push(CacheChange::Refresh {
+                    key: key.clone(),
+                    current: current.clone(),
+                    current_index: Some(index),
+                });
+            }
         }
     }
 
     pub fn move_key(&mut self, key: &K, to: usize) -> bool {
-        let Some(from) = self.order.iter().position(|existing| existing == key) else {
+        let Some(from) = self.order.index_of(key) else {
             return false;
         };
         if to >= self.order.len() {
@@ -288,11 +288,10 @@ where
         if from == to {
             return true;
         }
-        let moved_key = self.order.remove(from);
-        self.order.insert(to, moved_key.clone());
-        if let Some(current) = self.items.get(&moved_key).cloned() {
+        let _ = self.order.move_to(from, to);
+        if let Some(current) = self.items.get(key).cloned() {
             self.changes.push(CacheChange::Move {
-                key: moved_key,
+                key: key.clone(),
                 current,
                 current_index: to,
                 previous_index: from,
@@ -313,20 +312,22 @@ where
         items: impl IntoIterator<Item = T>,
         are_items_equal: impl Fn(&T, &T) -> bool,
     ) {
-        let mut next_items = HashMap::<K, T>::new();
-        let mut next_order = Vec::<K>::new();
+        // The last occurrence of a key wins and takes its position (earlier ones are left
+        // as holes).
+        let mut next_items = HashMap::<K, (T, usize)>::new();
+        let mut next_order = Vec::<Option<K>>::new();
         for item in items {
             let key = (self.key_selector)(&item);
-            if next_items.insert(key.clone(), item).is_some()
-                && let Some(index) = next_order.iter().position(|existing| existing == &key)
-            {
-                let _ = next_order.remove(index);
+            let slot = next_order.len();
+            if let Some((_, previous_slot)) = next_items.insert(key.clone(), (item, slot)) {
+                next_order[previous_slot] = None;
             }
-            next_order.push(key);
+            next_order.push(Some(key));
         }
 
         let removed_keys = self
             .order
+            .as_slice()
             .iter()
             .filter(|key| !next_items.contains_key(*key))
             .cloned()
@@ -335,18 +336,17 @@ where
             let _ = self.remove_key(&key);
         }
 
-        for (index, key) in next_order.iter().enumerate() {
-            let Some(next_item) = next_items.get(key).cloned() else {
+        for (index, key) in next_order.into_iter().flatten().enumerate() {
+            let Some((next_item, _)) = next_items.remove(&key) else {
                 continue;
             };
-            match self.items.get(key) {
+            match self.items.get(&key) {
                 Some(current_item) if are_items_equal(current_item, &next_item) => {
-                    if self.order.iter().position(|existing| existing == key) != Some(index) {
-                        let _ = self.move_key(key, index);
+                    if self.order.index_of(&key) != Some(index) {
+                        let _ = self.move_key(&key, index);
                     }
                 }
-                Some(_) => self.add_or_update_at(next_item, Some(index)),
-                None => self.add_or_update_at(next_item, Some(index)),
+                _ => self.add_or_update_key_at(key, next_item, Some(index)),
             }
         }
     }
@@ -357,6 +357,7 @@ where
         }
         let previous = self
             .order
+            .as_slice()
             .iter()
             .filter_map(|key| self.items.get(key).cloned().map(|item| (key.clone(), item)))
             .collect::<Vec<_>>();

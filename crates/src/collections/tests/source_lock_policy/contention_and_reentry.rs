@@ -663,16 +663,24 @@ fn group_connections_from_inside_a_reentrant_clone_get_nested_update() {
     );
 }
 
-// Review finding S04-F7: a deferred resume runs under a tracked lock.
+// Review finding S04-F7: a deferred resume runs under a tracked lock. Since PRF-1.2 the resume
+// shares the suspended batch instead of cloning it, so no item code runs under the lock at all.
 
 #[test]
-fn a_reentrant_clone_during_a_deferred_resume_gets_nested_update() {
-    let outcomes = within_deadline(|| {
+fn a_deferred_resume_clones_no_items_under_the_lock() {
+    let (outcomes, delivered) = within_deadline(|| {
         let probe: Probe = Arc::new(Mutex::new(None));
         let outcomes = Arc::new(Mutex::new(Vec::new()));
+        let delivered = Arc::new(AtomicUsize::new(0));
 
         let list = SourceList::<Reentrant>::default();
-        let _list_changes = list.changes().subscribe(|_| {}).unwrap();
+        let sink = Arc::clone(&delivered);
+        let _list_changes = list
+            .changes()
+            .subscribe(move |_| {
+                sink.fetch_add(1, AtomicOrdering::SeqCst);
+            })
+            .unwrap();
         let list_guard = Mutex::new(Some(list.suspend_notifications().unwrap()));
         list.push(Reentrant {
             probe: Arc::clone(&probe),
@@ -680,17 +688,23 @@ fn a_reentrant_clone_during_a_deferred_resume_gets_nested_update() {
         .unwrap();
         let (inner, record) = (list.clone(), Arc::clone(&outcomes));
         list.edit(|_| {
-            // Arm the probe: the deferred resume clones the suspended item after this edit
-            // releases the lock, and that clone reads the list again.
+            // Armed: a clone of the suspended item would read the list again.
             *probe.lock().unwrap() = Some(Box::new(move || {
                 record.lock().unwrap().push(inner.len().err());
             }));
             drop(list_guard.lock().unwrap().take());
         })
         .unwrap();
+        drop(probe.lock().unwrap().take());
 
         let cache = SourceCache::new(|_: &Reentrant| 1_u32);
-        let _cache_changes = cache.changes().subscribe(|_| {}).unwrap();
+        let sink = Arc::clone(&delivered);
+        let _cache_changes = cache
+            .changes()
+            .subscribe(move |_| {
+                sink.fetch_add(1, AtomicOrdering::SeqCst);
+            })
+            .unwrap();
         let cache_guard = Mutex::new(Some(cache.suspend_notifications().unwrap()));
         cache
             .add_or_update(Reentrant {
@@ -706,18 +720,15 @@ fn a_reentrant_clone_during_a_deferred_resume_gets_nested_update() {
                 drop(cache_guard.lock().unwrap().take());
             })
             .unwrap();
-        Arc::try_unwrap(outcomes)
+        drop(probe.lock().unwrap().take());
+        let outcomes = Arc::try_unwrap(outcomes)
             .ok()
             .unwrap()
             .into_inner()
-            .unwrap()
+            .unwrap();
+        (outcomes, delivered.load(AtomicOrdering::SeqCst))
     });
 
-    assert_eq!(
-        outcomes,
-        vec![
-            Some(CollectionError::NestedUpdate),
-            Some(CollectionError::NestedUpdate)
-        ]
-    );
+    assert_eq!(outcomes, Vec::<Option<CollectionError>>::new());
+    assert_eq!(delivered, 2, "each resumed batch is delivered once");
 }

@@ -7,19 +7,38 @@ use crate::collections::stream::StreamSubscriber;
 use crate::collections::subscription::Subscription;
 
 /// A published batch plus, for a batch resumed after notification suspension, the version
-/// each change was committed at (the segments of the suspended edits).
-#[derive(Clone)]
+/// each change was committed at (the segments of the suspended edits). The batch is shared:
+/// cloning the envelope never clones its changes.
 pub(crate) struct VersionedChangeSet<C> {
-    change_set: ChangeSet<C>,
+    change_set: Arc<ChangeSet<C>>,
     change_versions: Option<Arc<[u64]>>,
+}
+
+impl<C> Clone for VersionedChangeSet<C> {
+    fn clone(&self) -> Self {
+        Self {
+            change_set: Arc::clone(&self.change_set),
+            change_versions: self.change_versions.clone(),
+        }
+    }
 }
 
 impl<C> VersionedChangeSet<C> {
     pub(crate) fn new(change_set: ChangeSet<C>) -> Self {
+        Self::shared(Arc::new(change_set))
+    }
+
+    /// An envelope around an already shared batch.
+    pub(crate) fn shared(change_set: Arc<ChangeSet<C>>) -> Self {
         Self {
             change_set,
             change_versions: None,
         }
+    }
+
+    /// The shared batch (another reference to it, not a copy).
+    pub(crate) fn shared_change_set(&self) -> Arc<ChangeSet<C>> {
+        Arc::clone(&self.change_set)
     }
 
     /// One public batch made of `(version, changes)` segments committed while
@@ -32,7 +51,7 @@ impl<C> VersionedChangeSet<C> {
             changes.extend(segment);
         }
         Self {
-            change_set: ChangeSet::new(changes, version),
+            change_set: Arc::new(ChangeSet::new(changes, version)),
             change_versions: Some(versions.into()),
         }
     }
@@ -41,7 +60,7 @@ impl<C> VersionedChangeSet<C> {
     pub(crate) fn from_versioned_changes(changes: Vec<(u64, C)>, version: u64) -> Self {
         let (versions, changes): (Vec<u64>, Vec<C>) = changes.into_iter().unzip();
         Self {
-            change_set: ChangeSet::new(changes, version),
+            change_set: Arc::new(ChangeSet::new(changes, version)),
             change_versions: Some(versions.into()),
         }
     }

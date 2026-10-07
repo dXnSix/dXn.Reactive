@@ -16,6 +16,7 @@ pub mod expiration;
 pub mod factory;
 pub mod group;
 pub mod join;
+mod key_order;
 mod keyed_delivery;
 pub mod lifecycle;
 pub mod limit;

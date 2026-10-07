@@ -31,6 +31,7 @@ mod ref_count_lifecycle;
 mod side_effects_options_bridges;
 mod snapshot_diff_indexes;
 mod sorting_windowing;
+mod source_bookkeeping_costs;
 mod source_commit_order;
 mod source_lock_policy;
 mod source_read_api;

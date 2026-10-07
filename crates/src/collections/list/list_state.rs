@@ -2,7 +2,7 @@ use crate::collections::source_lock::SourceLock;
 use std::convert::Infallible;
 use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use rxrust::prelude::{ObservableFactory, Observer, Shared};
 
@@ -30,12 +30,12 @@ struct ListState<T> {
 pub struct SourceList<T> {
     state: Arc<SourceLock<ListState<T>>>,
     changes: DeliveryQueue<VersionedChangeSet<ListChange<T>>>,
-    preview: DeliveryQueue<ChangeSet<ListChange<T>>>,
+    preview: DeliveryQueue<Arc<ChangeSet<ListChange<T>>>>,
     count_changed: DeliveryQueue<(u64, usize)>,
     /// Suspension guards dropped while the state was locked, applied on release.
     pending_resumes: Arc<AtomicUsize>,
-    rx_changes: ListRx<T>,
-    _rx_bridge: Arc<Subscription>,
+    /// The rxRust subject and its bridge, created by the first `changes_rx()` call.
+    rx_changes: Arc<OnceLock<(ListRx<T>, Subscription)>>,
 }
 
 impl<T> SourceList<T>
@@ -44,14 +44,6 @@ where
 {
     pub fn new(items: Vec<T>) -> Self {
         let changes = DeliveryQueue::new();
-        let rx_changes = Shared::subject::<ChangeSet<ListChange<T>>, Infallible>();
-        let rx_changes_for_bridge = rx_changes.clone();
-        let bridge = changes
-            .subscribe(move |versioned: &VersionedChangeSet<ListChange<T>>| {
-                let mut rx_changes = rx_changes_for_bridge.clone();
-                rx_changes.next(versioned.change_set().clone());
-            })
-            .unwrap_or_else(|_| Subscription::empty());
         let state = Arc::new(SourceLock::new(ListState {
             items,
             version: 0,
@@ -86,8 +78,7 @@ where
             preview,
             count_changed,
             pending_resumes,
-            rx_changes,
-            _rx_bridge: Arc::new(bridge),
+            rx_changes: Arc::new(OnceLock::new()),
         }
     }
 
@@ -97,19 +88,11 @@ where
     }
 
     pub fn items(&self) -> Result<Vec<T>> {
-        Ok(self
-            .state
-            .lock()?
-            .items
-            .clone())
+        Ok(self.state.lock()?.items.clone())
     }
 
     pub fn len(&self) -> Result<usize> {
-        Ok(self
-            .state
-            .lock()?
-            .items
-            .len())
+        Ok(self.state.lock()?.items.len())
     }
 
     pub fn is_empty(&self) -> Result<bool> {
@@ -135,10 +118,7 @@ where
     }
 
     pub fn version(&self) -> Result<u64> {
-        Ok(self
-            .state
-            .lock()?
-            .version)
+        Ok(self.state.lock()?.version)
     }
 
     pub fn edit(
@@ -183,11 +163,14 @@ where
                 if state.suspend_depth > 0 {
                     state.suspended.push((batch.version, batch.changes.clone()));
                 } else {
-                    self.preview.push(batch.clone())?;
-                    self.changes.push(VersionedChangeSet::new(batch.clone()))?;
+                    // One shared envelope for every subscriber (the caller keeps `batch`).
+                    let shared = Arc::new(batch.clone());
+                    self.preview.push(Arc::clone(&shared))?;
+                    self.changes.push(VersionedChangeSet::shared(shared))?;
                 }
                 if count_before != state.items.len() {
-                    self.count_changed.push((state.version, state.items.len()))?;
+                    self.count_changed
+                        .push((state.version, state.items.len()))?;
                 }
                 batch
             }
@@ -362,12 +345,26 @@ where
         let preview = self.preview.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            Ok(preview.subscribe(move |batch| subscriber(batch))?)
+            Ok(preview.subscribe(move |batch: &Arc<ChangeSet<_>>| subscriber(batch))?)
         })
     }
 
+    /// The changes as an rxRust subject. The subject (and its bridge from the source) is
+    /// created on the first call, so a list never read through rxRust does no bridge work.
     pub fn changes_rx(&self) -> ListRx<T> {
-        self.rx_changes.clone()
+        let (subject, _) = self.rx_changes.get_or_init(|| {
+            let subject = Shared::subject::<ChangeSet<ListChange<T>>, Infallible>();
+            let bridge_subject = subject.clone();
+            let bridge = self
+                .changes
+                .subscribe(move |versioned: &VersionedChangeSet<ListChange<T>>| {
+                    let mut subject = bridge_subject.clone();
+                    subject.next(versioned.change_set().clone());
+                })
+                .unwrap_or_else(|_| Subscription::empty());
+            (subject, bridge)
+        });
+        subject.clone()
     }
 
     /// The current count, then every change of it. Registers for changes before reading
@@ -433,7 +430,7 @@ where
         // segments their snapshot already covers.
         let versioned =
             VersionedChangeSet::segmented(mem::take(&mut state.suspended), state.version);
-        self.preview.push(versioned.change_set().clone())?;
+        self.preview.push(versioned.shared_change_set())?;
         self.changes.push(versioned)?;
         drop(state);
         self.deliver()
@@ -541,7 +538,7 @@ impl<T> ListUpdater<'_, T> {
 fn apply_deferred_resumes<T>(
     state: &SourceLock<ListState<T>>,
     pending: &AtomicUsize,
-    preview: &DeliveryQueue<ChangeSet<ListChange<T>>>,
+    preview: &DeliveryQueue<Arc<ChangeSet<ListChange<T>>>>,
     changes: &DeliveryQueue<VersionedChangeSet<ListChange<T>>>,
     count_changed: &DeliveryQueue<(u64, usize)>,
 ) where
@@ -563,8 +560,9 @@ fn apply_deferred_resumes<T>(
     guard.suspend_depth = guard.suspend_depth.saturating_sub(resumes);
     if guard.suspend_depth == 0 && !guard.suspended.is_empty() {
         let version = guard.version;
-        let versioned = VersionedChangeSet::segmented(std::mem::take(&mut guard.suspended), version);
-        let _ = preview.push(versioned.change_set().clone());
+        let versioned =
+            VersionedChangeSet::segmented(std::mem::take(&mut guard.suspended), version);
+        let _ = preview.push(versioned.shared_change_set());
         let _ = changes.push(versioned);
     }
     drop(guard);

@@ -124,6 +124,15 @@ where
     }
 
     pub(crate) fn publish(&self, versioned: &VersionedChangeSet<CacheChange<K, T>>) {
+        // Without watches there is nothing to partition. A watch registered after this check
+        // takes its snapshot after this batch was committed, so the snapshot covers it.
+        let watched = self
+            .registry
+            .lock_blocking()
+            .is_ok_and(|registry| !registry.buckets.is_empty());
+        if !watched {
+            return;
+        }
         // Changes keep the version they were committed at, so a watch that subscribed
         // during notification suspension can drop the segments its snapshot covers.
         let mut partitioned = HashMap::<K, Vec<(u64, CacheChange<K, T>)>>::new();

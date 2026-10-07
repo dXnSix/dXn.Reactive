@@ -6,14 +6,6 @@ where
     pub fn new(key_selector: impl Fn(&T) -> K + Send + Sync + 'static) -> Self {
         let changes = DeliveryQueue::new();
         let keyed_changes = KeyedChangeHub::new();
-        let rx_changes = Shared::subject::<ChangeSet<CacheChange<K, T>>, Infallible>();
-        let rx_changes_for_bridge = rx_changes.clone();
-        let bridge = changes
-            .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
-                let mut rx_changes = rx_changes_for_bridge.clone();
-                rx_changes.next(versioned.change_set().clone());
-            })
-            .unwrap_or_else(|_| Subscription::empty());
         let keyed_changes_for_bridge = keyed_changes.clone();
         let keyed_bridge = changes
             .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
@@ -23,8 +15,7 @@ where
 
         let state = Arc::new(SourceLock::new(CacheState {
             items: HashMap::new(),
-            order: Vec::new(),
-            positions: HashMap::new(),
+            order: KeyOrder::new(),
             version: 0,
             editing: false,
             suspend_depth: 0,
@@ -59,8 +50,7 @@ where
             preview,
             count_changed,
             pending_resumes,
-            rx_changes,
-            _rx_bridge: Arc::new(bridge),
+            rx_changes: Arc::new(OnceLock::new()),
             _keyed_bridge: Arc::new(keyed_bridge),
         }
     }
@@ -74,7 +64,9 @@ where
         {
             // A new cache has no subscribers and no other handles: nothing to publish.
             if let Ok(mut state) = cache.state.lock() {
-                let CacheState { items: map, order, .. } = &mut *state;
+                let CacheState {
+                    items: map, order, ..
+                } = &mut *state;
                 let mut changes = Vec::new();
                 let mut updater = CacheUpdater {
                     key_selector: Arc::clone(&cache.key_selector),
@@ -83,13 +75,6 @@ where
                     changes: &mut changes,
                 };
                 updater.add_or_update_range(items);
-                state.positions = state
-                    .order
-                    .iter()
-                    .cloned()
-                    .enumerate()
-                    .map(|(index, key)| (key, index))
-                    .collect();
             }
         }
         cache
@@ -115,11 +100,7 @@ where
     }
 
     pub fn count(&self) -> Result<usize> {
-        Ok(self
-            .state
-            .lock()?
-            .items
-            .len())
+        Ok(self.state.lock()?.items.len())
     }
 
     pub fn items(&self) -> Result<Vec<T>> {
@@ -132,11 +113,7 @@ where
     }
 
     pub fn keys(&self) -> Result<Vec<K>> {
-        Ok(self
-            .state
-            .lock()?
-            .order
-            .clone())
+        Ok(self.state.lock()?.order.to_vec())
     }
 
     pub fn key_values(&self) -> Result<Vec<(K, T)>> {
@@ -155,19 +132,11 @@ where
     }
 
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
-        Ok(self
-            .state
-            .lock()?
-            .items
-            .get(key)
-            .cloned())
+        Ok(self.state.lock()?.items.get(key).cloned())
     }
 
     pub fn version(&self) -> Result<u64> {
-        Ok(self
-            .state
-            .lock()?
-            .version)
+        Ok(self.state.lock()?.version)
     }
 
     pub fn edit(
@@ -205,15 +174,6 @@ where
             }
 
             state.editing = false;
-            if !changes.is_empty() {
-                state.positions = state
-                    .order
-                    .iter()
-                    .cloned()
-                    .enumerate()
-                    .map(|(index, key)| (key, index))
-                    .collect();
-            }
             if changes.is_empty() {
                 ChangeSet::empty(state.version)
             } else {
@@ -224,11 +184,14 @@ where
                 if state.suspend_depth > 0 {
                     state.suspended.push((batch.version, batch.changes.clone()));
                 } else {
-                    self.preview.push(batch.clone())?;
-                    self.changes.push(VersionedChangeSet::new(batch.clone()))?;
+                    // One shared envelope for every subscriber (the caller keeps `batch`).
+                    let shared = Arc::new(batch.clone());
+                    self.preview.push(Arc::clone(&shared))?;
+                    self.changes.push(VersionedChangeSet::shared(shared))?;
                 }
                 if count_before != state.items.len() {
-                    self.count_changed.push((state.version, state.items.len()))?;
+                    self.count_changed
+                        .push((state.version, state.items.len()))?;
                 }
                 batch
             }
@@ -443,7 +406,7 @@ where
         let preview = self.preview.clone();
         ChangeStream::new(move |subscriber| {
             let subscriber = Arc::clone(&subscriber);
-            Ok(preview.subscribe(move |batch| subscriber(batch))?)
+            Ok(preview.subscribe(move |batch: &Arc<ChangeSet<_>>| subscriber(batch))?)
         })
     }
 
@@ -524,8 +487,22 @@ where
         })
     }
 
+    /// The changes as an rxRust subject. The subject (and its bridge from the source) is
+    /// created on the first call, so a cache never read through rxRust does no bridge work.
     pub fn changes_rx(&self) -> CacheRx<K, T> {
-        self.rx_changes.clone()
+        let (subject, _) = self.rx_changes.get_or_init(|| {
+            let subject = Shared::subject::<ChangeSet<CacheChange<K, T>>, Infallible>();
+            let bridge_subject = subject.clone();
+            let bridge = self
+                .changes
+                .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
+                    let mut subject = bridge_subject.clone();
+                    subject.next(versioned.change_set().clone());
+                })
+                .unwrap_or_else(|_| Subscription::empty());
+            (subject, bridge)
+        });
+        subject.clone()
     }
 
     /// The current count, then every change of it. Registers for changes before reading
@@ -591,7 +568,7 @@ where
         // suspension drop the segments their snapshot already covers.
         let versioned =
             VersionedChangeSet::segmented(mem::take(&mut state.suspended), state.version);
-        self.preview.push(versioned.change_set().clone())?;
+        self.preview.push(versioned.shared_change_set())?;
         self.changes.push(versioned)?;
         drop(state);
         self.deliver()
@@ -621,6 +598,7 @@ where
             let state = self.state.lock()?;
             let snapshot = state
                 .order
+                .as_slice()
                 .iter()
                 .enumerate()
                 .filter_map(|(index, key)| {
@@ -680,7 +658,7 @@ where
                 .map(|current| CacheChange::Add {
                     key: watch_key.clone(),
                     current,
-                    current_index: state.positions.get(&watch_key).copied(),
+                    current_index: state.order.index_of(&watch_key),
                 });
             (snapshot, state.version)
         };
@@ -705,7 +683,7 @@ where
 fn apply_deferred_resumes<K, T>(
     state: &SourceLock<CacheState<K, T>>,
     pending: &AtomicUsize,
-    preview: &DeliveryQueue<ChangeSet<CacheChange<K, T>>>,
+    preview: &DeliveryQueue<Arc<ChangeSet<CacheChange<K, T>>>>,
     changes: &DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
     count_changed: &DeliveryQueue<(u64, usize)>,
 ) where
@@ -728,8 +706,9 @@ fn apply_deferred_resumes<K, T>(
     guard.suspend_depth = guard.suspend_depth.saturating_sub(resumes);
     if guard.suspend_depth == 0 && !guard.suspended.is_empty() {
         let version = guard.version;
-        let versioned = VersionedChangeSet::segmented(std::mem::take(&mut guard.suspended), version);
-        let _ = preview.push(versioned.change_set().clone());
+        let versioned =
+            VersionedChangeSet::segmented(std::mem::take(&mut guard.suspended), version);
+        let _ = preview.push(versioned.shared_change_set());
         let _ = changes.push(versioned);
     }
     drop(guard);
