@@ -23,7 +23,8 @@ pub mod prelude {
     pub use crate::effect::Effect;
     pub use crate::event::{EventBus, EventStream};
     pub use crate::primitives::{
-        ConnectionStatus, DeliveryQueue, ReactiveError, Result, Subscription, ValueStream,
+        ConnectionStatus, DeliveryQueue, ManualScheduler, ReactiveError, Result, ScheduledTask,
+        Scheduler, Subscription, ThreadScheduler, ValueStream, default_scheduler,
     };
     pub use crate::signal::{ReadSignal, Signal, SignalChange};
     pub use crate::stream_ext::ReactiveValueStreamExt;
