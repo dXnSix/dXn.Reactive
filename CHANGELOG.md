@@ -273,6 +273,8 @@ breaking changes below are listed with migration notes for consumers.
 - **Fixed:** `left_join_many`/`full_join_many` drop the group of a removed left key when no right
   item uses it (they were kept forever), and `transform_to_tree` frees the nodes of a parent cycle
   when its subscription is disposed (they leaked).
+- **Fixed:** in `*_join_many`, a right-side `Update` that also moves the item (a new
+  `current_index`) moves it inside its group too; the group kept it at its old position.
 - Added Criterion benchmarks `joins`, `tree` and `sort_and_page`.
 - The test `source_lock_policy::a_reentrant_clone_during_a_deferred_resume_gets_nested_update`
   pinned a clone of the suspended batch during a deferred resume; resumes now share the batch,

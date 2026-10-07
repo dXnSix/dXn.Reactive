@@ -14,6 +14,7 @@ mod expiration_rework;
 mod group_and_combiner_indexes;
 mod grouping_tree_switching;
 mod index_contract_harness;
+mod join_many_right_moves;
 mod joins;
 mod key_bridge_indexes;
 mod keyed_sort_positions;

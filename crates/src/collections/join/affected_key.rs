@@ -139,6 +139,12 @@ where
                 current_index,
                 ..
             } => {
+                // The right order moves first: the item's position in its group follows it.
+                if let Some(index) = current_index {
+                    move_or_insert_key(&mut self.right_order, key.clone(), *index);
+                } else if !self.right_order.contains_key(key) {
+                    let _ = self.right_order.push(key.clone());
+                }
                 let previous_group_key = self
                     .right_items
                     .get(key)
@@ -158,11 +164,6 @@ where
                         .insert(key.clone(), (next_group_key.clone(), current.clone()));
                     self.add_or_update_group_item(key, current.clone(), &next_group_key);
                     upsert_affected_key(affected, next_group_key, false);
-                }
-                if let Some(index) = current_index {
-                    move_or_insert_key(&mut self.right_order, key.clone(), *index);
-                } else if !self.right_order.contains_key(key) {
-                    let _ = self.right_order.push(key.clone());
                 }
             }
             CacheChange::Remove { key, previous, .. } => {
