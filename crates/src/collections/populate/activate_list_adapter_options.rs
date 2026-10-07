@@ -8,14 +8,20 @@ where
 {
     let mut subscriptions = Vec::new();
     if let Some(expire_after) = options.expire_after {
+        let scheduler = options.scheduler.unwrap_or_else(default_scheduler);
         let expiration = if let Some(polling_interval) = options.polling_interval {
-            SourceListExpireAfterExt::expire_after_with_polling(
+            SourceListExpireAfterExt::expire_after_with_polling_with_scheduler(
                 backing,
                 move |item| expire_after(item),
                 polling_interval,
+                scheduler,
             )
         } else {
-            SourceListExpireAfterExt::expire_after(backing, move |item| expire_after(item))
+            SourceListExpireAfterExt::expire_after_with_scheduler(
+                backing,
+                move |item| expire_after(item),
+                scheduler,
+            )
         };
         subscriptions.push(expiration.subscribe(|_| {})?);
     }
@@ -47,14 +53,20 @@ where
 {
     let mut subscriptions = Vec::new();
     if let Some(expire_after) = options.expire_after {
+        let scheduler = options.scheduler.unwrap_or_else(default_scheduler);
         let expiration = if let Some(polling_interval) = options.polling_interval {
-            SourceCacheExpireAfterExt::expire_after_with_polling(
+            SourceCacheExpireAfterExt::expire_after_with_polling_with_scheduler(
                 backing,
                 move |item| expire_after(item),
                 polling_interval,
+                scheduler,
             )
         } else {
-            SourceCacheExpireAfterExt::expire_after(backing, move |item| expire_after(item))
+            SourceCacheExpireAfterExt::expire_after_with_scheduler(
+                backing,
+                move |item| expire_after(item),
+                scheduler,
+            )
         };
         subscriptions.push(expiration.subscribe(|_| {})?);
     }

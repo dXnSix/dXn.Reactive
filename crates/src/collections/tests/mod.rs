@@ -7,6 +7,7 @@ mod support;
 mod aggregation_diagnostics_diff;
 mod combination_materialization_population;
 mod connect_late_delivery;
+mod expiration_rework;
 mod group_and_combiner_indexes;
 mod grouping_tree_switching;
 mod index_contract_harness;

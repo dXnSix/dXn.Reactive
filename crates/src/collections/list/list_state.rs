@@ -145,6 +145,15 @@ where
         &self,
         edit: impl FnOnce(&mut ListUpdater<'_, T>),
     ) -> Result<ChangeSet<ListChange<T>>> {
+        self.edit_at_version(|updater, _| edit(updater))
+    }
+
+    /// [`edit`](Self::edit), also passing the version of the last committed batch, so an
+    /// edit can check that state derived from this source's batches is up to date.
+    pub(crate) fn edit_at_version(
+        &self,
+        edit: impl FnOnce(&mut ListUpdater<'_, T>, u64),
+    ) -> Result<ChangeSet<ListChange<T>>> {
         let batch = {
             let mut state = self.state.lock()?;
             if state.editing {
@@ -152,6 +161,7 @@ where
             }
             state.editing = true;
             let count_before = state.items.len();
+            let version = state.version;
 
             let mut changes = Vec::new();
             {
@@ -159,7 +169,7 @@ where
                     items: &mut state.items,
                     changes: &mut changes,
                 };
-                edit(&mut updater);
+                edit(&mut updater, version);
             }
 
             state.editing = false;

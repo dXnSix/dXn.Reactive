@@ -174,6 +174,15 @@ where
         &self,
         edit: impl FnOnce(&mut CacheUpdater<'_, K, T>),
     ) -> Result<ChangeSet<CacheChange<K, T>>> {
+        self.edit_at_version(|updater, _| edit(updater))
+    }
+
+    /// [`edit`](Self::edit), also passing the version of the last committed batch, so an
+    /// edit can check that state derived from this source's batches is up to date.
+    pub(crate) fn edit_at_version(
+        &self,
+        edit: impl FnOnce(&mut CacheUpdater<'_, K, T>, u64),
+    ) -> Result<ChangeSet<CacheChange<K, T>>> {
         let batch = {
             let mut state = self.state.lock()?;
             if state.editing {
@@ -181,6 +190,7 @@ where
             }
             state.editing = true;
             let count_before = state.items.len();
+            let version = state.version;
 
             let mut changes = Vec::new();
             {
@@ -191,7 +201,7 @@ where
                     order,
                     changes: &mut changes,
                 };
-                edit(&mut updater);
+                edit(&mut updater, version);
             }
 
             state.editing = false;

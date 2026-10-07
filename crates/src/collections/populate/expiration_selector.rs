@@ -5,14 +5,15 @@ use std::time::Duration;
 
 use crate::collections::cache::{CacheUpdater, SourceCache};
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
-use crate::collections::materialize::{ErrorSink, OrderedWriter, WriterOptions};
-use crate::collections::stream::ValueStream;
 use crate::collections::error::Result;
 use crate::collections::expiration::{SourceCacheExpireAfterExt, SourceListExpireAfterExt};
 use crate::collections::limit::{SourceCacheLimitExt, SourceListLimitExt};
 use crate::collections::list::{ListUpdater, SourceList};
+use crate::collections::materialize::{ErrorSink, OrderedWriter, WriterOptions};
 use crate::collections::stream::ChangeStream;
+use crate::collections::stream::ValueStream;
 use crate::collections::subscription::Subscription;
+use crate::primitives::{Scheduler, default_scheduler};
 
 pub type ExpirationSelector<T> = Arc<dyn Fn(&T) -> Option<Duration> + Send + Sync>;
 
@@ -20,6 +21,8 @@ pub struct ChangeSetAdapterOptions<T> {
     pub limit_size_to: Option<usize>,
     pub expire_after: Option<ExpirationSelector<T>>,
     pub polling_interval: Option<Duration>,
+    /// Runs the expiration timer; `None` uses [`default_scheduler`](crate::primitives::default_scheduler).
+    pub scheduler: Option<Arc<dyn Scheduler>>,
 }
 
 impl<T> Clone for ChangeSetAdapterOptions<T> {
@@ -28,6 +31,7 @@ impl<T> Clone for ChangeSetAdapterOptions<T> {
             limit_size_to: self.limit_size_to,
             expire_after: self.expire_after.clone(),
             polling_interval: self.polling_interval,
+            scheduler: self.scheduler.clone(),
         }
     }
 }
@@ -38,6 +42,7 @@ impl<T> Default for ChangeSetAdapterOptions<T> {
             limit_size_to: None,
             expire_after: None,
             polling_interval: None,
+            scheduler: None,
         }
     }
 }
@@ -62,6 +67,30 @@ impl<T> ChangeSetAdapterOptions<T> {
         Self::new()
             .with_expire_after(selector)
             .with_polling_interval(polling_interval)
+    }
+
+    /// [`expire_after`](Self::expire_after) with its timer on `scheduler`.
+    pub fn expire_after_with_scheduler(
+        selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> Self {
+        Self::expire_after(selector).with_scheduler(scheduler)
+    }
+
+    /// [`expire_after_with_polling`](Self::expire_after_with_polling) with its timer on
+    /// `scheduler`.
+    pub fn expire_after_with_polling_with_scheduler(
+        selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
+        polling_interval: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> Self {
+        Self::expire_after_with_polling(selector, polling_interval).with_scheduler(scheduler)
+    }
+
+    /// Runs the expiration timer on `scheduler`.
+    pub fn with_scheduler(mut self, scheduler: Arc<dyn Scheduler>) -> Self {
+        self.scheduler = Some(scheduler);
+        self
     }
 
     pub fn with_limit_size_to(mut self, size: usize) -> Self {
@@ -436,9 +465,9 @@ impl<T> SourceListPopulateFromExt<T> for SourceList<T> {
         let retry_destination = self.clone();
         let writer = OrderedWriter::new(
             move |item: &T| destination.push(item.clone()).map(drop),
-            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(
-                move |retry| retry_destination.on_next_release(retry),
-            )),
+            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(move |retry| {
+                retry_destination.on_next_release(retry)
+            })),
         );
         source.subscribe(move |item| writer.submit(item))
     }
@@ -470,9 +499,9 @@ impl<T> SourceListPopulateFromExt<T> for SourceList<T> {
         let retry_destination = self.clone();
         let writer = OrderedWriter::new(
             move |items: &Vec<T>| destination.add_range(items.clone()).map(drop),
-            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(
-                move |retry| retry_destination.on_next_release(retry),
-            )),
+            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(move |retry| {
+                retry_destination.on_next_release(retry)
+            })),
         );
         source.subscribe(move |items| writer.submit(items))
     }
@@ -508,9 +537,9 @@ impl<K, T> SourceCachePopulateFromExt<K, T> for SourceCache<K, T> {
         let retry_destination = self.clone();
         let writer = OrderedWriter::new(
             move |item: &T| destination.add_or_update(item.clone()).map(drop),
-            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(
-                move |retry| retry_destination.on_next_release(retry),
-            )),
+            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(move |retry| {
+                retry_destination.on_next_release(retry)
+            })),
         );
         source.subscribe(move |item| writer.submit(item))
     }
@@ -544,9 +573,9 @@ impl<K, T> SourceCachePopulateFromExt<K, T> for SourceCache<K, T> {
         let retry_destination = self.clone();
         let writer = OrderedWriter::new(
             move |items: &Vec<T>| destination.add_or_update_range(items.clone()).map(drop),
-            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(
-                move |retry| retry_destination.on_next_release(retry),
-            )),
+            WriterOptions::new(Some(Arc::new(on_error))).retry_on_release(Box::new(move |retry| {
+                retry_destination.on_next_release(retry)
+            })),
         );
         source.subscribe(move |items| writer.submit(items))
     }
@@ -561,8 +590,7 @@ thread_local! {
 }
 
 /// Starts an adapter's options (expiration, size limit) on its private backing.
-type Activation<S> =
-    Box<dyn Fn(&S, Option<&ErrorSink>) -> Result<Vec<Subscription>> + Send + Sync>;
+type Activation<S> = Box<dyn Fn(&S, Option<&ErrorSink>) -> Result<Vec<Subscription>> + Send + Sync>;
 type ListActivation<T> = Activation<SourceList<T>>;
 type CacheActivation<K, T> = Activation<SourceCache<K, T>>;
 
@@ -583,7 +611,11 @@ where
         #[cfg(test)]
         LAST_ADAPTER_BACKING.with(|last| *last.borrow_mut() = Some(Box::new(backing.clone())));
         // The output is subscribed before the input: the input may emit while subscribing.
-        let mut subscriptions = vec![backing.changes().subscribe(move |batch| subscriber(batch))?];
+        let mut subscriptions = vec![
+            backing
+                .changes()
+                .subscribe(move |batch| subscriber(batch))?,
+        ];
         subscriptions.extend(activate(&backing, errors.as_ref())?);
         let input_backing = backing.clone();
         let retry_backing = backing.clone();
@@ -616,7 +648,11 @@ where
         let backing = SourceCache::new(move |item: &T| key_selector(item));
         #[cfg(test)]
         LAST_ADAPTER_BACKING.with(|last| *last.borrow_mut() = Some(Box::new(backing.clone())));
-        let mut subscriptions = vec![backing.changes().subscribe(move |batch| subscriber(batch))?];
+        let mut subscriptions = vec![
+            backing
+                .changes()
+                .subscribe(move |batch| subscriber(batch))?,
+        ];
         subscriptions.extend(activate(&backing, errors.as_ref())?);
         let input_backing = backing.clone();
         let retry_backing = backing.clone();
@@ -639,8 +675,14 @@ fn push_item<T: Clone + Send + Sync + 'static>(list: &SourceList<T>, item: &T) -
     list.push(item.clone()).map(drop)
 }
 
-#[allow(clippy::ptr_arg, reason = "an adapter writer takes `&I` with `I = Vec<T>`")]
-fn push_items<T: Clone + Send + Sync + 'static>(list: &SourceList<T>, items: &Vec<T>) -> Result<()> {
+#[allow(
+    clippy::ptr_arg,
+    reason = "an adapter writer takes `&I` with `I = Vec<T>`"
+)]
+fn push_items<T: Clone + Send + Sync + 'static>(
+    list: &SourceList<T>,
+    items: &Vec<T>,
+) -> Result<()> {
     list.add_range(items.clone()).map(drop)
 }
 
@@ -652,7 +694,10 @@ where
     cache.add_or_update(item.clone()).map(drop)
 }
 
-#[allow(clippy::ptr_arg, reason = "an adapter writer takes `&I` with `I = Vec<T>`")]
+#[allow(
+    clippy::ptr_arg,
+    reason = "an adapter writer takes `&I` with `I = Vec<T>`"
+)]
 fn upsert_items<K, T>(cache: &SourceCache<K, T>, items: &Vec<T>) -> Result<()>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -673,7 +718,9 @@ where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + PartialEq + Send + Sync + 'static,
 {
-    Box::new(move |backing, errors| activate_cache_adapter_options(backing, options.clone(), errors))
+    Box::new(move |backing, errors| {
+        activate_cache_adapter_options(backing, options.clone(), errors)
+    })
 }
 
 impl<T, E> ValueStreamListChangeSetExt<T> for crate::primitives::ValueStream<T, E>
