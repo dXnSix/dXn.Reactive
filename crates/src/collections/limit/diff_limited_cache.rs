@@ -46,21 +46,24 @@ where
                 {
                     let moved_key = working_order.remove(previous_index);
                     working_order.insert(target_index.min(working_order.len()), moved_key);
+                    // A move carries the item as it is; a changed value follows as an update.
                     changes.push(CacheChange::Move {
                         key: key.clone(),
-                        current: current.item.clone(),
+                        current: previous_item.item.clone(),
                         current_index: target_index,
                         previous_index,
                     });
                 }
 
                 if previous_item.item != current.item {
+                    // After the move the key is at its final position; update it in place.
+                    let position = working_order.iter().position(|existing| existing == key);
                     changes.push(CacheChange::Update {
                         key: key.clone(),
                         current: current.item.clone(),
                         previous: previous_item.item.clone(),
-                        current_index: Some(target_index),
-                        previous_index: current_position,
+                        current_index: position,
+                        previous_index: position,
                     });
                 }
             }

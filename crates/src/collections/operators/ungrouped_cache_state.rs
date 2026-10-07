@@ -305,64 +305,64 @@ where
         touched_order: Vec<G>,
         current_snapshot: impl Fn(&G, &Self) -> Option<ImmutableCacheGroup<G, K, T>>,
     ) -> Vec<ImmutableCacheGroupChange<K, T, G>> {
-        let mut removes = Vec::<(Option<usize>, G, ImmutableCacheGroup<G, K, T>)>::new();
-        let mut adds = Vec::<(Option<usize>, G, ImmutableCacheGroup<G, K, T>)>::new();
-        let mut updates = Vec::<(
-            Option<usize>,
-            Option<usize>,
-            G,
-            ImmutableCacheGroup<G, K, T>,
-            ImmutableCacheGroup<G, K, T>,
-        )>::new();
-
+        // The changes replay against the output as it was (the index contract): removals,
+        // in-place updates, additions at provisional positions, then moves into the final
+        // group order.
+        let mut working = previous_order;
+        let mut changes = Vec::new();
+        let mut updates = Vec::new();
+        let mut adds = Vec::new();
         for group_key in touched_order {
             let previous = initial.get(&group_key).cloned().unwrap_or(None);
-            let current = current_snapshot(&group_key, self);
-            let previous_index = group_position(&previous_order, &group_key);
-            let current_index = group_position(&self.group_order, &group_key);
-            match (previous, current) {
+            match (previous, current_snapshot(&group_key, self)) {
                 (None, None) => {}
-                (None, Some(current)) => {
-                    adds.push((current_index, group_key, current));
-                }
+                (None, Some(current)) => adds.push((group_key, current)),
                 (Some(previous), None) => {
-                    removes.push((previous_index, group_key, previous));
+                    if let Some(index) = group_position(&working, &group_key) {
+                        let _ = working.remove(index);
+                        changes.push(CacheChange::Remove {
+                            key: group_key,
+                            previous,
+                            previous_index: Some(index),
+                        });
+                    }
                 }
-                (Some(previous), Some(current)) => {
-                    updates.push((current_index, previous_index, group_key, current, previous));
-                }
+                (Some(previous), Some(current)) => updates.push((group_key, previous, current)),
             }
         }
-
-        removes.sort_by_key(|entry| Reverse(entry.0));
-        adds.sort_by_key(|entry| entry.0);
-        updates.sort_by_key(|entry| entry.0);
-
-        let mut changes = Vec::with_capacity(removes.len() + adds.len() + updates.len());
-        changes.extend(removes.into_iter().map(|(previous_index, key, previous)| {
-            CacheChange::Remove {
-                key,
-                previous,
-                previous_index,
-            }
-        }));
-        changes.extend(
-            adds.into_iter()
-                .map(|(current_index, key, current)| CacheChange::Add {
-                    key,
+        for (group_key, previous, current) in updates {
+            match group_position(&working, &group_key) {
+                Some(index) => changes.push(CacheChange::Update {
+                    key: group_key,
                     current,
-                    current_index,
+                    previous,
+                    current_index: Some(index),
+                    previous_index: Some(index),
                 }),
-        );
-        changes.extend(updates.into_iter().map(
-            |(current_index, previous_index, key, current, previous)| CacheChange::Update {
-                key,
+                None => adds.push((group_key, current)),
+            }
+        }
+        let ranks = self
+            .group_order
+            .iter()
+            .enumerate()
+            .map(|(rank, key)| (key, rank))
+            .collect::<HashMap<_, _>>();
+        for (group_key, current) in adds {
+            let index = provisional_position(&working, &ranks, &group_key);
+            working.insert(index, group_key.clone());
+            changes.push(CacheChange::Add {
+                key: group_key,
                 current,
-                previous,
-                current_index,
-                previous_index,
-            },
-        ));
+                current_index: Some(index),
+            });
+        }
+        moves_into_order(
+            &mut working,
+            &self.group_order,
+            |group_key| current_snapshot(group_key, self),
+            &mut changes,
+        );
         changes
     }
 

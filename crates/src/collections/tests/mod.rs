@@ -19,6 +19,7 @@ mod ordered_emission_core;
 mod ordered_emission_relations;
 mod ref_count_lifecycle;
 mod side_effects_options_bridges;
+mod snapshot_diff_indexes;
 mod sorting_windowing;
 mod source_commit_order;
 mod source_lock_policy;

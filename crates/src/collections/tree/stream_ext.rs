@@ -418,10 +418,11 @@ where
             {
                 let moved_key = working_order.remove(previous_index);
                 working_order.insert(current_index.min(working_order.len()), moved_key);
-                if let Some(current) = next.get(key) {
+                // A move carries the node as it is; a replaced node follows as an update.
+                if let Some(previous_node) = previous.get(key) {
                     changes.push(CacheChange::Move {
                         key: key.clone(),
-                        current: current.clone(),
+                        current: previous_node.clone(),
                         current_index,
                         previous_index,
                     });
@@ -447,24 +448,32 @@ where
         if previous_node.ptr_eq(current) {
             continue;
         }
+        // After the moves above the key is at its final position; it is updated in place.
+        let position = working_order.iter().position(|existing| existing == key);
         changes.push(CacheChange::Update {
             key: key.clone(),
             current: current.clone(),
             previous: previous_node.clone(),
-            current_index: working_order
-                .iter()
-                .position(|existing| existing == key)
-                .or_else(|| source_order_index(next_order, key)),
-            previous_index: previous_order.iter().position(|existing| existing == key),
+            current_index: position,
+            previous_index: position,
         });
     }
 
     changes
 }
 
+/// Places `key` at `index`; without an index an existing key keeps its position (the index
+/// contract's "update in place") and a new key is appended.
 fn insert_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    remove_order_key(order, &key);
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
+    let existing = order.iter().position(|existing| existing == &key);
+    match (existing, index) {
+        (Some(_), None) => {}
+        (Some(existing), Some(index)) => {
+            let _ = order.remove(existing);
+            order.insert(index.min(order.len()), key);
+        }
+        (None, index) => order.insert(index.unwrap_or(order.len()).min(order.len()), key),
+    }
 }
 
 fn move_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {

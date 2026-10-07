@@ -64,9 +64,12 @@ where
         selector: &JoinSelector<K, L, R, U>,
     ) -> Vec<CacheChange<K, U>> {
         let mut changes = Vec::new();
+        let desired = self.desired_order();
+        let ranks = order_ranks(&desired);
         for affected in affected {
-            self.update_key(affected, selector, &mut changes);
+            self.update_key(affected, selector, &ranks, &mut changes);
         }
+        reorder_result(&mut self.result, &desired, &mut changes);
         changes
     }
 
@@ -74,6 +77,7 @@ where
         &mut self,
         affected: AffectedKey<K>,
         selector: &JoinSelector<K, L, R, U>,
+        ranks: &HashMap<K, usize>,
         changes: &mut Vec<CacheChange<K, U>>,
     ) {
         let key = affected.key;
@@ -95,39 +99,25 @@ where
                 });
             }
             (None, Some(current)) => {
-                let current_index = self.desired_index(&key);
+                let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
-                insert_key(&mut self.result.order, key.clone(), current_index);
-                let current_index = self.result_index(&key);
+                self.result.order.insert(index, key.clone());
                 changes.push(CacheChange::Add {
                     key,
                     current,
-                    current_index,
+                    current_index: Some(index),
                 });
             }
             (Some(previous), Some(current)) => {
+                // Updated in place; the batch's final reorder moves it if its position changed.
                 let previous_index = self.result_index(&key);
-                let desired_index = self.desired_index(&key);
-                if let Some(index) = desired_index
-                    && previous_index != Some(index)
-                {
-                    move_or_insert_key(&mut self.result.order, key.clone(), index);
-                    changes.push(CacheChange::Move {
-                        key: key.clone(),
-                        current: current.clone(),
-                        current_index: index,
-                        previous_index: previous_index.unwrap_or(index),
-                    });
-                }
-
                 if previous != current {
                     self.result.items.insert(key.clone(), current.clone());
-                    let current_index = self.result_index(&key);
                     changes.push(CacheChange::Update {
                         key,
                         current,
                         previous,
-                        current_index,
+                        current_index: previous_index,
                         previous_index,
                     });
                 } else if affected.refresh {
@@ -140,12 +130,6 @@ where
                 }
             }
         }
-    }
-
-    fn desired_index(&self, key: &K) -> Option<usize> {
-        self.desired_order()
-            .iter()
-            .position(|existing| existing == key)
     }
 
     fn desired_order(&self) -> Vec<K> {
@@ -190,4 +174,3 @@ struct JoinManyState<K, L, RK, R, U> {
     /// Right groups with changes queued under the join's lock, delivered after it is released.
     staged: Vec<RayCacheGroup<K, RK, R>>,
 }
-

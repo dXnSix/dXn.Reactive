@@ -47,21 +47,25 @@ where
                 {
                     let moved_key = working_order.remove(previous_index);
                     working_order.insert(target_index.min(working_order.len()), moved_key);
+                    // A move carries the item as it is; a changed value follows as an update.
                     changes.push(CacheChange::Move {
                         key: key.clone(),
-                        current: current.clone(),
+                        current: previous_item.clone(),
                         current_index: target_index,
                         previous_index,
                     });
                 }
 
                 if previous_item != current {
+                    // After a move the key's position is its post-move one (the index
+                    // contract); the update keeps it in place.
+                    let position = working_order.iter().position(|existing| existing == key);
                     changes.push(CacheChange::Update {
                         key: key.clone(),
                         current: current.clone(),
                         previous: previous_item.clone(),
-                        current_index: Some(target_index),
-                        previous_index: current_position,
+                        current_index: position,
+                        previous_index: position,
                     });
                 }
             }
@@ -332,3 +336,48 @@ impl<K, T> Default for CacheRemoveKeyState<K, T> {
     }
 }
 
+/// Where a new key goes in `working` so the keys keep `target` order: before the first key
+/// that comes after it in `target` (keys `target` does not list are skipped).
+fn provisional_position<K: Eq + Hash>(working: &[K], ranks: &HashMap<&K, usize>, key: &K) -> usize {
+    let Some(rank) = ranks.get(key).copied() else {
+        return working.len();
+    };
+    working
+        .iter()
+        .position(|existing| ranks.get(existing).is_some_and(|other| *other > rank))
+        .unwrap_or(working.len())
+}
+
+/// Moves the keys of `working` into `target` order (keys `target` does not list stay at the
+/// end), emitting a `Move` for each displaced key that `item` knows.
+fn moves_into_order<K, T>(
+    working: &mut Vec<K>,
+    target: &[K],
+    item: impl Fn(&K) -> Option<T>,
+    changes: &mut Vec<CacheChange<K, T>>,
+) where
+    K: Clone + Eq,
+{
+    let target = target
+        .iter()
+        .filter(|key| working.contains(key))
+        .collect::<Vec<_>>();
+    for (index, key) in target.into_iter().enumerate() {
+        if working.get(index) == Some(key) {
+            continue;
+        }
+        let Some(from) = working.iter().position(|existing| existing == key) else {
+            continue;
+        };
+        let moved = working.remove(from);
+        working.insert(index, moved);
+        if let Some(current) = item(key) {
+            changes.push(CacheChange::Move {
+                key: key.clone(),
+                current,
+                current_index: index,
+                previous_index: from,
+            });
+        }
+    }
+}

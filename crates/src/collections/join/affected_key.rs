@@ -22,7 +22,11 @@ where
 
     /// Queues `pending` on `group` (the join's lock is held); delivered by
     /// [`take_staged`](Self::take_staged)'s caller after the lock is released.
-    fn stage_group(&mut self, group: &RayCacheGroup<K, RK, R>, pending: PendingChanges<CacheChange<RK, R>>) {
+    fn stage_group(
+        &mut self,
+        group: &RayCacheGroup<K, RK, R>,
+        pending: PendingChanges<CacheChange<RK, R>>,
+    ) {
         if matches!(group.stage_pending(pending), Ok(true)) {
             self.staged.push(group.clone());
         }
@@ -46,9 +50,20 @@ where
         apply_cache_changes(&mut self.left, &batch.changes);
 
         let mut changes = Vec::new();
+        // Group membership changes as keys are updated, so the order is taken afterwards;
+        // additions use the order as it was when the batch started.
+        let ranks = order_ranks(&self.desired_order());
         for affected in affected {
-            self.update_key(affected.key, affected.refresh, selector, &mut changes);
+            self.update_key(
+                affected.key,
+                affected.refresh,
+                selector,
+                &ranks,
+                &mut changes,
+            );
         }
+        let desired = self.desired_order();
+        reorder_result(&mut self.result, &desired, &mut changes);
         changes
     }
 
@@ -68,9 +83,20 @@ where
         }
 
         let mut changes = Vec::new();
+        // Group membership changes as keys are updated, so the order is taken afterwards;
+        // additions use the order as it was when the batch started.
+        let ranks = order_ranks(&self.desired_order());
         for affected in affected {
-            self.update_key(affected.key, affected.refresh, selector, &mut changes);
+            self.update_key(
+                affected.key,
+                affected.refresh,
+                selector,
+                &ranks,
+                &mut changes,
+            );
         }
+        let desired = self.desired_order();
+        reorder_result(&mut self.result, &desired, &mut changes);
         changes
     }
 
@@ -236,6 +262,7 @@ where
         key: K,
         refresh: bool,
         selector: &JoinManySelector<K, L, RK, R, U>,
+        ranks: &HashMap<K, usize>,
         changes: &mut Vec<CacheChange<K, U>>,
     ) {
         let previous = self.result.items.get(&key).cloned();
@@ -254,39 +281,25 @@ where
                 });
             }
             (None, Some(current)) => {
-                let current_index = self.desired_index(&key);
+                let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
-                insert_key(&mut self.result.order, key.clone(), current_index);
-                let current_index = self.result_index(&key);
+                self.result.order.insert(index, key.clone());
                 changes.push(CacheChange::Add {
                     key,
                     current,
-                    current_index,
+                    current_index: Some(index),
                 });
             }
             (Some(previous), Some(current)) => {
+                // Updated in place; the batch's final reorder moves it if its position changed.
                 let previous_index = self.result_index(&key);
-                let desired_index = self.desired_index(&key);
-                if let Some(index) = desired_index
-                    && previous_index != Some(index)
-                {
-                    move_or_insert_key(&mut self.result.order, key.clone(), index);
-                    changes.push(CacheChange::Move {
-                        key: key.clone(),
-                        current: current.clone(),
-                        current_index: index,
-                        previous_index: previous_index.unwrap_or(index),
-                    });
-                }
-
                 if previous != current {
                     self.result.items.insert(key.clone(), current.clone());
-                    let current_index = self.result_index(&key);
                     changes.push(CacheChange::Update {
                         key,
                         current,
                         previous,
-                        current_index,
+                        current_index: previous_index,
                         previous_index,
                     });
                 } else if refresh {
@@ -318,12 +331,6 @@ where
             JoinManyKind::Full => left.is_some() || group_has_items,
         };
         include.then(|| selector(key, left, group)).flatten()
-    }
-
-    fn desired_index(&self, key: &K) -> Option<usize> {
-        self.desired_order()
-            .iter()
-            .position(|existing| existing == key)
     }
 
     fn desired_order(&self) -> Vec<K> {
@@ -412,26 +419,31 @@ fn affected_cache_keys<K, T>(
 where
     K: Clone + Eq + Hash,
 {
+    // Deduplicated through a position map, so a large batch stays linear.
     let mut affected = Vec::<AffectedKey<K>>::new();
+    let mut positions = HashMap::<K, usize>::new();
+    let mut upsert = |key: K, refresh: bool| match positions.get(&key) {
+        Some(&index) => affected[index].refresh = refresh,
+        None => {
+            positions.insert(key.clone(), affected.len());
+            affected.push(AffectedKey { key, refresh });
+        }
+    };
     for change in changes {
         match change {
             CacheChange::Add { key, .. }
             | CacheChange::Update { key, .. }
             | CacheChange::Move { key, .. }
-            | CacheChange::Remove { key, .. } => {
-                upsert_affected_key(&mut affected, key.clone(), false);
-            }
-            CacheChange::Refresh { key, .. } => {
-                upsert_affected_key(&mut affected, key.clone(), true);
-            }
+            | CacheChange::Remove { key, .. } => upsert(key.clone(), false),
+            CacheChange::Refresh { key, .. } => upsert(key.clone(), true),
             CacheChange::Clear { previous } => {
                 if previous.is_empty() {
                     for key in state.order.iter().cloned() {
-                        upsert_affected_key(&mut affected, key, false);
+                        upsert(key, false);
                     }
                 } else {
                     for (key, _) in previous {
-                        upsert_affected_key(&mut affected, key.clone(), false);
+                        upsert(key.clone(), false);
                     }
                 }
             }
@@ -450,4 +462,3 @@ where
         affected.push(AffectedKey { key, refresh });
     }
 }
-
