@@ -250,6 +250,34 @@ breaking changes below are listed with migration notes for consumers.
 - **Fixed:** `max_by` and `min_by` order NaN as the greatest value (equal to itself), so their
   results and change detection do not depend on arrival order.
 
+### Performance
+
+- Sources and keyed operators mirror their key order with an indexed order (O(1) key lookups per
+  insert, removal or move) instead of scanning: `SourceCache` edits no longer rebuild a position map
+  per edit, and transforms, the cache-to-list bridge (`remove_key`), `ensure_unique_keys`,
+  `filter_with_state`, keyed sorting, lifecycle operators, expiration, live grouping, joins and
+  `transform_to_tree` load in near-linear time.
+- Sources publish one shared batch per edit to all subscribers (each item is cloned once into
+  state and once into the batch), skip keyed-watch partitioning while no key is watched, and
+  create the rxRust subject and its bridge on the first `changes_rx()` call.
+- **Fixed (behavior change):** a new state or predicate in `filter_with_state`/`filter_dynamic`
+  (list and cache) emits only the inclusion flips; the list version emitted a `Replace` for every
+  visible position whose item changed.
+- **Fixed (behavior change):** list-shaped sorts (list `sort_*` and the cache `sort_*` returning
+  list changes) reorder with `Move` changes on a comparer change or resort instead of replacing
+  items (a reorder that would shift more than about four million positions in all falls back to
+  the positional diff).
+- **Fixed (behavior change):** `transform_to_tree` inserts a child at its position among its
+  siblings (one `Add` in the parent's `children()`) instead of appending it and moving every
+  sibling into place.
+- **Fixed:** `left_join_many`/`full_join_many` drop the group of a removed left key when no right
+  item uses it (they were kept forever), and `transform_to_tree` frees the nodes of a parent cycle
+  when its subscription is disposed (they leaked).
+- Added Criterion benchmarks `joins`, `tree` and `sort_and_page`.
+- The test `source_lock_policy::a_reentrant_clone_during_a_deferred_resume_gets_nested_update`
+  pinned a clone of the suspended batch during a deferred resume; resumes now share the batch,
+  and the test became `a_deferred_resume_clones_no_items_under_the_lock`.
+
 ### Lifecycle
 
 - **Breaking:** list `dispose_many` and `dispose_many_with` require `T: PartialEq` (like the cache

@@ -322,7 +322,8 @@ see [chapter 14](14-materialization-population-sharing.md#observable-wrappers).
 ### rxRust interop
 
 `changes_rx()` returns an [rxRust](https://github.com/rxRust/rxRust) `SharedSubject` that receives
-every published change set. Add `rxrust = "=1.0.0-rc.5"` to your dependencies to use rxRust
+every change set published after it was first called: the subject and its bridge from the source
+are created on that first call, so a source never read through rxRust does no rxRust work. Add `rxrust = "=1.0.0-rc.5"` to your dependencies to use rxRust
 operators on it:
 
 ```rust

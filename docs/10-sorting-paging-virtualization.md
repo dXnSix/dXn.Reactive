@@ -31,7 +31,11 @@ position, which breaks as soon as rows move.
 | `sort_dynamic_with_resort(comparers, resort)` | both |
 
 `Comparer<T>` is `Arc<dyn Fn(&T, &T) -> Ordering + Send + Sync>`. List sorting requires
-`T: PartialEq`.
+`T: PartialEq`. A new comparer or a resort reorders the output (here and in the list-shaped cache
+sorts below) with as few `Move` changes as possible and never replaces an item: reversing five items is four moves, and items that compare
+equal are matched by equality, so each keeps its identity. Moves cost up to the list length each,
+so a reorder that would shift more than about four million positions in all (reversing more than
+about 2,000 items) falls back to a positional diff that replaces the changed positions.
 
 ```rust
 use rayx_reactive::collections::prelude::*;

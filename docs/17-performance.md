@@ -15,9 +15,11 @@ stateful operator keeps its own copy of whatever it needs (inclusion sets, sorte
 maps, projections). Two subscribers to the same derived stream do the work twice and store the
 state twice, unless they share it with `ref_count` or a materialized wrapper.
 
-**Clones.** Items are cloned into change sets and into operator state. A large `T` multiplies that
-cost across every stateful operator in every chain. Prefer `Arc<T>` or compact records for large
-payloads.
+**Clones.** Items are cloned into change sets and into operator state. A source clones each item
+into its state and once into the published batch, which every subscriber shares (the rxRust
+bridge, created by the first `changes_rx()` call, clones each batch again). A large `T` multiplies
+the cost across every stateful operator in every chain. Prefer `Arc<T>` or compact records for
+large payloads.
 
 **Delivery.** Each delivery queue snapshots its subscriber list per item. A thousand subscribers on
 one signal cost a thousand callback invocations per write. `SourceCache::watch(key)` is the
@@ -30,13 +32,15 @@ watchers of the keys it touches. Thousands of per-row watchers stay cheap.
 |---|---|---|
 | `filter` (list/cache) | inclusion state per item | small |
 | `filter_immutable`, `transform_immutable` | nothing | small; requires immutable items and pure functions |
-| `filter_with_state` / `filter_dynamic` | tracked items | small per source change; a new state re-tests every item |
+| `filter_with_state` / `filter_dynamic` | tracked items | small per source change; a new state re-tests every item and emits only the flips |
 | `transform*` | one projection per item | one closure call per added or updated item |
 | `sort_keyed_*` | ordered keys and positions | small per change; a comparer change re-sorts |
-| list `sort_*` | sorted copy | **O(n)** per change (linear position search and equality lookups) |
+| list `sort_*` | sorted copy | **O(n)** per change (linear position search and equality lookups); a comparer change emits moves, or a positional diff past about four million shifted positions |
 | `page_*` / `virtualize_*` | the ordered view and the window | proportional to the window shift |
 | `update_index` / `update_index_with` | ordered state | **O(n)** per batch (re-indexes every item) |
-| `group` (live) | group map and member caches | small; a regroup re-evaluates every item |
+| `group` (live) | group map and member caches | small (a member's position in its group is a binary search); a regroup re-evaluates every item |
+| joins, `*_join_many` | both sides' items and the result order | small per change, plus one O(n) order check per batch |
+| `transform_to_tree` | nodes, parent links, visible roots | small per change (a child is placed by binary search among its siblings), plus re-evaluating the node predicate over every node per batch |
 | `query_when_changed*`, `to_collection`, `to_sorted_collection*` | a full snapshot | **clones the whole collection** per batch |
 | `count`, `sum_by`, `avg_by`, `std_dev_by` | running totals | O(1) per change |
 | `max_by` / `min_by` | a full snapshot | **O(n)** per batch (snapshot clone and scan); emits only when the extremum changes |
@@ -181,6 +185,9 @@ The repository includes [Criterion](https://github.com/bheisler/criterion.rs) be
 | `keyed_watch` | `watch(key)` delivery when a few keys change among many watchers |
 | `live_group` | live grouping cost relative to the members actually touched |
 | `list_diff` | list `edit_diff` on sparse changes |
+| `joins` | `full_join` and `left_join_many` loads |
+| `tree` | `transform_to_tree` loads of flat and bushy trees |
+| `sort_and_page` | `sort_and_page_by` loads and single-row updates |
 
 Run one with:
 

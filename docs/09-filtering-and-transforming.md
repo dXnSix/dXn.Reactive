@@ -85,8 +85,10 @@ Semantics:
 - **No item passes until the first state or predicate arrives.** Because `Signal::values()` emits
   immediately, this is invisible when a signal drives the filter.
 - Source changes are filtered incrementally against the latest state.
-- A new state or predicate re-tests every tracked item and emits a structured diff (removals and
-  additions), not a reset.
+- A new state or predicate re-tests every tracked item and emits only the items whose inclusion
+  flipped: removals and additions at their output positions, never a reset. Items that stay
+  included are neither replaced nor moved, so shifting a window predicate from `[1000, 2000)` to
+  `[1001, 2001)` emits one `Remove` and one `Add`.
 
 ```rust
 use rayx_reactive::collections::prelude::*;

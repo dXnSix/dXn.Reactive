@@ -189,7 +189,8 @@ parent/children relationships such as orders and order lines:
 | `right_join_many` | `Fn(&K, Option<&L>, &RayCacheGroup<K, RK, R>) -> U` |
 | `full_join_many` | `Fn(&K, Option<&L>, &RayCacheGroup<K, RK, R>) -> U` |
 
-When right-side membership changes, the selector re-runs only for the affected left keys.
+When right-side membership changes, the selector re-runs only for the affected left keys. A left
+key's group is dropped when the key leaves and no right item belongs to it.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -307,7 +308,11 @@ The output is a keyed stream of nodes; by default it contains only **root** node
 
 The operator attaches late-arriving parents to their existing children, promotes children to
 roots when their parent is removed, and re-parents nodes when an update changes their pivot key.
-Node identity is preserved throughout, so a tree view can keep expansion state per node.
+Node identity is preserved throughout, so a tree view can keep expansion state per node. A
+node's `children()` keep the source order: a new child is inserted at its position (one `Add`),
+and a child that moves in the source moves once among its siblings. Items that are each other's
+parents form a cycle that never reaches a root; disposing the tree subscription empties the
+`children()` of the nodes on such a cycle so that they are freed.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
