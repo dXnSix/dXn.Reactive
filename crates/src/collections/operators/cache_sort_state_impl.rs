@@ -269,6 +269,7 @@ where
                 }
             }
         }
+        self.debug_assert_positions();
         changes
     }
 
@@ -451,6 +452,7 @@ where
                 }
             }
         }
+        self.debug_assert_positions();
         changes
     }
 
@@ -503,12 +505,15 @@ where
     }
 
     fn insert_order_key(&mut self, key: K, index: Option<usize>) {
-        if let Some(existing_index) = self.source_positions.remove(&key) {
+        let existing = self.source_positions.remove(&key);
+        if let Some(existing_index) = existing {
             let _ = self.order.remove(existing_index);
         }
         let index = index.unwrap_or(self.order.len()).min(self.order.len());
         self.order.insert(index, key);
-        self.refresh_source_positions_from(index);
+        // Removing the old entry shifted every key after it, so refresh from the earlier
+        // of the two positions.
+        self.refresh_source_positions_from(existing.map_or(index, |existing| existing.min(index)));
     }
 
     fn move_order_key(&mut self, key: &K, index: usize) {
@@ -607,16 +612,39 @@ where
         });
     }
 
+    /// Where `item` belongs in `sorted`: after every entry that does not sort after it
+    /// (comparer ties are broken by source position). `sorted` is ordered that way, so a
+    /// binary search finds it with O(log n) comparer calls.
     fn insert_position(&self, key: &K, item: &T, comparer: &dyn Fn(&T, &T) -> Ordering) -> usize {
+        let source_position = self.source_position(key);
         self.sorted
-            .iter()
-            .position(|(existing_key, existing_item)| {
-                comparer(item, existing_item).then_with(|| {
-                    self.source_position(key)
-                        .cmp(&self.source_position(existing_key))
-                }) == Ordering::Less
+            .partition_point(|(existing_key, existing_item)| {
+                comparer(item, existing_item)
+                    .then_with(|| source_position.cmp(&self.source_position(existing_key)))
+                    != Ordering::Less
             })
-            .unwrap_or(self.sorted.len())
+    }
+
+    /// Debug builds check that the position maps match the vectors they index.
+    fn debug_assert_positions(&self) {
+        debug_assert!(
+            self.source_positions.len() == self.order.len()
+                && self
+                    .order
+                    .iter()
+                    .enumerate()
+                    .all(|(index, key)| self.source_positions.get(key) == Some(&index)),
+            "keyed sort: source positions out of sync with the source order"
+        );
+        debug_assert!(
+            self.sorted_positions.len() == self.sorted.len()
+                && self
+                    .sorted
+                    .iter()
+                    .enumerate()
+                    .all(|(index, (key, _))| self.sorted_positions.get(key) == Some(&index)),
+            "keyed sort: sorted positions out of sync with the sorted output"
+        );
     }
 
     fn remove_sorted_key(&mut self, key: &K) -> Option<(usize, (K, T))> {

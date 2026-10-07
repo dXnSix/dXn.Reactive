@@ -10,6 +10,7 @@ mod connect_late_delivery;
 mod grouping_tree_switching;
 mod index_contract_harness;
 mod joins;
+mod keyed_sort_positions;
 mod lifecycle_observables;
 mod limits_expiration_streams;
 mod materialization_reliability;
