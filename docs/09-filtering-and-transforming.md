@@ -509,7 +509,9 @@ Async transforms need OS threads, so they are not available on `wasm32-unknown-u
   order. When a parent is replaced or refreshed, its children are **diffed**, so unchanged children
   are not re-emitted.
 - **Cache:** `transform_many(child_key, |parent| children)` produces a keyed child cache. An updated
-  parent emits removes and adds only for children that actually changed.
+  parent emits removes and adds only for children that actually changed. A child key produced by
+  several parents belongs to the first live parent in parent order (another parent takes over
+  when it leaves), and changes are emitted in a deterministic order without indexes.
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -545,11 +547,11 @@ updated or removed can never publish stale children.
 
 | Operator | From → to | Purpose |
 |---|---|---|
-| `ListStreamExt::add_key(selector)` | list → cache | give list items an identity; output indexes are `None` |
+| `ListStreamExt::add_key(selector)` | list → cache | give list items an identity (keys must be unique); output indexes are the list positions |
 | `CacheStreamExt::remove_key()` | cache → list | drop keys, keeping the cache order |
-| `change_key(selector)` | cache → cache | re-key items by a value-derived key |
+| `change_key(selector)` | cache → cache | re-key items by a value-derived key; an item whose key changes is removed under the old key and added under the new one, and when several items map to one key the latest added or updated one is shown (removing it falls back to a remaining one). It emits no indexes, so sort **after** `change_key`, not before. |
 | `change_key_with_source_key(selector)` | cache → cache | re-key using the old key and the item |
-| `ensure_unique_keys()` | cache → cache | keep one change per key per batch (the last non-refresh change wins), drop moves, and re-derive add/update/remove against the operator's own state |
+| `ensure_unique_keys()` | cache → cache | collapse each batch to one change per key against the operator's own ordered state, moving only the keys whose order changed (a moved key's new value travels with its move; the one exception is a key that is moved and also refreshed, which gets both changes) |
 | `start_with_item(key, item)` | cache → cache | emit a synthetic add for one item at subscription |
 
 ```rust

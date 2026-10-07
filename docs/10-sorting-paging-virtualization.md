@@ -300,12 +300,13 @@ assert_eq!(responses[1].1, [1]);
 | `start` | the requested start index |
 | `total_count` | items in the whole collection |
 
-> **Responses travel with changes.** A response is emitted only together with a non-empty change
-> to the visible window. A source change *outside* the window (for example an insert on page 7
-> while page 0 is shown) changes `total_count` but emits nothing, so the last response's
-> `total_count` and `total_pages` can be stale. An initially empty window emits no response at
-> all. If a pager must always show the current totals, subscribe to `count()` on the unwindowed
-> stream as well.
+> **Responses follow every field.** A response is emitted whenever any of its fields changes,
+> with an empty change set when the visible items did not: a source change *outside* the window
+> (an insert on page 7 while page 0 is shown) still reports the new `total_count` and
+> `total_pages`. Once the source has delivered its first batch, a window reports its first
+> response even when it is empty. An empty source delivers no batch until its first change, so
+> a window over it stays silent until then. List `page_dynamic*` and `virtualize_dynamic*` emit
+> nothing until their first request arrives.
 
 ### Direct sort-and-window
 
@@ -313,8 +314,10 @@ assert_eq!(responses[1].1, [1]);
 `sort_and_page_dynamic_with_response[_by]`, `sort_and_virtualize_by`,
 `sort_and_virtualize_dynamic_by`, `sort_and_virtualize_dynamic` and
 `sort_and_virtualize_dynamic_with_response[_by]` keep the cache state, the sorted order and the
-window in **one** operator, and emit **list** changes for the visible items only. Window shifts are
-expressed as `Replace` changes per visible slot.
+window in **one** operator, and emit **list** changes for the visible items only. They show the
+same items as `sort_keyed_*` followed by the keyed window (the same ties and moves), and load n
+items with O(n log n) comparisons. Window shifts are expressed as `Replace` changes per visible
+slot.
 
 Choose them when the consumer needs only the visible values. Choose
 `sort_keyed_*().page_keyed*()` or `virtualize_keyed*()` when keys must survive the window.
@@ -343,8 +346,7 @@ A virtualized UI list renders only the rows in view, plus a small overscan. Driv
    Equal requests are suppressed.
 2. Build `source.connect() → filters → sort_keyed_* → virtualize_keyed_dynamic_with_response`.
 3. Apply each `KeyedVirtualChangeSet` to the row widgets: remove, insert or move rows by key, and
-   use `response.total_count` to size the scrollbar. Because of the staleness rule above, also
-   subscribe to `count()` for the scrollbar.
+   use `response.total_count` to size the scrollbar; it follows changes outside the window too.
 4. Keep the window slightly larger than the viewport so fast scrolling does not reveal gaps.
 
 The ordering and windowing work is proportional to the change, not to the collection size, so a

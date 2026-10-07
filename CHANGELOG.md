@@ -158,6 +158,32 @@ breaking changes below are listed with migration notes for consumers.
   positions rows by its own key mirror, so a non-conforming upstream cannot duplicate or misplace
   them; materialized views store the item a `Refresh` carries.
 
+### Keyed operators and windows
+
+- **Fixed:** live list and cache groups (including `group_on_observable`) keep valid indexes when a
+  group is created and emptied in one batch, and remove empty groups in a deterministic order; cache `group_by` orders members by source order and handles a full `Clear`.
+- **Fixed (behavior change):** `add_key` emits the list positions on every change (it emitted
+  `None` for additions); `ensure_unique_keys` emits indexes from its own order, forwards moves
+  (moving only keys whose order changed) and emits one change per key (a key that is moved and
+  refreshed gets both); `ValueStream` `edit_diff*` emits indexes valid in order (a
+  swap is one `Move`, removals run from the end). The tests
+  `side_effects_options_bridges::list_add_key_converts_list_changes_to_keyed_cache_changes` and
+  `aggregation_diagnostics_diff::value_stream_snapshot_edit_diff_emits_list_changes` were updated.
+- **Fixed (behavior change):** `change_key` tracks source to destination keys: a change of
+  destination key emits `Remove` plus `Add`, collisions keep a remaining source's item, a refresh
+  never changes which source provides a key, and no indexes are emitted (destination positions
+  are unknown: sort after `change_key`). The test
+  `side_effects_options_bridges::cache_change_key_preserves_reasons_and_remaps_keys` was updated.
+- **Fixed:** synchronous cache `transform_many` gives a shared child key to the first live parent
+  (falling back on removal) and emits in a deterministic order; cache-parent
+  `merge_many_*_change_sets` keep only a parent's latest child stream within a batch.
+- **Fixed (behavior change):** page and virtual responses (list, keyed and `sort_and_*`) are
+  emitted whenever a response field changes, with an empty change set if the visible items did
+  not, and once the source has loaded even for an empty window. List `page_dynamic*` and
+  `virtualize_dynamic*` no longer show a default `0..25` window before the first request.
+- **Fixed:** `sort_and_page_*` / `sort_and_virtualize_*` run on the keyed sort's state, so they
+  match `sort_keyed_*` plus the keyed window and load with O(n log n) comparisons.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on

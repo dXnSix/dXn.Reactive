@@ -70,9 +70,8 @@ always stays consistent.
 | `Clear { previous }` | Every `(key, value)` pair was removed. |
 
 Cache indexes are `Option<usize>`. A `SourceCache` keeps its keys in insertion order (or the order
-you set with `move_key`) and fills in indexes. Operators follow one **index contract**
-(documented on `CacheChange`; the few remaining exceptions are listed under
-[Known issues](README.md#known-issues)):
+you set with `move_key`) and fills in indexes. Every operator follows one **index contract**
+(documented on `CacheChange`):
 
 - An index is a position in the **emitting operator's own output**, or `None` when the operator
   cannot know positions. A subset operator (a filter, a window, a join) indexes its own output,
