@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 105,
+  "revision": 111,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -220,10 +220,16 @@
       ]
     },
     "t36-aggregate-robustness": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t37-lifecycle-semantics": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t38-source-bookkeeping-costs": {
       "status": "pending"
@@ -340,6 +346,15 @@
         }
       },
       "recordedAt": "2026-10-07T04:59:29Z"
+    },
+    "72522e012f5238fa8ad46cd4e71d86abb5274589d8a3eba8d9eb8c5ab557c9b8": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "ccd5d491fc53bc6ff9c7ffe329ccd12c22493e3af0ce1a7b907a95ed1ef4ba17"
+        }
+      },
+      "recordedAt": "2026-10-07T05:49:18Z"
     }
   },
   "checkResults": {
@@ -954,6 +969,40 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s10-async-final-0eb1f72a157d.log",
       "logSha256": "f322e0dd6f02e4c6f8f31113df6316338aa63bb0529c6f070a5b1c827476af30",
       "inputsHash": "50ddfed3da1641766e24429c57f8352cc406cbbea4c79c75ca07ae7848f5e147"
+    },
+    "s11-semantics/c-t36/final": {
+      "checkId": "c-t36",
+      "boundaryId": "s11-semantics",
+      "phase": "final",
+      "batchId": "72522e012f5238fa8ad46cd4e71d86abb5274589d8a3eba8d9eb8c5ab557c9b8",
+      "definitionHash": "f978b674ababffe02b4a46f6e7b07c4c93aed5a907363cd1edc12bdf8641f75f",
+      "basisHash": "279224096eec10024000547385d47422d887ac93f24b0cd03d9e3ab53a828624",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 5,
+      "durationSeconds": 0.1899,
+      "recordedAt": "2026-10-07T05:49:17Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s11-semantics-final-49470120c571.log",
+      "logSha256": "c3dc3c57fdc5664f5e4b7b1aee9a7b4f3264e93ade8ce7a71a6c14b2e0fcb30d",
+      "inputsHash": "8dc6f0e92858a9a16996499a7f7bba79aa8624ca3221294494f96f2bb5200178"
+    },
+    "s11-semantics/c-t37/final": {
+      "checkId": "c-t37",
+      "boundaryId": "s11-semantics",
+      "phase": "final",
+      "batchId": "72522e012f5238fa8ad46cd4e71d86abb5274589d8a3eba8d9eb8c5ab557c9b8",
+      "definitionHash": "0b4d86f8f977ad82f9eabe147c58114025636523ce2602a6d079c97ad4606f04",
+      "basisHash": "7e59b9eec2a26ef9b8432c6bbdfcb550d41aeb295963cb9520875ec21ef483b9",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.2039,
+      "recordedAt": "2026-10-07T05:49:18Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s11-semantics-final-0af16dc92499.log",
+      "logSha256": "2ea3fdbca3a7bad5b75e6866c7ddcd215ed2b3f127c4c15f48b1fab893a000ec",
+      "inputsHash": "8dc6f0e92858a9a16996499a7f7bba79aa8624ca3221294494f96f2bb5200178"
     }
   },
   "reviews": {
@@ -3418,6 +3467,224 @@
         "S10-F9"
       ],
       "recordedAt": "2026-10-07T05:03:06Z"
+    },
+    "s11-semantics": {
+      "reviewerId": "reviewer-s11-indep-7c3a",
+      "snapshotId": "72522e012f5238fa8ad46cd4e71d86abb5274589d8a3eba8d9eb8c5ab557c9b8",
+      "criterionIds": [
+        "AGG-1.1",
+        "AGG-1.2",
+        "LIF-1.1",
+        "LIF-1.2",
+        "LIF-1.3",
+        "LIF-1.4"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/numeric_totals.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "sha256": "9a7931b2ec0ea0d3b20e3fcdc6a53a95e36953c48571eb56f7a91c73bac255e1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/cache_query.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1"
+          ],
+          "sha256": "901ca6fddf57f22bbef9585ac369513e15537b6f5b2a2741ea4ba97a7a8126bf"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/cache_aggregation_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "sha256": "7ca3ecc1c4b8da7333d4986edac029c0116b7a8e5b208d0dcd2435cc29586f81"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/distinct_values.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.2"
+          ],
+          "sha256": "3e4acfd72629f8d9e3591796efeb0241296bd9a7dd86f85d71f6cd7c7b62c3c4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/apply_list_std_dev_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.2"
+          ],
+          "sha256": "e7b1807cfa4e7c8bc5b9f340950593421c0e00ab0e22b312d010e5052faa5eb9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.1",
+            "LIF-1.4"
+          ],
+          "sha256": "ceca692f7ca4f986af3fef414b27240c40c4579458437261cf16ecced41476f2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.4"
+          ],
+          "sha256": "b27fa9d0254f79aaabd97e76e47fc98a4f5320c8f05a76146372c2b03bc6769b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/mod.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.4"
+          ],
+          "sha256": "cfefbb1a6a4cfb61baf44d70740a33dc3e1dae3d9901c825ff71ac0d3d5eccba"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/diagnostics.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.2"
+          ],
+          "sha256": "3364869df9df95a96d80867c1be380a6e3ca0432c7f256264accfc9a73d04803"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/true_for/cache_true_for_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.3"
+          ],
+          "sha256": "05535c8c224a31db443d542bac6726d2c655a34bfd2d28e34a5545b481366119"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/true_for/true_for_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.3"
+          ],
+          "sha256": "a8b662a24063b603321c0bdef76bb17db017a325e8ed3360e480973d5bd40971"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "7986b785805ad5127fc6d16ef03dbc76e8c83055a297f59b1e2ed06b06ef13e8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/12-item-lifecycle.md",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.1",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "6896c83e131e887fbd45367076b47dbe64b787ed9803a0083dac6f3cc24552c2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/13-stream-control-and-aggregation.md",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.2"
+          ],
+          "sha256": "ee0d32c51cd18d1bd0f29e7ac1b66b753c651175d688261d00bebb513e52473a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/aggregate_robustness/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "sha256": "0525bab1ca2b4314e3e370f7105faebcde8ad37cc03887ed36a1f739cd08b1e0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/lifecycle_semantics/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "1bb9e16d859c2f90e8328aa0003450d38099cb896129d254a0bdfd7b12eb9886"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "9d82f2aeecabd4aacf2657da98a682ee6cc875223aa1ddc9ea25285c35a9bfe0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs",
+          "kind": "test",
+          "criterionIds": [
+            "AGG-1.1"
+          ],
+          "sha256": "13e9668596434e1fe64211c6b1371e52468e22afbd673e3cb2ce554118ec671c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s11-review-scratch/s11_review_probe.rs",
+          "kind": "runtime",
+          "criterionIds": [
+            "AGG-1.2",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "21bb38ecf368c0ef8832930ac0ea9f133be4951c942ce311b211c820b1a0ec86"
+        }
+      ],
+      "summaryMarkdown": "**Verdict: passed (re-review at snapshot 72522e01).** All four findings, S11-F1 to S11-F4, are resolved and no finding remains open. The review below the line is the original first pass at snapshot efd34a62.\n\n**Re-review checks**\n- **Repaired diff.** I read the repaired `numeric_totals.rs`, `tests/mod.rs`, the `lifecycle_semantics` gates, the new tests and the CHANGELOG.\n- **Pre-existing failure confirmed.** The remaining no-feature test-build failure in `operator_input_interop` is pre-existing: `support.rs` and `operator_input_interop/` are unchanged versus HEAD.\n- **Validation commands (all passed unless noted):**\n  - `cargo fmt --check`\n  - `cargo clippy --workspace --all-targets --all-features -- -D warnings`\n  - `cargo clippy -p rayx_reactive --lib -- -D warnings`\n  - `timeout 600 cargo check --workspace --target wasm32-unknown-unknown`\n  - `cargo test -p rayx_reactive_doc_examples`: 135 passed.\n  - `cargo check -p rayx_reactive --lib --tests` without features: only the pre-existing `operator_input_interop` errors remain.\n- **Test groups**, each run alone with `RUST_TEST_THREADS=4 timeout 600 cargo test -p rayx_reactive --all-features --lib collections::tests::<group>`:\n  - `aggregate_robustness`: 5 passed.\n  - `lifecycle_semantics`: 6 passed.\n  - `aggregation_diagnostics_diff`: 12 passed.\n  - The new ordering test ran 5 times, all passing.\n- **Review probe re-run.** I re-ran the full temporary review probe module (12 probes: index-contract fuzzers for list and cache `filter_on_observable` and the four merge-many operators, numeric drift, infinity and overflow, `true_for` edge cases, re-entrancy, cost). All passed. The module was removed afterwards.\n- **Ordering test on HEAD.** The new ordering test, copied into a temporary HEAD worktree, failed 1 of 3 runs. The worktree was removed afterwards.\n- **Working tree.** `git status` matches the pre-review state.\n\n---\n\n**Original first-pass summary (failed at snapshot efd34a62):**\n\n**Verdict: failed.** There is one major and three minor open findings. The semantics themselves look correct, and every criterion is implemented and covered by a test.\n\n**What was checked**\n- **Diff.** I read the full diff vs HEAD 91dbddc: `numeric_totals.rs`, the aggregation rewrites, `emptiness`, `true_for`, `diagnostics`, and the `StartPhase`/`FilterRestart`/`reconcile_merged_children` restructuring of list and cache `filter_on_observable` and the four merge-many operators. I also checked the CHANGELOG and docs 07/11/12/13.\n- **Index contract fuzzing.** I wrote a temporary probe module (since removed; a copy is in `s11-review-scratch/s11_review_probe.rs`). It runs bounded differential fuzzers that check every emitted batch against the `contract.rs` strict mirrors and a naive model. Coverage:\n  - list `filter_on_observable`: 5 predicate modes x 250 seeds x 25 batches. Modes: sync constant; signal toggled between batches; two sync emissions while subscribing; re-entrant toggling of another item's signal during subscribe; never-emitting children. Batches include double replace of the same index plus refresh or move, ranges, moves and clears.\n  - cache `filter_on_observable`, same modes, with positioned upserts, moves and clears, compared by position.\n  - list->list, cache->list, cache->cache and list->cache merge-many, each with static sync children and with live child sources mutated between batches (duplicate child items and keys across parents). Checked as a multiset, or as the key set plus candidate values.\n  - All fuzzers passed. Re-entrant source writes from a filter child, and from a `true_for` selector, neither deadlock nor break the mirror.\n- **Numerics.**\n  - `+inf` and `-inf` together give NaN, and removing each recovers.\n  - 3000 random add/remove operations at magnitudes up to 4e15 end exact to within 1e-9.\n  - The f32 path and the `TypeId` dispatch are correct. Integer `sum_by` is unchanged.\n  - NaN handling in `max_by`/`min_by`/`distinct_values` is deterministic.\n  - Exception: overflow (S11-F2).\n- **true_for.** Checked the empty source, failing then passing items, clear/remove, asynchronous children and a re-entrant selector. `starting` handles nesting.\n- **Locks (D-EMIT).** The new code delivers only through `OrderedEmitter`. `true_for`, filter cleanup and stats subscriptions are released outside locks. Child subscriptions dropped in `apply_source`/`apply_parent_changes` are still dropped under the state lock, as at HEAD, so this is not a regression.\n- **Performance.** I compared release builds of HEAD and the working tree on `filter_on_observable` startup at n=2k/8k and on 200 replaces/updates, list and cache. Startup is comparable (list 8k: 9.0 ms vs 6.8 ms), and the list now emits 1 startup batch instead of n/2. A `std_dev_by` with 4000 single-row updates of values around 1e9 (removal recompute per batch) costs about the same as HEAD in debug. No regression found.\n- **Do the tests fail on HEAD?** All new tests fail or abort on a HEAD worktree except the LIF-1.2 test (S11-F3).\n\n**Commands run (all passed unless noted)**\n- `cargo fmt --check`\n- `cargo clippy --workspace --all-targets --all-features -- -D warnings`\n- `timeout 600 cargo check --workspace --target wasm32-unknown-unknown`\n- `cargo test -p rayx_reactive_doc_examples`: 135 passed.\n- Each group run alone with `RUST_TEST_THREADS=4 timeout 600 cargo test -p rayx_reactive --all-features --lib collections::tests::<group>`:\n  - `aggregate_robustness`: 4 passed.\n  - `lifecycle_semantics`: 5 passed.\n  - `aggregation_diagnostics_diff`: 12.\n  - `lifecycle_observables`: 27.\n  - `combination_materialization_population`: 28.\n  - `keyed_state_operators`: 6.\n  - `ordered_emission_relations`: 11.\n  - `operator_input_interop`: 7.\n- `cargo check -p rayx_reactive --lib --tests` without features **fails** (S11-F1).\n\nThe working tree was restored to its initial state, and the temporary HEAD worktree was removed.\n\n**Breaking change.** Adding `T: PartialEq` to list `dispose_many`/`dispose_many_with` is acceptable. It mirrors the cache API, LIF-1.1/D-SEMANTICS require equality comparison, and the CHANGELOG lists it as Breaking with a migration to the new additive `dispose_many_by`.\n\n**Optional notes (not findings)**\n- Replacing the same list parent index twice in one batch reconciles the intermediate, empty child, so identical children are removed and re-added. This is correct but churns.\n- `total_eq` treats two mutually incomparable non-NaN values of a custom `PartialOrd` as equal in `distinct_values`.\n- `is_empty`/`is_not_empty` still emit the empty value first when the source delivers its snapshot asynchronously. This is inherent and outside the criterion's snapshot case.",
+      "findingIds": [
+        "S11-F1",
+        "S11-F2",
+        "S11-F3",
+        "S11-F4"
+      ],
+      "recordedAt": "2026-10-07T05:53:26Z"
     }
   },
   "checkpoints": {
@@ -4766,9 +5033,54 @@
       "severity": "minor",
       "status": "resolved",
       "descriptionMarkdown": "**The S10-F3 regression tests do not exercise the defective interleaving.** The original defect needs the *first* job of a key to finish (calling the old `finish(id, sequence)`, which also removed the second job's handle) while the second job is still pending.\n\nIn `a_later_update_cancels_both_jobs_of_a_key_from_one_batch` both jobs stay pending until the later update. In the cache case of `workers_exit_after_disposal` both futures are `pending()`. In both, `finish` never runs before the abort, so the old code would also have kept both handles and passed. By analysis, neither test would have failed at the previous snapshot.\n\nThe fix itself is verified by probe `dup`, where job 1 completes and job 2 stays pending. Suggested test: in one `edit`, add `(1, 10)` and update to `(1, 11)`; complete job 10 first; then update to `(1, 12)` (or dispose) and assert that job 11's future is dropped. Non-blocking.\n\n**Re-review (snapshot 03e0a001, revision 103): resolved.** `a_later_update_cancels_both_jobs_of_a_key_from_one_batch` now completes job 10 first, which runs `finish`, and then updates the key. To check that the test catches the defect, I ran it against a scratch copy of the tree (outside the repository) with the old sequence-keyed `finish` restored. It **failed 3 of 3 runs** with \"timed out waiting for the second job to be dropped\". On the real tree it passes, so it now catches the original defect. One nit, no action needed: the test treats job 10's drop flag as the signal that `finish` has run, but `finish` runs just after the drop, so in theory a very fast update could slip between the two. In practice the test discriminated 3 of 3 times."
+    },
+    {
+      "id": "S11-F1",
+      "boundaryId": "s11-semantics",
+      "criterionIds": [
+        "AGG-1.1",
+        "AGG-1.2",
+        "LIF-1.1",
+        "LIF-1.2",
+        "LIF-1.3",
+        "LIF-1.4"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**The test build breaks without `--all-features` (a misplaced `cfg` gate).** In `crates/src/collections/tests/mod.rs:6-8` the new `mod aggregate_robustness;` was inserted between `#[cfg(feature = \"diagnostics\")]` and `mod aggregation_diagnostics_diff;`. The gate now applies to `aggregate_robustness`, which does not need it, and `aggregation_diagnostics_diff`, which does, is compiled unconditionally. Separately, `mod lifecycle_semantics;` (`tests/mod.rs:22`) is not gated, yet `lifecycle_semantics/mod.rs:9` imports `crate::collections::diagnostics::{CacheDiagnosticsExt, ListDiagnosticsExt}`, and the `diagnostics` module only exists with the feature (`collections/mod.rs:9-10`; `default = []`).\n\nExpected: `cargo check -p rayx_reactive --lib --tests` and plain `cargo test -p rayx_reactive` compile, as they did at HEAD 91dbddc. Actual (verified): they fail with E0432 `unresolved import crate::collections::diagnostics` at `lifecycle_semantics/mod.rs:9`, plus E0433/E0425/E0599 in `aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs` (`ListAggregationExt`, `ChangeSummary`, `to_collection`, ...). CI and the CLAUDE.md commands use `--all-features`, so they do not catch this. Also, without the feature the AGG group is silently skipped.\n\nFix: restore `#[cfg(feature = \"diagnostics\")]` directly above `mod aggregation_diagnostics_diff;` and leave `aggregate_robustness` ungated. Gate only the diagnostics parts of `lifecycle_semantics` (the import and `update_stats_reach_a_reentrant_subscriber`), or gate the whole module, so the LIF-1.1/1.3/1.4 tests still run under default features. Re-run `cargo check -p rayx_reactive --lib --tests`.\n\n**Re-review (snapshot 72522e01): resolved.** `aggregate_robustness` is now ungated and imports the aggregation traits itself. `#[cfg(feature = \"diagnostics\")]` is back on `aggregation_diagnostics_diff`, and the diagnostics import and both stats tests in `lifecycle_semantics` are gated. `cargo check -p rayx_reactive --lib --tests` without features now reports only 5 E0599 errors, all in `operator_input_interop/signal_streams_feed_every_operator.rs` (`query_when_changed_on*`, `edit_diff*`). Those come from `support.rs:41` gating the trait re-exports behind `diagnostics`. `git diff HEAD` shows `support.rs` and `operator_input_interop/` unchanged, so this failure is pre-existing and not introduced by this sprint (it also corrects my earlier claim that HEAD compiled without features). `cargo clippy -p rayx_reactive --lib -- -D warnings` (default features) is clean."
+    },
+    {
+      "id": "S11-F2",
+      "boundaryId": "s11-semantics",
+      "criterionIds": [
+        "AGG-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Overflowing finite sums now yield NaN instead of infinity.** `FloatSum::accumulate` (`crates/src/collections/aggregation/numeric_totals.rs:26-34`) applies the Neumaier correction even when `sum + value` overflows. For `sum = 1e308, value = 1e308`: `total = inf`, `compensation += (1e308 - inf) + 1e308 = -inf`, and `value()` (`:36-46`) returns `inf + -inf = NaN`.\n\nReproduction (bounded review probe `probe_overflowing_finite_sum`, saved in `artifacts-temp/agentx/reactive-audit-remediation/s11-review-scratch/s11_review_probe.rs`): list `sum_by`/`avg_by` over `[1e308]`, then push `1e308`, then push `-1e308`. The working tree emits sums `[1e308, NaN, NaN]`; HEAD emits `[1e308, inf, inf]`. The NaN persists until a removal of magnitude >= 2^53 triggers a recompute. `std_dev_by` has the same issue when summed squares overflow (|v| around 1e154). This contradicts the documented intent that infinities and NaN are counted apart and only a NaN *input* produces NaN.\n\nFix: in `accumulate`, when `total` is not finite (with both inputs finite), do not update `compensation`. Better, record an overflow so that `value()` reports `+-inf` and the next removal recomputes from the values. Add an `aggregate_robustness` case for an overflowing sum.\n\n**Re-review: resolved.** `accumulate` skips compensation once the total is not finite. `value()` returns the overflowed sum. `remove` recomputes whenever the sum is not finite. The review probe now gives sums `[1e308, inf, inf]`, and after removals `1e308`. New test `aggregate_robustness::overflowing_sums_are_infinite_and_recover` passes. The drift and infinity probes still pass."
+    },
+    {
+      "id": "S11-F3",
+      "boundaryId": "s11-semantics",
+      "criterionIds": [
+        "LIF-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The LIF-1.2 test does not discriminate: it passes on HEAD.** `lifecycle_semantics::update_stats_reach_a_reentrant_subscriber` (`crates/src/collections/tests/lifecycle_semantics/mod.rs:69-100`) passes unchanged against a HEAD 91dbddc worktree (verified). HEAD already dropped the summary guard before calling the subscriber (`drop(summary); subscriber(&next);`). The test's re-entrant write goes through `SourceList::push`/`SourceCache::add_or_update`, which the source's delivery queue serializes, so nothing re-enters synchronously. The actual change (summaries computed under the lock and delivered through an `OrderedEmitter` in batch order) is therefore not pinned by any test. Every other new test fails or aborts on HEAD.\n\nFix: add a case where the upstream re-enters synchronously, for example `auto_refresh` over a `Signal` that the stats subscriber sets. Record the summary *after* the re-entrant write, and assert that the recorded summaries are in batch order (counts non-decreasing). With nested delivery, HEAD records the inner summary before the outer one, and the `OrderedEmitter` queues it behind. Alternatively, use a deterministic two-thread ordering test with a barrier and a generous deadline.\n\n**Re-review: resolved.** New test `lifecycle_semantics::update_stats_arrive_in_batch_order_from_concurrent_deliveries`: two threads deliver 300 batches each to a slow subscriber, and the test asserts that `overall.index` strictly increases. It passed 5 of 5 runs on the working tree, where `OrderedEmitter` guarantees the order. Copied into a HEAD worktree, it failed 1 of 3 runs (\"summaries were delivered out of order\"). So it discriminates, but only probabilistically, which is acceptable because the passing side is deterministic."
+    },
+    {
+      "id": "S11-F4",
+      "boundaryId": "s11-semantics",
+      "criterionIds": [
+        "AGG-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**An updated test is not named in the CHANGELOG.** The repository constraint requires that existing tests pinning a defective behavior be updated *with a note in the changelog*. `CHANGELOG.md:239-242` names only `aggregation_diagnostics_diff::list_aggregations_track_snapshots_counts_sum_and_average`. The same file also changes the pinned `is_not_empty` sequence of `cache_aggregations_track_query_counts_sum_and_average` (`aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs:342`, `[false, true, true, false]` -> `[false, true, false]`), and that test is not mentioned. Fix: name both updated tests in the `### Aggregates` entry.\n\n**Re-review: resolved.** `CHANGELOG.md` `### Aggregates` now names both `list_aggregations_track_snapshots_counts_sum_and_average` and `cache_aggregations_track_query_counts_sum_and_average`, and documents the overflow behavior."
     }
   ],
-  "handoffMarkdown": "lifecycle/cache.rs: start_async_dispose_worker wraps each block_on(finalizer) in catch_unwind, so later finalizers run and completion.complete() always runs after the channel closes; enqueue_async_disposals wraps the finalizer factory call in catch_unwind (a panicking factory skips its item only, on the source thread and in teardown). Group collections::tests::async_dispose_hardening (factory panic for key 3, future panics for keys 2 and 5, removal batch then teardown; finalized [1,4,6] and completion fires). Docs ch12 async disposal; CHANGELOG Async operators.",
+  "handoffMarkdown": "LIF-1.1: list dispose_many/dispose_many_with now require T: PartialEq and delegate to new ListLifecycleExt::dispose_many_by(same_item, dispose); apply_list_disposal_changes skips same-item replacements (breaking bound documented in CHANGELOG). LIF-1.2: diagnostics collect_update_stats (list+cache) emit through OrderedEmitter (computed under lock, delivered after, in order). LIF-1.3: true_for_cache_stream: initial param removed; per source batch a starting counter suppresses child evaluations until the batch's children have subscribed, then one evaluate_distinct via emitter; empty source evaluates once after subscribe. LIF-1.4: lifecycle/mod.rs StartPhase<C> (depth + pending), reconcile_merged_children (multiset), FilterRestart<T> (shown item + next). Cache-child merge-many (cache.rs MergeManyCacheCacheChangeSetsState, list.rs MergeManyListCacheChangeSetsState): touched keys deferred during the phase (recompute_or_defer), finish_start recomputes once. List-child merge-many (cache.rs MergeManyCacheListChangeSetsState, list.rs MergeManyListChangeSetsState): restarted parents' old items retired (kept merged), new child changes only update child items during the phase, finish_start reconciles. filter_on_observable list/cache: restarted entries keep inclusion (cache only when the update does not move the key) with shown() item for removes/moves/clears, child results during the phase buffered, finish_start settles restarts into Replace/Update/Remove/Add and emits one batch; all through OrderedEmitter; clear_subscriptions return entries dropped outside locks. Group collections::tests::lifecycle_semantics (5 tests). Existing groups re-run green: lifecycle_observables, ordered_emission_relations, operator_input_interop, side_effects_options_bridges, aggregation_diagnostics_diff, combination_materialization_population, keyed_state_operators, limits_expiration_streams, sources. Docs ch11, ch12, ch13; CHANGELOG ### Lifecycle.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",

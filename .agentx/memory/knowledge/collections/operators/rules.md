@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-08T18:00:00+02:00
+  updated: 2026-10-09T12:00:00+02:00
   topics:
     - operators
     - incremental
@@ -23,7 +23,9 @@ agentx:
 - List transforms must be incremental and preserve indexed change reasons; default refresh forwards the existing projection, and only explicit on-refresh transform variants should re-run list transform factories.
 - Buffered auto-refresh operators must forward normal source changes immediately and buffer only child-triggered refreshes; resolve list indexes/cache indexes at flush time so moves between trigger and flush do not create stale refresh coordinates. Source batches and refresh batches (buffered or not) go through one `OrderedEmitter`, so a refresh index is valid when it is delivered.
 - `std_dev_by` must intentionally mirror DynamicData's formula `sqrt(sum_squares - (sum * sum / count)) / (count - 1)` with fallback when fewer than two values are present; do not replace it with the conventional sample standard deviation formula without an explicit compatibility decision.
-- `min_by` and `max_by` aggregation streams should suppress unchanged extrema values, matching DynamicData's `DistinctUntilChanged` behavior for maximum/minimum streams and reducing downstream scalar invalidations.
+- `min_by` and `max_by` aggregation streams should suppress unchanged extrema values, matching DynamicData's `DistinctUntilChanged` behavior for maximum/minimum streams and reducing downstream scalar invalidations. Compare with `total_cmp`/`total_eq` (`aggregation/numeric_totals.rs`): NaN is the greatest value and equals itself, so results do not depend on arrival order.
+- Float running aggregates (`sum_by` over f64/f32, `avg_by`, `std_dev_by`) accumulate through `NumericTotal` (`FloatSum`: Neumaier over finite values with separate NaN/infinity counts; a removed value of magnitude >= 2^53 recomputes from the stored values). `is_empty`/`is_not_empty` emit one initial value from the snapshot (or the empty value when no snapshot arrives while subscribing), then only distinct values.
+- Operators that subscribe a child stream per item (`filter_on_observable`, `merge_many_*_change_sets`, `true_for_*`) run each source batch as a start phase (`lifecycle::StartPhase`): child results produced while the batch's children subscribe are buffered or deferred and settled once after them, so startup is one batch and an item restarted with an unchanged child result causes no churn. Emit through `OrderedEmitter`.
 - For dynamic derived views, subscribe request/comparer/child streams under operator-owned state and dispose child subscriptions when their parent item leaves the source.
 - Sort operators should mutate the sorted target for ordinary source batches and reserve whole sorted snapshot diffs for comparer changes, explicit resort signals, and window/page recalculation paths.
 - Keyed sort state must keep source-order and sorted-key position indexes synchronized whenever it mutates an ordered vector. Sparse keyed add/update/remove/move/refresh batches must retain structured reasons; only the large add-only initialization path may build the sorted target with one stable batch sort.
