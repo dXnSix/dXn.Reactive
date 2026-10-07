@@ -13,6 +13,7 @@ mod index_contract_harness;
 mod joins;
 mod key_bridge_indexes;
 mod keyed_sort_positions;
+mod keyed_state_operators;
 mod lifecycle_observables;
 mod limits_expiration_streams;
 mod materialization_reliability;

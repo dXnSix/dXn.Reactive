@@ -854,13 +854,15 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let key_selector = Arc::new(key_selector);
         ChangeStream::new(move |subscriber| {
+            let state = Arc::new(Mutex::new(ChangeKeyState::<K, DestinationKey, T>::default()));
             let key_selector = Arc::clone(&key_selector);
             source.subscribe(move |batch| {
-                let changes = batch
-                    .changes
-                    .iter()
-                    .map(|change| change_cache_key(change, &*key_selector))
-                    .collect::<Vec<_>>();
+                let changes = {
+                    let Ok(mut state) = state.lock() else {
+                        return;
+                    };
+                    state.apply(&batch.changes, &*key_selector)
+                };
                 if !changes.is_empty() {
                     subscriber(&ChangeSet::new(changes, batch.version));
                 }
@@ -1202,7 +1204,8 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let group_key = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
-            let items = Arc::new(Mutex::new(HashMap::<K, T>::new()));
+            // Members keep source order: the items are mirrored with their order.
+            let items = Arc::new(Mutex::new((HashMap::<K, T>::new(), Vec::<K>::new())));
             let grouped = Arc::new(Mutex::new(Vec::<RayGroup<G, T>>::new()));
             let group_key = Arc::clone(&group_key);
             source.subscribe(move |batch| {
@@ -1212,8 +1215,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
                 let Ok(mut grouped) = grouped.lock() else {
                     return;
                 };
-                apply_cache_changes_to_map(&mut items, &batch.changes);
-                let values = items.values().cloned().collect::<Vec<_>>();
+                let (map, order) = &mut *items;
+                apply_cache_changes_to_ordered_state(map, order, &batch.changes);
+                let values = order
+                    .iter()
+                    .filter_map(|key| map.get(key).cloned())
+                    .collect::<Vec<_>>();
                 let next = group_list(&values, &*group_key);
                 let changes = diff_list(&grouped, &next);
                 *grouped = next;
@@ -2014,66 +2021,22 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let child_key = Arc::new(child_key);
         let transform = Arc::new(transform);
         ChangeStream::new(move |subscriber| {
-            let children_by_parent =
-                Arc::new(Mutex::new(HashMap::<K, HashMap<ChildKey, Child>>::new()));
+            let state = Arc::new(Mutex::new(
+                SyncTransformManyState::<K, ChildKey, Child>::default(),
+            ));
             let child_key = Arc::clone(&child_key);
             let transform = Arc::clone(&transform);
             source.subscribe(move |batch| {
-                let Ok(mut children_by_parent) = children_by_parent.lock() else {
-                    return;
+                let changes = {
+                    let Ok(mut state) = state.lock() else {
+                        return;
+                    };
+                    state.apply(
+                        &batch.changes,
+                        &|item: &T| transform(item).into_iter().collect::<Vec<_>>(),
+                        &*child_key,
+                    )
                 };
-                let mut changes = Vec::new();
-                for change in &batch.changes {
-                    match change {
-                        CacheChange::Add { key, current, .. } => {
-                            let next_children = child_map(transform(current), &*child_key);
-                            for (child_key, child) in &next_children {
-                                changes.push(CacheChange::Add {
-                                    key: child_key.clone(),
-                                    current: child.clone(),
-                                    current_index: None,
-                                });
-                            }
-                            children_by_parent.insert(key.clone(), next_children);
-                        }
-                        CacheChange::Refresh { key, current, .. } => {
-                            let previous_children =
-                                children_by_parent.remove(key).unwrap_or_default();
-                            let next_children = child_map(transform(current), &*child_key);
-                            refresh_child_maps(&previous_children, &next_children, &mut changes);
-                            children_by_parent.insert(key.clone(), next_children);
-                        }
-                        CacheChange::Update { key, current, .. }
-                        | CacheChange::Move { key, current, .. } => {
-                            let previous_children =
-                                children_by_parent.remove(key).unwrap_or_default();
-                            let next_children = child_map(transform(current), &*child_key);
-                            diff_child_maps(&previous_children, &next_children, &mut changes);
-                            children_by_parent.insert(key.clone(), next_children);
-                        }
-                        CacheChange::Remove { key, .. } => {
-                            if let Some(previous_children) = children_by_parent.remove(key) {
-                                for (child_key, child) in previous_children {
-                                    changes.push(CacheChange::Remove {
-                                        key: child_key,
-                                        previous: child,
-                                        previous_index: None,
-                                    });
-                                }
-                            }
-                        }
-                        CacheChange::Clear { .. } => {
-                            let previous = children_by_parent
-                                .drain()
-                                .flat_map(|(_, children)| children.into_iter())
-                                .collect::<Vec<_>>();
-                            if !previous.is_empty() {
-                                changes.push(CacheChange::Clear { previous });
-                            }
-                        }
-                    }
-                }
-                drop(children_by_parent);
                 if !changes.is_empty() {
                     subscriber(&ChangeSet::new(changes, batch.version));
                 }

@@ -9,6 +9,8 @@ include!("cache_async_safe_job.rs");
 include!("cache_transform_many_async_iterable_stream.rs");
 include!("cache_transform_many_safe_async_stream.rs");
 include!("cache_async_transform_many_state.rs");
+include!("sync_transform_many_state.rs");
+include!("change_key_state.rs");
 include!("start_cache_async_transform_many_child.rs");
 include!("cache_inline_transform_state.rs");
 include!("list_sort_state.rs");

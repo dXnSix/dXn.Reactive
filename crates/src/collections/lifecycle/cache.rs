@@ -1725,7 +1725,16 @@ fn start_cache_cache_change_set_subscriptions<K, T, ChildKey, Child>(
     ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
     Child: Clone + PartialEq + Send + Sync + 'static,
 {
-    for (key, parent) in starts {
+    // A parent added and updated in one batch starts only its latest child stream, so the
+    // superseded stream's items never reach the merged output.
+    let mut latest = Vec::<&(K, T)>::new();
+    for start in starts.iter().rev() {
+        if !latest.iter().any(|kept| kept.0 == start.0) {
+            latest.push(start);
+        }
+    }
+    latest.reverse();
+    for (key, parent) in latest {
         let is_live = state
             .lock()
             .map(|state| state.is_live(key))
@@ -1954,7 +1963,16 @@ fn start_cache_list_change_set_subscriptions<K, T, U>(
     T: Clone + Send + Sync + 'static,
     U: Clone + PartialEq + Send + Sync + 'static,
 {
-    for (key, parent) in starts {
+    // A parent added and updated in one batch starts only its latest child stream, so the
+    // superseded stream's items never reach the merged output.
+    let mut latest = Vec::<&(K, T)>::new();
+    for start in starts.iter().rev() {
+        if !latest.iter().any(|kept| kept.0 == start.0) {
+            latest.push(start);
+        }
+    }
+    latest.reverse();
+    for (key, parent) in latest {
         let is_live = state
             .lock()
             .map(|state| state.is_live(key))
@@ -2629,7 +2647,11 @@ where
     }
 
     fn finalize_empty_groups(&mut self, group_changes: &mut Vec<CacheGroupChange<K, T, G>>) {
-        let empty_groups = self.empty_groups.iter().cloned().collect::<Vec<_>>();
+        let empty_groups = ordered_empty_groups(&self.empty_groups, &self.group_order, |key| {
+            group_changes
+                .iter()
+                .any(|change| matches!(change, CacheChange::Add { key: added, .. } if added == key))
+        });
         for group_key in empty_groups {
             let Some(group) = self.groups.get(&group_key).cloned() else {
                 let _ = self.empty_groups.remove(&group_key);
@@ -2813,13 +2835,37 @@ fn remove_pending_group_add<K, T, G>(
 where
     G: Eq,
 {
-    let Some(index) = group_changes
-        .iter()
-        .position(|change| matches!(change, CacheChange::Add { key, .. } if key == group_key))
+    let Some((position, dropped)) =
+        group_changes
+            .iter()
+            .enumerate()
+            .find_map(|(position, change)| match change {
+                CacheChange::Add {
+                    key, current_index, ..
+                } if key == group_key => Some((position, *current_index)),
+                _ => None,
+            })
     else {
         return false;
     };
-    let _ = group_changes.remove(index);
+    let _ = group_changes.remove(position);
+    // Later changes were indexed with the dropped group still in the output.
+    if let Some(dropped) = dropped {
+        for change in group_changes.iter_mut().skip(position) {
+            if let CacheChange::Add {
+                current_index: Some(index),
+                ..
+            }
+            | CacheChange::Remove {
+                previous_index: Some(index),
+                ..
+            } = change
+                && *index > dropped
+            {
+                *index -= 1;
+            }
+        }
+    }
     true
 }
 
@@ -3981,4 +4027,27 @@ fn apply_cache_subscriptions<K, T>(
             CacheChange::Refresh { .. } | CacheChange::Move { .. } => {}
         }
     }
+}
+
+/// Empty groups in finalization order: groups created in this batch (with a pending addition)
+/// first, so later removals are indexed without them, then by their position in the group
+/// order, so the removals are deterministic.
+fn ordered_empty_groups<G: Clone + Eq + Hash>(
+    empty_groups: &HashSet<G>,
+    group_order: &[G],
+    pending_add: impl Fn(&G) -> bool,
+) -> Vec<G> {
+    let positions = group_order
+        .iter()
+        .enumerate()
+        .map(|(position, key)| (key, position))
+        .collect::<HashMap<_, _>>();
+    let mut ordered = empty_groups.iter().cloned().collect::<Vec<_>>();
+    ordered.sort_by_key(|key| {
+        (
+            !pending_add(key),
+            positions.get(key).copied().unwrap_or(usize::MAX),
+        )
+    });
+    ordered
 }
