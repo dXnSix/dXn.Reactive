@@ -170,7 +170,12 @@ where
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), crate::collections::connection::PendingChanges::new()))
+        .or_insert_with(|| {
+            (
+                group.clone(),
+                crate::collections::connection::PendingChanges::new(),
+            )
+        })
         .1
 }
 

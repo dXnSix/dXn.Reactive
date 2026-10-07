@@ -14,4 +14,3 @@ impl<K, T> CacheArcStreamExt<K, T> for ChangeStream<CacheChange<K, Arc<T>>> {
         self.ignore_update_when(|current, previous| Arc::ptr_eq(current, previous))
     }
 }
-

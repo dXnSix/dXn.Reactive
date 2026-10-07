@@ -328,4 +328,3 @@ impl<Child> Default for ListTransformManyState<Child> {
         }
     }
 }
-

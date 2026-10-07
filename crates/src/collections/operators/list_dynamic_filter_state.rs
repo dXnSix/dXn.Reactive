@@ -223,4 +223,3 @@ impl<T, S> Default for ListDynamicFilterState<T, S> {
         }
     }
 }
-

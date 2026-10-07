@@ -361,11 +361,7 @@ impl<K, T> Default for CacheRemoveKeyState<K, T> {
 
 /// Where a new key goes in `working` so the keys keep `target` order: before the first key
 /// that comes after it in `target` (keys `target` does not list are skipped).
-fn provisional_position<K: Eq + Hash>(
-    working: &[K],
-    ranks: &HashMap<&K, usize>,
-    key: &K,
-) -> usize {
+fn provisional_position<K: Eq + Hash>(working: &[K], ranks: &HashMap<&K, usize>, key: &K) -> usize {
     let Some(rank) = ranks.get(key).copied() else {
         return working.len();
     };

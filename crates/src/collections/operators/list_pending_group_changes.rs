@@ -344,7 +344,12 @@ where
 {
     &mut pending
         .entry(group_key.clone())
-        .or_insert_with(|| (group.clone(), crate::collections::connection::PendingChanges::new()))
+        .or_insert_with(|| {
+            (
+                group.clone(),
+                crate::collections::connection::PendingChanges::new(),
+            )
+        })
         .1
 }
 
@@ -424,7 +429,6 @@ impl<K, T, G> Default for LiveCacheGroupState<K, T, G> {
         }
     }
 }
-
 
 /// Delivers the changes staged for each group (see `stage_pending`).
 fn drain_staged_groups<Group: StagedGroup>(groups: Vec<Group>) {

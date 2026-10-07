@@ -196,7 +196,11 @@ where
         });
         let mut cleared = Vec::new();
         for (destination, provider) in affected {
-            match self.holders.get(&destination).and_then(|holders| holders.last().cloned()) {
+            match self
+                .holders
+                .get(&destination)
+                .and_then(|holders| holders.last().cloned())
+            {
                 None => {
                     self.holders.remove(&destination);
                     if let Some((_, previous)) = self.output.remove(&destination) {
