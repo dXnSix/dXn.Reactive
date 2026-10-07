@@ -457,7 +457,7 @@ resolving a reference.
 
 | Collection | Operators |
 |---|---|
-| list | `transform_async(f)`, `transform_async_on_refresh(f)`, `transform_async_with_previous(f, transform_on_refresh)` |
+| list | `transform_async(f)`, `transform_async_on_refresh(f)`, `transform_async_with_previous(f, transform_on_refresh)`, `transform_async_with_options(f, options)` |
 | cache | `transform_async(f)`, `transform_async_with_key(f)`, `transform_async_with_previous(f, options)`, `transform_async_with_previous_forced(f, force, options)`, and `transform_safe_async*` variants |
 
 How they execute:
@@ -469,8 +469,18 @@ How they execute:
 - Output is delivered **on the worker thread**. Marshal to your UI thread in the subscriber, as you
   would for any background work.
 - `TransformAsyncOptions { maximum_concurrency, transform_on_refresh }` bounds how many futures of
-  one batch run concurrently (`None` means unbounded) and whether refreshes re-run the future.
-  `TransformAsyncOptions::DEFAULT` is unbounded with no refresh transforms.
+  one batch run concurrently (`None` means unbounded; `Some(0)` counts as 1) and whether
+  refreshes re-run the future. `TransformAsyncOptions::DEFAULT` is unbounded with no refresh
+  transforms. List results are applied in index order whatever order the futures finish in.
+- A future is **dropped** when a later source batch removes or replaces its item (or updates its
+  key) and when the subscription is disposed; the worker then exits promptly and nothing more is
+  delivered.
+- A **panicking** future does not stop the worker. The item is left out (a cache keeps a key's
+  previous projection; list indexes skip the item), and later batches are processed. The safe
+  variants report the panic through `on_error` when their error type can carry it: `E` is
+  `TransformPanic`, `String` (the message), `Box<dyn Error + Send + Sync>` or
+  `Arc<dyn Error + Send + Sync>`, or the panic payload is itself an `E`
+  (`std::panic::panic_any`). Output indexes are positions among the items the operator shows.
 - The futures run outside any async runtime. Do not rely on runtime context such as Tokio's
   reactor or timers inside them; spawn such work on your runtime and await its handle, or use
   runtime-agnostic I/O.
@@ -541,7 +551,13 @@ Async cache variants produce children from a future (`transform_many_async`,
 `transform_many_async_by` with a duplicate-key comparer, and the `transform_many_safe_async*`
 fallible forms), or from a live **child change stream** per parent (`transform_many_async_stream*`).
 They track a generation per parent, so a slow future or stream from a parent that has since been
-updated or removed can never publish stale children.
+updated or removed can never publish stale children; such a future is dropped. All parents of one
+subscription run on **one worker thread**, with at most `maximum_concurrency` transforms in flight
+when given through the `_with_options` variants (`transform_many_async_with_options(child_key,
+f, options)` and likewise for the other seven); the plain forms run every pending transform
+concurrently. A panicking transform gives its parent no children (the safe forms report it as
+above). Output is serialized with the source's own changes, so a slow subscriber never sees
+children of parents that were already removed.
 
 ## Re-keying and bridging
 

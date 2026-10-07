@@ -213,7 +213,7 @@ These operators create OS threads:
 | Operator | Threads |
 |---|---|
 | `transform_async*` (lists and caches) | one worker per subscription |
-| `transform_many_async*`, `transform_many_*_async_stream*` | a thread per parent materialization |
+| `transform_many_async*`, `transform_many_*_async_stream*` | one worker per subscription, running at most `maximum_concurrency` transforms at once |
 | `async_dispose_many*` | one worker per subscription |
 | `batch`, `buffer_initial`, `*_with_timeout`, `auto_refresh_buffered`, `expire_after*` (stream, source, and `ChangeSetAdapterOptions`) | none of their own: their timers run on a [scheduler](#schedulers) |
 

@@ -234,6 +234,33 @@ breaking changes below are listed with migration notes for consumers.
 - **Added:** `debounce`, `throttle` and `sample` on `ValueStream<T, E>` (`ReactiveValueStreamExt`),
   each with a `*_with_scheduler` variant; disposal cancels their pending timers.
 
+### Async operators
+
+- **Added:** list `transform_async_with_options(transform, TransformAsyncOptions)`: a batch's
+  futures run concurrently up to `maximum_concurrency` and their results are applied in index
+  order. List async transforms no longer require `U: PartialEq`.
+- **Added:** `transform_many_async_with_options` and the `_with_options` forms of the other seven
+  `transform_many_*async*` operators, honoring `TransformAsyncOptions::maximum_concurrency`;
+  `TransformPanic`, the error a safe async transform reports for a panicking future.
+- **Fixed:** cache `transform_many_async*`/`*_async_stream*` run on one worker thread per
+  subscription instead of one thread per parent, and emit through the ordered emitter (no
+  concurrent deliveries, no stale children behind a slow subscriber).
+- **Fixed (behavior change):** async transforms (cache and list) drop an in-flight future when a
+  later batch removes or replaces its item or updates its key, and every future on disposal; the
+  worker exits promptly and nothing is emitted afterwards. A future superseded before it ran is
+  not run. The tests `transforms_filters::cache_transform_safe_forced_retries_failed_source_items::cache_transform_safe_async_reports_errors_and_recovers` (now waits for the first error before updating the key) and `transforms_filters::cache_transform_many_async_ignores_stale_materialization_after_parent_re::cache_transform_many_async_ignores_stale_materialization_after_parent_removed` (the removed parent's receiver may already be dropped) were updated. A source that releases its callback (a finite stream) still gets every pending transform-many transform finished.
+- **Fixed (behavior change):** a panicking future no longer kills the worker: the item is skipped
+  (safe variants report it through `on_error` when `E` can carry a `TransformPanic`, a `String`
+  or a boxed error), and later batches are processed. Cache async transforms emit indexes as
+  positions in their own output, so skipped and failed items do not shift them; list async
+  transforms leave skipped items out with translated indexes.
+- **Fixed:** in `async_dispose_many*`, a finalizer that panics (its factory or its future) no
+  longer stops the later finalizers, and the completion stream always fires after every queued
+  finalizer, including the teardown ones.
+- **Fixed (behavior change):** `maximum_concurrency: Some(0)` runs one future at a time (it meant
+  unbounded for cache transforms). List `transform_async*` run a batch's futures concurrently
+  (unbounded) and apply the results in index order; they awaited each change in turn.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on

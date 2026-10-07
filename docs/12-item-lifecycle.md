@@ -281,6 +281,8 @@ completed)`.
   Source delivery never waits for them.
 - `completed` receives a `ValueStream<()>` that fires once every queued finalizer, including those
   queued by teardown, has finished. Use it to delay shutdown until cleanup completes.
+- A finalizer that panics (creating its future or while it runs) is skipped: the later finalizers
+  still run and `completed` still fires.
 
 ## Evaluating on refresh
 
