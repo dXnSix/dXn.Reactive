@@ -38,11 +38,13 @@ pub(super) use crate::collections::{
     type_filter::{AnyItem, CacheTypeFilterExt},
 };
 
-#[cfg(feature = "diagnostics")]
 pub(super) use crate::collections::{
-    CacheAggregationExt, ListAggregationExt, OptionalValueStreamCacheDiffExt,
-    ValueStreamCacheDiffExt, ValueStreamListDiffExt,
+    CacheAggregationExt, OptionalValueStreamCacheDiffExt, ValueStreamCacheDiffExt,
+    ValueStreamListDiffExt,
 };
+
+#[cfg(feature = "diagnostics")]
+pub(super) use crate::collections::ListAggregationExt;
 
 #[cfg(feature = "diagnostics")]
 pub(super) use crate::collections::diagnostics::{

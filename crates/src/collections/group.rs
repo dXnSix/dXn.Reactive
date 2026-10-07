@@ -8,18 +8,38 @@ use crate::collections::change::{CacheChange, ChangeSet};
 use crate::collections::connection::{PendingChanges, StartupConnection, VersionedChangeSet};
 use crate::collections::delivery::DeliveryQueue;
 use crate::collections::error::Result;
+use crate::collections::key_order::KeyOrder;
 use crate::collections::stream::{ChangeStream, StreamSubscriber};
 use crate::collections::subscription::Subscription;
 
 struct GroupCacheState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     version: u64,
 }
 
 struct RayCacheGroupInner<K, T> {
     state: SourceLock<GroupCacheState<K, T>>,
     changes: DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Cache groups alive on this thread (tests observe operator-owned group registries).
+    static LIVE_CACHE_GROUPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The number of cache groups created and not yet dropped on this thread.
+#[cfg(test)]
+pub(crate) fn live_cache_groups_for_test() -> usize {
+    LIVE_CACHE_GROUPS.with(std::cell::Cell::get)
+}
+
+#[cfg(test)]
+impl<K, T> Drop for RayCacheGroupInner<K, T> {
+    fn drop(&mut self) {
+        LIVE_CACHE_GROUPS.with(|live| live.set(live.get().saturating_sub(1)));
+    }
 }
 
 #[derive(Clone)]
@@ -57,12 +77,14 @@ where
     G: Clone,
 {
     pub(crate) fn new(key: G) -> Self {
+        #[cfg(test)]
+        LIVE_CACHE_GROUPS.with(|live| live.set(live.get() + 1));
         Self {
             key,
             inner: Arc::new(RayCacheGroupInner {
                 state: SourceLock::new(GroupCacheState {
                     items: HashMap::new(),
-                    order: Vec::new(),
+                    order: KeyOrder::new(),
                     version: 0,
                 }),
                 changes: DeliveryQueue::new(),
@@ -95,7 +117,7 @@ where
     }
 
     pub fn keys(&self) -> Result<Vec<K>> {
-        Ok(self.inner.state.lock()?.order.clone())
+        Ok(self.inner.state.lock()?.order.to_vec())
     }
 
     pub fn key_values(&self) -> Result<Vec<(K, T)>> {
@@ -169,11 +191,11 @@ where
     ) -> Result<()> {
         let mut state = self.inner.state.lock()?;
         if let Some(previous) = state.items.insert(key.clone(), item.clone()) {
-            let previous_index = state.order.iter().position(|existing| existing == &key);
-            if let Some(index) = index {
-                move_group_order_key(&mut state.order, &key, index);
+            let previous_index = state.order.index_of(&key);
+            if let (Some(index), Some(previous_index)) = (index, previous_index) {
+                let _ = state.order.move_to(previous_index, index);
             }
-            let current_index = state.order.iter().position(|existing| existing == &key);
+            let current_index = state.order.index_of(&key);
             pending.push(
                 next_version(&mut state.version),
                 CacheChange::Update {
@@ -185,8 +207,7 @@ where
                 },
             );
         } else {
-            insert_group_order_key(&mut state.order, key.clone(), index);
-            let current_index = state.order.iter().position(|existing| existing == &key);
+            let current_index = Some(state.order.insert(index.unwrap_or(usize::MAX), key.clone()));
             pending.push(
                 next_version(&mut state.version),
                 CacheChange::Add {
@@ -208,8 +229,7 @@ where
         let Some(previous) = state.items.remove(key) else {
             return Ok(None);
         };
-        let previous_index = state.order.iter().position(|existing| existing == key);
-        remove_group_order_key(&mut state.order, key);
+        let previous_index = state.order.remove(key);
         pending.push(
             next_version(&mut state.version),
             CacheChange::Remove {
@@ -237,7 +257,7 @@ where
             CacheChange::Refresh {
                 key: key.clone(),
                 current,
-                current_index: state.order.iter().position(|existing| existing == key),
+                current_index: state.order.index_of(key),
             },
         );
         Ok(true)
@@ -250,20 +270,19 @@ where
         pending: &mut PendingChanges<CacheChange<K, T>>,
     ) -> Result<bool> {
         let mut state = self.inner.state.lock()?;
-        let Some(previous_index) = state.order.iter().position(|existing| existing == key) else {
+        let Some(previous_index) = state.order.index_of(key) else {
             return Ok(false);
         };
         let to_index = to_index.min(state.order.len().saturating_sub(1));
         if previous_index == to_index {
             return Ok(true);
         }
-        let moved_key = state.order.remove(previous_index);
-        state.order.insert(to_index, moved_key.clone());
-        if let Some(current) = state.items.get(&moved_key).cloned() {
+        let _ = state.order.move_to(previous_index, to_index);
+        if let Some(current) = state.items.get(key).cloned() {
             pending.push(
                 next_version(&mut state.version),
                 CacheChange::Move {
-                    key: moved_key,
+                    key: key.clone(),
                     current,
                     current_index: to_index,
                     previous_index,
@@ -271,6 +290,33 @@ where
             );
         }
         Ok(true)
+    }
+
+    /// The position `key` takes among the group's other keys, which are ordered by `rank`:
+    /// O(1) for a key ranked after them all (the common load), a binary search otherwise.
+    pub(crate) fn rank_position(&self, key: &K, rank: &dyn Fn(&K) -> usize) -> Result<usize> {
+        let state = self.inner.state.lock()?;
+        let keys = state.order.as_slice();
+        let own = state.order.index_of(key);
+        let others = keys.len() - usize::from(own.is_some());
+        let other = |index: usize| match own {
+            Some(own) if index >= own => &keys[index + 1],
+            _ => &keys[index],
+        };
+        let target = rank(key);
+        if others == 0 || rank(other(others - 1)) < target {
+            return Ok(others);
+        }
+        let (mut low, mut high) = (0, others);
+        while low < high {
+            let middle = low + (high - low) / 2;
+            if rank(other(middle)) < target {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        Ok(low)
     }
 
     pub(crate) fn is_empty(&self) -> Result<bool> {
@@ -332,6 +378,7 @@ where
             let state = self.inner.state.lock()?;
             let snapshot = state
                 .order
+                .as_slice()
                 .iter()
                 .enumerate()
                 .filter_map(|(index, key)| {
@@ -381,26 +428,6 @@ where
 }
 
 impl<G, K, T> Eq for RayCacheGroup<G, K, T> where G: Eq {}
-
-fn insert_group_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
-    }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
-}
-
-fn move_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
-    }
-}
-
-fn remove_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
-}
 
 /// Advances a group's version for one applied change and returns it.
 fn next_version(version: &mut u64) -> u64 {

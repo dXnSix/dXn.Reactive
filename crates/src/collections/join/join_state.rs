@@ -2,7 +2,7 @@ impl<K, T> Default for OrderedCache<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
         }
     }
 }
@@ -87,11 +87,8 @@ where
         match (previous, desired) {
             (None, None) => {}
             (Some(previous), None) => {
-                let previous_index = self.result_index(&key);
+                let previous_index = self.result.order.remove(&key);
                 let _ = self.result.items.remove(&key);
-                if let Some(index) = previous_index {
-                    let _ = self.result.order.remove(index);
-                }
                 changes.push(CacheChange::Remove {
                     key,
                     previous,
@@ -101,7 +98,7 @@ where
             (None, Some(current)) => {
                 let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
-                self.result.order.insert(index, key.clone());
+                let _ = self.result.order.insert(index, key.clone());
                 changes.push(CacheChange::Add {
                     key,
                     current,
@@ -141,25 +138,24 @@ where
                 .filter(|key| self.right.items.contains_key(*key))
                 .cloned()
                 .collect(),
-            JoinKind::Left => self.left.order.clone(),
-            JoinKind::Right => self.right.order.clone(),
+            JoinKind::Left => self.left.order.to_vec(),
+            JoinKind::Right => self.right.order.to_vec(),
             JoinKind::Full => {
-                let mut order = self.left.order.clone();
-                for key in &self.right.order {
-                    if !order.iter().any(|existing| existing == key) {
-                        order.push(key.clone());
-                    }
-                }
+                let mut order = self.left.order.to_vec();
+                order.extend(
+                    self.right
+                        .order
+                        .iter()
+                        .filter(|key| !self.left.items.contains_key(*key))
+                        .cloned(),
+                );
                 order
             }
         }
     }
 
     fn result_index(&self, key: &K) -> Option<usize> {
-        self.result
-            .order
-            .iter()
-            .position(|existing| existing == key)
+        self.result.order.index_of(key)
     }
 }
 
@@ -167,9 +163,9 @@ struct JoinManyState<K, L, RK, R, U> {
     kind: JoinManyKind,
     left: OrderedCache<K, L>,
     right_items: HashMap<RK, (K, R)>,
-    right_order: Vec<RK>,
+    right_order: KeyOrder<RK>,
     groups: HashMap<K, RayCacheGroup<K, RK, R>>,
-    group_order: Vec<K>,
+    group_order: KeyOrder<K>,
     result: OrderedCache<K, U>,
     /// Right groups with changes queued under the join's lock, delivered after it is released.
     staged: Vec<RayCacheGroup<K, RK, R>>,

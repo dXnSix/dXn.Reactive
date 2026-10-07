@@ -12,9 +12,9 @@ where
             kind,
             left: OrderedCache::default(),
             right_items: HashMap::new(),
-            right_order: Vec::new(),
+            right_order: KeyOrder::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             result: OrderedCache::default(),
             staged: Vec::new(),
         }
@@ -48,6 +48,10 @@ where
 
         let affected = affected_cache_keys(&self.left, &batch.changes);
         apply_cache_changes(&mut self.left, &batch.changes);
+        let keys = affected
+            .iter()
+            .map(|affected| affected.key.clone())
+            .collect::<Vec<_>>();
 
         let mut changes = Vec::new();
         // Group membership changes as keys are updated, so the order is taken afterwards;
@@ -61,6 +65,12 @@ where
                 &ranks,
                 &mut changes,
             );
+        }
+        // A removed left key frees its group when no right item uses it.
+        for key in &keys {
+            if !self.left.items.contains_key(key) {
+                self.cleanup_group_if_unused(key);
+            }
         }
         let desired = self.desired_order();
         reorder_result(&mut self.result, &desired, &mut changes);
@@ -77,7 +87,7 @@ where
             return Vec::new();
         }
 
-        let mut affected = Vec::<AffectedKey<K>>::new();
+        let mut affected = AffectedKeys::<K>::default();
         for change in &batch.changes {
             self.apply_right_change(change, right_key_selector, &mut affected);
         }
@@ -86,7 +96,7 @@ where
         // Group membership changes as keys are updated, so the order is taken afterwards;
         // additions use the order as it was when the batch started.
         let ranks = order_ranks(&self.desired_order());
-        for affected in affected {
+        for affected in affected.keys {
             self.update_key(
                 affected.key,
                 affected.refresh,
@@ -104,7 +114,7 @@ where
         &mut self,
         change: &CacheChange<RK, R>,
         right_key_selector: &dyn Fn(&R) -> K,
-        affected: &mut Vec<AffectedKey<K>>,
+        affected: &mut AffectedKeys<K>,
     ) {
         match change {
             CacheChange::Add {
@@ -151,8 +161,8 @@ where
                 }
                 if let Some(index) = current_index {
                     move_or_insert_key(&mut self.right_order, key.clone(), *index);
-                } else if !self.right_order.iter().any(|existing| existing == key) {
-                    self.right_order.push(key.clone());
+                } else if !self.right_order.contains_key(key) {
+                    let _ = self.right_order.push(key.clone());
                 }
             }
             CacheChange::Remove { key, previous, .. } => {
@@ -237,7 +247,7 @@ where
         self.stage_group(&group, pending);
     }
 
-    fn remove_right_item(&mut self, key: &RK, affected: &mut Vec<AffectedKey<K>>) {
+    fn remove_right_item(&mut self, key: &RK, affected: &mut AffectedKeys<K>) {
         let Some((group_key, _)) = self.right_items.remove(key) else {
             remove_key(&mut self.right_order, key);
             return;
@@ -273,7 +283,7 @@ where
             (Some(previous), None) => {
                 let previous_index = self.result_index(&key);
                 let _ = self.result.items.remove(&key);
-                remove_key(&mut self.result.order, &key);
+                let _ = self.result.order.remove(&key);
                 changes.push(CacheChange::Remove {
                     key,
                     previous,
@@ -283,7 +293,7 @@ where
             (None, Some(current)) => {
                 let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
-                self.result.order.insert(index, key.clone());
+                let _ = self.result.order.insert(index, key.clone());
                 changes.push(CacheChange::Add {
                     key,
                     current,
@@ -371,7 +381,7 @@ where
         }
         let group = RayCacheGroup::new(key.clone());
         self.groups.insert(key.clone(), group.clone());
-        self.group_order.push(key.clone());
+        let _ = self.group_order.push(key.clone());
         group
     }
 
@@ -387,23 +397,16 @@ where
         }
     }
 
+    /// The position of `key` in its group, whose members keep the right source order.
     fn group_index_for_right_key(&self, key: &RK, group_key: &K) -> Option<usize> {
-        self.right_order
-            .iter()
-            .filter(|candidate| {
-                self.right_items
-                    .get(*candidate)
-                    .map(|(candidate_group, _)| candidate_group == group_key)
-                    .unwrap_or(false)
-            })
-            .position(|candidate| candidate == key)
+        self.right_order.index_of(key)?;
+        let group = self.groups.get(group_key)?;
+        let rank = |candidate: &RK| self.right_order.index_of(candidate).unwrap_or(usize::MAX);
+        group.rank_position(key, &rank).ok()
     }
 
     fn result_index(&self, key: &K) -> Option<usize> {
-        self.result
-            .order
-            .iter()
-            .position(|existing| existing == key)
+        self.result.order.index_of(key)
     }
 }
 
@@ -452,13 +455,30 @@ where
     affected
 }
 
-fn upsert_affected_key<K>(affected: &mut Vec<AffectedKey<K>>, key: K, refresh: bool)
+/// Affected keys in first-touch order, deduplicated through a position map.
+struct AffectedKeys<K> {
+    keys: Vec<AffectedKey<K>>,
+    positions: HashMap<K, usize>,
+}
+
+impl<K> Default for AffectedKeys<K> {
+    fn default() -> Self {
+        Self {
+            keys: Vec::new(),
+            positions: HashMap::new(),
+        }
+    }
+}
+
+fn upsert_affected_key<K>(affected: &mut AffectedKeys<K>, key: K, refresh: bool)
 where
-    K: Eq,
+    K: Clone + Eq + Hash,
 {
-    if let Some(affected) = affected.iter_mut().find(|affected| affected.key == key) {
-        affected.refresh = refresh;
-    } else {
-        affected.push(AffectedKey { key, refresh });
+    match affected.positions.get(&key) {
+        Some(&index) => affected.keys[index].refresh = refresh,
+        None => {
+            affected.positions.insert(key.clone(), affected.keys.len());
+            affected.keys.push(AffectedKey { key, refresh });
+        }
     }
 }

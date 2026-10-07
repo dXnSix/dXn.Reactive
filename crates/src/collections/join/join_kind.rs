@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
-use crate::collections::emit::OrderedEmitter;
 use crate::collections::change::{CacheChange, ChangeSet};
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::group::RayCacheGroup;
+use crate::collections::key_order::KeyOrder;
 use crate::collections::stream::ChangeStream;
 use crate::collections::subscription::Subscription;
 
@@ -440,6 +441,5 @@ where
 
 struct OrderedCache<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
-

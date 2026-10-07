@@ -13,7 +13,7 @@ where
                 let is_new = target.items.insert(key.clone(), current.clone()).is_none();
                 // A new key at the end (the common load) is appended without scanning.
                 if is_new && current_index.is_none_or(|index| index >= target.order.len()) {
-                    target.order.push(key.clone());
+                    let _ = target.order.push(key.clone());
                 } else {
                     insert_key(&mut target.order, key.clone(), *current_index);
                 }
@@ -32,8 +32,8 @@ where
                 target.items.insert(key.clone(), current.clone());
                 if let Some(index) = current_index {
                     move_or_insert_key(&mut target.order, key.clone(), *index);
-                } else if !target.order.iter().any(|existing| existing == key) {
-                    target.order.push(key.clone());
+                } else if !target.order.contains_key(key) {
+                    let _ = target.order.push(key.clone());
                 }
             }
             CacheChange::Move {
@@ -64,20 +64,17 @@ where
     }
 }
 
-fn insert_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    remove_key(order, &key);
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
+/// Places `key` at `index` (the end without one), moving it when present.
+fn insert_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: K, index: Option<usize>) {
+    let _ = order.insert(index.unwrap_or(usize::MAX), key);
 }
 
-fn move_or_insert_key<K: Eq>(order: &mut Vec<K>, key: K, index: usize) {
-    remove_key(order, &key);
-    order.insert(index.min(order.len()), key);
+fn move_or_insert_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: K, index: usize) {
+    let _ = order.insert(index, key);
 }
 
-fn remove_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
+fn remove_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K) {
+    let _ = order.remove(key);
 }
 
 fn order_ranks<K: Clone + Eq + Hash>(order: &[K]) -> HashMap<K, usize> {
@@ -126,9 +123,14 @@ fn reorder_result<K, U>(
         .filter(|key| result.items.contains_key(*key))
         .cloned()
         .collect::<Vec<_>>();
-    for (key, from, to) in
-        crate::collections::operators::minimal_moves(&mut result.order, &target)
-    {
+    // Most batches leave the order alone.
+    if result.order.as_slice() == target.as_slice() {
+        return;
+    }
+    let mut working = result.order.to_vec();
+    let moves = crate::collections::operators::minimal_moves(&mut working, &target);
+    result.order.reset(working);
+    for (key, from, to) in moves {
         if let Some(item) = result.items.get(&key) {
             changes.push(CacheChange::Move {
                 current: item.clone(),
