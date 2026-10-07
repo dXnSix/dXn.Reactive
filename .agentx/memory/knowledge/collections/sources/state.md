@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/sources
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-07T12:00:00+02:00
+  updated: 2026-10-10T12:00:00+02:00
   topics:
     - source-list
     - source-cache
@@ -24,6 +24,8 @@ Read this before changing source mutation, connection, keyed watch, diff, or mat
 ## Current Technical Shape
 
 `SourceCache`, `SourceList`, `RayCacheGroup`, and `RayListGroup` are history-free ([decision](../../../decisions/collections/sources/2026-07-27-collections-sources-history-free-targeted-delivery.md)). Each publishes transient `VersionedChangeSet` envelopes through a `DeliveryQueue`; `StartupConnection` subscribes first, takes a snapshot and its version, discards buffered envelopes at or below that version, drains newer ones in order, and then switches to direct live delivery that still drops envelopes at or below the snapshot version (proven by `collections::tests::connect_late_delivery`). The buffer belongs to the in-flight connection and is released on delivery, discard, disposal, or abandoned-state drop. Under `diagnostics`, `retained_implicit_batch_count()` counts those buffered envelopes; live and disposed steady state is zero.
+
+Each edit clones an item into the source state and once into the published batch, which `VersionedChangeSet` shares (`Arc<ChangeSet>`) across preview, changes, connections and the keyed hub; `changes_rx()` creates the rxRust subject and bridge on first use. `SourceCache` key order is a `KeyOrder`, so removals, moves, refreshes, `edit_diff` and watch-setup positions are O(1) key lookups.
 
 `SourceCache::watch(key)` registers with one source-owned `KeyedChangeHub`. Setup clones only the requested item and does one position lookup; the hub partitions each published batch once and invokes only subscribers for touched keys. Disposal removes the registration and prunes empty key buckets.
 

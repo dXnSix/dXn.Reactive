@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 112,
+  "revision": 119,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -232,13 +232,22 @@
       ]
     },
     "t38-source-bookkeeping-costs": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t39-operator-bookkeeping-costs": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t40-relation-operator-costs": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t41-api-hygiene": {
       "status": "pending"
@@ -355,6 +364,15 @@
         }
       },
       "recordedAt": "2026-10-07T05:49:18Z"
+    },
+    "da311726ce16c6390842e1b3c09a913de931428e0da2dd1d21af60116752703a": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "bb1eec2bf90ff4be7bdb425f98ecda34482e532140bec5880685eb712db1e323"
+        }
+      },
+      "recordedAt": "2026-10-07T06:53:42Z"
     }
   },
   "checkResults": {
@@ -1003,6 +1021,74 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s11-semantics-final-0af16dc92499.log",
       "logSha256": "2ea3fdbca3a7bad5b75e6866c7ddcd215ed2b3f127c4c15f48b1fab893a000ec",
       "inputsHash": "8dc6f0e92858a9a16996499a7f7bba79aa8624ca3221294494f96f2bb5200178"
+    },
+    "s12-performance/c-t38/final": {
+      "checkId": "c-t38",
+      "boundaryId": "s12-performance",
+      "phase": "final",
+      "batchId": "da311726ce16c6390842e1b3c09a913de931428e0da2dd1d21af60116752703a",
+      "definitionHash": "9381a4057b43a0f61fbefb9d85b6ab7f544f35b8e3c66cf8c8847601fee64d0f",
+      "basisHash": "fbf7281736d7502ed542b6161c6078384c4e1350c41a99eb4e21cb75944f0d1f",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 7,
+      "durationSeconds": 0.3422,
+      "recordedAt": "2026-10-07T06:53:41Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s12-performance-final-6fbbbe84b86b.log",
+      "logSha256": "7cc2741d75cefbc9509c60f6edaa1c9e7cfcf70a8ab684b8bcbb78b887a3c50f",
+      "inputsHash": "44f30f05e934dfc6e267b5173e46edc5c5af4506509c913f6132402e40a5e543"
+    },
+    "s12-performance/c-t39/final": {
+      "checkId": "c-t39",
+      "boundaryId": "s12-performance",
+      "phase": "final",
+      "batchId": "da311726ce16c6390842e1b3c09a913de931428e0da2dd1d21af60116752703a",
+      "definitionHash": "b729a4fae7f95ac08e4c225d58606d9496f1a91eb29f24f44c4577e4ce9a845b",
+      "basisHash": "994e81b70bc99684653a0d2bf1ea4686cefa84a9814148fdec541abbaf9c6b11",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 9,
+      "durationSeconds": 0.2279,
+      "recordedAt": "2026-10-07T06:53:41Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s12-performance-final-989dbd735f17.log",
+      "logSha256": "dce57e7ca15617f6dc8128068c778bc15c1a94076cb64ae0c045f7ebc5d0c870",
+      "inputsHash": "44f30f05e934dfc6e267b5173e46edc5c5af4506509c913f6132402e40a5e543"
+    },
+    "s12-performance/c-t40/final": {
+      "checkId": "c-t40",
+      "boundaryId": "s12-performance",
+      "phase": "final",
+      "batchId": "da311726ce16c6390842e1b3c09a913de931428e0da2dd1d21af60116752703a",
+      "definitionHash": "9b70d3c288a2bcefa48fbaa541ab63a14243e8c571a7c4a771bcb1656892e871",
+      "basisHash": "718f5f54d6a8e9dae7bcbd1efd333b1a7e810f306fb0556fa12264c230501d86",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 9,
+      "durationSeconds": 0.321,
+      "recordedAt": "2026-10-07T06:53:42Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s12-performance-final-261377aa3d24.log",
+      "logSha256": "229c8694b7a718eec73a06aca0f5d3f22b421b1bc10364b2e26bc84dcfde00f7",
+      "inputsHash": "44f30f05e934dfc6e267b5173e46edc5c5af4506509c913f6132402e40a5e543"
+    },
+    "s12-performance/c-t40-benches/final": {
+      "checkId": "c-t40-benches",
+      "boundaryId": "s12-performance",
+      "phase": "final",
+      "batchId": "da311726ce16c6390842e1b3c09a913de931428e0da2dd1d21af60116752703a",
+      "definitionHash": "fccb395b48e7aaeeef6d8ef6e2a0ef0df1e0ec11c7b0a657e2f8e1972ad19db5",
+      "basisHash": "dc268b46ccfcaa72c9460a3782b1407b8a3581bbac2faf81a8fc92536a24d8c4",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.1806,
+      "recordedAt": "2026-10-07T06:53:42Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s12-performance-final-694f1efbb732.log",
+      "logSha256": "66647873556c4920e5ce241432ea7c365645e66be6e1d22d04457377775ac8dd",
+      "inputsHash": "4dc30676a9bb6d713b924d6bd9258bf2581dc1563a44f5cc46802a07b57a222c"
     }
   },
   "reviews": {
@@ -3685,6 +3771,295 @@
         "S11-F4"
       ],
       "recordedAt": "2026-10-07T05:53:26Z"
+    },
+    "s12-performance": {
+      "reviewerId": "reviewer-s12-ac4ea84d",
+      "snapshotId": "da311726ce16c6390842e1b3c09a913de931428e0da2dd1d21af60116752703a",
+      "criterionIds": [
+        "PRF-1.1",
+        "PRF-1.2",
+        "PRF-2.1",
+        "PRF-2.2",
+        "PRF-2.3",
+        "PRF-3.1",
+        "PRF-3.2",
+        "PRF-3.3"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/key_order.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-2.1"
+          ],
+          "sha256": "678cbed1599b65d6d8ae8fd6428218da4427fd927b8e4f1c086d9e94fad11dc7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/cache_notification_suspension.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.1"
+          ],
+          "sha256": "56f89a6f951d51b86786434d3f292366b1e675495aa4243afe4772736c52eff9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-1.2"
+          ],
+          "sha256": "e429b22ca5b1f13daab2ee1e256db50970d568bba33a0e5b82677bc9af03b791"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/connection.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.2"
+          ],
+          "sha256": "319890273a2765048c3827bdbb542f80e9624f20eef258d420ca1a6166146aec"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/keyed_delivery.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.2"
+          ],
+          "sha256": "ecbde07f3171753aaedf25cae30f3d00e57cfe6b5bfa35d6a4f7a2436ab9552e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.2"
+          ],
+          "sha256": "3aaabfe4adb0c5c946534d6da3ca9464e9997bf2a1dbfe72e45dc45ff8af0ca4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/diff_cache_snapshots.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.1",
+            "PRF-2.3"
+          ],
+          "sha256": "05ca1572c86ef84a3e87f8e0ee9037abbb1cc9639d33f2446f14e9ecf8961657"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_dynamic_filter_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.2"
+          ],
+          "sha256": "371fcf9524596e0bf4ed9b516a309ea8fbea0efdcbe76f50698960597b001991"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_dynamic_filter_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.2"
+          ],
+          "sha256": "fa82016fd26fe09cc38cfadbb74e08afb126e709a14c29f147831bbc682d159e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_sort_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.3"
+          ],
+          "sha256": "890eb43e69cd2a60566e0780b57383177a3758b80f05f88d056dc5f3e53f62d2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_sort_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.3"
+          ],
+          "sha256": "ce60b6ceac5f7a40da81483d66fec1c1150372f212104201ff93dad8fc393a46"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tree/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "892e905fa7d6460d49af2f1cb6fa522147d61f9aca24a218a6adf6ab0885b3da"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "5d1b2183f3333095c3e0d86d079ce175cdd4322ce5b5a85dc0dcc8608eff3109"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/affected_key.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "e65955803abb1546e9c1e40cb7da3501f349ea689b97a74c5b56de7e2edce51e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.1"
+          ],
+          "sha256": "2542bed7f47e98032386b0916bc583aec06fc36a84428c6fe7541d0bbd423581"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/joins.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "1b16839a8227b4babefe5ffb7dcd35b2c344aec637e4fee1dd00ca51279e3276"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/tree.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "baaa9c428f22f4a4d686a1653e217219c5474818dbf40a186cfedca127e03ef3"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/sort_and_page.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "2f4e84f6238e8fbd02b653af4b622d2185d338a445e95cbe4f9560c9f1739591"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.2",
+            "PRF-2.3",
+            "PRF-3.2"
+          ],
+          "sha256": "74c2ccfc03c32e4f35725a5f2fbcfd54c12863776ce700b0811fadaeb0db6e5a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_bookkeeping_costs/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-1.2"
+          ],
+          "sha256": "bfa8873b49ee81a83df9bf21dcabfd14ad364e6598226092176a609649bd583a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/operator_bookkeeping_costs/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-2.3"
+          ],
+          "sha256": "6d6d562254fbcca8c17dd2fd25ff33342ab1e16d8515f44eb3fc6fac3e9a45d2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/relation_operator_costs/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "2a41d5e946f4bdaa3d575af754d6ec8cbc969f7458ab75f2ca49f797f56d219a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-fuzz.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-2.1",
+            "PRF-2.3"
+          ],
+          "sha256": "cd9bfe0e9b7b80954199c5df6182dad314c090002188a22032d53fd658d07b3b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-fuzz2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-3.1"
+          ],
+          "sha256": "340b6b7f0d9a9148cff8ba218f3eb83eab382a4750e7bbd40367e65aad65ed68"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-tree_disposal.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-3.2"
+          ],
+          "sha256": "18e456d999f69821b9418e044548ebf316e209f7fcac25cf7027258c6ac15ea8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-budget.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-2.3"
+          ],
+          "sha256": "194205d0d42deaa39f9dad96a860b661fbd5d7d2b1e2da44ef400ca0b0252bde"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-scale.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-2.1"
+          ],
+          "sha256": "b799b733e570137ddc6112ee500defb7749fc32ba63db580ebb45b9995af14d9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s12-bench-build.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "b1e78f12f56f975b2666ded757b7ff68191fff76e1e4c18a0f182a8c72e29909"
+        }
+      ],
+      "summaryMarkdown": "**Verdict: passed.** Re-review at revision 118. All three findings from the previous review (S12-F1, S12-F2, S12-F3) are fixed, and no finding remains open.\n\n**S12-F1 (tree disposal cleared ordinary roots):** fixed.\n- `parent_cycle_keys` now reports a cycle only when a walk revisits a key it marked earlier in the same walk.\n- A probe with rows (0,0),(1,0),(2,0),(3,1) plus a 10<->11 cycle with 12 hanging off it, and a self-root 20, confirms it. After disposal, the root keeps [1, 2] and node 1 keeps [3]. With the roots held, the probe's strong count is 6; it returns to 1 once they are dropped, so the cycle was freed.\n\n**S12-F2 (bulk removals about 10x slower than HEAD):** fixed.\n- I reviewed the lazy-removal `KeyOrder`: a stale position table, a Fenwick tree of removed table positions, a head offset and `settle` before an insert or move. The invariant holds: when no removal is pending, the head offset is 0 and the table is exact.\n- `apply_cache_changes_to_ordered_state` now clears at once when a `Clear { previous }` covers every key.\n- Release timings at 80k rows:\n\n| Scenario | HEAD | Revision 118 |\n|---|---|---|\n| `remove_keys(0..n/2)`, source only | 128 ms | 4 ms |\n| `remove_keys(0..n/2)`, with a transform | 246 ms | 10 ms |\n| `clear()`, with a transform | 54 ms | 9 ms |\n| 2,000 x (remove a middle key + append), with a transform | 3.7 s | 0.21 s |\n\n**S12-F3 (unbounded resort cost):** fixed.\n- `resort_moves` charges its tie-run equality scans to `RESORT_MOVE_BUDGET`, and `minimal_moves_within` uses `KeyOrder` positions plus a moves x length budget. Both fall back to the positional diff.\n- I checked the `to` computation against the previous algorithm.\n- A boundary probe at n = 1,990, 2,048, 2,100 and 3,000 (reverse, then mod-3 with a descending tie-break) gives the correct output in both regimes. Below the budget it emits only moves; above it, the positional diff.\n- The behaviour is documented in docs chapters 10 and 17 and in the CHANGELOG.\n\n**Bounded probes (public API, deleted afterwards):** all passed.\n- A removal-heavy differential fuzz: 30 seeds x 300 steps of front, middle and reversed bulk removals, mixed single-edit batches, `edit_diff`, clear, and filter-state changes. It checked `transform`, `ensure_unique_keys`, `remove_key`, `filter_with_state`, `sort_by` to list and the `watch` snapshot positions against the source.\n- Fuzzes against the source for live `group` member order, `expire_after`, `transform_to_tree` children order, `left_join_many` keys and membership, and cache `filter_with_state` flips.\n\n**Checks:** all green.\n- `cargo fmt --check`, clippy with `--all-targets --all-features -D warnings`, the wasm32 check, `cargo bench --no-run` and the doc examples (135 passed).\n- 22 test groups, run one at a time with `RUST_TEST_THREADS=4 timeout 600`. They include the three new groups (7, 9 and 9 tests), plus sources, source_lock_policy, transforms_filters, sorting_windowing, keyed_sort_positions, index_contract_harness, subset_operator_indexes, snapshot_diff_indexes, expiration_rework, limits_expiration_streams, lifecycle_observables, lifecycle_semantics, grouping_tree_switching, joins, group_and_combiner_indexes, ordered_emission_relations, async_transform_workers, key_bridge_indexes and keyed_state_operators.\n\n**Hygiene:** crates/src/collections/tests/mod.rs is back to CRLF, so its diff is only the three added lines.\n\n**Not a regression:** a right-side `Update` that carries a new `current_index` does not move the item inside its join-many group. HEAD behaves the same.",
+      "findingIds": [],
+      "recordedAt": "2026-10-07T07:16:26Z"
     }
   },
   "checkpoints": {
@@ -5088,7 +5463,7 @@
       "descriptionMarkdown": "**An updated test is not named in the CHANGELOG.** The repository constraint requires that existing tests pinning a defective behavior be updated *with a note in the changelog*. `CHANGELOG.md:239-242` names only `aggregation_diagnostics_diff::list_aggregations_track_snapshots_counts_sum_and_average`. The same file also changes the pinned `is_not_empty` sequence of `cache_aggregations_track_query_counts_sum_and_average` (`aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs:342`, `[false, true, true, false]` -> `[false, true, false]`), and that test is not mentioned. Fix: name both updated tests in the `### Aggregates` entry.\n\n**Re-review: resolved.** `CHANGELOG.md` `### Aggregates` now names both `list_aggregations_track_snapshots_counts_sum_and_average` and `cache_aggregations_track_query_counts_sum_and_average`, and documents the overflow behavior."
     }
   ],
-  "handoffMarkdown": "LIF-1.1: list dispose_many/dispose_many_with now require T: PartialEq and delegate to new ListLifecycleExt::dispose_many_by(same_item, dispose); apply_list_disposal_changes skips same-item replacements (breaking bound documented in CHANGELOG). LIF-1.2: diagnostics collect_update_stats (list+cache) emit through OrderedEmitter (computed under lock, delivered after, in order). LIF-1.3: true_for_cache_stream: initial param removed; per source batch a starting counter suppresses child evaluations until the batch's children have subscribed, then one evaluate_distinct via emitter; empty source evaluates once after subscribe. LIF-1.4: lifecycle/mod.rs StartPhase<C> (depth + pending), reconcile_merged_children (multiset), FilterRestart<T> (shown item + next). Cache-child merge-many (cache.rs MergeManyCacheCacheChangeSetsState, list.rs MergeManyListCacheChangeSetsState): touched keys deferred during the phase (recompute_or_defer), finish_start recomputes once. List-child merge-many (cache.rs MergeManyCacheListChangeSetsState, list.rs MergeManyListChangeSetsState): restarted parents' old items retired (kept merged), new child changes only update child items during the phase, finish_start reconciles. filter_on_observable list/cache: restarted entries keep inclusion (cache only when the update does not move the key) with shown() item for removes/moves/clears, child results during the phase buffered, finish_start settles restarts into Replace/Update/Remove/Add and emits one batch; all through OrderedEmitter; clear_subscriptions return entries dropped outside locks. Group collections::tests::lifecycle_semantics (5 tests). Existing groups re-run green: lifecycle_observables, ordered_emission_relations, operator_input_interop, side_effects_options_bridges, aggregation_diagnostics_diff, combination_materialization_population, keyed_state_operators, limits_expiration_streams, sources. Docs ch11, ch12, ch13; CHANGELOG ### Lifecycle.",
+  "handoffMarkdown": "PRF-3.1: tree (tree/stream_ext.rs) order/visible_order/pivot_groups use KeyOrder; children placed by place_child (sibling_position binary search over the parent's children by source rank, one edit: Add at index, or Update + one Move) instead of align_parent_children_order realigning all siblings; diff_tree_snapshots works on KeyOrder. CacheView holds &KeyOrder (pub(crate) index_of). Joins: OrderedCache.order/right_order/group_order are KeyOrder; insert_key/move_or_insert_key/remove_key O(1); full-join desired order filters right keys by left.items (no any() scan); reorder_result early-returns when in order; AffectedKeys (map-deduped) replaces linear upsert; group index via RayCacheGroup::rank_position. RayCacheGroup state order is KeyOrder; new pub(crate) rank_position (O(1) append, binary search otherwise); live cache grouping (LiveCacheGroupState, UngroupedCacheState, ImmutableCacheGroupState, LiveListGroupState group_order) on KeyOrder, group_index_for_key uses rank_position; KeyOrder::retain added. PRF-3.2: join-many apply_left frees empty groups of removed left keys (cleanup_group_if_unused); TreeState Drop clears children caches of nodes on parent cycles (parent_cycle_keys). cfg(test) thread-local live cache group counter in group.rs (live_cache_groups_for_test). PRF-3.3: benches joins.rs, tree.rs, sort_and_page.rs registered in crates/Cargo.toml; cargo bench --no-run builds. Pre-existing default-feature test compile failure fixed: tests/support.rs ungates CacheAggregationExt and the diff ext imports (ListAggregationExt stays diagnostics-only). Group collections::tests::relation_operator_costs (8 tests). Existing tree/join/group groups green.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",
