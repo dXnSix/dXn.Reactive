@@ -348,14 +348,20 @@ where
         .1
 }
 
-fn publish_pending_group_list_changes<T, G>(pending: ListGroupPending<T, G>)
+/// Queues each group's pending changes; call it while holding the operator's state lock,
+/// and [`drain_staged_groups`] with the result after releasing it.
+fn stage_pending_group_list_changes<T, G>(pending: ListGroupPending<T, G>) -> Vec<RayListGroup<G, T>>
 where
     T: Clone + Send + Sync + 'static,
     G: Clone + Send + Sync + 'static,
 {
-    for (_, (group, changes)) in pending {
-        let _ = group.publish_pending(changes);
-    }
+    pending
+        .into_values()
+        .filter_map(|(group, changes)| match group.stage_pending(changes) {
+            Ok(true) => Some(group),
+            Ok(false) | Err(_) => None,
+        })
+        .collect()
 }
 
 fn remove_pending_list_group_add<T, G>(
@@ -402,3 +408,41 @@ impl<K, T, G> Default for LiveCacheGroupState<K, T, G> {
     }
 }
 
+
+/// Delivers the changes staged for each group (see `stage_pending`).
+fn drain_staged_groups<Group: StagedGroup>(groups: Vec<Group>) {
+    for group in groups {
+        group.drain_staged();
+    }
+}
+
+/// A live group whose staged changes can be delivered.
+trait StagedGroup {
+    fn drain_staged(&self);
+}
+
+impl<G, T> StagedGroup for RayListGroup<G, T>
+where
+    G: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn drain_staged(&self) {
+        // A failure here means a poisoned group, whose readers report it themselves.
+        match self.drain_pending() {
+            Ok(()) | Err(_) => {}
+        }
+    }
+}
+
+impl<G, K, T> StagedGroup for RayCacheGroup<G, K, T>
+where
+    G: Clone + Send + Sync + 'static,
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn drain_staged(&self) {
+        match self.drain_pending() {
+            Ok(()) | Err(_) => {}
+        }
+    }
+}

@@ -281,14 +281,29 @@ where
     /// it was applied, so a connection whose snapshot already contains some of them drops
     /// exactly those.
     pub(crate) fn publish_pending(&self, changes: PendingChanges<CacheChange<K, T>>) -> Result<()> {
-        let Some(versioned) = changes.into_versioned() else {
-            return Ok(());
-        };
-        {
-            // Pushed under the state lock so batches keep their commit order.
-            let _state = self.inner.state.lock()?;
-            self.inner.changes.push(versioned)?;
+        if self.stage_pending(changes)? {
+            self.drain_pending()?;
         }
+        Ok(())
+    }
+
+    /// Queues changes staged by the `*_pending` methods without delivering them, and returns
+    /// whether there were any. An operator calls it while still holding the lock under which
+    /// it computed them, and [`drain_pending`](Self::drain_pending) after releasing that lock,
+    /// so the group's subscribers see the operator's batches in computation order and never
+    /// run under the operator's lock.
+    pub(crate) fn stage_pending(&self, changes: PendingChanges<CacheChange<K, T>>) -> Result<bool> {
+        let Some(versioned) = changes.into_versioned() else {
+            return Ok(false);
+        };
+        // Pushed under the state lock so batches keep their commit order.
+        let _state = self.inner.state.lock()?;
+        self.inner.changes.push(versioned)?;
+        Ok(true)
+    }
+
+    /// Delivers changes queued by [`stage_pending`](Self::stage_pending).
+    pub(crate) fn drain_pending(&self) -> Result<()> {
         Ok(self.inner.changes.drain()?)
     }
 

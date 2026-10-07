@@ -10,6 +10,7 @@ pub mod delivery;
 pub mod diagnostics;
 pub mod diff;
 pub mod distinct;
+mod emit;
 pub mod error;
 pub mod expiration;
 pub mod factory;

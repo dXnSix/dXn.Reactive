@@ -163,6 +163,7 @@ impl<T> ListDiagnosticsExt<T> for ChangeStream<ListChange<T>> {
                 if let Ok(mut summary) = summary.lock() {
                     let next = next_list_summary(&summary, batch);
                     *summary = next.clone();
+                    drop(summary);
                     subscriber(&next);
                 }
             })
@@ -183,6 +184,7 @@ impl<K, T> CacheDiagnosticsExt<K, T> for ChangeStream<CacheChange<K, T>> {
                 if let Ok(mut summary) = summary.lock() {
                     let next = next_cache_summary(&summary, batch);
                     *summary = next.clone();
+                    drop(summary);
                     subscriber(&next);
                 }
             })

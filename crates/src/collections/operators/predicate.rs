@@ -1,3 +1,4 @@
+use crate::collections::emit::OrderedEmitter;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::future::Future;

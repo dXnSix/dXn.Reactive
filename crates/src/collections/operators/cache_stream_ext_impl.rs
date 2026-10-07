@@ -397,40 +397,30 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let predicate = Arc::new(predicate);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let filter = Arc::new(Mutex::new(CacheDynamicFilterState::<K, T, S>::default()));
 
             let state_filter = Arc::clone(&filter);
             let state_predicate = Arc::clone(&predicate);
-            let state_subscriber = Arc::clone(&subscriber);
+            let state_emitter = emitter.clone();
             let state_subscription = state.subscribe(move |next_state| {
-                let batch = {
-                    let Ok(mut filter) = state_filter.lock() else {
-                        return;
-                    };
+                state_emitter.update(&state_filter, |filter| {
                     filter.set_state(next_state.clone(), &*state_predicate)
-                };
-                if let Some(batch) = batch {
-                    state_subscriber(&batch);
-                }
+                });
             })?;
 
             let source_filter = Arc::clone(&filter);
             let source_predicate = Arc::clone(&predicate);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut filter) = source_filter.lock() else {
-                        return;
-                    };
+                emitter.update(&source_filter, |filter| {
                     filter.apply_source(batch, &*source_predicate)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 state_subscription,
+                delivery,
             ]))
         })
     }
@@ -1171,53 +1161,37 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let resort = resort.err_into::<CollectionError>();
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(CacheSortState::<K, T>::default()));
 
             let comparer_state = Arc::clone(&state);
-            let comparer_subscriber = Arc::clone(&subscriber);
+            let comparer_emitter = emitter.clone();
             let comparer_subscription = comparers.subscribe(move |comparer| {
-                let batch = {
-                    let Ok(mut state) = comparer_state.lock() else {
-                        return;
-                    };
+                comparer_emitter.update(&comparer_state, |state| {
                     state.set_comparer_keyed(Arc::clone(comparer))
-                };
-                if let Some(batch) = batch {
-                    comparer_subscriber(&batch);
-                }
+                });
             })?;
 
             let resort_state = Arc::clone(&state);
-            let resort_subscriber = Arc::clone(&subscriber);
+            let resort_emitter = emitter.clone();
             let resort_subscription = resort.subscribe(move |_| {
-                let batch = {
-                    let Ok(mut state) = resort_state.lock() else {
-                        return;
-                    };
+                resort_emitter.update(&resort_state, |state| {
                     state.resort_keyed(None)
-                };
-                if let Some(batch) = batch {
-                    resort_subscriber(&batch);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source_keyed(batch)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 comparer_subscription,
                 resort_subscription,
                 source_subscription,
+                delivery,
             ]))
         })
     }
@@ -1318,53 +1292,37 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let resort = resort.err_into::<CollectionError>();
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(CacheSortState::<K, T>::default()));
 
             let comparer_state = Arc::clone(&state);
-            let comparer_subscriber = Arc::clone(&subscriber);
+            let comparer_emitter = emitter.clone();
             let comparer_subscription = comparers.subscribe(move |comparer| {
-                let batch = {
-                    let Ok(mut state) = comparer_state.lock() else {
-                        return;
-                    };
+                comparer_emitter.update(&comparer_state, |state| {
                     state.set_comparer(Arc::clone(comparer))
-                };
-                if let Some(batch) = batch {
-                    comparer_subscriber(&batch);
-                }
+                });
             })?;
 
             let resort_state = Arc::clone(&state);
-            let resort_subscriber = Arc::clone(&subscriber);
+            let resort_emitter = emitter.clone();
             let resort_subscription = resort.subscribe(move |_| {
-                let batch = {
-                    let Ok(mut state) = resort_state.lock() else {
-                        return;
-                    };
+                resort_emitter.update(&resort_state, |state| {
                     state.resort(None)
-                };
-                if let Some(batch) = batch {
-                    resort_subscriber(&batch);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source(batch)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 comparer_subscription,
                 resort_subscription,
+                delivery,
             ]))
         })
     }
@@ -1396,6 +1354,8 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
                 let next = group_list(&values, &*group_key);
                 let changes = diff_list(&grouped, &next);
                 *grouped = next;
+                // Released before calling downstream, which may re-enter this operator.
+                drop((items, grouped));
                 if !changes.is_empty() {
                     subscriber(&ChangeSet::new(changes, batch.version));
                 }
@@ -1427,19 +1387,24 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let group_key: GroupSelector<K, T, G> = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(LiveCacheGroupState::<K, T, G>::default()));
             let selector = Arc::clone(&group_key);
-            source.subscribe(move |batch| {
-                let (changes, pending) = if let Ok(mut state) = state.lock() {
-                    state.apply_source(batch, &*selector)
-                } else {
-                    (Vec::new(), HashMap::new())
+            let input = source.subscribe(move |batch| {
+                let staged = {
+                    let Ok(mut state) = state.lock() else {
+                        return;
+                    };
+                    let (changes, pending) = state.apply_source(batch, &*selector);
+                    if !changes.is_empty() {
+                        emitter.push(ChangeSet::new(changes, batch.version));
+                    }
+                    stage_pending_group_cache_changes(pending)
                 };
-                publish_pending_group_cache_changes(pending);
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
-            })
+                drain_staged_groups(staged);
+                emitter.drain();
+            })?;
+            Ok(Subscription::many(vec![input, delivery]))
         })
     }
 
@@ -1478,40 +1443,48 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let group_key: GroupSelector<K, T, G> = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(LiveCacheGroupState::<K, T, G>::default()));
 
             let source_state = Arc::clone(&state);
             let source_selector = Arc::clone(&group_key);
-            let source_subscriber = Arc::clone(&subscriber);
+            let source_emitter = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, pending) = if let Ok(mut state) = source_state.lock() {
-                    state.apply_source(batch, &*source_selector)
-                } else {
-                    (Vec::new(), HashMap::new())
+                let staged = {
+                    let Ok(mut state) = source_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending) = state.apply_source(batch, &*source_selector);
+                    if !changes.is_empty() {
+                        source_emitter.push(ChangeSet::new(changes, batch.version));
+                    }
+                    stage_pending_group_cache_changes(pending)
                 };
-                publish_pending_group_cache_changes(pending);
-                if !changes.is_empty() {
-                    source_subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                drain_staged_groups(staged);
+                source_emitter.drain();
             })?;
 
             let regroup_state = Arc::clone(&state);
             let regroup_selector = Arc::clone(&group_key);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                let (changes, pending, version) = if let Ok(mut state) = regroup_state.lock() {
-                    state.regroup_all(&*regroup_selector)
-                } else {
-                    (Vec::new(), HashMap::new(), 0)
+                let staged = {
+                    let Ok(mut state) = regroup_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending, version) = state.regroup_all(&*regroup_selector);
+                    if !changes.is_empty() {
+                        emitter.push(ChangeSet::new(changes, version));
+                    }
+                    stage_pending_group_cache_changes(pending)
                 };
-                publish_pending_group_cache_changes(pending);
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, version));
-                }
+                drain_staged_groups(staged);
+                emitter.drain();
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 regroup_subscription,
+                delivery,
             ]))
         })
     }
@@ -1576,38 +1549,26 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let group_key: GroupSelector<K, T, G> = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(ImmutableCacheGroupState::<K, T, G>::default()));
 
             let source_state = Arc::clone(&state);
             let source_selector = Arc::clone(&group_key);
-            let source_subscriber = Arc::clone(&subscriber);
+            let source_emitter = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let output = if let Ok(mut state) = source_state.lock() {
-                    state.apply_source(batch, &*source_selector)
-                } else {
-                    None
-                };
-                if let Some(output) = output {
-                    source_subscriber(&output);
-                }
+                source_emitter.update(&source_state, |state| state.apply_source(batch, &*source_selector));
             })?;
 
             let regroup_state = Arc::clone(&state);
             let regroup_selector = Arc::clone(&group_key);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                let output = if let Ok(mut state) = regroup_state.lock() {
-                    state.regroup_all(&*regroup_selector)
-                } else {
-                    None
-                };
-                if let Some(output) = output {
-                    subscriber(&output);
-                }
+                emitter.update(&regroup_state, |state| state.regroup_all(&*regroup_selector));
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 regroup_subscription,
+                delivery,
             ]))
         })
     }
@@ -1646,53 +1607,64 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let regrouper = regrouper.err_into::<CollectionError>();
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(DynamicLiveCacheGroupState::<K, T, G>::default()));
 
             let selector_state = Arc::clone(&state);
-            let selector_subscriber = Arc::clone(&subscriber);
+            let selector_emitter = emitter.clone();
             let selector_subscription = group_selectors.subscribe(move |selector| {
-                let (changes, pending, version) = if let Ok(mut state) = selector_state.lock() {
-                    state.apply_selector(selector.clone())
-                } else {
-                    (Vec::new(), HashMap::new(), 0)
+                let staged = {
+                    let Ok(mut state) = selector_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending, version) = state.apply_selector(selector.clone());
+                    if !changes.is_empty() {
+                        selector_emitter.push(ChangeSet::new(changes, version));
+                    }
+                    stage_pending_group_cache_changes(pending)
                 };
-                publish_pending_group_cache_changes(pending);
-                if !changes.is_empty() {
-                    selector_subscriber(&ChangeSet::new(changes, version));
-                }
+                drain_staged_groups(staged);
+                selector_emitter.drain();
             })?;
 
             let source_state = Arc::clone(&state);
-            let source_subscriber = Arc::clone(&subscriber);
+            let source_emitter = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, pending) = if let Ok(mut state) = source_state.lock() {
-                    state.apply_source(batch)
-                } else {
-                    (Vec::new(), HashMap::new())
+                let staged = {
+                    let Ok(mut state) = source_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending) = state.apply_source(batch);
+                    if !changes.is_empty() {
+                        source_emitter.push(ChangeSet::new(changes, batch.version));
+                    }
+                    stage_pending_group_cache_changes(pending)
                 };
-                publish_pending_group_cache_changes(pending);
-                if !changes.is_empty() {
-                    source_subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                drain_staged_groups(staged);
+                source_emitter.drain();
             })?;
 
             let regroup_state = Arc::clone(&state);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                let (changes, pending, version) = if let Ok(mut state) = regroup_state.lock() {
-                    state.regroup_all()
-                } else {
-                    (Vec::new(), HashMap::new(), 0)
+                let staged = {
+                    let Ok(mut state) = regroup_state.lock() else {
+                        return;
+                    };
+                    let (changes, pending, version) = state.regroup_all();
+                    if !changes.is_empty() {
+                        emitter.push(ChangeSet::new(changes, version));
+                    }
+                    stage_pending_group_cache_changes(pending)
                 };
-                publish_pending_group_cache_changes(pending);
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, version));
-                }
+                drain_staged_groups(staged);
+                emitter.drain();
             })?;
 
             Ok(Subscription::many(vec![
                 selector_subscription,
                 source_subscription,
                 regroup_subscription,
+                delivery,
             ]))
         })
     }
@@ -1796,55 +1768,39 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ValueStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(CacheSortedPageState::<K, T>::new(
                 PageRequest::new(0, 25),
             )));
 
             let comparer_state = Arc::clone(&state);
-            let comparer_subscriber = Arc::clone(&subscriber);
+            let comparer_emitter = emitter.clone();
             let comparer_subscription = comparers.subscribe(move |comparer| {
-                let update = {
-                    let Ok(mut state) = comparer_state.lock() else {
-                        return;
-                    };
+                comparer_emitter.update(&comparer_state, |state| {
                     state.set_comparer(Arc::clone(comparer))
-                };
-                if let Some(update) = update {
-                    comparer_subscriber(&update);
-                }
+                });
             })?;
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let update = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
+                request_emitter.update(&request_state, |state| {
                     state.set_request(*request)
-                };
-                if let Some(update) = update {
-                    request_subscriber(&update);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let update = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source(batch)
-                };
-                if let Some(update) = update {
-                    subscriber(&update);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 comparer_subscription,
                 request_subscription,
+                delivery,
             ]))
         })
     }
@@ -1948,55 +1904,39 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ValueStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(CacheSortedVirtualState::<K, T>::new(
                 VirtualRequest::new(0, 25),
             )));
 
             let comparer_state = Arc::clone(&state);
-            let comparer_subscriber = Arc::clone(&subscriber);
+            let comparer_emitter = emitter.clone();
             let comparer_subscription = comparers.subscribe(move |comparer| {
-                let update = {
-                    let Ok(mut state) = comparer_state.lock() else {
-                        return;
-                    };
+                comparer_emitter.update(&comparer_state, |state| {
                     state.set_comparer(Arc::clone(comparer))
-                };
-                if let Some(update) = update {
-                    comparer_subscriber(&update);
-                }
+                });
             })?;
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let update = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
+                request_emitter.update(&request_state, |state| {
                     state.set_request(*request)
-                };
-                if let Some(update) = update {
-                    request_subscriber(&update);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let update = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source(batch)
-                };
-                if let Some(update) = update {
-                    subscriber(&update);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 comparer_subscription,
                 request_subscription,
+                delivery,
             ]))
         })
     }
@@ -2065,38 +2005,28 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ValueStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(KeyedCachePageState::<K, T>::default()));
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let update = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
+                request_emitter.update(&request_state, |state| {
                     state.set_request(*request)
-                };
-                if let Some(update) = update {
-                    request_subscriber(&update);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let update = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source(batch)
-                };
-                if let Some(update) = update {
-                    subscriber(&update);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 request_subscription,
                 source_subscription,
+                delivery,
             ]))
         })
     }
@@ -2177,38 +2107,28 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let requests = requests.err_into::<CollectionError>();
         let source = self.clone();
         ValueStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(KeyedCacheVirtualState::<K, T>::default()));
 
             let request_state = Arc::clone(&state);
-            let request_subscriber = Arc::clone(&subscriber);
+            let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                let update = {
-                    let Ok(mut state) = request_state.lock() else {
-                        return;
-                    };
+                request_emitter.update(&request_state, |state| {
                     state.set_request(*request)
-                };
-                if let Some(update) = update {
-                    request_subscriber(&update);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                let update = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source(batch)
-                };
-                if let Some(update) = update {
-                    subscriber(&update);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 request_subscription,
                 source_subscription,
+                delivery,
             ]))
         })
     }
@@ -2288,6 +2208,7 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
                         }
                     }
                 }
+                drop(children_by_parent);
                 if !changes.is_empty() {
                     subscriber(&ChangeSet::new(changes, batch.version));
                 }
@@ -2553,6 +2474,7 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
                     return;
                 };
                 let changes = ensure_unique_cache_changes(&mut items, &mut order, &batch.changes);
+                drop((items, order));
                 subscriber(&ChangeSet::new(changes, batch.version));
             })
         })
