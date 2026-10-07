@@ -39,7 +39,7 @@ fn a_superseded_inner_batch_in_flight_finishes_before_the_clear() {
                 let _ = replaced
                     .lock()
                     .unwrap()
-                    .recv_timeout(Duration::from_millis(500));
+                    .recv_timeout(Duration::from_secs(20));
             }
             batches.lock().unwrap().push(batch.changes.clone());
             in_callback.store(false, AtomicOrdering::SeqCst);
@@ -104,7 +104,7 @@ fn an_inner_subscription_completing_after_disposal_is_released() {
             let _ = disposed
                 .lock()
                 .unwrap()
-                .recv_timeout(Duration::from_millis(500));
+                .recv_timeout(Duration::from_secs(20));
             let inner = list.connect().subscribe(move |batch| subscriber(batch))?;
             live.fetch_add(1, AtomicOrdering::SeqCst);
             let live = Arc::clone(&live);

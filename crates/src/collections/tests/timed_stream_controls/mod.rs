@@ -470,6 +470,18 @@ fn wait_until(settled: impl Fn() -> bool) {
     }
 }
 
+/// Waits until `scheduler` ran every task due within `window` from now: a marker scheduled
+/// behind them runs last, as the scheduler runs tasks in due-time order.
+fn wait_for_due_tasks(scheduler: &Arc<dyn Scheduler>, window: Duration) {
+    let ran = Arc::new(AtomicBool::new(false));
+    let marker = Arc::clone(&ran);
+    let _task = scheduler.schedule(
+        window,
+        Box::new(move || marker.store(true, AtomicOrdering::SeqCst)),
+    );
+    wait_until(|| ran.load(AtomicOrdering::SeqCst));
+}
+
 #[test]
 fn list_buffered_refreshes_stay_ordered_and_valid_across_threads() {
     let scheduler: Arc<dyn Scheduler> = Arc::new(ThreadScheduler::new());
@@ -495,7 +507,7 @@ fn list_buffered_refreshes_stay_ordered_and_valid_across_threads() {
         .auto_refresh_buffered_with_scheduler(
             move |_| tracked_trigger_stream(Arc::clone(&factory)),
             ms(1),
-            scheduler,
+            Arc::clone(&scheduler),
         )
         .subscribe(move |batch| {
             if busy.swap(true, AtomicOrdering::SeqCst) {
@@ -563,8 +575,8 @@ fn list_buffered_refreshes_stay_ordered_and_valid_across_threads() {
     // Every buffered window flushes; the mirror then matches the source.
     let expected = list.items().unwrap();
     wait_until(|| mirror.lock().unwrap().items == expected);
+    wait_for_due_tasks(&scheduler, ms(1));
     let settled = refreshes.load(AtomicOrdering::SeqCst);
-    thread::sleep(ms(20));
     assert_eq!(mirror.lock().unwrap().items, expected);
     assert_eq!(
         overlaps.load(AtomicOrdering::SeqCst),
@@ -608,7 +620,7 @@ fn cache_buffered_refreshes_stay_valid_across_threads() {
         .auto_refresh_buffered_with_scheduler(
             move |_, key| tracked_keyed_trigger_stream(*key, Arc::clone(&factory)),
             ms(1),
-            scheduler,
+            Arc::clone(&scheduler),
         )
         .subscribe(move |batch| {
             if busy.swap(true, AtomicOrdering::SeqCst) {
@@ -673,7 +685,8 @@ fn cache_buffered_refreshes_stay_valid_across_threads() {
         expected.sort_unstable();
         keys == expected
     });
-    thread::sleep(ms(20));
+    // The trailing refresh window flushes too.
+    wait_for_due_tasks(&scheduler, ms(1));
     let total = refreshes.load(AtomicOrdering::SeqCst);
     assert!(total > 0);
     assert_eq!(

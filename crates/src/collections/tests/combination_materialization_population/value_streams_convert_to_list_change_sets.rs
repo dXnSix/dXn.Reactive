@@ -169,9 +169,13 @@ fn value_stream_list_change_set_options_limit_and_expire_private_source()
     });
 
     let view = Arc::new(Mutex::new(Vec::<u32>::new()));
+    // A manual clock keeps the expiration exact (no wall-clock sleep).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = items
         .to_list_change_set_with_options(
             ChangeSetAdapterOptions::new()
+                .with_scheduler(scheduler)
                 .with_limit_size_to(2)
                 .with_expire_after(|item| {
                     if *item == 3 {
@@ -193,7 +197,9 @@ fn value_stream_list_change_set_options_limit_and_expire_private_source()
     }
     assert_eq!(&*lock_vec(&view)?, &[2, 3]);
 
-    std::thread::sleep(Duration::from_millis(100));
+    clock.advance_by(Duration::from_millis(39));
+    assert_eq!(&*lock_vec(&view)?, &[2, 3]);
+    clock.advance_by(Duration::from_millis(1));
     assert_eq!(&*lock_vec(&view)?, &[2]);
     Ok(())
 }
@@ -211,10 +217,14 @@ fn value_stream_cache_change_set_options_limit_and_expire_private_source()
     });
 
     let view = Arc::new(Mutex::new(Vec::<Row>::new()));
+    // A manual clock keeps the expiration exact (no wall-clock sleep).
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = items
         .to_cache_change_set_with_options(
             |row| row.id,
             ChangeSetAdapterOptions::new()
+                .with_scheduler(scheduler)
                 .with_limit_size_to(2)
                 .with_expire_after(|row: &Row| {
                     if row.id == 3 {
@@ -239,7 +249,12 @@ fn value_stream_cache_change_set_options_limit_and_expire_private_source()
         &[Row { id: 2, value: 20 }, Row { id: 3, value: 30 }]
     );
 
-    std::thread::sleep(Duration::from_millis(100));
+    clock.advance_by(Duration::from_millis(39));
+    assert_eq!(
+        &*lock_vec(&view)?,
+        &[Row { id: 2, value: 20 }, Row { id: 3, value: 30 }]
+    );
+    clock.advance_by(Duration::from_millis(1));
     assert_eq!(&*lock_vec(&view)?, &[Row { id: 2, value: 20 }]);
     Ok(())
 }

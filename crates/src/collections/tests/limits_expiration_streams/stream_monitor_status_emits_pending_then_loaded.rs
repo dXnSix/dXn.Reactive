@@ -48,16 +48,20 @@ fn stream_buffer_initial_coalesces_first_timed_burst() -> Result<(), Box<dyn std
 
     let received = Arc::new(Mutex::new(Vec::<ChangeSet<ListChange<u32>>>::new()));
     let received_for_subscriber = Arc::clone(&received);
-    let _subscription =
-        source
-            .buffer_initial(Duration::from_millis(20))
-            .subscribe(move |batch| {
-                if let Ok(mut received) = received_for_subscriber.lock() {
-                    received.push(batch.clone());
-                }
-            })?;
+    // A manual clock: the initial window closes exactly when the test advances it.
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
+    let _subscription = source
+        .buffer_initial_with_scheduler(Duration::from_millis(20), scheduler)
+        .subscribe(move |batch| {
+            if let Ok(mut received) = received_for_subscriber.lock() {
+                received.push(batch.clone());
+            }
+        })?;
 
-    std::thread::sleep(Duration::from_millis(60));
+    clock.advance_by(Duration::from_millis(19));
+    assert!(lock_vec(&received)?.is_empty());
+    clock.advance_by(Duration::from_millis(1));
     {
         let received = lock_vec(&received)?;
         assert_eq!(received.len(), 1);
@@ -206,9 +210,17 @@ fn stream_batch_if_with_timeout_flushes_and_resumes() -> Result<(), Box<dyn std:
 
     let received = Arc::new(Mutex::new(Vec::<ChangeSet<ListChange<u32>>>::new()));
     let received_for_subscriber = Arc::clone(&received);
+    // A manual clock: the pause timeout fires exactly when the test advances it.
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .changes()
-        .batch_if_with_timeout(pause_stream, false, Duration::from_millis(20))
+        .batch_if_with_timeout_with_scheduler(
+            pause_stream,
+            false,
+            Duration::from_millis(20),
+            scheduler,
+        )
         .subscribe(move |batch| {
             if let Ok(mut received) = received_for_subscriber.lock() {
                 received.push(batch.clone());
@@ -219,7 +231,10 @@ fn stream_batch_if_with_timeout_flushes_and_resumes() -> Result<(), Box<dyn std:
     source.edit(|items| items.push(2))?;
     assert!(lock_vec(&received)?.is_empty());
 
-    std::thread::sleep(Duration::from_millis(60));
+    // The timeout is armed by the first buffered change.
+    clock.advance_by(Duration::from_millis(19));
+    assert!(lock_vec(&received)?.is_empty());
+    clock.advance_by(Duration::from_millis(1));
     {
         let received = lock_vec(&received)?;
         assert_eq!(received.len(), 1);
@@ -243,7 +258,9 @@ fn stream_batch_if_with_timeout_flushes_and_resumes() -> Result<(), Box<dyn std:
     drop(subscribers);
 
     source.edit(|items| items.push(4))?;
-    std::thread::sleep(Duration::from_millis(60));
+    clock.advance_by(Duration::from_millis(19));
+    assert_eq!(lock_vec(&received)?.len(), 2);
+    clock.advance_by(Duration::from_millis(1));
 
     let received = lock_vec(&received)?;
     assert_eq!(received.len(), 3);

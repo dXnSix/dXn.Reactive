@@ -413,10 +413,11 @@ fn panicking_futures_do_not_stop_async_transforms() {
     list.insert(2, 3).unwrap(); // after the panicked 13
     list.move_item(0, 3).unwrap();
     list.remove(0).unwrap(); // the panicked 13, moved to the front
+    // Wait for the final state itself: an intermediate state (after the insert) also has
+    // three items, so a length check followed by a fixed sleep races on a slow runner.
     wait_until("the list transforms", || {
-        mirror.lock().unwrap().items.len() == 3
+        mirror.lock().unwrap().items == [30, 20, 10]
     });
-    thread::sleep(Duration::from_millis(20));
     assert_eq!(mirror.lock().unwrap().items, vec![30, 20, 10]);
     assert_eq!(list.items().unwrap(), vec![3, 2, 1]);
 }

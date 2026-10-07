@@ -276,11 +276,15 @@ fn list_auto_refresh_buffered_coalesces_refreshes_without_delaying_source_change
 
     let triggers_for_factory = Arc::clone(&triggers);
     let received_for_subscriber = Arc::clone(&received);
+    // A manual clock: the buffer window closes exactly when the test advances it.
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .connect()
-        .auto_refresh_buffered(
+        .auto_refresh_buffered_with_scheduler(
             move |_| tracked_trigger_stream(Arc::clone(&triggers_for_factory)),
             Duration::from_millis(40),
+            scheduler,
         )
         .subscribe(move |batch| {
             if let Ok(mut received) = received_for_subscriber.lock() {
@@ -302,7 +306,7 @@ fn list_auto_refresh_buffered_coalesces_refreshes_without_delaying_source_change
         vec![ListChange::Add { index: 2, item: 3 }]
     );
 
-    std::thread::sleep(Duration::from_millis(100));
+    clock.advance_by(Duration::from_millis(40));
     assert_eq!(
         lock_vec(&received)?.last().unwrap().changes.clone(),
         vec![
@@ -324,7 +328,7 @@ fn list_auto_refresh_buffered_coalesces_refreshes_without_delaying_source_change
         }]
     );
 
-    std::thread::sleep(Duration::from_millis(100));
+    clock.advance_by(Duration::from_millis(40));
     assert_eq!(
         lock_vec(&received)?.last().unwrap().changes.clone(),
         vec![ListChange::Refresh { index: 1, item: 1 }]
@@ -346,11 +350,15 @@ fn cache_auto_refresh_buffered_coalesces_keyed_refreshes_with_current_indexes()
 
     let triggers_for_factory = Arc::clone(&triggers);
     let received_for_subscriber = Arc::clone(&received);
+    // A manual clock: the buffer window closes exactly when the test advances it.
+    let clock = crate::primitives::ManualScheduler::new();
+    let scheduler: Arc<dyn crate::primitives::Scheduler> = Arc::new(clock.clone());
     let _subscription = source
         .connect()
-        .auto_refresh_buffered(
+        .auto_refresh_buffered_with_scheduler(
             move |_, key| tracked_keyed_trigger_stream(*key, Arc::clone(&triggers_for_factory)),
             Duration::from_millis(40),
+            scheduler,
         )
         .subscribe(move |batch| {
             if let Ok(mut received) = received_for_subscriber.lock() {
@@ -390,7 +398,11 @@ fn cache_auto_refresh_buffered_coalesces_keyed_refreshes_with_current_indexes()
         }]
     );
 
-    std::thread::sleep(Duration::from_millis(100));
+    // The window opened with the first trigger and is still open just before 40 ms.
+    let count_before_window_closes = lock_vec(&received)?.len();
+    clock.advance_by(Duration::from_millis(39));
+    assert_eq!(lock_vec(&received)?.len(), count_before_window_closes);
+    clock.advance_by(Duration::from_millis(1));
     assert_eq!(
         lock_vec(&received)?.last().unwrap().changes.clone(),
         vec![
