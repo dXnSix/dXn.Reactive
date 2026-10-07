@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 56,
+  "revision": 64,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -112,10 +112,16 @@
       ]
     },
     "t18-ordered-emission-core": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t19-ordered-emission-relations": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t20-index-contract-harness": {
       "status": "pending"
@@ -241,6 +247,15 @@
         }
       },
       "recordedAt": "2026-10-07T00:07:16Z"
+    },
+    "6def189850278d8d96fcf8974d22fe266bff37defd59075b6567a0e061f78ff1": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "d14f7f3b3114f8e4fce8a8752bf891cecbb08ecc9454bb3878547fa7770655d3"
+        }
+      },
+      "recordedAt": "2026-10-07T00:56:18Z"
     }
   },
   "checkResults": {
@@ -549,6 +564,40 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s05-composition-final-0fd34575bc3a.log",
       "logSha256": "92adfe20a7288b9213a9d2efdc649d02b438c3195e99ce76357b3d55232dce5f",
       "inputsHash": "fdfc2272856b45dc3bab1825c008347cb39f8f02400a2087957d9ce25c8422c6"
+    },
+    "s06-emission/c-t18/final": {
+      "checkId": "c-t18",
+      "boundaryId": "s06-emission",
+      "phase": "final",
+      "batchId": "6def189850278d8d96fcf8974d22fe266bff37defd59075b6567a0e061f78ff1",
+      "definitionHash": "e39b23e43e24786341662abf3efe6533d4a40d693fd99f6c87b2c8e35775b5b7",
+      "basisHash": "c22d9730363e58d19fc9779b3169eebaf6f2c886800bbeb27ad8f0c2d727508c",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 13,
+      "durationSeconds": 7.7822,
+      "recordedAt": "2026-10-07T00:56:17Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s06-emission-final-599d28d208e4.log",
+      "logSha256": "5b1e0063e26943f5f9d46482880a84912a936b2550462081114e0116095cce60",
+      "inputsHash": "1513d73e05d28fc9cf11315f591ed7faca75ad840451308dbbfe97463fbf2f55"
+    },
+    "s06-emission/c-t19/final": {
+      "checkId": "c-t19",
+      "boundaryId": "s06-emission",
+      "phase": "final",
+      "batchId": "6def189850278d8d96fcf8974d22fe266bff37defd59075b6567a0e061f78ff1",
+      "definitionHash": "2dc41bab0232c8a741410911f310c5bcc3276436f192dd617a34e4ef8cc129db",
+      "basisHash": "f8633a721727d4b966f3fa2d7ec89ddf0728130b2435ccac6bd9f3747b07b764",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 11,
+      "durationSeconds": 0.8836,
+      "recordedAt": "2026-10-07T00:56:18Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s06-emission-final-3c44ce2f5933.log",
+      "logSha256": "eaa9bc964ce2cc888e86b6f67e3bb3a4d56eea721f3a67c6e9a4f48d426ee094",
+      "inputsHash": "1513d73e05d28fc9cf11315f591ed7faca75ad840451308dbbfe97463fbf2f55"
     }
   },
   "reviews": {
@@ -1497,6 +1546,279 @@
         "S05-F8"
       ],
       "recordedAt": "2026-10-07T00:08:00Z"
+    },
+    "s06-emission": {
+      "reviewerId": "reviewer-s06-indep-acfb",
+      "snapshotId": "6def189850278d8d96fcf8974d22fe266bff37defd59075b6567a0e061f78ff1",
+      "criterionIds": [
+        "EMT-1.1",
+        "EMT-1.2"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/emit.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "EMT-1.2"
+          ],
+          "sha256": "b57dc070100ff6a16d9ab8940e6bcbf827179d43a99f7ee22781b8f8a4766509"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "a9edc738649346a2d7631538138a96c18e1c97e7a5b30abfba41da9d982290eb"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "b6f1f0cf5093f19f5d1ba7ca693a1c84bdf2dbe947e2ffef15e164f49f60cb03"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_pending_group_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "22aee0207fe1f045a183078d825ee42d88f6238910f91e8f23664ae800eec156"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/dynamic_live_cache_group_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "0a32f55ab93ef8962e43aec158211206e1209af865bd2847499d8af82faa272a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "1f0575b552616b64d195647dc7119e280396eecc641392661da631c94ad227e2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_kind.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "35bc7fd2ff31bb427b7b68a4c2c3453c92646bbfcda04996f2dfb5efa6969cf7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/affected_key.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "1d3c1d39c0beb1ac03e3e14785755bdb5b8244c7f5a736d163ddf204179dcc77"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/combine_operator.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "8c84ba3f7113c7438faf964f9e1e55ae65271e3eaa66a6a06fb30dbc0b8e225d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/combine_dynamic_caches.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "d25d126d8148ebff03a6230861ef6b74b0a25dc4a48e832f1756e6b084dfe452"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/start_cache_async_transform_many_child.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "eebc23add2a249b01b456d2b66c275ed9988733f8b9736947a81f65c2dc2119b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_async_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "54ac72011462cd3c23a25cc2e8d2d515e62bd1f83bdbca5071c65a60d05432ed"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tree/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "87a0531a5e4747f77418ee6037768b5daa00c10ecbda28ef2e149c817c3b83b7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "d0e3beccb6ea8f92fce57fff24eb7bda00358d350408f408c73cd6e3346913c1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "6d4dfe05e0295953174d7218b200c85241644f13cdaa6406a2c32663580f58d7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "EMT-1.2"
+          ],
+          "sha256": "e3bedede1c20c301bc4cbd2f97f7ac12a9319d23d2bc47e6a8026506db782f15"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "EMT-1.2"
+          ],
+          "sha256": "b44c5f8dd62e8addce7ac50a04052a4317a3b5b2c8312a7bf5f0e2955e0491c7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/groups.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "a00ab6f57e75da542a1164328ad3f2718e8b5d208061c456a0898a483a0b989c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/filters.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "db2afd9696f33930859223d7a586b0e6436d7badc758f15375b394fcedcbe094"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/sorts.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "d90ed326e77f6d79257ea02acf80a9c4c3cd3de38fba3a8ed8a71a167114be7e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/windows.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "f88d71657d1ada6d03342805bb7859bf710c30dd38293cbb364de5e8ab5eaec6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/joins.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "77c650e763ac79ac43b559a1e26bdeb97d776468957fd86ba24144c5ad6aa9d1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/combiners.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "ef6c1311938fba847c578edd64d63dc10bcdc9720bbb1ea1153ffd5c1f9191ba"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/merge_many.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "b104ac6451f1eede40e04bdc7510beff4f7de653550fe065f9df8e5bc977d415"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/transforms_trees.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "70204952f843de8666f6cdfae2d43e7fc2dd7d6c7ab43632c46eaf16c5627556"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "268110554a20957475371f5baf0992bf2cd2d712771835e63fb4036c87f20083"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list_group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "f86bda6fc5f17f90a975e6dfb5540582c7582a76aeb023ae6aa34a38f279f03f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/lock_release.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "ac22cee7dae23ef1859372f8fd28c2a962edfd4afb4a80dcde512a43754461da"
+        }
+      ],
+      "summaryMarkdown": "Independent re-review of s06-emission at revision 62. All three findings are resolved and re-verified with the original scratch probes plus a discrimination check of the new group-stream assertions. `ordered_emission_core` (13) and `ordered_emission_relations` (11) pass; fmt, clippy (-D warnings) and the wasm32 check are clean. Non-blocking note, outside EMT-1.1/1.2: the lifecycle `group_on_observable` still publishes group changes with `publish_pending` after unlocking (no lock hazard, but not ordered across threads); docs/16 names the ordered families explicitly.",
+      "findingIds": [
+        "S06-F1",
+        "S06-F2",
+        "S06-F3"
+      ],
+      "recordedAt": "2026-10-07T00:59:27Z"
     }
   },
   "checkpoints": {
@@ -1539,6 +1861,14 @@
       },
       "reviewHash": "84264f2ec307313713d58a39e76cbde1de38c1e12069b9857e880d573a8b8898",
       "recordedAt": "2026-10-07T00:08:34Z"
+    },
+    "s06-emission": {
+      "snapshotId": "6def189850278d8d96fcf8974d22fe266bff37defd59075b6567a0e061f78ff1",
+      "commits": {
+        "reactive": "f14b6acc55bec457e9a98c44ed41918d0a5734fc"
+      },
+      "reviewHash": "92e76ffc79d038231c97415b826f4bbad3bc37e4700cd3f0b40e84f957de3af6",
+      "recordedAt": "2026-10-07T01:00:02Z"
     }
   },
   "findings": [
@@ -2324,9 +2654,86 @@
           "symbol": "adapter_size_limits_report_through_the_adapter_error_sink"
         }
       ]
+    },
+    {
+      "id": "S06-F1",
+      "boundaryId": "s06-emission",
+      "criterionIds": [
+        "EMT-1.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Live group operators publish the inner group batches after releasing their state lock, so a group's own change stream can receive batches out of computation order.** The outer batch now goes through `OrderedEmitter` (pushed under the lock), but the per-group changes staged under the same lock (`add_or_update_pending`/`remove_pending`/... into `pending`) are published with `publish_pending_group_*_changes(pending)` *after* the state guard is dropped: list `group_with_regrouper` (`list_stream_ext_impl.rs`, source and regroup callbacks), cache `group_with_key`, `group_with_key_and_regrouper` and `group_dynamic_with_regrouper` (`cache_stream_ext_impl.rs`, all three input callbacks). When the regrouper/selector and the source run on two threads, thread A can stage version vA, unlock, and be overtaken by thread B, which stages vB > vA and publishes first; `RayCacheGroup::publish_pending` then queues vB before vA and `StartupConnection::receive` delivers them in that order. The groups' `connect()` streams are part of these operators' downstream output (they are what a grouped tree/list binding subscribes to).\n\n- Expected (EMT-1.1, D-EMIT): every downstream batch of `group_dynamic*`/`*_with_regrouper`, including each group's inner change stream, arrives in computation order, and the materialized view equals a naive recomputation in 200 of 200 rounds.\n- Observed (bounded scratch probe on a copy of the working tree, public API only: cache `group_with_regrouper` by `(value % 2) ^ flip`, regroup + flip on one thread, parity-preserving `add_or_update` on the other, each group's `connect()` materialized; 300 rounds x 30 steps): in two of three runs one round ended with the inner view of group 1 holding `(5, (5, 365))` while the group state holds `(5, (5, 429))` (`round 23 ...` and `round 147 group 1: group state [... (5, (5, 1421)) ...] inner stream view [... (5, (5, 1357)) ...]`): a regroup Add staged before a newer source Update was delivered after it. The sprint tests cannot detect this: `ordered_emission_core::groups` reads `group.items()`/`group.key_values()` (the group state) and never subscribes to a group's change stream.\n\nRepair: publish the inner group batches under the operator lock in the same order as the outer batch: split `RayCacheGroup::publish_pending`/`RayListGroup::publish_pending` into a push (taken while the operator's state lock is held, as staging already is) and a drain after unlocking, and use it in all four live group operators (the outer push and the inner pushes inside the same critical section, then drain the inner queues and the emitter). Extend `ordered_emission_core::groups` to materialize every group's `connect()` stream under the two-thread race and compare it with the naive grouping.\n\n**Resolution:** Re-verified: `RayCacheGroup`/`RayListGroup::stage_pending` now queue each group's batch while the operator's state lock is held, and `drain_staged_groups` delivers after unlocking, in list `group_with_regrouper` and cache `group_with_key`, `group_with_key_and_regrouper` and `group_dynamic_with_regrouper` (8 call sites). Re-running the original scratch probe on a copy of the repaired tree: 0 of 1,200 rounds diverge (before: 2 of 900). Discrimination check: in a scratch copy with only the staging moved back after the unlock, the new stream assertions in `ordered_emission_core::groups` fail in 3 of 3 runs (`a group's own stream is out of order`).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/groups.rs",
+          "symbol": "list_group_with_regrouper_matches_a_naive_grouping"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/groups.rs",
+          "symbol": "cache_group_dynamic_with_regrouper_matches_a_naive_grouping"
+        }
+      ]
+    },
+    {
+      "id": "S06-F2",
+      "boundaryId": "s06-emission",
+      "criterionIds": [
+        "EMT-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**`*_join_many` delivers right-group batches while holding the join's state lock, which deadlocks a group subscriber that feeds the join.** `JoinManyState::apply_right` calls `RayCacheGroup::publish_pending` from `join/affected_key.rs` (`add_or_update_group_item`, `remove_group_item`, the `Refresh` and `Move` arms). `publish_pending` pushes *and drains*, so the right group's subscribers run inside `emitter.update(&state, |state| state.apply_right(..))`, i.e. under the join's own state lock. The groups are handed to the user's selector (`&RayCacheGroup<K, RK, R>`), so their `connect()` subscribers are downstream of the join.\n\n- Expected (EMT-1.2: \"the same guarantees hold for all eight joins\", D-EMIT invariant, and docs/16: \"No operator calls its subscriber while holding its own lock, so a subscriber may feed an operator's inputs again\"; CHANGELOG makes the same claim): a right-group subscriber runs after the join unlocks and may edit the join's inputs.\n- Observed (bounded scratch probe on a copy, public API only): `left.left_join_many(right, |r| r.1, selector)` with the selector stashing the group for left key 1; a subscriber of that group's `connect()` calls `left.add_or_update((2, 20))` on its first live batch; `right.add_or_update((101, 1))` then never returns (5 s `recv_timeout` expired, process ended deliberately: `DEADLOCK`). The left edit re-enters the join's left callback, whose `state.lock()` is held by the same thread. Control: the identical probe editing an unrelated `SourceCache` completes immediately.\n\nRepair: have `JoinManyState` collect the staged per-group `PendingChanges` instead of publishing them inside `apply_right`; push them into the group queues while the join lock is still held (preserving commit order) and drain after unlocking, alongside the emitter drain. Add a regression test to `ordered_emission_relations::joins` (a right-group subscriber feeding the left source, plus a two-thread check that each right group's `connect()` view equals the group state), and keep docs/16 and the changelog accurate for group/join inner streams.\n\n**Resolution:** Re-verified: `JoinManyState::stage_group` queues right-group batches under the join lock (all four former `publish_pending` sites in `join/affected_key.rs`), and the join_many right callback drains the staged groups and then the emitter after unlocking. The original deadlock probe now completes immediately; the new regression test covers the same scenario with a bounded `recv_timeout` and checks that the left edit is joined.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/joins.rs",
+          "symbol": "a_right_group_subscriber_may_edit_the_join_inputs"
+        }
+      ]
+    },
+    {
+      "id": "S06-F3",
+      "boundaryId": "s06-emission",
+      "criterionIds": [
+        "EMT-1.1",
+        "EMT-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Several sprint tests do not discriminate, and some named operators are untested.** By the implementer's own pre-sprint run, `cache_filter_dynamic_matches_a_naive_filter` and `many_joins_match_a_naive_join` pass on HEAD 5cd6165, so they do not demonstrate the fix; `many_joins` projects every row to `(key, left, None)`, so right-group content and order are never checked, and the cache filter probe is an unordered `HashMap`. There is no coverage for the list dynamic combiners (`and_dynamic`..`except_dynamic` over `SourceList<ChangeStream<ListChange<T>>>`), the `transform_safe_*_forced*` variants, `merge_many_*_change_sets_by`, or the lock release in list `reverse`/`virtualize`, and the group tests never observe the inner group streams (see S06-F1/F2). Cosmetic: the joins and static combiners contain misindented blocks that `cargo fmt` does not repair because the files are `include!`d (`join_kind.rs` `let changes = {` at lines 332, 346, 397, 412; `combine_operator.rs` lines 368, 402); the block is redundant there.\n\n- Expected: each criterion family has a two-thread test that fails on the pre-sprint code and exercises the named operators.\n- Observed: two of the 20 tests pass on the old code; the families above have no test.\n\nRepair: make the cache filter and many-join tests discriminating (an ordered or keyed view whose final value depends on order, e.g. a `sort_dynamic` after `filter_dynamic`, and a many-join selector that reads the right group's items), add tests for the untested variants, and collapse the redundant `let changes = { .. };` blocks.\n\n**Resolution:** Re-verified: `many_joins` now projects the right group's live `count()` and compares per-key counts; the cache filter test also covers a stateful `filter_with_state`; added tests for the dynamic list combiners, `transform_safe_with_forced(_all)`, `merge_many_cache_change_sets_by` (cache and list parents) and lock release after a subscriber panic (`reverse`, `virtualize`, `group_by`, `ensure_unique_keys`, cache `transform_many`); the redundant `let changes = { .. };` blocks are gone.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/joins.rs",
+          "symbol": "many_joins_match_a_naive_join"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/filters.rs",
+          "symbol": "cache_filter_dynamic_matches_a_naive_filter"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/combiners.rs",
+          "symbol": "dynamic_list_combiners_match_a_fresh_subscription"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/lock_release.rs",
+          "symbol": "list_operators_keep_emitting_after_a_subscriber_panic"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/lock_release.rs",
+          "symbol": "cache_operators_keep_emitting_after_a_subscriber_panic"
+        }
+      ]
     }
   ],
-  "handoffMarkdown": "",
+  "handoffMarkdown": "Joins (join_same_key/join_many), static+dynamic combiners, sync forced transforms (cache_transform_stream/_safe_stream), transform_to_tree_with_predicate, merge_many_{list,cache}_change_sets (cache+list parents) emit through OrderedEmitter. Async forced transforms already serialize on one worker. Tests: ordered_emission_relations (9 tests, 200 rounds).",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",

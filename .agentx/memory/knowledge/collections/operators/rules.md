@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-07T02:00:00+02:00
+  updated: 2026-10-07T18:00:00+02:00
   topics:
     - operators
     - incremental
@@ -47,3 +47,5 @@ agentx:
 - Keep Rust optional helpers native to `Option<T>` / `Result<T, E>` and `ValueStream<Option<T>>`; do not simulate Rx error channels for missing optional values in `ValueStream` operators.
 - Preserve the crate's zero-based page/window contract when adding defaults or helpers around `PageRequest` and `VirtualRequest`.
 - Operator parameters that take a stream, and per-item selectors that return one, use a method-level error parameter `E` with `E: Send + Sync + 'static, CollectionError: From<E>` (one independent parameter per stream) and convert with `err_into::<CollectionError>()` at the top of the impl body. Inside such a method, calls to other `E`-generic operators need an explicit `CollectionError` turbofish: the in-scope `CollectionError: From<E>` where clause otherwise drives inference to the caller's `E`.
+- Operators with more than one input (dynamic predicate/comparer/request/selector/regrouper streams, joins, combiners, forced transforms, filtered trees, merge-many) emit through `collections::emit::OrderedEmitter`: compute the batch under the operator state lock, `push` before unlocking, `drain` after (`emitter.update(&state, |state| ...)` for the common case). Keep the emitter's delivery subscription last in the operator's `Subscription::many` so it is disposed after the inputs.
+- Never call a downstream subscriber, or a live group's subscribers, while holding an operator state lock: a panicking subscriber would poison the lock and silently stop the operator, and a subscriber that feeds the operator's inputs would deadlock. Live groups owned by an operator use `stage_pending` under the operator lock and `drain_pending` after it (`stage_pending_group_*_changes` + `drain_staged_groups`; `JoinManyState::stage_group`/`take_staged`).
