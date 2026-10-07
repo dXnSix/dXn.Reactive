@@ -16,6 +16,7 @@ mod key_bridge_indexes;
 mod keyed_sort_positions;
 mod keyed_state_operators;
 mod lifecycle_observables;
+mod limit_size_rework;
 mod limits_expiration_streams;
 mod materialization_reliability;
 mod operator_input_interop;
