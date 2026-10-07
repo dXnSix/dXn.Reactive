@@ -115,6 +115,21 @@ breaking changes below are listed with migration notes for consumers.
   **Added:** `switch_with_errors` reports an inner subscription that failed; the switch retries when
   the outer stream emits again.
 
+### Operator emission
+
+- **Fixed:** operators with several inputs (dynamic filters, sorts, page/virtualize and group
+  operators, `*_with_resort`, `*_with_regrouper`, `sort_and_*_dynamic*`, all joins, static and
+  dynamic combiners, forced transforms, `transform_to_tree_with_predicate` and
+  `merge_many_*_change_sets`) no longer deliver batches out of order or concurrently when their
+  inputs are driven from different threads; each subscription has one ordered output, possibly
+  delivered by the thread that is already draining it. The live groups created by the group
+  operators and the right groups of `*_join_many` are notified the same way: their own streams
+  receive batches in computation order, after the operator released its lock, so a group's
+  subscriber may edit the operator's inputs (it used to deadlock `*_join_many`).
+- **Fixed:** `reverse`, `virtualize`, `group_by`, `ensure_unique_keys`, cache `transform_many` and
+  `collect_update_stats` no longer call their subscriber while holding their own state lock, so a
+  panicking subscriber no longer poisons them and stops their output.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on

@@ -41,6 +41,14 @@ own queues to watch the backlog.
   threads the streams may interleave with one another); an edit made inside a `preview()` callback
   is delivered after the batch that triggered it.
 - **Batches are atomic.** A subscriber sees a whole change set or nothing, never part of one.
+- **Operators with several inputs have one ordered output.** Dynamic filters, sorts, pages,
+  windows and groups, joins, combiners, forced transforms, filtered trees and
+  `merge_many_*_change_sets` compute each output batch under their own state lock, queue it before
+  releasing the lock and deliver it afterwards. When their inputs are driven from different threads,
+  each subscription receives the batches in the order they were computed, one at a time, possibly on
+  the thread that is already delivering. The live groups of group operators and `*_join_many`
+  follow the same rule for their own streams. No operator calls its subscriber (or a group's
+  subscriber) while holding its own lock, so a subscriber may feed an operator's inputs again.
 - **Re-entrant writes are queued, not recursive.** A write made by a subscriber is delivered after
   the current item has reached every subscriber.
 - **Subscription order between subscribers.** Subscribers of the same queue are invoked one at a
