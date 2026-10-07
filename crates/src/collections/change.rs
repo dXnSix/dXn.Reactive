@@ -71,6 +71,13 @@ pub struct RangeChange<T> {
     pub items: Vec<T>,
 }
 
+/// One change to an ordered list.
+///
+/// Indexes are positions in the emitting stream's own list, applied in order: each change
+/// sees the list as left by the changes before it in the same batch. `Move { from, to }`
+/// removes the item at `from` and inserts it at `to` in the shortened list; `Remove`,
+/// `Replace`, `Move`, `Refresh` and `RemoveRange` carry the items currently at those
+/// positions, and `Clear` carries the whole list.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ListChange<T> {
     Add { index: usize, item: T },
@@ -124,6 +131,31 @@ impl<T> ListChange<T> {
     }
 }
 
+/// One change to a keyed collection.
+///
+/// # Index contract
+///
+/// Every index is a position in the **emitting operator's own ordered output**, or `None`
+/// when the operator does not know positions (a consumer then positions the key itself).
+/// Changes apply in order, each one seeing the output as left by the changes before it in
+/// the same batch:
+///
+/// - `Add { current_index }` inserts the key at that position.
+/// - `Update` with `previous_index != current_index` means: remove the key at
+///   `previous_index`, then insert it at `current_index` of the shortened output. Equal
+///   indexes (or `None`) update the key in place.
+/// - `Remove { previous_index }` and `Refresh { current_index }` name the key's current
+///   position.
+/// - `Move { previous_index, current_index }` removes the key at `previous_index` and
+///   inserts it at `current_index`; it carries the item as it is (a changed value follows
+///   as an `Update`). A later change to the same key in the same batch uses the
+///   **post-move** position as its `previous_index`.
+/// - `Clear { previous }` removes the listed entries, or everything when `previous` is
+///   empty.
+///
+/// A subset operator (a filter, a window, a join) indexes its own output, never its
+/// source's, and never removes a key it did not include. Operators that cannot know
+/// positions emit `None`.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum CacheChange<K, T> {
     Add {

@@ -1,5 +1,6 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
+mod contract;
 mod support;
 
 #[cfg(feature = "diagnostics")]
@@ -7,6 +8,7 @@ mod aggregation_diagnostics_diff;
 mod combination_materialization_population;
 mod connect_late_delivery;
 mod grouping_tree_switching;
+mod index_contract_harness;
 mod joins;
 mod lifecycle_observables;
 mod limits_expiration_streams;
