@@ -369,7 +369,8 @@ breaking changes below are listed with migration notes for consumers.
 - **Fixed:** with overlapping executions only the most recently started one publishes its terminal
   state.
 - **Fixed:** a panicking action publishes `Failed("panicked: …")` and the panic continues to the
-  caller or out of the future.
+  caller or out of the future. For an `AsyncCommand` this includes an action that panics before
+  returning its future.
 - **Added:** `Command::is_executing` / `AsyncCommand::is_executing`, `ExecutionPolicy`
   (`Concurrent`, the default, and `IgnoreWhileRunning`), `with_execution_policy` and
   `execution_policy` on both command types.

@@ -398,7 +398,12 @@ impl AsyncCommand {
             return Err(CommandError::Disabled);
         }
         let ticket = self.execution.begin().ok_or(CommandError::Disabled)?;
-        match AssertUnwindSafe((self.action)()).catch_unwind().await {
+        // The action call that builds the future runs inside the guarded block too: a panic
+        // there fails the command like a panic while polling.
+        match AssertUnwindSafe(async { (self.action)().await })
+            .catch_unwind()
+            .await
+        {
             Ok(result) => {
                 ticket.finish(terminal_state(&result));
                 result

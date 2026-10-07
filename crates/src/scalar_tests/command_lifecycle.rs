@@ -236,6 +236,21 @@ fn a_panicking_async_action_fails_the_command_and_propagates_out_of_the_future()
 }
 
 #[test]
+fn an_async_action_panicking_before_returning_its_future_fails_the_command() {
+    let command =
+        AsyncCommand::new(|| -> std::future::Ready<CommandResult> { panic!("factory boom") });
+
+    let outcome = catch_unwind(AssertUnwindSafe(|| block_on(command.execute())));
+
+    assert!(outcome.is_err(), "the panic continues out of the future");
+    match command.state().get().unwrap() {
+        CommandState::Failed(message) => assert!(message.contains("panicked: factory boom")),
+        state => panic!("unexpected state {state:?}"),
+    }
+    assert!(!command.is_executing().get().unwrap());
+}
+
+#[test]
 fn ignore_while_running_refuses_overlapping_executions_without_side_effects() {
     let senders = Arc::new(Mutex::new(VecDeque::new()));
     let senders_for_action = Arc::clone(&senders);
