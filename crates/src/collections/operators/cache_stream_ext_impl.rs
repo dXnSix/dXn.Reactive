@@ -175,162 +175,25 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static,
     {
+        // The dynamic filter's state with a fixed predicate: it keeps the filter's own
+        // output order, so indexes follow the contract and excluded keys are never removed.
         let source = self.clone();
         let predicate = Arc::new(predicate);
         ChangeStream::new(move |subscriber| {
-            let included = Arc::new(Mutex::new(HashMap::<K, T>::new()));
+            let filter = Arc::new(Mutex::new(CacheDynamicFilterState::<K, T, ()> {
+                state: Some(()),
+                ..Default::default()
+            }));
             let predicate = Arc::clone(&predicate);
             source.subscribe(move |batch| {
-                let Ok(mut included) = included.lock() else {
-                    return;
+                let batch = {
+                    let Ok(mut filter) = filter.lock() else {
+                        return;
+                    };
+                    filter.apply_source(batch, &|_: &(), item: &T| predicate(item))
                 };
-                let mut changes = Vec::new();
-                for change in &batch.changes {
-                    match change {
-                        CacheChange::Add {
-                            key,
-                            current,
-                            current_index,
-                        } => {
-                            if predicate(current) {
-                                included.insert(key.clone(), current.clone());
-                                changes.push(CacheChange::Add {
-                                    key: key.clone(),
-                                    current: current.clone(),
-                                    current_index: *current_index,
-                                });
-                            }
-                        }
-                        CacheChange::Update {
-                            key,
-                            current,
-                            previous,
-                            current_index,
-                            previous_index,
-                        } => {
-                            let was_included = included.contains_key(key);
-                            let is_included = predicate(current);
-                            match (was_included, is_included) {
-                                (true, true) => {
-                                    included.insert(key.clone(), current.clone());
-                                    changes.push(CacheChange::Update {
-                                        key: key.clone(),
-                                        current: current.clone(),
-                                        previous: previous.clone(),
-                                        current_index: *current_index,
-                                        previous_index: *previous_index,
-                                    });
-                                }
-                                (true, false) => {
-                                    let previous =
-                                        included.remove(key).unwrap_or_else(|| previous.clone());
-                                    changes.push(CacheChange::Remove {
-                                        key: key.clone(),
-                                        previous,
-                                        previous_index: *previous_index,
-                                    });
-                                }
-                                (false, true) => {
-                                    included.insert(key.clone(), current.clone());
-                                    changes.push(CacheChange::Add {
-                                        key: key.clone(),
-                                        current: current.clone(),
-                                        current_index: *current_index,
-                                    });
-                                }
-                                (false, false) => {}
-                            }
-                        }
-                        CacheChange::Remove {
-                            key,
-                            previous,
-                            previous_index,
-                        } => {
-                            if let Some(previous) = included.remove(key) {
-                                changes.push(CacheChange::Remove {
-                                    key: key.clone(),
-                                    previous,
-                                    previous_index: *previous_index,
-                                });
-                            } else if predicate(previous) {
-                                changes.push(CacheChange::Remove {
-                                    key: key.clone(),
-                                    previous: previous.clone(),
-                                    previous_index: *previous_index,
-                                });
-                            }
-                        }
-                        CacheChange::Refresh {
-                            key,
-                            current,
-                            current_index,
-                        } => {
-                            let was_included = included.contains_key(key);
-                            let is_included = predicate(current);
-                            match (was_included, is_included) {
-                                (true, true) => {
-                                    included.insert(key.clone(), current.clone());
-                                    changes.push(CacheChange::Refresh {
-                                        key: key.clone(),
-                                        current: current.clone(),
-                                        current_index: *current_index,
-                                    });
-                                }
-                                (true, false) => {
-                                    if let Some(previous) = included.remove(key) {
-                                        changes.push(CacheChange::Remove {
-                                            key: key.clone(),
-                                            previous,
-                                            previous_index: *current_index,
-                                        });
-                                    }
-                                }
-                                (false, true) => {
-                                    included.insert(key.clone(), current.clone());
-                                    changes.push(CacheChange::Add {
-                                        key: key.clone(),
-                                        current: current.clone(),
-                                        current_index: *current_index,
-                                    });
-                                }
-                                (false, false) => {}
-                            }
-                        }
-                        CacheChange::Move {
-                            key,
-                            current,
-                            current_index,
-                            previous_index,
-                        } => {
-                            if included.contains_key(key) && predicate(current) {
-                                changes.push(CacheChange::Move {
-                                    key: key.clone(),
-                                    current: current.clone(),
-                                    current_index: *current_index,
-                                    previous_index: *previous_index,
-                                });
-                            }
-                        }
-                        CacheChange::Clear { previous } => {
-                            let removed = previous
-                                .iter()
-                                .filter_map(|(key, item)| {
-                                    included
-                                        .remove(key)
-                                        .map(|previous| (key.clone(), previous))
-                                        .or_else(|| {
-                                            predicate(item).then(|| (key.clone(), item.clone()))
-                                        })
-                                })
-                                .collect::<Vec<_>>();
-                            if !removed.is_empty() {
-                                changes.push(CacheChange::Clear { previous: removed });
-                            }
-                        }
-                    }
-                }
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
+                if let Some(batch) = batch {
+                    subscriber(&batch);
                 }
             })
         })
@@ -1556,7 +1419,9 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let source_selector = Arc::clone(&group_key);
             let source_emitter = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                source_emitter.update(&source_state, |state| state.apply_source(batch, &*source_selector));
+                source_emitter.update(&source_state, |state| {
+                    state.apply_source(batch, &*source_selector)
+                });
             })?;
 
             let regroup_state = Arc::clone(&state);

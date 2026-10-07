@@ -3,6 +3,42 @@ where
     K: Clone + Eq + Hash,
     T: Clone,
 {
+    fn insert(&mut self, index: usize, key: &K, item: &T, changes: &mut Vec<ListChange<T>>) {
+        self.order.insert(index, key.clone());
+        self.items.insert(key.clone(), item.clone());
+        changes.push(ListChange::Add {
+            index,
+            item: item.clone(),
+        });
+    }
+
+    /// Moves the key from `existing` to `target` (clamped) and returns its position.
+    fn move_to(
+        &mut self,
+        key: &K,
+        existing: usize,
+        target: Option<usize>,
+        changes: &mut Vec<ListChange<T>>,
+    ) -> usize {
+        let Some(target) = target else {
+            return existing;
+        };
+        let to = target.min(self.order.len().saturating_sub(1));
+        if to == existing {
+            return existing;
+        }
+        let moved = self.order.remove(existing);
+        self.order.insert(to, moved);
+        if let Some(item) = self.items.get(key) {
+            changes.push(ListChange::Move {
+                from: existing,
+                to,
+                item: item.clone(),
+            });
+        }
+        to
+    }
+
     fn apply(&mut self, batch: &ChangeSet<CacheChange<K, T>>) -> Vec<ListChange<T>> {
         let mut changes = Vec::new();
         for change in &batch.changes {
@@ -11,122 +47,91 @@ where
         changes
     }
 
+    /// Positions come from this bridge's own key mirror; an upstream index is only used as
+    /// the target position of an insertion or move (clamped to the list). A non-conforming
+    /// upstream therefore cannot duplicate, lose or misplace rows (IDX-3.4).
     fn apply_change(&mut self, change: &CacheChange<K, T>, changes: &mut Vec<ListChange<T>>) {
         match change {
             CacheChange::Add {
                 key,
                 current,
                 current_index,
-            } => {
-                remove_cache_key(&mut self.order, key);
-                let index = current_index
-                    .unwrap_or(self.order.len())
-                    .min(self.order.len());
-                self.order.insert(index, key.clone());
-                self.items.insert(key.clone(), current.clone());
-                changes.push(ListChange::Add {
-                    index,
-                    item: current.clone(),
-                });
             }
-            CacheChange::Update {
+            | CacheChange::Update {
                 key,
                 current,
-                previous,
                 current_index,
-                previous_index,
+                ..
             } => {
-                let existing_index = self.index_for(key);
-                let remove_index = previous_index.or(existing_index);
-                if let Some(existing_index) = existing_index {
-                    let _ = self.order.remove(existing_index);
-                    let _ = self.items.remove(key);
+                if let Some(existing) = self.index_for(key) {
+                    let _ = self.order.remove(existing);
+                    if let Some(old) = self.items.remove(key) {
+                        changes.push(ListChange::Remove {
+                            index: existing,
+                            old,
+                        });
+                    }
+                    let index = current_index.unwrap_or(existing).min(self.order.len());
+                    self.insert(index, key, current, changes);
+                } else {
+                    let index = current_index
+                        .unwrap_or(self.order.len())
+                        .min(self.order.len());
+                    self.insert(index, key, current, changes);
                 }
-                if let Some(remove_index) = remove_index {
-                    changes.push(ListChange::Remove {
-                        index: remove_index,
-                        old: previous.clone(),
-                    });
-                }
-
-                let insert_index = current_index
-                    .or(remove_index)
-                    .unwrap_or(self.order.len())
-                    .min(self.order.len());
-                self.order.insert(insert_index, key.clone());
-                self.items.insert(key.clone(), current.clone());
-                changes.push(ListChange::Add {
-                    index: insert_index,
-                    item: current.clone(),
-                });
             }
-            CacheChange::Remove {
-                key,
-                previous,
-                previous_index,
-            } => {
-                let existing_index = self.index_for(key);
-                let remove_index = previous_index.or(existing_index);
-                if let Some(existing_index) = existing_index {
-                    let _ = self.order.remove(existing_index);
-                }
-                let _ = self.items.remove(key);
-                if let Some(remove_index) = remove_index {
-                    changes.push(ListChange::Remove {
-                        index: remove_index,
-                        old: previous.clone(),
-                    });
+            CacheChange::Remove { key, .. } => {
+                if let Some(existing) = self.index_for(key) {
+                    let _ = self.order.remove(existing);
+                    if let Some(old) = self.items.remove(key) {
+                        changes.push(ListChange::Remove {
+                            index: existing,
+                            old,
+                        });
+                    }
                 }
             }
             CacheChange::Refresh {
                 key,
                 current,
                 current_index,
-            } => {
-                if let Some(index) = current_index.or_else(|| self.index_for(key)) {
+            } => match self.index_for(key) {
+                Some(existing) => {
+                    let index = self.move_to(key, existing, *current_index, changes);
                     self.items.insert(key.clone(), current.clone());
                     changes.push(ListChange::Refresh {
                         index,
                         item: current.clone(),
                     });
-                } else {
-                    self.order.push(key.clone());
-                    self.items.insert(key.clone(), current.clone());
-                    changes.push(ListChange::Add {
-                        index: self.order.len().saturating_sub(1),
-                        item: current.clone(),
-                    });
                 }
-            }
+                None => {
+                    let index = self.order.len();
+                    self.insert(index, key, current, changes);
+                }
+            },
             CacheChange::Move {
                 key,
                 current,
                 current_index,
-                previous_index,
-            } => {
-                let existing_index = self.index_for(key);
-                let from = *previous_index;
-                if let Some(existing_index) = existing_index {
-                    let moved_key = self.order.remove(existing_index);
-                    self.order
-                        .insert((*current_index).min(self.order.len()), moved_key);
-                } else {
-                    self.order
-                        .insert((*current_index).min(self.order.len()), key.clone());
+                ..
+            } => match self.index_for(key) {
+                Some(existing) => {
+                    let _ = self.move_to(key, existing, Some(*current_index), changes);
                 }
-                self.items.insert(key.clone(), current.clone());
-                changes.push(ListChange::Move {
-                    from,
-                    to: *current_index,
-                    item: current.clone(),
-                });
-            }
+                None => {
+                    let index = (*current_index).min(self.order.len());
+                    self.insert(index, key, current, changes);
+                }
+            },
             CacheChange::Clear { previous } => {
                 if self.items.is_empty() && previous.is_empty() {
                     return;
                 }
 
-                if previous.is_empty() || previous.len() == self.items.len() {
+                let clears_everything = previous.is_empty()
+                    || (previous.len() == self.items.len()
+                        && previous.iter().all(|(key, _)| self.items.contains_key(key)));
+                if clears_everything {
                     let old = self
                         .order
                         .iter()
@@ -142,16 +147,14 @@ where
 
                 let mut removals = previous
                     .iter()
-                    .filter_map(|(key, item)| self.index_for(key).map(|index| (index, key, item)))
+                    .filter_map(|(key, _)| self.index_for(key).map(|index| (index, key)))
                     .collect::<Vec<_>>();
-                removals.sort_by_key(|(index, _, _)| std::cmp::Reverse(*index));
-                for (index, key, item) in removals {
+                removals.sort_by_key(|(index, _)| std::cmp::Reverse(*index));
+                for (index, key) in removals {
                     remove_cache_key(&mut self.order, key);
-                    let _ = self.items.remove(key);
-                    changes.push(ListChange::Remove {
-                        index,
-                        old: item.clone(),
-                    });
+                    if let Some(old) = self.items.remove(key) {
+                        changes.push(ListChange::Remove { index, old });
+                    }
                 }
             }
         }

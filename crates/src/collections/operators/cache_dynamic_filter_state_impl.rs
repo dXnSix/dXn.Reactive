@@ -1,18 +1,9 @@
 impl<K, T, S> CacheDynamicFilterState<K, T, S>
 where
     K: Clone + Eq + Hash,
-    T: Clone + PartialEq,
+    T: Clone,
     S: Clone,
 {
-    fn set_state(
-        &mut self,
-        state: S,
-        predicate: &dyn Fn(&S, &T) -> bool,
-    ) -> Option<ChangeSet<CacheChange<K, T>>> {
-        self.state = Some(state);
-        self.refilter(predicate)
-    }
-
     fn apply_source(
         &mut self,
         batch: &ChangeSet<CacheChange<K, T>>,
@@ -30,23 +21,6 @@ where
         }
 
         self.emit(changes, Some(batch.version))
-    }
-
-    fn refilter(
-        &mut self,
-        predicate: &dyn Fn(&S, &T) -> bool,
-    ) -> Option<ChangeSet<CacheChange<K, T>>> {
-        let state = self.state.as_ref()?;
-        let (next, next_order) = self.filtered_snapshot(state, predicate);
-        let changes =
-            diff_cache_snapshots(&self.filtered, &self.filtered_order, &next, &next_order);
-        self.filtered = next;
-        self.filtered_order = next_order;
-        if changes.is_empty() {
-            None
-        } else {
-            Some(ChangeSet::new(changes, self.next_version()))
-        }
     }
 
     fn filtered_snapshot(
@@ -80,12 +54,25 @@ where
                 current,
                 current_index,
             } => {
-                self.items.insert(key.clone(), current.clone());
-                insert_cache_key(&mut self.order, key.clone(), *current_index);
+                let is_new = self.items.insert(key.clone(), current.clone()).is_none();
+                // A new key at the end (the common load) is appended without scanning.
+                let appended =
+                    is_new && current_index.is_none_or(|index| index >= self.order.len());
+                if appended {
+                    self.order.push(key.clone());
+                } else {
+                    insert_cache_key(&mut self.order, key.clone(), *current_index);
+                }
                 if predicate(state, current) {
-                    let current_index = self.visible_index_for_key(key);
+                    let current_index = if appended && !self.filtered.contains_key(key) {
+                        self.filtered_order.push(key.clone());
+                        Some(self.filtered_order.len() - 1)
+                    } else {
+                        let index = self.visible_index_for_key(key);
+                        insert_cache_key(&mut self.filtered_order, key.clone(), index);
+                        index
+                    };
                     self.filtered.insert(key.clone(), current.clone());
-                    insert_cache_key(&mut self.filtered_order, key.clone(), current_index);
                     changes.push(CacheChange::Add {
                         key: key.clone(),
                         current: current.clone(),
@@ -98,7 +85,7 @@ where
                 current,
                 previous,
                 current_index,
-                previous_index: source_previous_index,
+                ..
             } => {
                 let previous_filtered_index = self.filtered_index(key);
                 let previous_filtered = self.filtered.get(key).cloned();
@@ -116,25 +103,15 @@ where
                         if let Some(index) = next_index {
                             move_cache_key(&mut self.filtered_order, key, index);
                         }
-                        if previous_filtered_index != next_index
-                            && let (Some(previous_index), Some(current_index)) =
-                                (previous_filtered_index, next_index)
-                        {
-                            changes.push(CacheChange::Move {
-                                key: key.clone(),
-                                current: current.clone(),
-                                current_index,
-                                previous_index,
-                            });
-                        }
-
+                        // An update that changes position: remove at the old output index,
+                        // insert at the new one (the index contract).
                         self.filtered.insert(key.clone(), current.clone());
                         changes.push(CacheChange::Update {
                             key: key.clone(),
                             current: current.clone(),
                             previous: previous_filtered,
                             current_index: next_index,
-                            previous_index: previous_filtered_index.or(*source_previous_index),
+                            previous_index: previous_filtered_index,
                         });
                     }
                     (Some(previous_filtered), false) => {
@@ -143,7 +120,7 @@ where
                         changes.push(CacheChange::Remove {
                             key: key.clone(),
                             previous: previous_filtered,
-                            previous_index: previous_filtered_index.or(*source_previous_index),
+                            previous_index: previous_filtered_index,
                         });
                     }
                     (None, true) => {
@@ -161,28 +138,19 @@ where
                     }
                 }
             }
-            CacheChange::Remove {
-                key,
-                previous,
-                previous_index,
-            } => {
+            CacheChange::Remove { key, .. } => {
                 let previous_filtered_index = self.filtered_index(key);
                 let previous_filtered = self.filtered.remove(key);
                 let _ = self.items.remove(key);
                 let _ = remove_cache_key(&mut self.order, key);
                 let _ = remove_cache_key(&mut self.filtered_order, key);
 
+                // A key the filter never included is not in its output.
                 if let Some(previous_filtered) = previous_filtered {
                     changes.push(CacheChange::Remove {
                         key: key.clone(),
                         previous: previous_filtered,
-                        previous_index: previous_filtered_index.or(*previous_index),
-                    });
-                } else if predicate(state, previous) {
-                    changes.push(CacheChange::Remove {
-                        key: key.clone(),
-                        previous: previous.clone(),
-                        previous_index: *previous_index,
+                        previous_index: previous_filtered_index,
                     });
                 }
             }
@@ -200,7 +168,7 @@ where
 
                 let is_included = predicate(state, current);
                 match (previous_filtered, is_included) {
-                    (Some(_), true) => {
+                    (Some(previous_filtered), true) => {
                         let next_index = self.visible_index_for_key(key);
                         if let Some(index) = next_index {
                             move_cache_key(&mut self.filtered_order, key, index);
@@ -211,7 +179,7 @@ where
                         {
                             changes.push(CacheChange::Move {
                                 key: key.clone(),
-                                current: current.clone(),
+                                current: previous_filtered,
                                 current_index,
                                 previous_index,
                             });
@@ -230,7 +198,7 @@ where
                         changes.push(CacheChange::Remove {
                             key: key.clone(),
                             previous: previous_filtered,
-                            previous_index: previous_filtered_index.or(*current_index),
+                            previous_index: previous_filtered_index,
                         });
                     }
                     (None, true) => {
@@ -250,7 +218,7 @@ where
                 key,
                 current,
                 current_index,
-                previous_index: source_previous_index,
+                ..
             } => {
                 let previous_filtered_index = self.filtered_index(key);
                 let previous_filtered = self.filtered.get(key).cloned();
@@ -282,8 +250,7 @@ where
                         changes.push(CacheChange::Remove {
                             key: key.clone(),
                             previous: previous_filtered,
-                            previous_index: previous_filtered_index
-                                .or(Some(*source_previous_index)),
+                            previous_index: previous_filtered_index,
                         });
                     }
                     (None, true) => {
@@ -320,14 +287,12 @@ where
             }
             CacheChange::Clear { previous } => {
                 let mut removed = Vec::new();
-                for (key, previous_item) in previous {
+                for (key, _) in previous {
                     let _ = self.items.remove(key);
                     let _ = remove_cache_key(&mut self.order, key);
                     let _ = remove_cache_key(&mut self.filtered_order, key);
                     if let Some(previous_filtered) = self.filtered.remove(key) {
                         removed.push((key.clone(), previous_filtered));
-                    } else if predicate(state, previous_item) {
-                        removed.push((key.clone(), previous_item.clone()));
                     }
                 }
                 if !removed.is_empty() {
@@ -377,3 +342,36 @@ where
     }
 }
 
+/// Refiltering diffs snapshots, which needs item equality.
+impl<K, T, S> CacheDynamicFilterState<K, T, S>
+where
+    K: Clone + Eq + Hash,
+    T: Clone + PartialEq,
+    S: Clone,
+{
+    fn set_state(
+        &mut self,
+        state: S,
+        predicate: &dyn Fn(&S, &T) -> bool,
+    ) -> Option<ChangeSet<CacheChange<K, T>>> {
+        self.state = Some(state);
+        self.refilter(predicate)
+    }
+
+    fn refilter(
+        &mut self,
+        predicate: &dyn Fn(&S, &T) -> bool,
+    ) -> Option<ChangeSet<CacheChange<K, T>>> {
+        let state = self.state.as_ref()?;
+        let (next, next_order) = self.filtered_snapshot(state, predicate);
+        let changes =
+            diff_cache_snapshots(&self.filtered, &self.filtered_order, &next, &next_order);
+        self.filtered = next;
+        self.filtered_order = next_order;
+        if changes.is_empty() {
+            None
+        } else {
+            Some(ChangeSet::new(changes, self.next_version()))
+        }
+    }
+}

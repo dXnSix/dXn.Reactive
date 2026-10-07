@@ -102,8 +102,8 @@ where
             ListChange::RemoveRange { index, old } => {
                 let _ = items.remove_range(*index, old.len());
             }
-            ListChange::Refresh { index, .. } => {
-                let _ = items.refresh(*index);
+            ListChange::Refresh { index, item } => {
+                let _ = items.refresh_with(*index, item.clone());
             }
             ListChange::Clear { .. } => items.clear(),
         }
@@ -130,8 +130,8 @@ fn apply_cache_changes_to_updater<K, T>(
                 current_index,
                 ..
             } => cache.add_or_update_key_at(key.clone(), current.clone(), *current_index),
-            CacheChange::Refresh { key, .. } => {
-                let _ = cache.refresh_key(key);
+            CacheChange::Refresh { key, current, .. } => {
+                let _ = cache.refresh_key_with(key, current.clone());
             }
             CacheChange::Move {
                 key,

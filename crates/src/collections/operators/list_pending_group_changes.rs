@@ -350,7 +350,9 @@ where
 
 /// Queues each group's pending changes; call it while holding the operator's state lock,
 /// and [`drain_staged_groups`] with the result after releasing it.
-fn stage_pending_group_list_changes<T, G>(pending: ListGroupPending<T, G>) -> Vec<RayListGroup<G, T>>
+fn stage_pending_group_list_changes<T, G>(
+    pending: ListGroupPending<T, G>,
+) -> Vec<RayListGroup<G, T>>
 where
     T: Clone + Send + Sync + 'static,
     G: Clone + Send + Sync + 'static,

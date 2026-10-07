@@ -176,7 +176,9 @@ where
 
 /// Queues each group's pending changes; call it while holding the operator's state lock,
 /// and [`drain_staged_groups`] with the result after releasing it.
-fn stage_pending_group_cache_changes<K, T, G>(pending: CacheGroupPending<K, T, G>) -> Vec<RayCacheGroup<G, K, T>>
+fn stage_pending_group_cache_changes<K, T, G>(
+    pending: CacheGroupPending<K, T, G>,
+) -> Vec<RayCacheGroup<G, K, T>>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,

@@ -241,6 +241,22 @@ where
         true
     }
 
+    /// Refreshes `key` with `item` as its current value: a refresh carries the item as it
+    /// now is (used when materializing a change stream).
+    pub(crate) fn refresh_key_with(&mut self, key: &K, item: T) -> bool {
+        let Some(slot) = self.items.get_mut(key) else {
+            return false;
+        };
+        *slot = item.clone();
+        let current_index = self.order.iter().position(|existing| existing == key);
+        self.changes.push(CacheChange::Refresh {
+            key: key.clone(),
+            current: item,
+            current_index,
+        });
+        true
+    }
+
     pub fn refresh_item(&mut self, item: &T) -> bool {
         let key = (self.key_selector)(item);
         self.refresh_key(&key)

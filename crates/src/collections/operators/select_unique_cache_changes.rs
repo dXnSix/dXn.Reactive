@@ -142,11 +142,18 @@ fn apply_change_aware_cache_change<K, T>(
     }
 }
 
+/// Places `key` at `index`; without an index an existing key keeps its position (the index
+/// contract's "update in place") and a new key is appended.
 fn insert_cache_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
+    let existing = order.iter().position(|existing| existing == &key);
+    match (existing, index) {
+        (Some(_), None) => {}
+        (Some(existing_index), Some(index)) => {
+            let _ = order.remove(existing_index);
+            order.insert(index.min(order.len()), key);
+        }
+        (None, index) => order.insert(index.unwrap_or(order.len()).min(order.len()), key),
     }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
 }
 
 fn push_unique_key<K>(keys: &mut Vec<K>, seen: &mut HashSet<K>, key: K)

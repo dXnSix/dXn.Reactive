@@ -24,6 +24,7 @@ mod source_commit_order;
 mod source_lock_policy;
 mod source_read_api;
 mod sources;
+mod subset_operator_indexes;
 mod suspension_versions;
 mod switch_reliability;
 mod transforms_filters;

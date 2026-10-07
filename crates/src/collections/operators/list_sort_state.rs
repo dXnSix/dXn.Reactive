@@ -45,11 +45,24 @@ where
                     key,
                     current,
                     current_index,
+                    previous_index,
                     ..
                 } => {
                     self.source_items.insert(key.clone(), current.clone());
                     insert_cache_key(&mut self.order, key.clone(), *current_index);
                     if let Some(current_projected) = self.projected.get_mut(key) {
+                        // The projection is updated in place, so a positional update becomes
+                        // a move of the item as it is, then a refresh at the new position.
+                        if let (Some(from), Some(to)) = (previous_index, current_index)
+                            && from != to
+                        {
+                            changes.push(CacheChange::Move {
+                                key: key.clone(),
+                                current: current_projected.clone(),
+                                current_index: *to,
+                                previous_index: *from,
+                            });
+                        }
                         update(current_projected, current);
                         changes.push(CacheChange::Refresh {
                             key: key.clone(),

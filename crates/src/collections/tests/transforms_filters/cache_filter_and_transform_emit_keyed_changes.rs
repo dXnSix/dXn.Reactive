@@ -22,12 +22,13 @@ fn cache_filter_and_transform_emit_keyed_changes() -> Result<(), Box<dyn std::er
 
     let received = lock_vec(&received)?;
     assert_eq!(received.len(), 1);
+    // Indexes are positions in the filter's own output: key 2 is its first row.
     assert_eq!(
         received[0].changes,
         vec![CacheChange::Add {
             key: 2,
             current: 20,
-            current_index: Some(1),
+            current_index: Some(0),
         }]
     );
     Ok(())

@@ -118,6 +118,17 @@ impl<T: Clone> ListUpdater<'_, T> {
         true
     }
 
+    /// Refreshes the item at `index` with `item` as its current value: a refresh carries
+    /// the item as it now is (used when materializing a change stream).
+    pub(crate) fn refresh_with(&mut self, index: usize, item: T) -> bool {
+        let Some(slot) = self.items.get_mut(index) else {
+            return false;
+        };
+        *slot = item.clone();
+        self.changes.push(ListChange::Refresh { index, item });
+        true
+    }
+
     pub fn refresh_all(&mut self) {
         for (index, item) in self.items.iter().cloned().enumerate() {
             self.changes.push(ListChange::Refresh { index, item });
