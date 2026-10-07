@@ -50,14 +50,14 @@ patterns that make the library effective in real applications.
 15. [Application patterns](15-application-patterns.md): ViewModel composition, bridging signals
     into collection operators, binding to a UI, and complete recipes.
 16. [Concurrency and platforms](16-concurrency-and-platforms.md): the threading model, delivery
-    order, re-entrancy, worker threads, async futures, and WebAssembly.
+    order, contention, panics, worker threads, schedulers, async futures, and WebAssembly.
 17. [Performance](17-performance.md): cost model, guidelines, anti-patterns, and benchmarks.
 18. [Testing reactive code](18-testing.md): probes, deterministic assertions, and testing time
     and async operators.
 19. [Coming from DynamicData and ReactiveUI](19-coming-from-dynamicdata.md): concept and API
     mapping for .NET developers.
 20. [Contributing](20-contributing.md): repository layout, validation, test organization, and
-    co-development with RayX.
+    working with consumers such as RayX.
 
 ## Reading paths
 

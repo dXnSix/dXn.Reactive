@@ -21,8 +21,9 @@ bridge, created by the first `changes_rx()` call, clones each batch again). A la
 the cost across every stateful operator in every chain. Prefer `Arc<T>` or compact records for
 large payloads.
 
-**Delivery.** Each delivery queue snapshots its subscriber list per item. A thousand subscribers on
-one signal cost a thousand callback invocations per write. `SourceCache::watch(key)` is the
+**Delivery.** Each delivery queue shares one snapshot of its subscriber list, rebuilt only when
+someone subscribes or unsubscribes, so delivering an item allocates nothing per subscriber. A
+thousand subscribers on one signal still cost a thousand callback invocations per write. `SourceCache::watch(key)` is the
 exception: watchers are bucketed by key, and each batch is partitioned once and routed only to the
 watchers of the keys it touches. Thousands of per-row watchers stay cheap.
 
@@ -147,8 +148,8 @@ slower and error-prone. Use `auto_refresh_buffered` for high-frequency per-item 
 - `set` instead of `replace` for input-driven state, so equal values cost nothing.
 - `read(|v| …)` instead of `get()` for projections of large values.
 - Split state by invalidation boundary: several small signals rather than one large struct.
-- `Computed` republishes on every input change; add `distinct_until_changed` before costly
-  consumers.
+- `Computed::derive`/`combine*` republish on every input change; use `Computed::derive_distinct`,
+  or add `distinct_until_changed` before costly consumers.
 - Operators on `ValueStream` run per subscription; share expensive scalar derivations through a
   `Computed`.
 

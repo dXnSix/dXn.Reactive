@@ -315,8 +315,10 @@ let rows = source
 
 `true_for_all`, `true_for_all_value`, `true_for_any` and `true_for_any_value` reduce per-item
 streams to one boolean (see [chapter 11](11-grouping-joins-trees.md#collection-wide-predicates-true_for_all-and-true_for_any)).
-A newly added item counts as `false` until its stream emits, so a synchronously emitting stream can
-produce a brief `false` → `true` pair:
+The result is evaluated once a batch's item streams have been subscribed, so a value a stream emits
+while subscribing (such as `values()`' current value) counts at once, with no `false` flicker:
+adding a passing item to a passing collection emits nothing. An item whose stream has not emitted
+yet counts as `false`:
 
 ```rust
 use rayx_reactive::collections::prelude::*;

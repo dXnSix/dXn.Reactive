@@ -20,7 +20,9 @@ Primary source files:
 
 ## Signal Semantics
 
-`Signal<T>` is writable current-value state backed by a `Mutex<SignalState<T>>` and a `DeliveryQueue<SignalChange<T>>`.
+`Signal<T>` is writable current-value state backed by a `Mutex<SignalState<T>>` and a `DeliveryQueue<SignalChange<T>>`. Clones share the state. `Signal::default()` exists for `T: Default`.
+
+Writes commit atomically and are delivered in commit order, also with several writer threads: the change is pushed while the lock is held and drained after it is released. A subscriber that writes to the signal queues its change behind the current one. Only one thread drains at a time, so a subscriber can run on another writer's thread that is already delivering. A panic inside an `update` closure, `T::eq` or `T::clone` propagates to the caller and leaves the value and version unchanged; the signal stays usable (no `Poisoned`).
 
 `ReadSignal<T>` is a cloneable read-only handle to the same state. Expose `ReadSignal<T>` from ViewModels when a view should observe but not mutate a value.
 
@@ -38,8 +40,9 @@ Mutation methods:
 
 Read methods:
 
-- `read(|value| ...)` holds the lock only for the closure and avoids cloning the full value.
+- `read(|value| ...)` holds the lock only for the closure and avoids cloning the full value. Do not write the same signal inside it: the lock is not re-entrant.
 - `get()` clones and returns the current value.
+- `try_get()` / `try_read(...)` (also on `ReadSignal`) never wait: `Ok(None)` while another thread holds the lock. Use them on a UI thread that must not block.
 - `version()` reads the current version.
 
 ## Values Versus Changes
@@ -53,7 +56,8 @@ Both return `ValueStream` from `rayx_reactive::primitives`, so stream operators 
 Important subscription behavior:
 
 - `values()` can call the subscriber before `subscribe(...)` returns.
-- `values()` installs its change subscription before it snapshots the current value, so a change committed during startup is delivered after the synchronous baseline instead of being lost.
+- `values()` installs its change subscription before it snapshots the current value, so a change committed during startup is delivered after the synchronous baseline instead of being lost. A subscriber never receives an older version after a newer one and ends on the signal's current value, even with concurrent writers.
+- `ValueStream::start_with` subscribes upstream before emitting its initial value, so a write made while handling the initial value is delivered (nested, on the same thread).
 - Subscriber callbacks receive references; clone only when you need to store the value beyond the callback.
 - Delivery uses `DeliveryQueue`, so reentrant signal writes enqueue and drain FIFO instead of recursively walking subscribers.
 
@@ -61,16 +65,25 @@ Evidence: `crates/src/signal.rs` and its reentrant startup tests in `crates/src/
 
 ## Computed Values
 
-`Computed<T>` owns an internal `Signal<T>` plus a `DisposeBag` that keeps source subscriptions alive until the computed value is dropped.
+`Computed<T>` owns an internal `Signal<T>` plus a `DisposeBag` that keeps source subscriptions alive until the computed value is dropped. It is not `Clone`; share its `read_signal()`.
 
 Use:
 
-- `Computed::derive(source, |value| ...)` for one source signal.
-- `Computed::combine2(first, second, |a, b| ...)` for two source signals.
+- `Computed::derive(source, |value| ...)` for one source signal. It republishes after every input change, even when the result is equal.
+- `Computed::derive_distinct(source, |value| ...)` (`T: PartialEq`) to publish only real changes.
+- `Computed::combine2(first, second, |a, b| ...)` and `Computed::combine3(first, second, third, |a, b, c| ...)` for two or three source signals.
+- `Computed::from_stream(&stream, initial)` to hold a stream's latest value as scalar state (for example a collection `count()` feeding `Command::with_can_execute`). It works for any stream error `E: From<ReactiveError>`.
 - `computed.read_signal()` to expose the derived value read-only.
 - `computed.values()` or `computed.changes()` to subscribe to the derived state.
 
-`Computed<T>` is not implicit dependency tracking. It only tracks the signals passed to `derive` or `combine2`. For more than two inputs, either compose computed values deliberately or create a domain-specific aggregation signal. For collections, prefer collection aggregation/query operators rather than computing from `Signal<Vec<T>>`.
+Guarantees:
+
+- Glitch-free: a write that reaches a `Computed` through several paths (a diamond, or `combine2(a, a, ...)`) publishes once, computed from one consistent version of each input.
+- Fresh reads: `get()` (and reads through `read_signal()`) recompute when an input's version moved on, even while another thread is still delivering that write.
+- Construction evaluates the closure once (again only if an input changed meanwhile); the value starts at version `0`.
+- A panicking closure propagates to the writer whose change triggered it, and the `Computed` keeps updating afterwards.
+
+`Computed<T>` is not implicit dependency tracking. It only tracks the signals passed to its constructor. For more than three inputs, compose computed values deliberately or create a domain-specific aggregation signal. For collections, prefer collection aggregation/query operators rather than computing from `Signal<Vec<T>>`.
 
 ## Performance Rules
 

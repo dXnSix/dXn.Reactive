@@ -323,8 +323,8 @@ see [chapter 14](14-materialization-population-sharing.md#observable-wrappers).
 
 `changes_rx()` returns an [rxRust](https://github.com/rxRust/rxRust) `SharedSubject` that receives
 every change set published after it was first called: the subject and its bridge from the source
-are created on that first call, so a source never read through rxRust does no rxRust work. Add `rxrust = "=1.0.0-rc.5"` to your dependencies to use rxRust
-operators on it:
+are created on that first call, so a source never read through rxRust does no rxRust work. Add
+`rxrust = "=1.0.0-rc.5"` to your dependencies to use rxRust operators on it:
 
 ```rust
 use rayx_reactive::collections::prelude::*;
@@ -375,8 +375,8 @@ assert_eq!(*batches.lock().unwrap(), [3]);
 Guards nest; only the outermost drop publishes. `count_changed()` is not suspended: it keeps
 reporting counts as edits happen. A `connect()` or `watch` that subscribes while a guard is alive
 gets the current state as its snapshot; when the guard drops, it receives only the suspended
-changes its snapshot did not already contain, so it never sees a change twice. Prefer a single `edit` when you control all the writes; use
-suspension when the writes come from code you do not control, such as several helper calls.
+changes its snapshot did not already contain, so it never sees a change twice. Prefer a single
+`edit` when you control all the writes; use suspension when the writes come from code you do not control, such as several helper calls.
 
 ## Re-entrancy
 
@@ -405,13 +405,13 @@ A subscriber that writes back into the source it observes must have a terminatin
 `add_or_update` publishes an `Update` even for an identical value, so an unconditional write-back
 loops forever. Use `add_or_update_if_changed`, or check the incoming change first.
 
-`NestedUpdate` always means same-thread re-entry.
-Because native targets wait, two threads that each access the other source from inside an edit
-closure (thread 1 edits `a` and reads `b` inside, thread 2 edits `b` and reads `a` inside) can
-deadlock; access other sources from edit closures only in one global order, or outside the edit. When **another thread** holds a source's lock,
+`NestedUpdate` always means same-thread re-entry. When **another thread** holds a source's lock,
 native targets wait for it, so concurrent writers and readers all succeed. On `wasm32`, where the
 browser main thread must not block, the access returns `CollectionError::Contended` instead, without
-leaving a partial subscription. See
+leaving a partial subscription. Because native targets wait, two threads that each access the other
+source from inside an edit closure (thread 1 edits `a` and reads `b` inside, thread 2 edits `b` and
+reads `a` inside) can deadlock; access other sources from edit closures only in one global order, or
+outside the edit. See
 [Concurrency and platforms](16-concurrency-and-platforms.md#sources-under-contention).
 
 ## Errors
@@ -420,8 +420,8 @@ leaving a partial subscription. See
 |---|---|
 | `NestedUpdate` | the source was accessed from inside its own edit on the same thread |
 | `Contended` | `wasm32` only: another thread holds the source's lock; retry later |
-| `Poisoned` | a thread panicked while holding the source's lock |
-| `MissingKey`, `IndexOutOfRange` | reserved; sources do not currently return them, because invalid keys and indexes are reported through updater return values instead |
+| `Poisoned` | a thread panicked while holding the source's lock (for example inside an edit closure); the source stays unusable |
+| `MissingKey`, `IndexOutOfRange` | reserved; sources never return them, because invalid keys and indexes are reported through updater return values instead |
 
 ---
 

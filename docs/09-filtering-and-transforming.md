@@ -159,8 +159,8 @@ Noisy feeds often send updates that do not matter downstream. These operators in
 
 | Operator | Drops an update when |
 |---|---|
-| `ignore_update_when(\|previous, current\| bool)` | the closure returns `true` |
-| `include_update_when(\|previous, current\| bool)` | the closure returns `false` |
+| `ignore_update_when(\|current, previous\| bool)` | the closure returns `true` |
+| `include_update_when(\|current, previous\| bool)` | the closure returns `false` |
 | `ignore_same_value_update()` | `previous == current` (`T: PartialEq`) |
 | `ignore_same_reference_update()` | `Arc::ptr_eq(previous, current)`, for `Arc<T>` items (`CacheArcStreamExt`) |
 
@@ -179,7 +179,7 @@ let updates = Arc::new(Mutex::new(0));
 let sink = Arc::clone(&updates);
 let _subscription = sensors
     .connect()
-    .ignore_update_when(|previous, current| (previous.celsius - current.celsius).abs() < 0.5)
+    .ignore_update_when(|current, previous| (current.celsius - previous.celsius).abs() < 0.5)
     .subscribe(move |batch| *sink.lock().unwrap() += batch.changes.len())?;
 
 sensors.add_or_update(Sensor { id: 1, celsius: 20.0 })?; // add: passes

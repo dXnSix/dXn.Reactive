@@ -29,6 +29,12 @@ Use a `SourceList<T>` when order and duplicate entries matter. Use a `SourceCach
 
 Most UI-facing code should subscribe to a derived `ChangeStream` through `connect()`, `ref_count()`, `as_observable_list()`, `as_observable_cache()`, or `populate_into()`, then keep the returned `Subscription` alive for the view lifetime.
 
+Contracts every operator follows:
+
+- Indexes are positions in the emitting operator's own output, or `None` when it cannot know them. An `Update` with differing `previous_index`/`current_index` is remove-then-insert; a `Move` carries the item as it is, and a later change to the same key in the batch uses the post-move position. A subset operator (filter, window, join) never removes a key it did not include.
+- Each subscription has one ordered output: batches arrive in computation order and never concurrently, but may be delivered by another thread that is already draining that output. Async operators and timed operators deliver on their worker or scheduler thread. Marshal to the UI thread in the consumer.
+- Sources wait on cross-thread contention on native targets and return `CollectionError::Contended` on `wasm32`; `NestedUpdate` means same-thread re-entry. See [sources](reactive-collections-sources.md).
+
 ## Public Surface Map
 
 - `SourceList<T>` and `ListUpdater<T>`: ordered source mutation and list change streams.

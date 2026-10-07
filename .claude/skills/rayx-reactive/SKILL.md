@@ -15,9 +15,9 @@ The crate (`crates/`) has three layers: scalar state at the crate root, shared s
 |---|---|
 | Scalar state overview, choosing signals vs collections | [Reactive state](references/reactive-state.md) |
 | `Signal`, `ReadSignal`, `Computed`, versions, equality | [Signals](references/reactive-state-signals.md) |
-| `ValueStream`, `Subscription`, `DeliveryQueue`, stream operators | [Streams and primitives](references/reactive-state-streams.md) |
+| `ValueStream`, `Subscription`, `DeliveryQueue`, stream operators, schedulers and timed operators | [Streams and primitives](references/reactive-state-streams.md) |
 | `Effect`, `DisposeBag`, `ViewModelActivator` | [Lifecycle](references/reactive-state-lifecycle.md) |
-| `Command`, `AsyncCommand`, `EventBus` | [Commands and events](references/reactive-state-commands-events.md) |
+| `Command`, `AsyncCommand`, `ExecutionPolicy`, `EventBus` | [Commands and events](references/reactive-state-commands-events.md) |
 | Signals driving or fed by collections | [State with collections](references/reactive-state-collections.md) |
 | Scalar performance, testing, pitfalls | [State performance](references/reactive-state-performance.md) |
 | Observable collections overview | [Reactive collections](references/reactive-collections.md) |
@@ -33,7 +33,9 @@ The crate (`crates/`) has three layers: scalar state at the crate root, shared s
 ## Shared Constraints
 
 - Preserve the public surface; do not delete or rename public items because they lack current call sites.
-- Prefer structured, incremental `ChangeSet` output over resets; preserve keys and indexes.
+- Prefer structured, incremental `ChangeSet` output over resets; preserve keys and indexes. Every index is a position in the emitting operator's own output (or `None`); see the index contract on `CacheChange`/`ListChange` in `crates/src/collections/change.rs`.
+- `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`: match them with a wildcard arm. Record every behavior change, breaking change and new API in `CHANGELOG.md` (`Unreleased`), with a *Migration:* note for breaking ones.
+- Subscriptions, guards, `Effect`, `Computed`, `ActivationToken` and the stream types are `#[must_use]`: bind them (`let _subscription = ...`) for as long as they should stay active.
 - Keep `.references/DynamicData` (in `../RayX`) as behavioral context only; do not copy .NET overload shapes.
 - HARD RULE: test only what you change. Add a new test group per feature (`crates/src/collections/tests/<group>/`, or a named scalar test module) and run it alone; run the full validation list in `AGENTS.md` once before committing.
 - The crate is standalone: never depend on, build, or validate RayX (or any consumer) to test a change; mimic consumer scenarios in this repository's own tests and document breaking API changes.

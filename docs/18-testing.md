@@ -199,7 +199,9 @@ assert_eq!(clock.pending(), 0);
 
 Use `std::sync::Barrier` to make threads start together, join them, then assert final state.
 Assert outcomes that are deterministic (final contents, counts, "each item exactly once"), not
-interleavings. Remember that concurrent source writes can return `NestedUpdate`; see
+interleavings. On native targets concurrent source writes wait for each other and all succeed,
+and each stream delivers in commit order, so a mirror of a source ends equal to it; `NestedUpdate`
+only signals same-thread re-entry. See
 [Sources under contention](16-concurrency-and-platforms.md#sources-under-contention).
 
 ## Using diagnostics in tests
@@ -215,15 +217,16 @@ connections in the process, so exact assertions on it are unreliable when tests 
 |---|---|
 | The recorder stays empty | the subscription was dropped (`subscribe(…)?;` without binding it, or bound to `_`) |
 | An expected initial value is missing | subscribed to `changes()` instead of `values()`/`connect()`, or the source was empty (no snapshot batch) |
-| Order differs between runs | the assertion depends on the order of *different* subscribers, or on hash-ordered output (for example finalizers on unsubscribe); sort before comparing |
-| Flaky failures around timers | fixed sleeps; use `wait_until` with a generous deadline |
+| Order differs between runs | the assertion depends on how threads interleave, or on hash-ordered output (for example finalizers on unsubscribe); sort before comparing (subscribers of one source or signal are called in subscription order) |
+| Flaky failures around timers | fixed sleeps; use a `ManualScheduler`, or `wait_until` with a generous deadline |
 | A test hangs | a subscriber writes back unconditionally (an infinite update loop), or a `Signal::read` closure writes to the same signal |
 
 ## Testing on WebAssembly
 
 The crate's own tests use `wasm-bindgen-test` on `wasm32` targets
-(`#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]`). Only the
-synchronous subset is meaningful there; see [WebAssembly](16-concurrency-and-platforms.md#webassembly).
+(`#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]`), and CI runs them
+on Node. Only the synchronous subset, and timed operators on a `ManualScheduler`, are meaningful
+there; see [WebAssembly](16-concurrency-and-platforms.md#webassembly).
 
 ---
 

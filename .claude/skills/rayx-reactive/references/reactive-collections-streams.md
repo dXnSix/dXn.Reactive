@@ -28,11 +28,13 @@ Primary source files:
 
 Keep scalar state/ViewModel support in `rayx_reactive` depending on `rayx_reactive::primitives`, not on `rayx_reactive::collections`. Shared stream machinery belongs in primitives so local `Signal<T>` state and collection projections can share operators without creating a crate cycle or forcing scalar state consumers to depend on collection APIs.
 
-`ValueStream<T>` supports `map` and `start_with`.
+`ValueStream<T, E>` supports `map`, `start_with`, `map_err`/`err_into`, and the `ReactiveValueStreamExt` operators (see [reactive-state-streams.md](reactive-state-streams.md)). Inside `rayx_reactive::collections`, `ValueStream<T>` is an alias with the error fixed to `CollectionError`.
 
 Keep subscriptions alive for as long as the consumer needs updates. Dropping `Subscription` disposes child subscriptions and operator-owned state.
 
-Use `Signal<T>::values()` or `Computed<T>::values()` from `rayx_reactive` when a collection operator needs dynamic scalar state such as a predicate state, page request, virtual request, comparer, pause flag, or regroup trigger. The signal stream can emit synchronously during subscription, so collection bridge operators subscribe downstream/private sources before upstream values.
+Use `Signal<T>::values()` or `Computed<T>::values()` from `rayx_reactive` when a collection operator needs dynamic scalar state such as a predicate state, page request, virtual request, comparer, pause flag, or regroup trigger; operators accept any stream error `E` with `CollectionError: From<E>`. The signal stream can emit synchronously during subscription, so collection bridge operators subscribe downstream/private sources before upstream values.
+
+Output ordering: every subscription of a multi-input operator has one ordered output. Batches are computed under the operator's lock, queued, and delivered after it is released, in computation order and never concurrently, possibly by another thread that is already draining that output. A subscriber may therefore edit the operator's inputs without deadlocking.
 
 ## Stream Controls
 
@@ -46,12 +48,15 @@ Use `Signal<T>::values()` or `Computed<T>::values()` from `rayx_reactive` when a
 - `buffer_initial(duration)`
 - `batch(duration)`
 - `batch_count(count)`
-- `batch_if(paused: ValueStream<bool>)`
-- `buffer_if(paused)`
-- `batch_if_with_timeout(paused, timeout)`
-- `buffer_if_with_timeout(paused, timeout)`
+- `batch_if(paused: ValueStream<bool, E>, initial_pause_state)`
+- `buffer_if(paused, initial_pause_state)` (alias of `batch_if`)
+- `batch_if_with_timeout(paused, initial_pause_state, timeout)`
+- `buffer_if_with_timeout(paused, initial_pause_state, timeout)`
+- `*_with_scheduler(.., scheduler)` variants of `buffer_initial`, `batch`, `batch_if_with_timeout` and `buffer_if_with_timeout`
 
-Use `buffer_initial` to coalesce synchronous startup bursts. Use `batch` or `batch_count` to reduce high-frequency invalidation boundaries. Use `batch_if` / `buffer_if` when an external pause signal should hold changes until it becomes false.
+Use `buffer_initial` to coalesce synchronous startup bursts. Use `batch` or `batch_count` to reduce high-frequency invalidation boundaries. Use `batch_if` / `buffer_if` when an external pause signal should hold changes until it becomes false; `initial_pause_state` applies until the stream emits.
+
+Timed controls run on `default_scheduler()` (or the given scheduler) instead of a thread per window. Their flushes are delivered in order with source batches and never concurrently; `batch` arms its next window only after a flush was delivered; dropping the subscription cancels a pending timer without waiting and releases the buffer. A zero duration behaves like `not_empty()`. Flushes are delivered on the scheduler thread. Test them with a `ManualScheduler`.
 
 `monitor_status()` emits `Pending` then `Loaded` for the current non-terminal stream contract.
 
@@ -81,7 +86,7 @@ let visible = source
 let current_rows = visible.items()?;
 ```
 
-Wrappers created from streams keep the populate subscription alive. Wrappers created from sources expose the source read side without adding a populate subscription.
+Wrappers created from streams keep the populate subscription alive. Wrappers created from sources expose the source read side without adding a populate subscription. A materialized wrapper never drops a batch it failed to write: it retries it before the next one and reports each failure on `errors()`.
 
 ## Aggregation And Query Streams
 
@@ -112,7 +117,10 @@ These keep a cache snapshot and emit queries when per-item value streams fire, w
 
 Use incremental scalar streams (`count`, `sum_by`, `avg_by`, `std_dev_by`) for UI counters and summaries. Use `query_when_changed` only when the consumer needs full snapshots.
 
-`min_by` and `max_by` suppress unchanged extrema values. `std_dev_by` intentionally mirrors the DynamicData-compatible formula recorded in repo memory.
+- `is_empty`/`is_not_empty` emit one initial value from the snapshot (a non-empty source yields `[false]` for `is_empty`, no `true` flicker), then only distinct changes.
+- Float `sum_by`, `avg_by` and `std_dev_by` keep a compensated running sum and count infinities/NaN apart: an overflowing sum is infinite and recovers when the value leaves, and results stay accurate across large-magnitude additions and removals.
+- `min_by` and `max_by` suppress unchanged extrema values and order NaN as the greatest value (equal to itself), so results do not depend on arrival order.
+- `std_dev_by` intentionally mirrors the DynamicData-compatible formula recorded in repo memory.
 
 ## Distinct Values
 
@@ -122,7 +130,7 @@ Use these for filter facets, unique categories, tags, and group selector values.
 
 ## Diagnostics
 
-`ListDiagnosticsExt::collect_update_stats()` and `CacheDiagnosticsExt::collect_update_stats()` emit `ChangeSummary`:
+`ListDiagnosticsExt::collect_update_stats()` and `CacheDiagnosticsExt::collect_update_stats()` emit `ChangeSummary` in batch order, outside the operator's lock:
 
 - `latest`: statistics for the latest batch.
 - `overall`: accumulated statistics.

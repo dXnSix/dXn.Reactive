@@ -178,11 +178,25 @@ Parent/children relationship:
 let joined = orders.connect().left_join_many(
     lines.connect(),
     |line| line.order_id,
-    |order, group| OrderRow::new(order, group.clone()),
+    |_order_id, order, group| OrderRow::new(order, group.clone()),
 );
 ```
 
 Avoid rebuilding all grouped or joined rows from full snapshots for every child update.
+
+Operator costs to keep in mind:
+
+| Operator | Cost per change |
+|---|---|
+| `filter_with_state` / `filter_dynamic` | small; a new state re-tests every item and emits only the flips |
+| list `sort_*` | **O(n)** (linear position search, equality lookups); a comparer change or resort emits minimal moves, or a positional diff past about four million shifted positions |
+| `sort_keyed_*`, `sort_and_*` | O(log n) comparisons per insert; loads O(n log n) |
+| live `group` | small (binary search in the group); a regroup re-evaluates every item |
+| joins, `*_join_many` | small, plus one O(n) order check per batch |
+| `transform_to_tree` | small (binary search among siblings), plus the node predicate over every node per batch |
+| `update_index` | O(n) per batch |
+
+Sources and keyed operators (transforms, `remove_key`, `ensure_unique_keys`, `filter_with_state`, keyed sorting, lifecycle, expiration, live groups, joins, trees) mirror key order with an indexed order and load in near-linear time. Items are cloned into state and once into each published batch, which all subscribers share; prefer `Arc<T>` or compact records for large payloads.
 
 ## Child Observables
 
@@ -191,13 +205,13 @@ Use auto-refresh for child signals:
 ```rust
 let refreshed = rows
     .connect()
-    .auto_refresh_buffered(|row| row.changed(), Duration::from_millis(16));
+    .auto_refresh_buffered(|row, _key| row.changed(), Duration::from_millis(16));
 ```
 
 Use merge-many variants when child values are the output:
 
 ```rust
-let events = rows.connect().merge_many_keyed_items(|row| row.changed());
+let events = rows.connect().merge_many_keyed_items(|row, _key| row.changed());
 ```
 
 Avoid external subscription maps. Built-in lifecycle operators dispose stale children on remove, update, clear, and unsubscribe.
@@ -219,10 +233,10 @@ let view = source.connect().batch(Duration::from_millis(16));
 Manual pause:
 
 ```rust
-let view = source.connect().batch_if(is_dragging);
+let view = source.connect().batch_if(is_dragging.values(), false);
 ```
 
-Use batching upstream of materialization/binding. Do not add UI-local buffering that loses change reasons or indexes.
+Use batching upstream of materialization/binding. Do not add UI-local buffering that loses change reasons or indexes. Timed batching runs on the shared default scheduler; there is no thread per window.
 
 ## Population And External Feeds
 

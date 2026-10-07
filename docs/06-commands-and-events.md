@@ -57,8 +57,11 @@ assert_eq!(clear.state().get()?, CommandState::Succeeded); // a disabled call pu
 | `Failed(message)` | The action returned an error (`message` is the error's `Display` text), or panicked (`message` starts with `panicked: `). |
 | `Cancelled` | An `AsyncCommand::execute()` future was dropped after it started and before it finished (for example by `select!` or a timeout). |
 
-Each execution publishes `Running` and then its terminal state, even when the previous execution
-ended the same way, so a view observing `state().values()` sees every run. Calling `execute` while
+An execution that starts while none is running publishes `Running`, and the most recently started
+execution publishes its terminal state when it ends, even when the previous one ended the same way.
+Sequential runs therefore each show as `Running` then their outcome; overlapping runs (allowed by
+the default `ExecutionPolicy::Concurrent`) show as one `Running` and the latest run's outcome.
+Calling `execute` while
 disabled returns `CommandError::Disabled` and publishes nothing. A panicking action publishes
 `Failed("panicked: …")`, resets `is_executing()`, and the panic continues to the caller (or out of
 the future).
@@ -223,10 +226,11 @@ after they subscribe. This is the defining difference from a signal.
 | Method | Behavior |
 |---|---|
 | `EventBus::new()` / `default()` | A new bus. Cloning shares the bus. |
-| `emit(event)` | Delivers to current subscribers through a FIFO delivery queue. |
+| `emit(event)` | Delivers to current subscribers through a FIFO delivery queue, in emit order even when several threads emit. |
 | `stream()` | Returns an `EventStream<T>`. |
 
-`EventStream<T>` offers `subscribe(…)`, `map(…)` (returning another `EventStream`), and
+Events need not be `Clone`: `emit` moves the event into the queue and lends it to each subscriber.
+`EventStream<T>` is cheap to clone and offers `subscribe(…)`, `map(…)` (returning another `EventStream`), and
 `values()`, which exposes the underlying `ValueStream` so you can use the full set of
 [stream operators](04-streams-and-subscriptions.md#operators).
 

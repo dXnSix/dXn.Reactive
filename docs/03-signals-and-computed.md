@@ -31,7 +31,8 @@ assert_eq!(original.get()?, 2);
 ```
 
 To be observed, a signal's value must be `Clone + Send + Sync + 'static`. `set` additionally
-requires `PartialEq`.
+requires `PartialEq`. `Signal<T>` implements `Default` when `T` does, and `Debug` (printing the
+value, or `<locked>` instead of waiting when another thread holds the lock).
 
 ### Reading
 
@@ -214,6 +215,7 @@ and owns those subscriptions for as long as it lives.
 | `Computed::derive_distinct(source, \|a\| …)` | one `ReadSignal<A>`; publishes only when the result changes (`T: PartialEq`) |
 | `Computed::combine2(first, second, \|a, b\| …)` | two `ReadSignal`s |
 | `Computed::combine3(first, second, third, \|a, b, c\| …)` | three `ReadSignal`s |
+| `Computed::from_stream(&stream, initial)` | any `ValueStream<T, E>`: holds its latest value, starting from `initial` (for example a collection `count()`, see [chapter 15](15-application-patterns.md)) |
 
 | Method | Purpose |
 |---|---|

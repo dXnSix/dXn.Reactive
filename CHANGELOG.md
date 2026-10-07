@@ -29,13 +29,13 @@ breaking changes below are listed with migration notes for consumers.
   inside `when_activated` callbacks. `CollectionError::from(ReactiveError::External(..))` recovers a
   wrapped collection error; other external errors map to `Poisoned`.
 - **Added:** `ValueStream::map_err` and `ValueStream::err_into`, and `ReactiveError::external`.
-- **Changed (generic error parameters):** `ReactiveValueStreamExt<T, E = ReactiveError>` and
+- **Breaking (generic error parameters):** `ReactiveValueStreamExt<T, E = ReactiveError>` and
   `OptionValueStreamExt<T, StreamError = CollectionError>` are implemented for streams of any error
   type, and `Effect::watch` accepts `&ValueStream<T, E>` and returns `Result<Effect, E>`.
   *Migration:* code that built a stream with `ValueStream::new(..)` and relied on a scalar
   operator to infer the error type now needs an annotation (`ValueStream::<T, ReactiveError>::new`)
   or `ValueStream::from_reactive`.
-- **Changed (generic error parameters):** every collection operator that takes a stream (sort
+- **Breaking (generic error parameters):** every collection operator that takes a stream (sort
   comparers and resort triggers, page/virtual requests including `sort_and_*`, `batch_if`/`buffer_if`
   pause streams, regroupers, group selectors, forced-transform triggers, tree predicates, `switch`,
   `populate_from*`, the `to_*_change_set*` and `edit_diff*` bridges, buffered change-set streams)
@@ -43,9 +43,12 @@ breaking changes below are listed with migration notes for consumers.
   `transform_on_observable`, `group_on_observable`, `merge_many*`, `when_*value_changed*`,
   `true_for_*`, `query_when_changed_on*`) accepts `ValueStream<_, E>` with
   `CollectionError: From<E>`. Pass `signal.values()` directly; the `collection_stream` adapter shown
-  in earlier docs is no longer needed. Existing call sites keep compiling. Two-stream operators
+  in earlier docs is no longer needed. Two-stream operators
   (`sort_*_dynamic_with_resort`, `sort_and_*_dynamic*`, `group_dynamic_with_regrouper`) take an
-  independent error type for each stream.
+  independent error type for each stream. *Migration:* existing call sites keep compiling, except
+  a stream built inline with `primitives::ValueStream::new(..)` (the crate-root one) whose error
+  type was inferred from the operator: annotate it (`ValueStream::<_, CollectionError>::new`) or
+  build it with the `collections::ValueStream` alias, which fixes `CollectionError`.
 - **Added:** `Computed::from_stream(&stream, initial)` holds a stream's latest value as scalar state
   (for example a collection `count()` driving `Command::with_can_execute`).
 - **Added:** `ValueStream` combinators on `ReactiveValueStreamExt`: `merge`, `combine_latest`,
@@ -188,8 +191,10 @@ breaking changes below are listed with migration notes for consumers.
 
 - **Added:** `primitives::Scheduler` (`now`, `schedule(delay, task) -> ScheduledTask`, cancelled on
   drop), `ThreadScheduler` (one lazily started timer thread per instance), `default_scheduler()`
-  (one shared instance) and `ManualScheduler` (a virtual clock for deterministic tests,
-  `advance_by`).
+  (one shared instance) and `ManualScheduler` (a virtual clock for deterministic tests:
+  `advance_by`, `run_due`, `pending`). Custom schedulers build their handles with
+  `ScheduledTask::new(cancel)` or `ScheduledTask::done()`; a handle can also be `cancel`led or
+  `detach`ed.
 - **Added:** `*_with_scheduler` variants of `batch`, `buffer_initial`,
   `batch_if_with_timeout`/`buffer_if_with_timeout` and list and cache `auto_refresh_buffered`.
   The existing methods run on `default_scheduler()` instead of spawning a thread per window or
@@ -207,10 +212,10 @@ breaking changes below are listed with migration notes for consumers.
   `SourceListExpireAfterExt`; `ChangeSetAdapterOptions::expire_after_with_scheduler`,
   `expire_after_with_polling_with_scheduler` and `with_scheduler`. Every `expire_after*` runs on a
   scheduler instead of a thread per subscription, and disposal no longer joins a timer thread.
-- **Breaking:** `ChangeSetAdapterOptions` has a new public field, `scheduler`. Code that builds it
-  with a struct literal adds `scheduler: None` (or `..Default::default()`); the constructors and
-  builders are unchanged. Implementers of the expiration traits outside the crate (none are
-  expected) add the two new methods.
+- **Breaking:** `ChangeSetAdapterOptions` has a new public field, `scheduler`. *Migration:* code
+  that builds it with a struct literal adds `scheduler: None` (or `..Default::default()`); the
+  constructors and builders are unchanged. Implementers of the expiration traits outside the crate
+  (none are expected) add the two new methods.
 - **Fixed:** the polling variants (stream, source and adapter options) expire due items within one
   polling interval; source changes no longer postpone the poll forever.
 - **Fixed (behavior change):** stream `expire_after` translates later source changes to its own
@@ -279,12 +284,16 @@ breaking changes below are listed with migration notes for consumers.
 - The test `source_lock_policy::a_reentrant_clone_during_a_deferred_resume_gets_nested_update`
   pinned a clone of the suspended batch during a deferred resume; resumes now share the batch,
   and the test became `a_deferred_resume_clones_no_items_under_the_lock`.
+- The `connection` unit tests `source_cache_history_free_startup_disposal_releases_buffer` and
+  `startup_diagnostic_gauge_releases_buffer_on_dispose_drop_and_live` counted a copy of each buffered
+  batch; a connecting subscriber now buffers the shared batch, so its item is dropped once.
 
 ### Lifecycle
 
 - **Breaking:** list `dispose_many` and `dispose_many_with` require `T: PartialEq` (like the cache
   versions) and no longer dispose an item replaced by an equal one. **Added:** list
-  `dispose_many_by(same_item, dispose)`; types without `PartialEq` migrate to it.
+  `dispose_many_by(same_item, dispose)`. *Migration:* types without `PartialEq` use
+  `dispose_many_by(|_, _| false, dispose)` to keep disposing every replaced item.
 - **Fixed:** `collect_update_stats` emits its summaries in batch order and outside its lock.
 - **Fixed (behavior change):** `true_for_all*`/`true_for_any*` evaluate after a batch's item
   streams have been subscribed: over one passing item they emit `[true]` (not `[true, false,
@@ -375,3 +384,36 @@ breaking changes below are listed with migration notes for consumers.
   failing are disposed.
 - **Fixed:** a panicking activation callback abandons its generation (disposing the partial work)
   instead of leaving the activator stuck in a half-activated generation.
+
+### API hygiene
+
+- **Breaking:** `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`.
+  *Migration:* add a wildcard arm to exhaustive `match`es on them outside this crate. The change
+  and reason enums (`ListChange`, `CacheChange`, `ChangeReason`, …) stay exhaustive.
+- **Breaking (lint):** `Subscription`, `CompositeSubscription`, `Effect`, `ActivationToken`,
+  `Disposable`, both notification-suspension guards, `Computed`, `ValueStream`, `ChangeStream` and
+  `EventStream` are `#[must_use]`. Dropping one of the guards disposes it at once, so an unused
+  value was usually a bug. *Migration:* bind the value (`let _subscription = …`) for as long as it
+  should stay active, or `drop(…)` it explicitly.
+- **Breaking (implementers only):** the public extension traits are not sealed, and this release
+  adds methods to, or makes generic over the stream error, `ReactiveValueStreamExt`,
+  `ListStreamExt`, `CacheStreamExt`, `ListLifecycleExt`, `CacheLifecycleExt`, the populate and
+  `ValueStream*ChangeSetExt` adapters, the limit, expiration and switch traits. *Migration:* only
+  an implementation outside the crate (none are expected) must add the new methods and signatures;
+  callers are unaffected.
+- **Added:** `Debug` for `Signal`, `ReadSignal`, `Computed`, `Command`, `AsyncCommand`, `EventBus`,
+  `EventStream`, `ValueStream`, `Subscription`, `CompositeSubscription`, `Disposable`, `Effect`,
+  `DisposeBag`, `ViewModelActivator`, `ActivationToken`, `SourceList`, `SourceCache`,
+  `ObservableList`, `ObservableCache` and `ChangeStream`. The output reads a snapshot without
+  blocking on a lock: the value of a signal, `Computed` or command state, the length and version
+  of a source (`<locked>` while another thread, or an edit on this one, holds it), counts of
+  handles; streams print as opaque.
+- **Added:** `CompositeSubscription::add`, `dispose`, `len`, `is_empty` and `Default`;
+  `DisposeWith` for `Disposable`, `Effect` and `CompositeSubscription`; `DisposeBag::clear`, `len`
+  and `is_empty`; `Clone` for `EventStream`; `Default` for `Signal<T: Default>`.
+- **Changed:** `EventBus::emit` (and `EventBus: Clone`, `DeliveryQueue: Clone`) no longer require
+  `T: Clone`.
+- **Added:** rustdoc for every public item (the crate denies `missing_docs` in CI) and a
+  crate-root overview linking the guide; docs.rs builds with all features.
+- **CI:** jobs for rustdoc, the MSRV (Rust 1.95), the `#[wasm_bindgen_test]` tests on
+  `wasm32-unknown-unknown` and macOS.

@@ -63,14 +63,14 @@ sources; the library itself never couples them.
 | Module | Contents |
 |---|---|
 | `signal` | `Signal<T>`, `ReadSignal<T>`, `SignalChange<T>` |
-| `computed` | `Computed<T>` (`derive`, `combine2`) |
-| `stream_ext` | `ReactiveValueStreamExt`: `filter`, `filter_map`, `distinct_until_changed`, `skip` |
+| `computed` | `Computed<T>` (`derive`, `derive_distinct`, `combine2`, `combine3`, `from_stream`) |
+| `stream_ext` | `ReactiveValueStreamExt`: `filter`, `filter_map`, `distinct_until_changed`, `skip`, `take`, `merge`, `combine_latest`, `switch_map`, `scan`, `share`, `debounce`, `throttle`, `sample`, … |
 | `effect` | `Effect` |
 | `disposal` | `Disposable`, `DisposeBag`, `DisposeWith` |
 | `activation` | `ViewModelActivator`, `ActivationToken`, `ActivatableViewModel` |
-| `command` | `Command`, `AsyncCommand`, `CommandState`, `CommandError`, `CommandResult` |
+| `command` | `Command`, `AsyncCommand`, `CommandState`, `CommandError`, `CommandResult`, `ExecutionPolicy` |
 | `event` | `EventBus<T>`, `EventStream<T>` |
-| `primitives` | `ValueStream`, `ValueSubscriber`, `Subscription`, `CompositeSubscription`, `DeliveryQueue`, `ConnectionStatus`, `ReactiveError`, `Result` |
+| `primitives` | `ValueStream`, `ValueSubscriber`, `Subscription`, `CompositeSubscription`, `DeliveryQueue`, `ConnectionStatus`, `ReactiveError`, `Result`, `Scheduler`, `ThreadScheduler`, `ManualScheduler`, `default_scheduler` |
 
 ### `rayx_reactive::collections`
 
@@ -138,7 +138,8 @@ the scalar operators unchanged. See
 `CollectionError` and `ReactiveError` convert into each other (a collection error inside
 `ReactiveError::External` converts back to itself), and `CommandError` implements
 `From<ReactiveError>`, so `?` works across the layers in both directions. All error types implement
-`std::error::Error`.
+`std::error::Error`. `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`:
+a `match` on them outside the crate needs a wildcard arm.
 
 ## What this library is not
 

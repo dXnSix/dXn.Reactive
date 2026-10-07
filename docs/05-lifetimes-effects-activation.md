@@ -70,8 +70,10 @@ A `DisposeBag` collects subscriptions and disposes them together.
 |---|---|
 | `DisposeBag::new()` / `default()` | An empty, live bag. |
 | `add(subscription)` | Stores the subscription; if the bag is already disposed, drops it immediately. |
-| `subscription.dispose_with(&bag)` | Same as `bag.add(subscription)`, written fluently (`DisposeWith` trait). |
+| `subscription.dispose_with(&bag)` | Same as `bag.add(subscription)`, written fluently (`DisposeWith` trait, also implemented by `Disposable`, `Effect` and `CompositeSubscription`). |
 | `dispose()` | Drops every stored subscription. Idempotent. |
+| `clear()` | Drops every stored subscription but keeps the bag live for new ones. |
+| `len()` / `is_empty()` | How many subscriptions the bag holds. |
 | `is_disposed()` | Whether `dispose` has run. |
 | drop | Disposes. |
 
@@ -331,8 +333,9 @@ let activator = ViewModelActivator::default();
 let _token = activator.activate()?;
 ```
 
-Collection subscription setup can fail with `Poisoned`, or with `NestedUpdate` if you connect to a
-source from inside that source's own edit. The `External` variant keeps the original: downcast it
+Collection subscription setup can fail with `Poisoned`, with `NestedUpdate` if you connect to a
+source from inside that source's own edit, or (on `wasm32` only) with `Contended` while another
+thread holds the source. The `External` variant keeps the original: downcast it
 with `error.downcast_ref::<CollectionError>()`, or convert back with `CollectionError::from`.
 
 ## Choosing an owner
@@ -351,8 +354,9 @@ with `error.downcast_ref::<CollectionError>()`, or convert back with `Collection
   closure needs (as in `ClockViewModel`), or a `Weak`.
 - **Unowned subscriptions in activation callbacks.** Anything not added to `bag` outlives the
   activation, or ends immediately if dropped. Add every subscription to the bag.
-- **Panicking in callbacks.** Return an error instead; the activator cleans up the partial
-  generation for you.
+- **Panicking in callbacks.** Return an error instead. A panic propagates to the caller of
+  `activate()`; the activator still abandons the generation and disposes its partial work, so a
+  later `activate()` starts afresh.
 - **Forgetting the token.** `vm.activator().activate()?;` without binding the token activates and
   immediately deactivates.
 

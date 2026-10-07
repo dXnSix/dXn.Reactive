@@ -197,8 +197,10 @@ no updates ([chapter 8](08-sources.md#editing)). Reading with `items()` or `look
 
 - A panic inside a subscriber propagates to the thread draining that delivery queue: the
   publishing thread, or another publisher's thread that is already draining it.
-- A panic while a lock is held poisons it, and later operations on that signal or source return
-  `Poisoned`.
+- Signals survive panics in your code: a panic inside an `update` closure or a `T::eq`/`T::clone`
+  during a write leaves the signal unchanged and usable, and a panicking `Computed` closure leaves
+  the `Computed` updating. A panic inside a source's edit closure (or its key selector) poisons the
+  source, and later operations on it return `Poisoned`.
 - **A subscriber panic does not stall delivery.** If the panic unwinds through a delivery and is
   caught (with `catch_unwind`, or a thread pool that survives task panics), the signal, event bus or
   source keeps working: items queued behind the panicking one, and later ones, are delivered to
@@ -341,9 +343,9 @@ The crate is pure Rust on `std` with no platform-specific code or system depende
 |---|---|
 | `x86_64-unknown-linux-gnu` | formatted, linted, tested in CI |
 | `x86_64-pc-windows-msvc` | formatted, linted, tested in CI |
-| macOS (`aarch64-apple-darwin`, `x86_64-apple-darwin`) | not in CI; no platform-specific code |
+| macOS (`aarch64-apple-darwin`) | tested in CI |
 | other `std` targets with threads (BSDs, Android, iOS) | not in CI; expected to work |
-| `wasm32-unknown-unknown` | `cargo check` in CI; synchronous subset only (below) |
+| `wasm32-unknown-unknown` | `cargo check` and the `#[wasm_bindgen_test]` tests (on Node) in CI; synchronous subset, plus timed operators on your own scheduler (below) |
 
 ### WebAssembly
 

@@ -17,7 +17,7 @@ Primary source files:
 
 ## Snapshot Grouping
 
-List and cache stream extensions expose `group_by`. This returns list-shaped `RayGroup<G, T>` snapshots. Use it for simple grouped summaries where a full grouped snapshot per source batch is acceptable.
+List and cache stream extensions expose `group_by`. This returns list-shaped `RayGroup<G, T>` snapshots sorted by group key (cache members keep source order; a full `Clear` is handled). Every batch recomputes the grouped snapshot and emits its difference, so use it only for small data where a full grouped snapshot per source batch is acceptable.
 
 For large or interactive groups, prefer live or immutable grouping.
 
@@ -36,7 +36,9 @@ The outer stream emits `RayListGroup<G, T>` add/remove changes only when group e
 - `count()`
 - `is_empty()`
 
-Member changes publish through the group's live list. Source replace/refresh/regrouper turns can move items between groups. Pure source moves update inner group order without outer group churn. Groups emptied then refilled in the same source batch keep stable identity.
+Member changes publish through the group's live list. Source replace/refresh/regrouper turns can move items between groups. Pure source moves update inner group order without outer group churn. Groups emptied then refilled in the same source batch keep stable identity; a group created and emptied in one batch never appears, and empty groups are removed in a deterministic order.
+
+A group's own stream receives its batches in the operator's computation order, after the operator released its lock, so a group subscriber may edit the operator's inputs. A connection made while the operator is staging a change never receives that change twice.
 
 ## Live Cache Groups
 
@@ -82,9 +84,9 @@ Immutable grouping preserves group creation order. A group is removed only when 
 
 ## Group On Observable
 
-`CacheLifecycleExt::group_on_observable(|item| ValueStream<G>)` groups by per-item child streams.
+`CacheLifecycleExt::group_on_observable(|item, key| ValueStream<G, E>)` groups by per-item child streams.
 
-Items are invisible until their child group-key stream emits. Source updates replace child subscriptions. Removed children cannot publish stale values. Empty groups are removed after each source/child turn.
+Items are invisible until their child group-key stream emits. Source updates replace child subscriptions. Removed children cannot publish stale values. Empty groups are removed after each source/child turn, and group indexes stay valid when a group is created and emptied in one turn.
 
 Use this when the group key is not stored directly on the source item or comes from a live child value.
 
@@ -117,27 +119,26 @@ List equivalents exist through `ListCombineExt` and `DynamicListCombineExt`.
 
 Use static combiners when the set of sources is known. Use dynamic combiners when child streams are added/removed at runtime.
 
-Combiners track logical membership and touched keys/items. They emit structured changes instead of resetting snapshots.
+Combiners track logical membership and touched keys/items. They emit structured changes instead of resetting snapshots, keep an update followed by a refresh of the same key in one batch, and deliver one ordered output even when their inputs are driven from different threads.
 
 ## Joins
 
-Same-key cache joins:
+Same-key cache joins (selector receives the key):
 
-- `inner_join(right, selector)`
-- `left_join(right, selector)`
-- `right_join(right, selector)`
-- `full_join(right, selector)`
+- `inner_join(right, |key, left, right| ...)`
+- `left_join(right, |key, left, right: Option<&R>| ...)`
+- `right_join(right, |key, left: Option<&L>, right| ...)`
+- `full_join(right, |key, left: Option<&L>, right: Option<&R>| ...)`
 
 Grouped join-many cache joins:
 
-- `inner_join_many(right, right_group_key, selector)`
-- `left_join_many(...)`
-- `right_join_many(...)`
-- `full_join_many(...)`
+- `inner_join_many(right, right_key_selector, |key, left, group| ...)`
+- `left_join_many(...)` (the group may be empty)
+- `right_join_many(...)` / `full_join_many(...)` (`left: Option<&L>`)
 
-Same-key joins combine left and right caches by key.
+Same-key joins combine left and right caches by key. Output is keyed by the left key and follows the left (or combined) source order, with valid `Move`/`Update` index pairs.
 
-Join-many groups the right side by a key compatible with the left key and passes a live `RayCacheGroup` to the selector. It re-runs selectors only for affected left/group keys when right membership changes.
+Join-many groups the right side by `right_key_selector` (returning a left key) and passes a live `RayCacheGroup<K, RK, R>` to the selector. It re-runs selectors only for affected left keys when right membership changes. A right-side `Update` that moves the item (a new `current_index`) also moves it inside its group. `left_join_many`/`full_join_many` drop a removed left key's group when no right item uses it. Group notifications are delivered after the join released its lock, so a group subscriber may edit the join inputs.
 
 Use join-many when a left item owns many right-side children and the selector needs a live child group.
 
@@ -148,17 +149,21 @@ Use join-many when a left item owns many right-side children and the selector ne
 - `transform_to_tree(pivot_on)`
 - `transform_to_tree_with_predicate(pivot_on, ValueStream<TreePredicate<K, T>>)`
 
-`TreeNode<K, T>` exposes:
+`TreeNode<K, T>` exposes (all methods):
 
-- `key`
-- `item`
-- `parent`
-- `parent_key`
+- `key()`
+- `item()`
+- `parent()`
+- `parent_key()`
+- `children()`: a `SourceCache<K, TreeNode<K, T>>` of the child nodes in source order, which can be connected to
 - `is_root()`
-- `depth()`
-- child `SourceCache` through node internals
+- `depth()` (on a parent cycle each ancestor counts once)
 
 The tree transform builds DynamicData-style hierarchical views from a flat keyed cache. It defaults visible output to root nodes, attaches late-arriving parents to existing children, promotes direct children to roots when a parent is removed, reparents on update/refresh when the pivot key changes, and supports dynamic node filtering.
+
+Node identity: a node keeps its identity while it is promoted, re-parented, refreshed or moved, and when a late parent arrives. An **update of its item replaces the node**: the new node (the `Update`'s `current`) takes over the children. A view that follows a node's `children()` must rebind to `current.children()` on `Update`, and per-node view state such as expansion is best keyed by the node's key, not by node identity.
+
+A new child is inserted at its position among its siblings (one `Add` in the parent's `children()`, placed by binary search), and a child that moves in the source moves once among its siblings. Items that are each other's parents form a cycle that never reaches a root; disposing the tree subscription empties the `children()` of the nodes on such a cycle so they are freed.
 
 Use trees for flat data with parent IDs. Do not hand-build nested state in a UI component when the cache tree operator can preserve node identity and child streams.
 
@@ -166,12 +171,11 @@ Use trees for flat data with parent IDs. Do not hand-build nested state in a UI 
 
 Cache/source true-for APIs:
 
-- `true_for_all(|item| ValueStream<bool>)`
-- `true_for_all_value(|item| bool-like value stream selector)`
-- `true_for_any(...)`
-- `true_for_any_value(...)`
+- `true_for_all(|item, key| ValueStream<U, E>, |item, value| bool)`
+- `true_for_all_value(|item, key| ValueStream<U, E>, |value| bool)`
+- `true_for_any(...)` / `true_for_any_value(...)` with the same shapes
 
-Items whose child stream has not emitted count as false. Empty all is true; empty any is false. Duplicate boolean results are suppressed. Source updates replace child subscriptions and removed children cannot publish stale values.
+Items whose child stream has not emitted count as false. Empty all is true; empty any is false. Duplicate boolean results are suppressed. The result is evaluated after a batch's item streams have been subscribed, so one passing item emits `[true]` (no `[true, false, true]` flicker) and adding another passing item emits nothing. Source updates replace child subscriptions and removed children cannot publish stale values.
 
 Use true-for streams for aggregate validation state, "all rows saved", "any row dirty", or selection flags.
 
@@ -186,7 +190,7 @@ let lines = SourceCache::new(|line: &Line| line.id);
 let order_rows = orders.connect().left_join_many(
     lines.connect(),
     |line| line.order_id,
-    |order, lines_for_order| OrderRow::new(order, lines_for_order.clone()),
+    |_order_id, order, lines_for_order| OrderRow::new(order, lines_for_order.clone()),
 );
 ```
 
@@ -229,6 +233,17 @@ Use the built-in grouping operators so group identity, removals, and refills are
 let tree = nodes
     .connect()
     .transform_to_tree(|node| node.parent_id);
+```
+
+Rebind child views on node replacement:
+
+```rust
+// `Update` replaces the node: follow the new node's children.
+match change {
+    CacheChange::Update { key, current, .. } => row_views.rebind(key, current.children()),
+    CacheChange::Add { key, current, .. } => row_views.bind(key, current.children()),
+    _ => {}
+}
 ```
 
 ## Tree DON'T

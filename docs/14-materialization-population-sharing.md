@@ -302,7 +302,8 @@ They pick the oldest items inside that edit, only from state that has seen every
 committed before it (otherwise the next delivered batch triggers the eviction again), retry an
 edit that failed because the source was busy, and emit exactly the items the edit removed.
 Eviction therefore follows delivery: while several threads commit faster than the source delivers
-its batches, the source can hold more than `n` items until the limiter has received them. Do not
+its batches, the source can hold more than `n` items until the limiter has received them.
+`limit_size_to_with_errors(n, |error| …)` also reports each failed eviction edit. Do not
 implement limits yourself by editing a source from inside its own edit.
 
 ## Expiration

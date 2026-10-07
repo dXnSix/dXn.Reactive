@@ -344,8 +344,9 @@ runs **exactly once**: on `dispose()` or on drop, whichever comes first.
 | `Subscription::many(vec)` | Own several subscriptions as one. Dropping it drops them all. |
 | `subscription.dispose()` | Dispose now, consuming the handle. |
 
-`CompositeSubscription::new(vec)` is equivalent to `Subscription::many` but is a distinct type, for
-code that wants to name a group. For subscriptions tied to an object or view lifetime, prefer
+`CompositeSubscription` is a growable group with its own type: `new(vec)` or `default()`, then
+`add(subscription)`, `len()`, `is_empty()` and `dispose()`; dropping it disposes every member, and
+`dispose_with(&bag)` hands the whole group to a `DisposeBag`. For subscriptions tied to an object or view lifetime, prefer
 [`DisposeBag`](05-lifetimes-effects-activation.md#disposebag) and
 [`ViewModelActivator`](05-lifetimes-effects-activation.md#viewmodelactivator).
 
@@ -496,7 +497,7 @@ assert_eq!(counter.changes.pending_len()?, 0);
 
 `ConnectionStatus` (`Pending`, `Loaded`, `Errored`, `Completed`) is the item type of
 `ChangeStream::monitor_status()`. Because streams have no terminal events, the collection layer
-currently produces `Pending` and then `Loaded`. See
+only produces `Pending` and then `Loaded`; `Errored` and `Completed` are reserved. See
 [Stream control](13-stream-control-and-aggregation.md#loading-state).
 
 ## The error model
@@ -516,7 +517,8 @@ currently produces `Pending` and then `Loaded`. See
 
 ## Pitfalls
 
-- **Discarding the subscription.** `stream.subscribe(f)?;` disposes at the end of the statement.
+- **Discarding the subscription.** `stream.subscribe(f)?;` disposes at the end of the statement
+  (`Subscription` is `#[must_use]`, so the compiler warns).
   Bind it: `let _subscription = …` keeps it until the end of the scope; a struct field or
   `DisposeBag` keeps it longer. A bare `_` pattern drops it immediately.
 - **Assuming deferred delivery.** A subscriber may run before `subscribe` returns. Do not hold a

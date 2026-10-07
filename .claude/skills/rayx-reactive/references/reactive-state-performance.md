@@ -30,7 +30,8 @@ Primary source files:
 - Use `changes()` only when previous/current/version is needed and late subscribers can miss current state.
 - Remember `values()` can emit synchronously during subscription.
 - Do not treat `EventBus` as state; events do not replay.
-- Do not rely on `Command`/`AsyncCommand` for single-flight concurrency. Add a running signal or use the runtime command service when concurrency policy matters.
+- For single-flight commands use `with_execution_policy(ExecutionPolicy::IgnoreWhileRunning)`; the default `Concurrent` policy starts overlapping executions. Bind busy state to `is_executing()`.
+- Expect subscribers to run on whichever thread is draining the queue, not necessarily the writer's; marshal to the UI thread in the consumer.
 - Do not call UI entity APIs from arbitrary stream callbacks.
 - Do not make crate-root scalar modules depend on `rayx_reactive::collections`.
 
@@ -49,7 +50,8 @@ Test these boundaries:
 - `Computed` updates when source signals change.
 - `DisposeBag` disposes once.
 - `ViewModelActivator` reference-counts activation and disposes on the last token drop.
-- Commands set `Running`, `Succeeded`, `Failed`, or `Cancelled`.
+- Commands set `Running`, `Succeeded`, `Failed`, or `Cancelled`; a disabled `execute` returns `Disabled` and publishes nothing.
+- Timed operators (`debounce`, `throttle`, `sample`, `batch`, `expire_after`, ...) run on a `ManualScheduler` via their `*_with_scheduler` variants; advance it with `advance_by` instead of sleeping.
 
 ## Validation Commands
 
@@ -61,7 +63,7 @@ cargo test -p rayx_reactive --all-features collections::tests::<group>
 cargo clippy -p rayx_reactive --all-targets --all-features -- -D warnings
 ```
 
-A public API change RayX uses also needs RayX's checks and its Test Suite reactive spec; see RayX's [reactive consumer guide](../../../../../RayX/.claude/skills/rayx/references/reactive-state.md).
+Never build or validate RayX (or another consumer) to test a change here; mimic the consumer scenario in this repository's tests and document breaking public-API changes in `CHANGELOG.md` with a *Migration:* note.
 
 ## DO
 

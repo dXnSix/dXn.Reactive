@@ -32,8 +32,9 @@ position, which breaks as soon as rows move.
 
 `Comparer<T>` is `Arc<dyn Fn(&T, &T) -> Ordering + Send + Sync>`. List sorting requires
 `T: PartialEq`. A new comparer or a resort reorders the output (here and in the list-shaped cache
-sorts below) with as few `Move` changes as possible and never replaces an item: reversing five items is four moves, and items that compare
-equal are matched by equality, so each keeps its identity. Moves cost up to the list length each,
+sorts below) with as few `Move` changes as possible and never replaces an item: reversing five
+items is four moves, and items that compare equal are matched by equality, so each keeps its
+identity. Moves cost up to the list length each,
 so a reorder that would shift more than about four million positions in all (reversing more than
 about 2,000 items) falls back to a positional diff that replaces the changed positions.
 
@@ -56,8 +57,8 @@ collections with identity, sort a `SourceCache` with the keyed family instead.
 
 ### Dynamic sort order
 
-User-selectable sorting is a stream of comparers. Map a signal holding the sort mode to comparers,
-then adapt it to the collection stream flavor (see
+User-selectable sorting is a stream of comparers. Map a signal holding the sort mode to comparers
+and pass the stream directly; no adapter is needed (see
 [Feeding signals into collection operators](15-application-patterns.md#feeding-signals-into-collection-operators)):
 
 ```rust
@@ -359,7 +360,7 @@ window over a very large cache stays cheap.
 ## `SortReason`
 
 `SortReason` (`InitialLoad`, `DataChanged`, `ComparerChanged`, `Reset`, `Reorder`) is part of the
-public change model for DynamicData parity. No current operator emits it.
+public change model for DynamicData parity. No operator emits it.
 
 ---
 
