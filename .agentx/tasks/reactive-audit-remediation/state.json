@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 104,
+  "revision": 105,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -3492,6 +3492,14 @@
       },
       "reviewHash": "88e5ad9a2785333ccfb3a955882b8917e881f46b389f406ae2c471acecb6e403",
       "recordedAt": "2026-10-07T04:14:00Z"
+    },
+    "s10-async": {
+      "snapshotId": "03e0a001cface32540e6f48033d768294b1de149b87074a6d121dcac7066a92c",
+      "commits": {
+        "reactive": "7b8426bb35885af392f95170edfe41347c19982a"
+      },
+      "reviewHash": "ca99682c5fd8f0ea4b74ca3b50b8f01e580a4545e7cccead4c3d5d1cbf3eb87f",
+      "recordedAt": "2026-10-07T05:03:27Z"
     }
   },
   "findings": [
