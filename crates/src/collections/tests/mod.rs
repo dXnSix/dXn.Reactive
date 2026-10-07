@@ -20,5 +20,6 @@ mod source_lock_policy;
 mod source_read_api;
 mod sources;
 mod suspension_versions;
+mod switch_reliability;
 mod transforms_filters;
 mod watch_batch_coalescing;
