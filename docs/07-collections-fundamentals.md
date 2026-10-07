@@ -70,14 +70,20 @@ always stays consistent.
 | `Clear { previous }` | Every `(key, value)` pair was removed. |
 
 Cache indexes are `Option<usize>`. A `SourceCache` keeps its keys in insertion order (or the order
-you set with `move_key`) and fills in indexes. Sorted and windowed keyed operators rewrite them to
-positions in their own ordered output. Some operators cannot know positions and emit `None`.
-Several subset operators (for example cache `filter`) currently forward source positions instead;
-see [Known issues](README.md#known-issues).
-Consumers that only care about identity can ignore indexes.
+you set with `move_key`) and fills in indexes. Operators follow one **index contract**
+(documented on `CacheChange`; the few remaining exceptions are listed under
+[Known issues](README.md#known-issues)):
 
-An `Update` from an ordered keyed stream can carry `previous_index != current_index`. Treat that as
-"remove at the previous index, insert at the current index", not as an in-place replacement.
+- An index is a position in the **emitting operator's own output**, or `None` when the operator
+  cannot know positions. A subset operator (a filter, a window, a join) indexes its own output,
+  never its source's, and never removes a key it did not include.
+- Changes apply in order, each seeing the output as the changes before it in the batch left it.
+- An `Update` with `previous_index != current_index` means "remove at the previous index, insert
+  at the current index", not an in-place replacement.
+- A `Move` carries the item as it is (a changed value follows as an `Update`), and a later change
+  to the same key in the same batch uses the post-move position as its `previous_index`.
+
+Consumers that only care about identity can ignore indexes.
 
 ### Reasons
 

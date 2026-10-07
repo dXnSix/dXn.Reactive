@@ -130,6 +130,34 @@ breaking changes below are listed with migration notes for consumers.
   `collect_update_stats` no longer call their subscriber while holding their own state lock, so a
   panicking subscriber no longer poisons them and stops their output.
 
+### Change indexes
+
+- **Documented:** the `CacheChange` (and `ListChange`) index contract on the types: indexes are
+  positions in the emitting operator's own output or `None`; an `Update` with differing indexes is
+  a remove plus an insert; a `Move` carries the item as it is, and a later change to the same key
+  in the batch uses the post-move position.
+- **Fixed:** keyed sort keeps its position maps in sync after indexed upserts of existing keys (it
+  could misorder or panic) and inserts with a binary search (O(log n) comparisons).
+- **Fixed (behavior change):** cache `filter`, `transform_safe*`, forced transforms and the dynamic
+  filter index their own output instead of forwarding source positions, and `filter` no longer
+  emits `Remove`/`Clear` for keys it never included. Code that relied on source-space indexes from
+  these operators sees output positions now; the test
+  `transforms_filters::cache_filter_and_transform_emit_keyed_changes`, which pinned a source-space
+  index, now expects the filter's output position.
+- **Fixed:** an index-less `Update` (from an upstream that does not know positions) updates the key
+  in place in sorts, safe and forced transforms and trees instead of moving it to the end.
+- **Performance:** initial loads through `filter`, `transform_safe` and joins append new keys
+  without scanning, so they stay linear.
+- **Fixed:** `transform_inline*` emits a positional update as a `Move` plus `Refresh`; keyed
+  windows (`page_keyed*`, `virtualize_keyed*`, `top_keyed`), joins, combiners, stream
+  `limit_size_to`, immutable groups and trees emit correct `Move`/`Update` index pairs; join output
+  follows the left (or combined) source order after mixed batches.
+- **Fixed:** `a.or([b])` (and the other combiners) keep an update followed by a refresh of the same
+  key in one batch.
+- **Fixed:** the cache-to-list bridge behind `as_observable_list`, `remove_key` and `bind_to_vec`
+  positions rows by its own key mirror, so a non-conforming upstream cannot duplicate or misplace
+  them; materialized views store the item a `Refresh` carries.
+
 ### Signals
 
 - **Fixed:** a `values()` subscriber never receives an older value after a newer one, and ends on

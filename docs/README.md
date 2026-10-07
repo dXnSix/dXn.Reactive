@@ -85,12 +85,9 @@ A whole-codebase audit on 2026-10-06 found defects that are scheduled for repair
 `reactive-audit-remediation` (`.agentx/tasks/reactive-audit-remediation/`). Until it lands, keep
 these in mind:
 
-- **Cache indexes.** Cache `filter`, `transform_safe*`, forced transforms, `transform_inline`, the
-  dynamic filter, keyed windows after moving updates, joins, `add_key`, `ensure_unique_keys` and
-  `ValueStream::edit_diff` can emit indexes that misplace rows when materialized with
-  `as_observable_list()` or `bind_to_vec()`. Materializing with `as_observable_cache()` (by key), or
-  sorting with `sort_keyed_*` before materializing, avoids the problem. Keyed sort can panic on
-  indexed updates that move a key later (`add_or_update_key_at`).
+- **Cache indexes.** `add_key`, `ensure_unique_keys` and `ValueStream::edit_diff` can emit
+  indexes that misplace rows when materialized with `as_observable_list()` or `bind_to_vec()`.
+  Materializing with `as_observable_cache()` (by key) avoids the problem.
 - **Expiration.** The `*_with_polling` expiration variants never expire items; stream-level
   `expire_after` can desynchronize downstream after the first expiry.
 - **Page and window totals** can go stale ([chapter 10](10-sorting-paging-virtualization.md#response-metadata)).
