@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 132,
+  "revision": 134,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -406,6 +406,15 @@
         }
       },
       "recordedAt": "2026-10-07T08:20:50Z"
+    },
+    "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "207f682b90661c4b37f5842ef1a8a96d4330dadae718da84f942ae6215fc0339"
+        }
+      },
+      "recordedAt": "2026-10-07T08:41:19Z"
     }
   },
   "checkResults": {
@@ -1246,914 +1255,914 @@
       "checkId": "c-t01",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "9e0cde9d137222d0732a57d7022bef304af1a0c69343bfb18526e8584759fbd4",
-      "basisHash": "3a2a6fbc3a6bc69a077828c5af92ba18c7f81aeae484cfaa47a9caa5c0d0afb6",
+      "basisHash": "b526806bfaa10fa35323c344eaf0c82e8144be3efec54aeef5fc4092ff1b382a",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.3476,
-      "recordedAt": "2026-10-07T08:16:58Z",
+      "durationSeconds": 0.1921,
+      "recordedAt": "2026-10-07T08:36:42Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-aa18f30fdcb9.log",
-      "logSha256": "140bef667a33bb9bb1e4bb7a5f5499cf957ef932fb672f99409e5540b7f7de53",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-23e87d67554f.log",
+      "logSha256": "f7158e0f7bc9c64720804b54b5c7fc4cc392a71dea0df3e7afe541b51da3f5b5",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t02/final": {
       "checkId": "c-t02",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a382faa203463ffb324261168400287b8f9d43b6ce22eca827cea50f03b34870",
-      "basisHash": "9add05f2126d7b9ff8162a1121d8554b68671657c46f6a825f44c45ce741547b",
+      "basisHash": "e03678254791ebd53713151db69d2de97517030e0e0dde5b9c5c680074375f26",
       "status": "passed",
       "exitCode": 0,
       "testCount": 10,
-      "durationSeconds": 0.3061,
-      "recordedAt": "2026-10-07T08:16:58Z",
+      "durationSeconds": 0.2332,
+      "recordedAt": "2026-10-07T08:36:42Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1c6dd59bf1c4.log",
-      "logSha256": "e08ea5570dc0ec1a7a79b5381d629101f40702ef393be4a7920fc9034ae433f7",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-5323386b97f9.log",
+      "logSha256": "fe85c9115f3629e138768b8d759b7bd829778c191df6e4641eb0cadea5b2be3f",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t03/final": {
       "checkId": "c-t03",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "bec901b721c70af70254aeeb5aada501e50c5972f516f6356a932120e0c2cf8a",
-      "basisHash": "506fabf05d202ca6649b220971a1e64139063c304abf18e128d3f86b3794ec20",
+      "basisHash": "f9245f14ace8458263bc494335116f30ea9da9b4cd26f550c4683b0e879104bd",
       "status": "passed",
       "exitCode": 0,
-      "testCount": 10,
-      "durationSeconds": 0.2227,
-      "recordedAt": "2026-10-07T08:16:59Z",
+      "testCount": 11,
+      "durationSeconds": 0.1856,
+      "recordedAt": "2026-10-07T08:36:42Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-8123699ed31a.log",
-      "logSha256": "a5a90efa354420792eb2cc1f4aceb86bbb1c0f9b8029f8903dfd4c6c4378d484",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-b0b0d2b6d965.log",
+      "logSha256": "233ab630c4450ee5541d3f29cf57315a44129026b6db95b45a7927b01d2acf75",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t04/final": {
       "checkId": "c-t04",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "307b6dc141950c03543a6164e11c1b632602b9974aee1fc987d56863c801d180",
-      "basisHash": "44d9c888004dbf3407b5bc0cad9f87534b82b306efa27973d068bfce4bdd80d0",
+      "basisHash": "14c9bc7138539a2ff1242109b342a79782c4585ff1e91ee25b90675fb8aa8b57",
       "status": "passed",
       "exitCode": 0,
       "testCount": 12,
-      "durationSeconds": 0.2128,
-      "recordedAt": "2026-10-07T08:16:59Z",
+      "durationSeconds": 0.1953,
+      "recordedAt": "2026-10-07T08:36:43Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-84023ea17c11.log",
-      "logSha256": "ed302ebdf9aa8a9fffe6f3590d41ee378c58ebf5358385493cd5e3869772b1f5",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-2cb3e8587517.log",
+      "logSha256": "a63219e575dc48cbe6351d0408ddfea5e57914ccace74f1d50628abded93dbc8",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t05/final": {
       "checkId": "c-t05",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "c8bc93f17a40960f31ce9c71f242afdbcdcef4b184b6853a26ec2d90bf97d2a6",
-      "basisHash": "9e71cc2fbb076704584d666f82d23e3545c9c889a47be70c3a4f4e19881f557e",
+      "basisHash": "96128ae83d1108ce68d73404e83594c6cec3c083823309737ddb2bf212e0f8e3",
       "status": "passed",
       "exitCode": 0,
       "testCount": 10,
-      "durationSeconds": 0.2379,
-      "recordedAt": "2026-10-07T08:16:59Z",
+      "durationSeconds": 0.2307,
+      "recordedAt": "2026-10-07T08:36:43Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-cc42f17159ac.log",
-      "logSha256": "cbff30f7111756aee37bddafb6ef403675bd8fa4baaf5922f13f8639b9a591c5",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-615b6e0c36ed.log",
+      "logSha256": "8af35938763cabcef906c4ced58699b81875e0d1fd9b9bfb0740fb349b18d291",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t06/final": {
       "checkId": "c-t06",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "141b0630f15163d820d685684e75f4a1fd1f2a8a81d209d2559795fee48ce4b4",
-      "basisHash": "6f19d048086561541e985935139c6f78df5168f12c2020f5d0f9acdc6b926655",
+      "basisHash": "7de64f1856645bddd49c9c7d370014330cf78dfb857cec053ea70da14617d7a1",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.1864,
-      "recordedAt": "2026-10-07T08:16:59Z",
+      "durationSeconds": 0.199,
+      "recordedAt": "2026-10-07T08:36:43Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-6fbfcbd905a1.log",
-      "logSha256": "17f40cfd6aa7c0089ff31da05031b70d1c7143b1d051ce55e72384149ee4dabe",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-8bf9311f04f7.log",
+      "logSha256": "b13614b586089afd2330dbd8ceba831911d583cdfa52c99abfb0d075794103c7",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t07/final": {
       "checkId": "c-t07",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "9f077576c724d949a28d516f8942e71a2f3df37ee8a4cbdb8e0ccdd103d25403",
-      "basisHash": "bc333a662f95e8862d8da0cd842affca738b25d8f00da4635a17a83b3e8ba719",
+      "basisHash": "8ed52c3a2bf9f01ebd7f3469f375fd98c6eb24ffd4613c1825b6d301a61071ff",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 0.1927,
-      "recordedAt": "2026-10-07T08:16:59Z",
+      "durationSeconds": 0.1893,
+      "recordedAt": "2026-10-07T08:36:43Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-3c5a0edbcaf9.log",
-      "logSha256": "e11313797f127a2d94027a71276a0f387b8a91030b9fc03f02d69b412cc7375d",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-58b2fbffc7d0.log",
+      "logSha256": "e9f7eb13cf1f53abaecaa11048c6703983abb154ecd5fff862239a1f1c35051d",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t08/final": {
       "checkId": "c-t08",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "26eafd0ac49a8d602354c961d92bd4f1c439cce7dc721c937c14fdf6ddaa0b67",
-      "basisHash": "bd41dbe2d8342a169a27395eab3d5579953153aac6e65a03e11a7a4166a4136a",
+      "basisHash": "f7ce722a2d75b7acf36f7199900e3c1a6908ed4b15634e56283dfc4fcd37ed51",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 0.2108,
-      "recordedAt": "2026-10-07T08:17:00Z",
+      "durationSeconds": 0.2005,
+      "recordedAt": "2026-10-07T08:36:43Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-cdb28fa36b73.log",
-      "logSha256": "073546199e863946d7ff3b0cc334ef808a8468dfe569ea0e23a51f811b1eef22",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-8ce7c6ad3feb.log",
+      "logSha256": "17237cf89c84ecb273e82e9497aae34e2494b49802ed42b07748bb0a70ef4c6f",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t08-docs/final": {
       "checkId": "c-t08-docs",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "18a690dab311d414ec517d78263e58141b7a13aa30a439d6db2f2baf7a557b83",
-      "basisHash": "bfb7e00a14ac0fd4c115b587bc6c63ee9dc89f9c76af61aadec8d909c54045c1",
+      "basisHash": "499ea8c4794513e848a2d8c56538faeb16fd5d22e63d313a6bbfd5956528e8dc",
       "status": "passed",
       "exitCode": 0,
       "testCount": 135,
-      "durationSeconds": 0.2307,
-      "recordedAt": "2026-10-07T08:17:00Z",
+      "durationSeconds": 17.9483,
+      "recordedAt": "2026-10-07T08:37:01Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-9e37e9138f2f.log",
-      "logSha256": "a8a35d9a6ee62e85422914e42b0af1390b3ac9d0cf53acaeb5ccc871e5cf75f4",
-      "inputsHash": "d7a34e4ae4399c315ee47f5428b11c0f42df6f77fb929ec8aca43800cc3a1b9d"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-eca570ff89d4.log",
+      "logSha256": "ab255e5d959b1545a7f10bf0fd36b0bf78f2e1c99b14f933f70dffafcab01390",
+      "inputsHash": "154a3cbc772494285982d7b3b8c4e77933d3d62ff9318f4757b6455fb1643d15"
     },
     "final/c-t09/final": {
       "checkId": "c-t09",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "353db1c8a80b16743ad1cb8abfc03023ce16768a562dcf0cd05a780eaeaca53f",
-      "basisHash": "ecb3ab742ead07d644bd75401336e710f78d2149617708a7ff8c00edd242d84a",
+      "basisHash": "29b487d9d1ddf7e2b73035a6aa433e8aa35077e201dacdcb33ab34e723f40ea1",
       "status": "passed",
       "exitCode": 0,
       "testCount": 21,
-      "durationSeconds": 0.282,
-      "recordedAt": "2026-10-07T08:17:00Z",
+      "durationSeconds": 0.2258,
+      "recordedAt": "2026-10-07T08:37:02Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-9d0ffdaf88c5.log",
-      "logSha256": "c30a9d386a04b5b7f82f2d5f130f55dcdeb8efe0bd1bc538b2be71d8640692ea",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-91e75c22b92b.log",
+      "logSha256": "6c7a39a6591f532a76bf5481d94273cda3613713544a82ec3cee78b6dd9d303e",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t10/final": {
       "checkId": "c-t10",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "b42dfafa47f54c40dac4d949a14c3f63873d0f3e9d5cb299ef5a610d1cc2534e",
-      "basisHash": "214f4090e9338d123e6f829f065870e3991bc3d903d489e0e5174cf170c1914b",
+      "basisHash": "ccb11a78674d4d2692c3a0cbcd32f7df95f5f07bca55420aa827acb7b203cad8",
       "status": "passed",
       "exitCode": 0,
       "testCount": 16,
-      "durationSeconds": 1.2031,
-      "recordedAt": "2026-10-07T08:17:01Z",
+      "durationSeconds": 0.9985,
+      "recordedAt": "2026-10-07T08:37:03Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-3958cd452b34.log",
-      "logSha256": "5bf0629a08c306f920de26cc31633efcf55ce2a8f79939be95d1b7aba1a34f48",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-327bc15b19dc.log",
+      "logSha256": "d520b4b936df3d332a8078a444b5ecc1329799ecf13616f16241d1ddbdd30a5b",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t11/final": {
       "checkId": "c-t11",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a7799189b29f2d86b754a18bd67958de4934960f62c40736ed0b27385e7360b6",
-      "basisHash": "075bb69263321d1e528eb1ec256af981314b96ff0beb6a0fd0bb2d70b8ef3c1d",
+      "basisHash": "ba340e113ac7cf4bdaefbb38acfb5f0c1a8cbe3c25110165d648b377b6d932b8",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 1.0676,
-      "recordedAt": "2026-10-07T08:17:03Z",
+      "durationSeconds": 0.9598,
+      "recordedAt": "2026-10-07T08:37:04Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-67d190ac874d.log",
-      "logSha256": "eaf7f6aa704a6a4f5558a6d2759c4430ddc898496650dee991ee68789d382f45",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-2fcbc5687dc4.log",
+      "logSha256": "dc499a9064b6308d3735f14ecf961dc177f2eb27047b030b98a865813ffca37b",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t12/final": {
       "checkId": "c-t12",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "582670136b7cc9fd354e35c22bd5b59ce5cb1e47aa4405cd3dbbac3b3ded5461",
-      "basisHash": "962d261128f99c618f5948d86a61274f71a7869036cde02bf861285052819199",
+      "basisHash": "a7a347cc959cb3277fb8cd285879b00845051333871c9b9b8809ba1d11cf91b5",
       "status": "passed",
       "exitCode": 0,
       "testCount": 4,
-      "durationSeconds": 0.1875,
-      "recordedAt": "2026-10-07T08:17:03Z",
+      "durationSeconds": 0.1847,
+      "recordedAt": "2026-10-07T08:37:04Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-00df6a19e220.log",
-      "logSha256": "bb6fca1667909bf669bc0abb951893d20271280052ca0ef66e82fd00521a207b",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-26910ac98d4f.log",
+      "logSha256": "ddf417c3671e1f54ad89d687e0b8ab649582c4312cea23ae7a55a37eb233bbdd",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t13/final": {
       "checkId": "c-t13",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "ade14cc9ff6033e1bcb2cf37423e0b792dc18d1518882f794a0a75b723c0f73d",
-      "basisHash": "636b39e2d583519aad2586b0f314970d3dced924858548de5f3bd0c91de3aeb4",
+      "basisHash": "12934fc6dc1a17b46dd82b244b4a6f1a3602c25f31c0c771287d7af79f1d9c7c",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.2019,
-      "recordedAt": "2026-10-07T08:17:03Z",
+      "durationSeconds": 0.2015,
+      "recordedAt": "2026-10-07T08:37:04Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-e192743600ed.log",
-      "logSha256": "faba9942d64ca8894fe236c6edea0267354b70e56574e71b59e1409f989c26c4",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-2565f348eee2.log",
+      "logSha256": "d8f100219f747e428cef5323ddedcfd54b7684c8c9c2c01289811de137131823",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t14/final": {
       "checkId": "c-t14",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "bc264c65515c1ebe87b6482b57232ed38bbb93ad423216000ee0e401cf157a65",
-      "basisHash": "ebd7ef4e3ca7a86f4d7fddba69a56ac4567b4cce7b00afa6df267d93a8de34ee",
+      "basisHash": "35c218750030033a46a06b6e59da30964d04d999cd6fb15955ec54fe4ccd7c4b",
       "status": "passed",
       "exitCode": 0,
       "testCount": 3,
-      "durationSeconds": 0.1829,
-      "recordedAt": "2026-10-07T08:17:03Z",
+      "durationSeconds": 0.1729,
+      "recordedAt": "2026-10-07T08:37:04Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-5740cac230f2.log",
-      "logSha256": "8046d2897e3c4b7872926d3ed441a8396ec8ed7bf27aef2bb9e62e5d4f5b3e87",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-50499f998894.log",
+      "logSha256": "fc83a778351af42e0dea74b1a63266a7b996ac0d136521dea985b311fd121d8f",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t15/final": {
       "checkId": "c-t15",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "579ce212f175c4df43022e23d7e255822bf1f13bc444f03ac5f3aff52169b7a1",
-      "basisHash": "4176143efd22b4e1f77b62bcdd7983ba79636e93bae34e32d71c260b5e0c4e59",
+      "basisHash": "5ec678d9b100fe4df0e8ae788e677da95de9cebbf51b7faa8a6d98651002c913",
       "status": "passed",
       "exitCode": 0,
       "testCount": 11,
-      "durationSeconds": 0.1773,
-      "recordedAt": "2026-10-07T08:17:03Z",
+      "durationSeconds": 0.1818,
+      "recordedAt": "2026-10-07T08:37:05Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1cdd8671d4b6.log",
-      "logSha256": "b547b0847d383c36c552bfd08a2bef915413c6e3b5d5b82dcb8a5cf0e0d20e07",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-8cdae7ae95c0.log",
+      "logSha256": "3fcb35f7ee07097cfcf193d20bb399e25bdf3b106f391b3f19188c82f910660c",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t16/final": {
       "checkId": "c-t16",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a4f147db5a18347afc1d8b7c39356ac68e5cf88054d941642118e275cb6818bc",
-      "basisHash": "a624ee916d3d13bcd36f2bed7a6af27a12e7d64dea505dd74265be8756e4f581",
+      "basisHash": "6391a907c3234a6928dc7093285963304d29be6b22aa2eb643cebb56a472e148",
       "status": "passed",
       "exitCode": 0,
       "testCount": 8,
-      "durationSeconds": 0.2184,
-      "recordedAt": "2026-10-07T08:17:04Z",
+      "durationSeconds": 0.2125,
+      "recordedAt": "2026-10-07T08:37:05Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-d6444b5d5678.log",
-      "logSha256": "1b8b5664563495f2fd4b6aa6e54a2ffb1ea21ab5f61d453733cc1b02e0a9c788",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-956203e40edb.log",
+      "logSha256": "601f0a878348027550e7ca948f9cc5e180adbe6ed79f4ac7214e6c1411d66424",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t17/final": {
       "checkId": "c-t17",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "33d1470b687fd885506f6b25d6166be868320bc5b5d3e7046887ad739f5e1f55",
-      "basisHash": "6650ca25183846602095a89dd0ddef28ef007df5f8bafde5fc52e0bdc111a1af",
+      "basisHash": "876d2dee2b144f1f18f04354f544c90ce3a56b5cc135b06621f6d24b7be983e5",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.2264,
-      "recordedAt": "2026-10-07T08:17:04Z",
+      "durationSeconds": 0.2183,
+      "recordedAt": "2026-10-07T08:37:05Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-cf61f830a771.log",
-      "logSha256": "9cb0d3cf819e1f5a539d8260cca57d752ce6f0e0bfe6effe3338f80bfae19fe6",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-579eec19bec0.log",
+      "logSha256": "8cf5eef9101bf19f134bb7fbcb2e674b03b34866ef76b6af199756e89756dbe8",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t18/final": {
       "checkId": "c-t18",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "e39b23e43e24786341662abf3efe6533d4a40d693fd99f6c87b2c8e35775b5b7",
-      "basisHash": "b739f823be09c7170fa356e568f721ed5fbde8c468ae221f3e41c254b64c34ec",
+      "basisHash": "1791f45273c27de7b85114faa90db4f772077e5c6d6d0e749172a144d9e0edd8",
       "status": "passed",
       "exitCode": 0,
       "testCount": 13,
-      "durationSeconds": 1.1764,
-      "recordedAt": "2026-10-07T08:17:05Z",
+      "durationSeconds": 1.1546,
+      "recordedAt": "2026-10-07T08:37:06Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-df0398f7f6e7.log",
-      "logSha256": "7f00b4e6fbcec469deec5472ef3fbb1851a24f01a679a62599d7944d47c519ea",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-fffc6227af9b.log",
+      "logSha256": "a4fcaccc2c48d2375c2373dff2a7b687b3ac30b05cf3f747147dd6bf54ff9bc9",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t19/final": {
       "checkId": "c-t19",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "2dc41bab0232c8a741410911f310c5bcc3276436f192dd617a34e4ef8cc129db",
-      "basisHash": "21cbf807f274748514dfa335b75f9778ef6b0c5a5f0a4fca4629066600059666",
+      "basisHash": "4cf0f8d310deb1ccca8af2790fb3226fde45ed8db80642f87b36ab658db163ae",
       "status": "passed",
       "exitCode": 0,
       "testCount": 11,
-      "durationSeconds": 1.0197,
-      "recordedAt": "2026-10-07T08:17:06Z",
+      "durationSeconds": 0.9283,
+      "recordedAt": "2026-10-07T08:37:07Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-e0c95d23048c.log",
-      "logSha256": "468c97443eba2be601965c7a63d097f37ec5c660675942f6ff597d8cec223e7a",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-dc0cadce0733.log",
+      "logSha256": "6d07067405b90dcb044e7dc18af64ca69a20a93b4190ffec2deb639b29a762b4",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t20/final": {
       "checkId": "c-t20",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "7c8dd1b854a064941010ddeb8c5d57243d29cb7c42f4ac124ef9f8439437f601",
-      "basisHash": "4c6e38e1645ea00b70293be7ba5debe674bea73c288cc0d07dd0ffd1a48bb78b",
+      "basisHash": "b0f379d7339da6625c0d9d7e7e3b74e79142f3ce1bdb2ccd64094121665c1c69",
       "status": "passed",
       "exitCode": 0,
       "testCount": 12,
-      "durationSeconds": 0.4511,
-      "recordedAt": "2026-10-07T08:17:07Z",
+      "durationSeconds": 0.4415,
+      "recordedAt": "2026-10-07T08:37:08Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-c3d590b25790.log",
-      "logSha256": "21ebedffac8b8b9b7b89c60cf4098c368a93939f8d1f6181e6d09ed42ffe0b46",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-182f380973fc.log",
+      "logSha256": "27d1e980c777fdc8aeb75151b4efd4a4fcd6068dea99d070cba3459fa23d1e7f",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t21/final": {
       "checkId": "c-t21",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "c6965df738ffeb79995d1ba928f76e2df887868419156d884fbbe166050ea586",
-      "basisHash": "c6614550d0992d1b046fe5f4d8024abdb0281b5585ffcbe4e08098bf7ed96e2c",
+      "basisHash": "7696a3af6d79c5b786409f35e1591f95fa77fc82ea6290e82d997cf38483bf3c",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.903,
-      "recordedAt": "2026-10-07T08:17:07Z",
+      "durationSeconds": 0.8358,
+      "recordedAt": "2026-10-07T08:37:08Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-55edbf1a9ade.log",
-      "logSha256": "60ca1bca63272ab445adbc86a074b8a5c92e3f912d14f7acfdb83cc72f6cfd31",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-8432a019f893.log",
+      "logSha256": "846840bd7e3abe108838f907fd81164669fb806b003cf35626efac3f3db01c7f",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t22/final": {
       "checkId": "c-t22",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "c67ddfbb6f71a9e3589167f0c1f1ef649d65f57f9b283731c9ce5e2ce83894fa",
-      "basisHash": "c44194188c6bf4aa88d061874c972f32589d8a13b146c5611dc04d7fa962a057",
+      "basisHash": "ae32cce7b7377f24a0462cb69334e006bfa9b6d8925ffea1c140e5c7ae238a01",
       "status": "passed",
       "exitCode": 0,
       "testCount": 14,
-      "durationSeconds": 1.8665,
-      "recordedAt": "2026-10-07T08:17:09Z",
+      "durationSeconds": 1.8636,
+      "recordedAt": "2026-10-07T08:37:10Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-0640600881e8.log",
-      "logSha256": "00d4ba0a9394c54aa464a28477484a103d63d1f15fcb0171cc5afcca29c505a8",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-51fe47b35a76.log",
+      "logSha256": "3d7243a8a7f0556d3293a1dbe314d929c21239e024612aed4cc0777602584bc5",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t23/final": {
       "checkId": "c-t23",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "13caff87491b4f37b44fcace70ec412109ab1593a586599a81e16569773bca38",
-      "basisHash": "11dbc2d50027e994109eab6a4d0a53b86491b99ec0696856896dc4b0b01d2748",
+      "basisHash": "4086fd4f812990b326e663ee27c133b87cdc14a51e0c14010b9fcfb5873e9f16",
       "status": "passed",
       "exitCode": 0,
       "testCount": 11,
-      "durationSeconds": 2.439,
-      "recordedAt": "2026-10-07T08:17:12Z",
+      "durationSeconds": 2.3362,
+      "recordedAt": "2026-10-07T08:37:13Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-f76049e19a8b.log",
-      "logSha256": "2ed49eef55c3fa6e569cf04067d0ef5356de8d59912a0796b00993448650b613",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-e27d7922dd51.log",
+      "logSha256": "4837e5abc13eb0f811167ed9f8d386f866a9acb2586643643761548c8c864dbd",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t24/final": {
       "checkId": "c-t24",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "84f82851d994307c47e40e839bc68a9e5645d01062b8faa6d142ab96924610b0",
-      "basisHash": "5d281ccf3fc22ca47608117819557e9f735536f82c0921b9f88b55166d1d304c",
+      "basisHash": "46fc946dd5a02eef2db42885bc8ef24ef1821c1758775f8f1312bbf085837f50",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.6884,
-      "recordedAt": "2026-10-07T08:17:12Z",
+      "durationSeconds": 0.673,
+      "recordedAt": "2026-10-07T08:37:13Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-6b28a566aa2e.log",
-      "logSha256": "ec071042819b15c762c039eb780ad50467bef5514bbbde9932ac8c2e1ec7afb6",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-c39c46c1e7a9.log",
+      "logSha256": "f9e86cc47bb95538225e3d7cb4a1843ba54cf6a19424d42e6f2eaf0cdd4d9955",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t25/final": {
       "checkId": "c-t25",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "e9dca787d484796c455281020c018c91681a8fe388d549d8cbe135cd7cba9248",
-      "basisHash": "a19919cc779adea1989efad54a1c14fd03dafe250cedebbd9cf52622be3c62c0",
+      "basisHash": "ea3417661c2f208e7b25adc6985aa7c7c5d1254eaa6777033b0f59bff0bd8574",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.594,
-      "recordedAt": "2026-10-07T08:17:13Z",
+      "durationSeconds": 0.5803,
+      "recordedAt": "2026-10-07T08:37:14Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-00b043648a95.log",
-      "logSha256": "48efd39bf1918bc1db680bf4edf09305b63ab914edada22823a7d4b7c1093655",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-85d37ac3a0e4.log",
+      "logSha256": "dda09b4f6eb8d8e11aaac3bc7db222bd25a217e7c8a8381711d7a8f30d39a298",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t26/final": {
       "checkId": "c-t26",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "3ff5c1b6dea07c3e1ae8160fc85aa48cda1a18836bad31d9d0207a575b498d8f",
-      "basisHash": "c01cc30f7c7f9dc7d4bae7dd1d7c6f24c1433939ab0146bf0ddcd0e44b782987",
+      "basisHash": "0fb68ecf31698ca9b814d311bb6a7060fb69be82a844fc8c76ba7eccf1e8c90e",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 1.6478,
-      "recordedAt": "2026-10-07T08:17:15Z",
+      "durationSeconds": 1.6317,
+      "recordedAt": "2026-10-07T08:37:16Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-5573f6c031ea.log",
-      "logSha256": "b2bf636eacbf3f306bef42fa13c8a43d9a1ace5857976e9b25c5870fb00b0063",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-01146e13131d.log",
+      "logSha256": "5b40017dfb445e1c0f88e81c42d873342613b9285ccb0f377a5cd759e2a8277b",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t27/final": {
       "checkId": "c-t27",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a4e3a4bb6cd3ac76c9e8104db7b034a1bf22051b759aecd4035e4bd18743b7c4",
-      "basisHash": "ae3b333ad191c905bb1a9305f136fde569febbb663e0edb99cd583d72e209006",
+      "basisHash": "2a8c7b4e60077f6fdd63435084fd0aaadc3d743acf4fa3ffd8de827255cbe876",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 0.7765,
-      "recordedAt": "2026-10-07T08:17:16Z",
+      "durationSeconds": 0.7597,
+      "recordedAt": "2026-10-07T08:37:16Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-f6e102e3a984.log",
-      "logSha256": "80152c20ffd7aeb7ad64770e346a42321116d2bb2a0f6956f8bb92db8deb90a9",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-6317623a23e0.log",
+      "logSha256": "52b157b093b27133a6d42749acfa4e873ee7879fe9208c5ee4d41e212ab3bf0b",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t28/final": {
       "checkId": "c-t28",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "01d0c18fc299f0c420cc5fa68a7f870fdbed5beed5f3826aa573c400b5291f9f",
-      "basisHash": "ab4c8048a1e30c1ddb61919c6ab9738ad4614da4ab0d036dc51eae144dd67ae6",
+      "basisHash": "6dcbe71782d27146d33bdf9c5f2830e3269d18e86c75e0f7aa832c77844c32b8",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.2258,
-      "recordedAt": "2026-10-07T08:17:16Z",
+      "durationSeconds": 0.2134,
+      "recordedAt": "2026-10-07T08:37:17Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-fd1863ae553d.log",
-      "logSha256": "bfd640c13165401588e14b4165d76125b9a997d868feef2996d9093790772478",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-f0bc9e2a7db3.log",
+      "logSha256": "889d2f834c72d4a03dfcda33c43301ab4f0a20df80efc1b309d0579f994afd43",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t29/final": {
       "checkId": "c-t29",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "dbf81c62c33a204114791a50e759554e784eaac1224af7d3f1329fda64fce767",
-      "basisHash": "8c74e7248d3f826ea8b2ed4e660ad91fcb2db8cd9a8155c6107361d724c263b0",
+      "basisHash": "d7204a1ae670e556e85ac08488a2bc73654fc62e606856bdf4581e21fdc86c7a",
       "status": "passed",
       "exitCode": 0,
       "testCount": 13,
-      "durationSeconds": 0.3411,
-      "recordedAt": "2026-10-07T08:17:16Z",
+      "durationSeconds": 0.3503,
+      "recordedAt": "2026-10-07T08:37:17Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-dd8eda3bc8dc.log",
-      "logSha256": "0729105798f9e25cd823710607bfa210d4d24effb83426affe098b50d372712a",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1c23d0815518.log",
+      "logSha256": "39024e5cedc4084ac04c0ef22702198d1653c63b01f99787a1703933ca9ea737",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t30/final": {
       "checkId": "c-t30",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a694a30483b2da4a8051880032c242a108918977414ea876aec9d762f7e42a47",
-      "basisHash": "e65b9ec17bcf67dff46ce63028531a94ba7aab4f9482e171dbc9091dccdea967",
+      "basisHash": "c43fdbca4d2df481944bbe015a922d067a87d2b7dac6fc70969810d630863728",
       "status": "passed",
       "exitCode": 0,
       "testCount": 15,
-      "durationSeconds": 0.362,
-      "recordedAt": "2026-10-07T08:17:17Z",
+      "durationSeconds": 0.3415,
+      "recordedAt": "2026-10-07T08:37:17Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-3b7277ce16d6.log",
-      "logSha256": "0ec0c03cc9a2ee8803b5f5dc669c91b2efb1b7cb2af67fd17793e3cbc68094e6",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-bca02a38ef36.log",
+      "logSha256": "b19ff7ba5cbd11cb11235909103252b3f93dabbb05e021152d497f2183c4c01b",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t31/final": {
       "checkId": "c-t31",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "acdbba61a05e98a61590d29916c1a9280ad870fabb7a0770c844c68e5f834e43",
-      "basisHash": "742f6cf6d561f2db17c4de76cb36731f5124f5e9d3a9ba993219e42986d677d8",
+      "basisHash": "3ba9fe94cad2c4cbfb08a35812276f0504b2cb29b0ff10c4f8887fcebe6281a5",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.3478,
-      "recordedAt": "2026-10-07T08:17:17Z",
+      "durationSeconds": 0.3079,
+      "recordedAt": "2026-10-07T08:37:18Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-e56019beba06.log",
-      "logSha256": "3d491ee36703ccdf0103e3b4472ff38abc9e563ee9bc2c1ed2921a4ef94deb8c",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-7792e1fdd602.log",
+      "logSha256": "d7a0a79a74222b0aeb07daecd7dd52f98423aec65e4f312910d7f79fd7057a4f",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t32/final": {
       "checkId": "c-t32",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a1582e30c9241569aa45c17063644e335cc84b68ccbe7436f48d09f9bfeff6c7",
-      "basisHash": "1644f3f5ea8103ca5aaffee102ceeb6de6862a3ba225b8fdd257751b91cdae29",
+      "basisHash": "f8587315f69ab23f76ff31e1b65fe4fe6ad21d2c19b14315af2727fcad5d3712",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.1898,
-      "recordedAt": "2026-10-07T08:17:17Z",
+      "durationSeconds": 0.1831,
+      "recordedAt": "2026-10-07T08:37:18Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-703b979735fc.log",
-      "logSha256": "5d12db62e243e968455f16f040b0f158cdfef1cac113d1dae0646c556ea6cb42",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1e2e5a54e89c.log",
+      "logSha256": "f2a2ec8a73c35a33c993209bfcb607fa098191f68bfb558136a9a347d3dda785",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t33/final": {
       "checkId": "c-t33",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "0c91d89147ba5479b4a595198c737a75bd7ffb909eca166d4635972ce9e8b474",
-      "basisHash": "ff5bddbb0d9aaaf7e12deec32ab38d3cab3abde4ca624d0a87bae90fad71f6ab",
+      "basisHash": "6449daecd2368bb2e16397f0f1ceb5a530ea5cd4706b60a5f05f169796d7699e",
       "status": "passed",
       "exitCode": 0,
       "testCount": 12,
-      "durationSeconds": 1.7708,
-      "recordedAt": "2026-10-07T08:17:19Z",
+      "durationSeconds": 1.7141,
+      "recordedAt": "2026-10-07T08:37:20Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-3b5fd0270962.log",
-      "logSha256": "8db63640c98045898258314d2a7b5aa5b8c4afdf9f8ce19a17414085bc473bc4",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-35780c1fec75.log",
+      "logSha256": "6d216b8468c08f7e8d339c2dabe19fabc791cd77c389115ef15bd59cdd59060e",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t34/final": {
       "checkId": "c-t34",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "ce4c84dfc7bf95bce44470307d26115b551f4981c66108e514848ea2e8c37746",
-      "basisHash": "966922452530c8b7fd0d8370d22ffb8010318e83dc9960b8cc770ba544d7c840",
+      "basisHash": "4deb7ef55abc0c558c4cd0b50dc681175b97bc90e1ba93d3c2fdfbbcc48fc623",
       "status": "passed",
       "exitCode": 0,
       "testCount": 4,
-      "durationSeconds": 0.2676,
-      "recordedAt": "2026-10-07T08:17:19Z",
+      "durationSeconds": 0.3172,
+      "recordedAt": "2026-10-07T08:37:20Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-4fa3ea577326.log",
-      "logSha256": "f0e29db57b25c434bef847ed4f9846eb4149c0be61858e8195dc0c2b440cfe81",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-89bca9a34915.log",
+      "logSha256": "d7f4d98a2412a859c3376fb1bc5bd0901acd770686ad7df26e72489577a08ebf",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t35/final": {
       "checkId": "c-t35",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "c8696d3640f33ac407aa292c0d515a20facbd598196d5b1d8d2ce01c1fa2ee86",
-      "basisHash": "c27f8e57e1fc7e688bee3ed85e373e11e9fa47202423a96c8a31f9f0d6b8c855",
+      "basisHash": "3d6a831af5596597ec0fac1e70424a56b684f3e54ca9bc56a52152f7a8fb6f05",
       "status": "passed",
       "exitCode": 0,
       "testCount": 1,
-      "durationSeconds": 0.1848,
-      "recordedAt": "2026-10-07T08:17:19Z",
+      "durationSeconds": 0.188,
+      "recordedAt": "2026-10-07T08:37:20Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-a75d8fed8613.log",
-      "logSha256": "90468ba04c3361644d8a5178bc2e1633341acb6fd8baba5202f619ad926b3a26",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-df5b39cbde49.log",
+      "logSha256": "d9cd20f5152e55becc797852d78fa43b95966fc0e5a5919dd9d4d84d4a4b29ed",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t36/final": {
       "checkId": "c-t36",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "f978b674ababffe02b4a46f6e7b07c4c93aed5a907363cd1edc12bdf8641f75f",
-      "basisHash": "37eba3bf349ab7f8104f3a4c99d9188c4774d248cd872334410078729814893e",
+      "basisHash": "256ba2deda8f763f908483b24af88bde3757061662f869db87036d32cd6676e1",
       "status": "passed",
       "exitCode": 0,
       "testCount": 5,
-      "durationSeconds": 0.1768,
-      "recordedAt": "2026-10-07T08:17:20Z",
+      "durationSeconds": 0.1838,
+      "recordedAt": "2026-10-07T08:37:20Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-a0165765ae6d.log",
-      "logSha256": "a9ca54d723411160ab26dec4ebaf65268304c174bf09bba148d7954a7257729f",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-37896f339428.log",
+      "logSha256": "8a15ccd02b54072d73eb4271deca332d81220a9aba05469ce7dd043e16b4c431",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t37/final": {
       "checkId": "c-t37",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "0b4d86f8f977ad82f9eabe147c58114025636523ce2602a6d079c97ad4606f04",
-      "basisHash": "133510fac1272d2d84d7164b43fd177f65e1b76844983c75ffedd118787a43dc",
+      "basisHash": "920af6a8e55135b5c881a990e5b90b513e95d2e8f475a996c442d93d8fcd6ea5",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.1876,
-      "recordedAt": "2026-10-07T08:17:20Z",
+      "durationSeconds": 0.1898,
+      "recordedAt": "2026-10-07T08:37:21Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-9315ff190324.log",
-      "logSha256": "c7d003c82f69b70807004b092bc3f24e2e9c00355beab767aacec326c55a3a6d",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-40ae49bcc96c.log",
+      "logSha256": "df1dbd4c464bacce27de4ae34f4cab6a270d28515384561e27c7fd036425e6e9",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t38/final": {
       "checkId": "c-t38",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "9381a4057b43a0f61fbefb9d85b6ab7f544f35b8e3c66cf8c8847601fee64d0f",
-      "basisHash": "2ff1379dfa3ce6c0e27efd8bb9974b9f6486cf12ccb0cf31c277f66bc60b8fdc",
+      "basisHash": "2ca4abdd7ff1d24be78433beca8b66c0062f3ab3f6d834605c4c881dfe9f0fc1",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 0.3654,
-      "recordedAt": "2026-10-07T08:17:20Z",
+      "durationSeconds": 0.3385,
+      "recordedAt": "2026-10-07T08:37:21Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-aed4f669cd3d.log",
-      "logSha256": "1f9cb9a615a40d057d8fe5944b403073ffd4b8b7226f9a4ef772ab378163e76c",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1be12df168ce.log",
+      "logSha256": "bbbbd03af48a350179b9e4db482380ec22c47b9241f87e33fc8951f8c2415e4b",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t39/final": {
       "checkId": "c-t39",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "b729a4fae7f95ac08e4c225d58606d9496f1a91eb29f24f44c4577e4ce9a845b",
-      "basisHash": "7f2228a3d91e302b4dfd0048af9e4dd9705cc81bd6fe6fa4f01c53445f64b623",
+      "basisHash": "e5a3b028d6dc6d38a0cbd53182b9582d21c63b8241cb280cb9cd255c0084575e",
       "status": "passed",
       "exitCode": 0,
       "testCount": 9,
-      "durationSeconds": 0.248,
-      "recordedAt": "2026-10-07T08:17:20Z",
+      "durationSeconds": 0.2289,
+      "recordedAt": "2026-10-07T08:37:21Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-3e5bd79014f8.log",
-      "logSha256": "fa9b1ce4a907485e1605478dcee7ec5b94a8c7c906e2f3aa97be85da64f4ac90",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-afb7d8cba747.log",
+      "logSha256": "dabfa92bc21bf4be0f9f70c3ecf407746e1fc6b0de7f3c81a4679bc7b4438a71",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t40/final": {
       "checkId": "c-t40",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "9b70d3c288a2bcefa48fbaa541ab63a14243e8c571a7c4a771bcb1656892e871",
-      "basisHash": "7ffe31a0876d2427673bd33aa944f05f477629db388203eee3df18ef2da5cb3d",
+      "basisHash": "95393eb97408cd82c25993aa696d28283a7a8a7bc7a62db9760a4fbd3385d917",
       "status": "passed",
       "exitCode": 0,
       "testCount": 9,
-      "durationSeconds": 0.3312,
-      "recordedAt": "2026-10-07T08:17:21Z",
+      "durationSeconds": 0.3277,
+      "recordedAt": "2026-10-07T08:37:21Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-7d70cab1bf0a.log",
-      "logSha256": "77c9ea9e551279580244a9e068364f6299926f3ccfc7f938c32bdb737db8e813",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-958677a30469.log",
+      "logSha256": "179ce67b1e682f28798b6ebfb0351052b8809d6e205c432b0ac0ee672ce68981",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t40-benches/final": {
       "checkId": "c-t40-benches",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "fccb395b48e7aaeeef6d8ef6e2a0ef0df1e0ec11c7b0a657e2f8e1972ad19db5",
-      "basisHash": "ea59f1772c8a0d679fe0b1d84e6cf1f6bf543caad42ed4ea1ec565f02f754a0f",
+      "basisHash": "71c8d02f6ac4b6d9f2cd98185146cad4e922f2458f26a12d63439696955a4110",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 152.3272,
-      "recordedAt": "2026-10-07T08:19:53Z",
+      "durationSeconds": 187.8208,
+      "recordedAt": "2026-10-07T08:40:29Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-669993ec3a20.log",
-      "logSha256": "efeb95f9110929b35c172b5692f354a0380de7b4379226d602bdbb286a74a607",
-      "inputsHash": "e9e3d8110fdfcfbfd02ebb8d825fa0adf84598782c6e3102a00e230a694f7676"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-ca05829f2e21.log",
+      "logSha256": "aca690e20b7fb395e99830fe586c2e9c7112e1dd85720c941d57e4b112db98c2",
+      "inputsHash": "bc32875bd9ed0365fb759c8e46da35031a7e20df0c6caf0a898afb06cadac3c1"
     },
     "final/c-t41/final": {
       "checkId": "c-t41",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "0fcdfe8dc5f1c51850994ba590457b5b1bafa0affcd18cec42036ed61ebdc905",
-      "basisHash": "582f67a18b693ebe5fabe9fa414195d82abc31c06498698d9409e7204143b4c0",
+      "basisHash": "457290a17730f00c5c7969d4f1fe17f4243d3f938aad4e313966bde0194921f7",
       "status": "passed",
       "exitCode": 0,
       "testCount": 7,
-      "durationSeconds": 0.1915,
-      "recordedAt": "2026-10-07T08:19:53Z",
+      "durationSeconds": 0.3058,
+      "recordedAt": "2026-10-07T08:40:30Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-da66a3279dac.log",
-      "logSha256": "799542daf4eb162ffae567dc6e17d02d688951c29868f59111b93b99244e15b1",
-      "inputsHash": "289133be1ef70ddc3e2b11ce82fb492364b0c6e9ea133f4e51284533635b5a6e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1f08cec85df6.log",
+      "logSha256": "7d45cc838872d04872e4267fd2f0af3b64edd74d5cbacbfe78c3790c22342e0a",
+      "inputsHash": "711a06e524b393b2ef1fef29db7a9debd30d56a768b35719141e7239cb749d70"
     },
     "final/c-t41-clippy/final": {
       "checkId": "c-t41-clippy",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "91bcb70b24125551386e7fa2f70322e210cdebef478ecbf88a0193a89ee1f182",
-      "basisHash": "cf13760168327e006c64b105745c7377b7d2fea2d1c7af3f6deca1cbe7128deb",
+      "basisHash": "b51099b6aac4533da33ff4bdeb6de102214e17da1f7cf79408938824bfb7892c",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 2.9347,
-      "recordedAt": "2026-10-07T08:19:56Z",
+      "durationSeconds": 0.3247,
+      "recordedAt": "2026-10-07T08:40:30Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-60f9f038fe87.log",
-      "logSha256": "92f313ad163117bbc0a82ebdbf5590c0ecd28c38ed8cc389b37bc7d3bb10ed2b",
-      "inputsHash": "a80f329bbee23c0f99fa10a0622bcb211df577479f1f9bd28c3ddecabba2ab00"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-8c2b7af0717f.log",
+      "logSha256": "299f16a2c523be18fef769975d2df00e0505521db047540feea3a74b94666887",
+      "inputsHash": "bd253d14fc2c13f2c3b21500b6c9d4f894fdaaef7a6f1c095f47f631f740c350"
     },
     "final/c-t42/final": {
       "checkId": "c-t42",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "3e12ce35b53d3cb1b1c5d9fb9d4038b22133ea51160472c44ad29666b3aa9b21",
-      "basisHash": "9f8aa015a243b1669ccd9a69f4a4f68b49f43774f4b46e74d7b0f1031f871ece",
+      "basisHash": "0f2dcfef90175ad4faac4d98d140e28728988fb45afab4c62e7b4b7b4cf7e89f",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 0.2297,
-      "recordedAt": "2026-10-07T08:19:57Z",
+      "durationSeconds": 3.0993,
+      "recordedAt": "2026-10-07T08:40:33Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-d04a369ee851.log",
-      "logSha256": "1362168cda40bd50133886fe7e612f8fc67f9eaaeae73a629d63f2e50b211f11",
-      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-741e718c312f.log",
+      "logSha256": "90144d864316db4a076db6f47d70a825a329c204faf1d883b33542c38852639a",
+      "inputsHash": "bd3a2e952cc6d857ae555e4ad7de0a61c8f7b5f91b892230c0e8d9087858e751"
     },
     "final/c-t43-msrv/final": {
       "checkId": "c-t43-msrv",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "9a6598c4fe020a575c70de46785e1f36ea448d3d2ca08a9ac3ad6e2430879f10",
-      "basisHash": "36a460af2dff9bc1288b2a22b6d1cb4e3e79179f5a4cc7451f5b53c14a427df1",
+      "basisHash": "d4abad81fb181f81f797ed34dad55a9461232f961304bfac6367fdfad260af3a",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 0.1938,
-      "recordedAt": "2026-10-07T08:19:57Z",
+      "durationSeconds": 2.2252,
+      "recordedAt": "2026-10-07T08:40:35Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-e2d2f0dfdb19.log",
-      "logSha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9",
-      "inputsHash": "3e6c4b5e6e703276210789b77d4ef0c0f85047b4ec0e65fc1044df4fbe08fe0a"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-2cbe051406cc.log",
+      "logSha256": "d06bc9410617743654d3df55bc7997d38024687c9892e94bee3b750f09b060e6",
+      "inputsHash": "95c5a085108cbfafc973590578e1d34abb2dd166120769eece0883c6e8cfee5e"
     },
     "final/c-t44/final": {
       "checkId": "c-t44",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "d15dd8976ef5e135100efe85933a5319fade666214e7bd2376ff72b6ef5de010",
-      "basisHash": "58529f75e1921678e074cbc9b6034ebb1fa58c262963526414ec23b9a0053c15",
+      "basisHash": "08e5afe98583b872b5927142fb2ba7903ab54b425ad1312354234db4ecb3ae26",
       "status": "passed",
       "exitCode": 0,
       "testCount": 6,
-      "durationSeconds": 0.3405,
-      "recordedAt": "2026-10-07T08:19:57Z",
+      "durationSeconds": 1.5522,
+      "recordedAt": "2026-10-07T08:40:37Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-35a46a6e73d5.log",
-      "logSha256": "991b747029449c43450152d3b35e432cf247cefab59ce0cf66bd18ac518433a1",
-      "inputsHash": "289133be1ef70ddc3e2b11ce82fb492364b0c6e9ea133f4e51284533635b5a6e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-4581c8e555fa.log",
+      "logSha256": "38a2850e269c253f0d96d0a1cf0ec1144c4537a8e4a671e02a767f6288535ba8",
+      "inputsHash": "711a06e524b393b2ef1fef29db7a9debd30d56a768b35719141e7239cb749d70"
     },
     "final/c-t44-api/final": {
       "checkId": "c-t44-api",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a3a27156acdefcea77f298ccdbb593630b21908e186d43c1ff16d9096da418d7",
-      "basisHash": "054219447b099de45e3d199a65fbab2120be5af954e2f5ebafdd5de1d16f6052",
+      "basisHash": "b3bfd77774ca1e2a846d730549067ae561fad244d963a01623a9bf1d8464849f",
       "status": "passed",
       "exitCode": 0,
       "testCount": 18,
-      "durationSeconds": 0.1923,
-      "recordedAt": "2026-10-07T08:19:57Z",
+      "durationSeconds": 3.1745,
+      "recordedAt": "2026-10-07T08:40:40Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-f0ede2e58618.log",
-      "logSha256": "8603ae0e1ade06990266c8d7eacf7122398b1f910f10889fa031e55a0e06f569",
-      "inputsHash": "289133be1ef70ddc3e2b11ce82fb492364b0c6e9ea133f4e51284533635b5a6e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-e2ca9ea592f1.log",
+      "logSha256": "551b6b91b50788e9c0fe361279d982853fa306ec388d21ffa52a7485774b4a53",
+      "inputsHash": "711a06e524b393b2ef1fef29db7a9debd30d56a768b35719141e7239cb749d70"
     },
     "final/c-t45/final": {
       "checkId": "c-t45",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "e96caec773ece113ea3f963f9ec80715c808aa9fd6ef8cc6c9561f864beb6d76",
-      "basisHash": "bfb7e00a14ac0fd4c115b587bc6c63ee9dc89f9c76af61aadec8d909c54045c1",
+      "basisHash": "499ea8c4794513e848a2d8c56538faeb16fd5d22e63d313a6bbfd5956528e8dc",
       "status": "passed",
       "exitCode": 0,
       "testCount": 135,
-      "durationSeconds": 0.2307,
-      "recordedAt": "2026-10-07T08:19:57Z",
+      "durationSeconds": 17.9483,
+      "recordedAt": "2026-10-07T08:40:40Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-9e37e9138f2f.log",
-      "logSha256": "a8a35d9a6ee62e85422914e42b0af1390b3ac9d0cf53acaeb5ccc871e5cf75f4",
-      "inputsHash": "d7a34e4ae4399c315ee47f5428b11c0f42df6f77fb929ec8aca43800cc3a1b9d"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-eca570ff89d4.log",
+      "logSha256": "ab255e5d959b1545a7f10bf0fd36b0bf78f2e1c99b14f933f70dffafcab01390",
+      "inputsHash": "154a3cbc772494285982d7b3b8c4e77933d3d62ff9318f4757b6455fb1643d15"
     },
     "final/f-fmt/final": {
       "checkId": "f-fmt",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "a90e5d981bce119b86b97b3b684ae41d0e6b8ff69aafa62ce3acbbe508f9e82f",
-      "basisHash": "70db64f9f706597d93f74d4ca851eace778e32dffb3d5cbef406f20a72a53cad",
+      "basisHash": "ee039a61e4fec0ac35c4a650362e5eaf81c08c2e71cbc95bbe06ac009376fd37",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 0.8237,
-      "recordedAt": "2026-10-07T08:19:58Z",
+      "durationSeconds": 0.8836,
+      "recordedAt": "2026-10-07T08:40:41Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-7de9a1f42a5c.log",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-cc6fe1362869.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "final/f-clippy/final": {
       "checkId": "f-clippy",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "63faa2d2a96ad9b7f46731b31dc6ec7a662478df864413d08e4662420df7c05a",
-      "basisHash": "dffa89f715e1fb9fac13012419588576d4aad34b570b185725c881861d6f2946",
+      "basisHash": "dd496293fcd308a72f9fbc8f1a5fd38810887dd6231a2d243f737fdde7c3c22e",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 0.8902,
-      "recordedAt": "2026-10-07T08:19:59Z",
+      "durationSeconds": 0.3584,
+      "recordedAt": "2026-10-07T08:40:41Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-50fb708b90be.log",
-      "logSha256": "6fac2b3aa81f40a64c8aa0996d2e83656652d8ad03496f358c7d417a216f9305"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-1c869ccc7c7a.log",
+      "logSha256": "2bc683fb4e4f4f21ee9ee39e2b8ecce2efe20d3b1be57bda5316aa519ab3d30a"
     },
     "final/f-wasm/final": {
       "checkId": "f-wasm",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "9d9d15a9390f0bde5642ca0eb2f8d97bd2922f765186f33aeec04cb11892db95",
-      "basisHash": "d128f25b668b8cbcb0c2c93a6b6e3a950c88c031465f4d521b409d30343c270a",
+      "basisHash": "6a49bb52e434dad515103ceebd63986d14393ba4ebce1bf1f6b0982fdaa1617f",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 0.2422,
-      "recordedAt": "2026-10-07T08:19:59Z",
+      "durationSeconds": 2.2062,
+      "recordedAt": "2026-10-07T08:40:44Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-84c9640928c8.log",
-      "logSha256": "4f27ac380b22e1d975eee20ce727fa8cbc09061177f6253af0777fd4de7b7506"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-9b9c2e336e69.log",
+      "logSha256": "72e579f842fb43e7dc40910570d26ddebea53c0000e9b5f2454fb3271b4836af"
     },
     "final/f-package/final": {
       "checkId": "f-package",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "4622ce73d4e91051f4a83be10e25b50d14d7de15cac2058a712ffd53adde368c",
-      "basisHash": "f1cff09db54d4fddc8920ceca6e7f44992088bfd36a72078ab16061dd727b2cf",
+      "basisHash": "5f9bb1d85e3ee23abb9a92a4f46198d4ac5c729489a6d11f21e3906a44beb769",
       "status": "passed",
       "exitCode": 0,
       "testCount": 0,
-      "durationSeconds": 8.7154,
-      "recordedAt": "2026-10-07T08:20:08Z",
+      "durationSeconds": 4.3573,
+      "recordedAt": "2026-10-07T08:40:48Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-eac8cb3326f1.log",
-      "logSha256": "a04618843caf82426cb96761d77010d893de9dac61e12331c426ae8625a9a9fe"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-ee8f006f7153.log",
+      "logSha256": "920ed22589f6b370bf5107891e9b0fb36fdd6f51b1b09dca029151c7964289e0"
     },
     "final/f-test/final": {
       "checkId": "f-test",
       "boundaryId": "final",
       "phase": "final",
-      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "batchId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
       "definitionHash": "d6e307631ecb2068e62addc8360e5c4c10b98a6ec4da9197ca61c22441f9e678",
-      "basisHash": "3240e277b3909f89ee8e13153d97c298c0dd860dccc1022a49b6f084092c04e8",
+      "basisHash": "b1c98daf2da8a2a7c3022cb08debe671d46090c48727a9c19b01f99f7b15f307",
       "status": "passed",
       "exitCode": 0,
-      "testCount": 824,
-      "durationSeconds": 41.9765,
-      "recordedAt": "2026-10-07T08:20:50Z",
+      "testCount": 825,
+      "durationSeconds": 30.6217,
+      "recordedAt": "2026-10-07T08:41:19Z",
       "messageMarkdown": "Expectation matched",
-      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-deef5c32b4b5.log",
-      "logSha256": "868946d6b228f3734f1161ed61a1daa9652f53a325af9cb7c22fd9ed7a88018e"
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/final-final-f2614c65154d.log",
+      "logSha256": "1a10471611b577a48f168e873f002318005c85d5b2db1a8aa5ec9f3ca2db6516"
     }
   },
   "reviews": {
@@ -5525,6 +5534,2722 @@
       "summaryMarkdown": "Delta re-review at snapshot `f4e338fe…`. **S13-F4 is repaired.** `.claude/skills/rayx-reactive/references/reactive-state-commands-events.md:39` now says:\n- only an execution that starts while none is running publishes `Running`;\n- the most recently started execution publishes its terminal state;\n- sequential runs show `Running` then their outcome, while overlapping `Concurrent` runs show one `Running` and the latest outcome.\n\nThis matches `Execution::begin`/`end`, the `CommandState` rustdoc and `docs/06-commands-and-events.md`. A grep over `docs/`, `README.md`, `.claude/skills/`, `crates/src/` and `CHANGELOG.md` finds no other copy of the old \"each execution publishes `Running`\" or \"sees every run\" wording. The skill files' diff stat is unchanged in size (one line replaced), and the code/docs diff stat is unchanged, so no source or test changed. The unchanged checks were not rerun, as requested. The anchors' `s13-rr2-*` logs from snapshot `bacbe900…` still apply, because the only change since then is a skill reference line: fmt/clippy/rustdoc/MSRV/wasm pass, doctests 24, doc examples 135, `api_hygiene` 7, `consumer_scenarios` 6, `collections_public_api` 18, `disposal_reentry` 3, scalar 120, `sources` 58, `source_lock_policy` 16, `join_many_right_moves` 2.\n\nS13-F1 to S13-F4 are all repaired, and all criteria (HYG-1.1 to 1.3, DOC-1.1, CI-1.1, SCN-1.1 to 1.5, REL-1.1, REL-1.2) are met. **CI-1.2** (a green CI run) is manual and still pending a push; it is not held against the sprint. No findings are open. The working tree was left unchanged (110 status entries); this delta review made no edits outside `artifacts-temp/`.",
       "findingIds": [],
       "recordedAt": "2026-10-07T08:16:27Z"
+    },
+    "final": {
+      "reviewerId": "reviewer-final-cdf8dd",
+      "snapshotId": "7a0aa149536d766aaf1b337aed70ba60476f2b83dd64f9f8659cb9c6351becee",
+      "criterionIds": [
+        "DLV-1.1",
+        "DLV-2.1",
+        "DLV-2.2",
+        "DLV-2.3",
+        "DLV-2.4",
+        "DLV-2.5",
+        "CMD-1.1",
+        "CMD-1.2",
+        "CMD-1.3",
+        "CMD-1.4",
+        "CMP-1.1",
+        "CMP-1.2",
+        "CMP-1.3",
+        "CMP-1.4",
+        "CMP-1.5",
+        "SIG-1.1",
+        "SIG-1.2",
+        "SIG-1.3",
+        "SIG-1.4",
+        "SIG-1.5",
+        "ACT-1.1",
+        "ACT-1.2",
+        "ACT-1.3",
+        "INT-1.1",
+        "INT-1.2",
+        "INT-1.3",
+        "INT-2.1",
+        "INT-2.2",
+        "INT-3.1",
+        "SRC-1.1",
+        "SRC-1.2",
+        "SRC-1.3",
+        "SRC-2.1",
+        "SRC-2.2",
+        "SRC-2.3",
+        "SRC-3.1",
+        "SRC-4.1",
+        "SRC-4.2",
+        "SRC-5.1",
+        "MAT-1.1",
+        "MAT-2.1",
+        "MAT-2.2",
+        "MAT-3.1",
+        "EMT-1.1",
+        "EMT-1.2",
+        "IDX-1.1",
+        "IDX-2.1",
+        "IDX-2.2",
+        "IDX-3.1",
+        "IDX-3.2",
+        "IDX-3.3",
+        "IDX-3.4",
+        "IDX-4.1",
+        "IDX-4.2",
+        "IDX-4.3",
+        "IDX-5.1",
+        "IDX-5.2",
+        "IDX-5.3",
+        "IDX-6.1",
+        "IDX-6.2",
+        "IDX-6.3",
+        "KEY-1.1",
+        "KEY-1.2",
+        "KEY-1.3",
+        "WIN-1.1",
+        "WIN-1.2",
+        "WIN-1.3",
+        "TIM-1.1",
+        "TIM-1.2",
+        "TIM-1.3",
+        "TIM-1.4",
+        "TIM-1.5",
+        "TIM-2.1",
+        "TIM-2.2",
+        "TIM-2.3",
+        "TIM-2.4",
+        "TIM-3.1",
+        "TIM-4.1",
+        "ASY-1.1",
+        "ASY-1.2",
+        "ASY-1.3",
+        "ASY-1.4",
+        "ASY-2.1",
+        "ASY-3.1",
+        "AGG-1.1",
+        "AGG-1.2",
+        "LIF-1.1",
+        "LIF-1.2",
+        "LIF-1.3",
+        "LIF-1.4",
+        "PRF-1.1",
+        "PRF-1.2",
+        "PRF-2.1",
+        "PRF-2.2",
+        "PRF-2.3",
+        "PRF-3.1",
+        "PRF-3.2",
+        "PRF-3.3",
+        "HYG-1.1",
+        "HYG-1.2",
+        "HYG-1.3",
+        "DOC-1.1",
+        "CI-1.1",
+        "CI-1.2",
+        "SCN-1.1",
+        "SCN-1.2",
+        "SCN-1.3",
+        "SCN-1.4",
+        "SCN-1.5",
+        "REL-1.1",
+        "REL-1.2"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/delivery.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.5",
+            "SIG-1.3"
+          ],
+          "sha256": "693677ecba287c254d29d2d61415965b9d12c4987fe7546f1e289600767a1a00"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/signal.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.4",
+            "CMP-1.2",
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4"
+          ],
+          "sha256": "7608c5cb0bb7582a980d675c3577c8629163d0a5e66a76e4af52abfa7d2efa74"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/event.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.4"
+          ],
+          "sha256": "4bc350c609fe453002b97f26f0d8ea0ff3077ba81f3bb8c29a07ed082c4815b2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-2.3",
+            "DLV-2.5",
+            "SIG-1.5",
+            "INT-2.2",
+            "INT-3.1",
+            "TIM-4.1"
+          ],
+          "sha256": "095079664d9b37fdbe16a974223dfb7f28bc720393cf6efa235206a5e0da52bb"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "kind": "source",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.5",
+            "CMP-1.2",
+            "SIG-1.1",
+            "SIG-1.4",
+            "EMT-1.1",
+            "EMT-1.2",
+            "TIM-1.1",
+            "TIM-1.5",
+            "ASY-1.1"
+          ],
+          "sha256": "350e9e541f5ae2564eb3bcae355aaaf3e3b30b3ffebfb23e6d07b2f30b5f76c2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/panic_safe_delivery.rs",
+          "kind": "test",
+          "criterionIds": [
+            "DLV-1.1"
+          ],
+          "sha256": "ec9ef5cb8a109173d5b89ed6c0b67c7fe3f137be0dabe358321e56ebbc750c80"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/ordered_delivery.rs",
+          "kind": "test",
+          "criterionIds": [
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.4",
+            "DLV-2.5"
+          ],
+          "sha256": "3f87f037cfd70a42ff6cf7ddeba268d2f5ddad3c0d6f5aacb5d0c244f03efa8c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/command.rs",
+          "kind": "source",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4",
+            "DOC-1.1"
+          ],
+          "sha256": "25cfeb06ab14b3c503077a56848b1b04ca292c839235f2152ba64ea75118eedd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/command_lifecycle.rs",
+          "kind": "test",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4"
+          ],
+          "sha256": "e1bdbe6f8ee958b472514e5c22e9bc60f56d0517f01355e2ccf3e7b1d3fb76fd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/06-commands-and-events.md",
+          "kind": "source",
+          "criterionIds": [
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4",
+            "REL-1.1"
+          ],
+          "sha256": "dd20876149181e39338978034540c5835fafab70c35720046530e588588dead0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/computed.rs",
+          "kind": "source",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5",
+            "INT-1.3"
+          ],
+          "sha256": "52584be890c8bd4aba575216e59a909f9c3bd0e20fe2989470ec3f1293eafc2e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/computed_consistency.rs",
+          "kind": "test",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5"
+          ],
+          "sha256": "d082294e6b2f98fc6c69b1b88f22298c3521896e0f7a4516901d1d4d5b80a28d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SIG-1.5",
+            "INT-1.1"
+          ],
+          "sha256": "4563d739a667b1db75d1c71a0e9ad23f3d9f172a3031f1f51fb50317261e84f9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/signal_robustness.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4",
+            "SIG-1.5"
+          ],
+          "sha256": "6e5da49881eefa81bfe1162e58c3c77d6dc83fb7fef5c0bf94ae8ad636f5c891"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/03-signals-and-computed.md",
+          "kind": "source",
+          "criterionIds": [
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4"
+          ],
+          "sha256": "0b77a4ad2bd6a684ba45e3f0af2897478a3ebf2f67355e10e184b143f648dc82"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/activation.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "sha256": "49f547b1a5fd47ed02a19462f39bd2f8f0ab25069107cec4cbc4240e6248fdaf"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/activation_lifecycle.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "sha256": "36f527efb4df170ae1337e76d741dcebf1409a339635a2c3470da5170ed86512"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/05-lifetimes-effects-activation.md",
+          "kind": "source",
+          "criterionIds": [
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3"
+          ],
+          "sha256": "7f869864036b11b19977f3023923ca3760288242ee5748f945fab1199b731c44"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1",
+            "INT-3.1",
+            "TIM-1.3",
+            "TIM-4.1"
+          ],
+          "sha256": "7a61ea8a5a64bcc9425fbbd67be1fbd785b9e447162a1351c8fe81c4ae060699"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/effect.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1",
+            "HYG-1.1"
+          ],
+          "sha256": "d4bae955d4b3bc847de43dae1d05537126cfaa90ad659c7fe408346534d216b5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/option/option_value_stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.1"
+          ],
+          "sha256": "0f447ce42a70d11246ab151a6784f4420afe7bc35a5ea49d936e031291dcc97c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.2"
+          ],
+          "sha256": "8cdb574952596d9b24c50b62b1b03b1ec61e0a66e1c2c9471cdf3c79d869ad86"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "313bd625704e884c9a9e5599bbdeb15867204b133771f403e99527da51fea462"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-1.2",
+            "EMT-1.1",
+            "EMT-1.2",
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-2.2",
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3",
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3",
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3",
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3",
+            "TIM-1.2",
+            "TIM-2.2",
+            "TIM-3.1",
+            "TIM-4.1",
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1",
+            "ASY-3.1",
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4",
+            "PRF-2.2",
+            "PRF-2.3",
+            "PRF-3.2",
+            "REL-1.2"
+          ],
+          "sha256": "8c583ba631902e12267cb3b73bfc42cc9001bc7358c7fabf8121db2b9fb0c2e2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/stream_error_interop.rs",
+          "kind": "test",
+          "criterionIds": [
+            "INT-1.1",
+            "INT-1.2",
+            "INT-1.3"
+          ],
+          "sha256": "4aa51d473bfd0415fe5db8c62716994b7b602260e4780c417a8ae17581da4798"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "ASY-1.1",
+            "ASY-1.4"
+          ],
+          "sha256": "f4263f15d8a4ecb7c5e008dd98d9548fdfe22eb22766fe6f18dd54f96e265a29"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/predicate.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "ASY-1.4",
+            "ASY-2.1"
+          ],
+          "sha256": "829aeb2885c76be32ce8da42bf9e15804335f32799bc49bdef103d8ac9b5d332"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "EMT-1.2",
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "LIF-1.1",
+            "LIF-1.4"
+          ],
+          "sha256": "4c9748ae4967306266bfcc57051a7fcfc208f25309c01ec0699588e2b953906e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "EMT-1.2",
+            "IDX-5.1",
+            "KEY-1.3",
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "ASY-3.1",
+            "LIF-1.4"
+          ],
+          "sha256": "17992faeb688452ba88e84f0102c380d24997c900f11d12c1ccc552101bca1cc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/true_for/cache_true_for_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "LIF-1.3"
+          ],
+          "sha256": "9af648342d40a9746ebed9336dd22996d0af84d4cf2a63d55c9ab228ea70de9c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/cache_aggregation_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "sha256": "4f00e56722aaf479db0505b2964e88c071a33cef400be547152d36a23efb6cf5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/stream/batch_count_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "7ca35787915c51475692e9db2c741f279109f74173cfebe1d3e796ed80b1530a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tree/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "EMT-1.2",
+            "IDX-4.2",
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "61f2ba49cc6c04d302fd9fedbfc5f1add11e610e5fe1a9a59b4169ba6df17f5a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/switch.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "MAT-3.1"
+          ],
+          "sha256": "27134f171c11b95a5e9061275df4d439a7ee7eaa9019f26e7885913de5cdc31b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/expiration_selector.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "MAT-1.1",
+            "TIM-1.2",
+            "TIM-2.1"
+          ],
+          "sha256": "fc26563242ae1c7ade26e3076169ad1b997274fd82c2c5374e0a88d8560fbf08"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/diff.rs",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.1",
+            "IDX-6.3"
+          ],
+          "sha256": "ff7d1e472df7d67f13c33ef5e657bc22b694520c55c0816aee4eaa675db9213d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/operator_input_interop/signal_streams_feed_every_operator.rs",
+          "kind": "test",
+          "criterionIds": [
+            "INT-2.1"
+          ],
+          "sha256": "b87d21133ff9f1940a68f99445652c69a6aeb7a1f521219f9e49884432baaaa4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/15-application-patterns.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "a501de327410e562d6cdf9aca552e0446f30ec8783bc92f8c25ff60c59d20da8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/01-introduction.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "62a665030b5969418a9a2b3b1156a3dcb954f973368c6ba496eccbdad33a0446"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "README.md",
+          "kind": "source",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "e01e6a35e15e74ab21abb6dfd0cab20c9a2c19cbac3228997e5d6a57b322ac4e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "doc-examples/Cargo.toml",
+          "kind": "runtime",
+          "criterionIds": [
+            "INT-2.2"
+          ],
+          "sha256": "40395d6479bf794dff8ee315a0775f6e9ce79c5a3c2a0302e5256762cc020e67"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/value_stream_combinators.rs",
+          "kind": "test",
+          "criterionIds": [
+            "INT-3.1"
+          ],
+          "sha256": "d28cf854dfe4013ce81e6d8d16357c51c7c4da2e1da5b8780e4be93af97b940e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/source_lock.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "ef7234d2d6f1da53f2b34baa1645c9373dd9c1308adc84318eb27cc203e5f579"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3",
+            "SRC-3.1",
+            "SRC-4.1",
+            "SRC-4.2",
+            "TIM-2.3",
+            "PRF-1.2",
+            "HYG-1.2"
+          ],
+          "sha256": "929e776b5adf2c7555a7c7d40e7309792006e0280de7d34ac95df4f5c638873e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3",
+            "SRC-3.1",
+            "SRC-4.2",
+            "SRC-5.1",
+            "TIM-2.3",
+            "PRF-1.1",
+            "PRF-1.2",
+            "HYG-1.2"
+          ],
+          "sha256": "22ccc36eee4cc434ea33abe2e2fed497209b6773aff0d63ddab753dea9fb4dcd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/cache_notification_suspension.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-3.1",
+            "SRC-4.1",
+            "SRC-4.2",
+            "SRC-5.1",
+            "PRF-1.1"
+          ],
+          "sha256": "17325c817b3654219da41727197e7283b6a1c29b93e172dce092eb20c3e4ffbe"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "EMT-1.1",
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "e6de1e406a56e7a8910548bf9ff2ae14d30a621b9bc6f36c991dfc8555127a48"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list_group.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "EMT-1.1"
+          ],
+          "sha256": "0f1e5646afce057435210e0806d374e13bc01df80539dddf3dbb8ee2a9e516e2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/keyed_delivery.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-3.1",
+            "PRF-1.2"
+          ],
+          "sha256": "ecbde07f3171753aaedf25cae30f3d00e57cfe6b5bfa35d6a4f7a2436ab9552e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/connection.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-2.1",
+            "SRC-2.3",
+            "SRC-3.1",
+            "PRF-1.2"
+          ],
+          "sha256": "95cb960d15ac037001f51a5e6f413824a5b04249bed0aad6f2bdd3d03eb1ed89"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-4.2",
+            "MAT-1.1"
+          ],
+          "sha256": "670ff0c3cb957a81b1273e246ce67f1df422db39c63d0bcea628e3fc8254900a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-4.2",
+            "MAT-1.1"
+          ],
+          "sha256": "45ece25e4de87f967b35143dff6cf05f139df54afda24d0529005ddf90fea471"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-5.1",
+            "EMT-1.1",
+            "IDX-3.1",
+            "IDX-5.2",
+            "KEY-1.1",
+            "KEY-1.2",
+            "WIN-1.1",
+            "WIN-1.3"
+          ],
+          "sha256": "2f3c7934b64022ce909c0413d92df31bd06701550796bf99b366419f08720a66"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/push_child_adds.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SRC-5.1",
+            "IDX-6.2"
+          ],
+          "sha256": "6f3cd6a2cc83383c4cea4cc4938a8a4f082ea4542f6aa240887b58a3209082be"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3"
+          ],
+          "sha256": "e60c2d1467f33d99a69ac6b07cf7cbc4ace0e206f786fe458f3842568a01774c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_commit_order/ordered_publication.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3"
+          ],
+          "sha256": "beb53b1f275ffcb04b34cb68dfb075a69027acd926c0b8bc0b34f7bc42ee1fa4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/suspension_versions/subscribe_during_suspension.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-3.1"
+          ],
+          "sha256": "cc26bdfc78d4e30f8eabd373c3a804ea01cc082181c9348a46aca0b5ebc75f16"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_read_api/updater_reads_and_point_queries.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-4.1",
+            "SRC-4.2"
+          ],
+          "sha256": "91297ad9b8c6703dabd3fa1c87fe64690dff242301b6e560f7545d9ff76ee153"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/watch_batch_coalescing/one_value_per_batch.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SRC-5.1"
+          ],
+          "sha256": "487a87864d4f0feca030a8f645052323e99203c333f4c3574760209b564ee0d9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/materialize.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "e37efd27d8056d88e30abe7a6f1a2fb2156c8246cad0f79dedf63390fd5c9252"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/activate_list_adapter_options.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1",
+            "TIM-1.2",
+            "TIM-2.1"
+          ],
+          "sha256": "d9bd82eac739916d0a22f4079fa07e027eccd02513ff2b4c2400760ab19ddb35"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/limit/cache_limit_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1",
+            "IDX-4.1",
+            "TIM-2.3",
+            "TIM-3.1"
+          ],
+          "sha256": "bc2797230912365a708d5f023d224810b77b978ab63557e641222916d964d126"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/ref_count.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-2.1",
+            "MAT-2.2"
+          ],
+          "sha256": "09cf60aa508cec6ac89a0152e314fbf029f09ff434ca3f3e8086856f48fe5301"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/14-materialization-population-sharing.md",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1",
+            "MAT-2.1",
+            "MAT-2.2",
+            "MAT-3.1"
+          ],
+          "sha256": "d91bb571540bfb4a6d838899e95c3ed87511ec40c9129fbf7ae020eeb8d1f0bb"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/failed_writes_are_kept.rs",
+          "kind": "test",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "9db0e085a3858ad6a387fa5f75858db6c5460462c768b0e8d2baa5e704b2081a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/startup_and_teardown.rs",
+          "kind": "test",
+          "criterionIds": [
+            "MAT-2.1",
+            "MAT-2.2"
+          ],
+          "sha256": "7c7b89e26dff2943332af52f2677109a6458a03ac1ed39c78dbffbbf42f0284a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/switch_reliability/failures_generations_disposal.rs",
+          "kind": "test",
+          "criterionIds": [
+            "MAT-3.1"
+          ],
+          "sha256": "7a62284359376d2c81345a6951222c8618427037481355e8fff3f404db4ddd02"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/emit.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "EMT-1.2",
+            "TIM-1.4"
+          ],
+          "sha256": "b57dc070100ff6a16d9ab8940e6bcbf827179d43a99f7ee22781b8f8a4766509"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "WIN-1.1",
+            "WIN-1.2",
+            "ASY-2.1"
+          ],
+          "sha256": "b601ba6bef8fc9fc951889f63f719979f28facab132d039f86d0700e49bc00e8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_pending_group_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "IDX-5.1"
+          ],
+          "sha256": "cf59f9c726df6ed5c4d01db26239b9ad0addac264f7ada47f3d9c3e4c9502c7d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/dynamic_live_cache_group_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.1",
+            "IDX-5.1"
+          ],
+          "sha256": "aefd0362d2eb62ad9e5fec92799265c182162de97185fb7d0af8250265bdf89a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_kind.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "7a85e1f564d3c39cf47a65644820313b7c202064b05fb98939d5238388e00156"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/affected_key.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2",
+            "IDX-4.1",
+            "IDX-4.3",
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "68f4c64b6e83863d16130868c5e145f28446374fd366ffad2624f88d748214f6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/combine_operator.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "fcaea9a8a69920d5cce0e2e63eead3c029d558275c9be9ce0bec94c83bf44548"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/combine_dynamic_caches.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "d25d126d8148ebff03a6230861ef6b74b0a25dc4a48e832f1756e6b084dfe452"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/start_cache_async_transform_many_child.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2",
+            "IDX-3.1"
+          ],
+          "sha256": "a52bba4529458dff2a8b746925e12928b419744d644f36c8ec9e1e2217b14efa"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_async_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2",
+            "ASY-1.2",
+            "ASY-1.3"
+          ],
+          "sha256": "a139155a9bb3bfd7061792e0c0d609c9eb5c3ffd0e5d0c805ed0a82cfdbfc4b9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/groups.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "a00ab6f57e75da542a1164328ad3f2718e8b5d208061c456a0898a483a0b989c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/filters.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "db2afd9696f33930859223d7a586b0e6436d7badc758f15375b394fcedcbe094"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/sorts.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "d90ed326e77f6d79257ea02acf80a9c4c3cd3de38fba3a8ed8a71a167114be7e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/windows.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "f88d71657d1ada6d03342805bb7859bf710c30dd38293cbb364de5e8ab5eaec6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/joins.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "77c650e763ac79ac43b559a1e26bdeb97d776468957fd86ba24144c5ad6aa9d1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/combiners.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "ef6c1311938fba847c578edd64d63dc10bcdc9720bbb1ea1153ffd5c1f9191ba"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/merge_many.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "b104ac6451f1eede40e04bdc7510beff4f7de653550fe065f9df8e5bc977d415"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_relations/transforms_trees.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.2"
+          ],
+          "sha256": "70204952f843de8666f6cdfae2d43e7fc2dd7d6c7ab43632c46eaf16c5627556"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/join_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "EMT-1.2",
+            "IDX-4.1",
+            "IDX-4.3",
+            "PRF-3.1"
+          ],
+          "sha256": "2542bed7f47e98032386b0916bc583aec06fc36a84428c6fe7541d0bbd423581"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ordered_emission_core/lock_release.rs",
+          "kind": "test",
+          "criterionIds": [
+            "EMT-1.1"
+          ],
+          "sha256": "ac22cee7dae23ef1859372f8fd28c2a962edfd4afb4a80dcde512a43754461da"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/change.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "sha256": "2dce51b8823fc99ff139f8ededd73da4b7e252a66c8836f52638505e26e3237e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_sort_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-2.1",
+            "IDX-2.2",
+            "PRF-2.3"
+          ],
+          "sha256": "ce60b6ceac5f7a40da81483d66fec1c1150372f212104201ff93dad8fc393a46"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_inline_transform_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "91ab86037d0628f7e83e7e766d02ffd22e84b32d9c7945000b3977867959ef2e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_dynamic_filter_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2",
+            "PRF-2.2"
+          ],
+          "sha256": "fa82016fd26fe09cc38cfadbb74e08afb126e709a14c29f147831bbc682d159e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_sort_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.3",
+            "PRF-2.3"
+          ],
+          "sha256": "890eb43e69cd2a60566e0780b57383177a3758b80f05f88d056dc5f3e53f62d2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/apply_list_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.4"
+          ],
+          "sha256": "8bcfb87d727d7afae0930faed27ded15aa97d97d5ff68c1e470243fa8cabf5b7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/diff_cache_snapshots.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-6.1",
+            "PRF-2.1",
+            "PRF-2.3"
+          ],
+          "sha256": "05ca1572c86ef84a3e87f8e0ee9037abbb1cc9639d33f2446f14e9ecf8961657"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/combine/cache_key_updates.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-5.3"
+          ],
+          "sha256": "37762d33800d13005325c955dfe842f28149760842367a73442835650af76130"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/join/apply_cache_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.3",
+            "IDX-6.2"
+          ],
+          "sha256": "93bf57220b4d5cc5d09821e5bfa4aa7c62cc73f4e92369bf68ea1bdbf8f0df76"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/ungrouped_cache_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-4.2"
+          ],
+          "sha256": "1a21bed124eb24f369f72b942ea8c6964a5288c69b08cc12e108f7e79804eb73"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/07-collections-fundamentals.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-1.1",
+            "IDX-3.1"
+          ],
+          "sha256": "57eb1443fb91b31e467809ef7d8453394919afff58ed0655b9b1435c1327847f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/contract.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-2.2",
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3",
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3",
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3",
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "02b3dadb3b3d063ecd3b12a01068a9211e77176aa543b881ee3df6ca3e817b63"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/index_contract_harness/validator.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "sha256": "6282315c648f55afa4c718b38c9ecf718994e634b6c1ca9ec33fe8b62cefa2a5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/index_contract_harness/list_operators.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-1.1"
+          ],
+          "sha256": "d7708321ac07d72832aa5287ee49c0dbea37aa83cc4cd9221654726ff87fe09b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_sort_positions/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-2.1",
+            "IDX-2.2"
+          ],
+          "sha256": "19066a9d5eb469af0cbde07f25ec3b203b224d2052da0a2d11550ba0532e96e7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/fuzzed.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4"
+          ],
+          "sha256": "eca56d49bbddfd078931661a15f68ceb0b2d8463f32a84fab72107eec268061c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/repros.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4"
+          ],
+          "sha256": "d20dc9d96d4b7a458998069ef378560dc83f9136142fcfeee6a6070b4cdb8954"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/fuzzed.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "sha256": "cbc37b9f1f3d01d4f08cc9021fee11b61a877b4fbacc7a34ad416bd85493e325"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/repros.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3"
+          ],
+          "sha256": "44a36fcf19c694e37e4c03d62b86682ebe31baeed13f5eea9da148d3ebd8b282"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/select_unique_cache_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "38b0eaae96fdf718db6844505cfe969727930f83061ff9f3ecd024d5a522dbbb"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/dynamic_inputs.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-3.2"
+          ],
+          "sha256": "ee308b3b7e3bb10cb74fa7886eee5ef3e837556802a644b6b20b75b9a533461b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/subset_operator_indexes/load_scaling.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1",
+            "IDX-4.3"
+          ],
+          "sha256": "9e76119801a51bb2733cbbd951bda52712f69799a4a240142a41f957333415fd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/snapshot_diff_indexes/independent_sources.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-4.1",
+            "IDX-4.3"
+          ],
+          "sha256": "43b0227cebf0843fcdcf47d0f45a0d5d3f841d40fc58679203c9570bcc2f337b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/transforms_filters/cache_filter_and_transform_emit_keyed_changes.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-3.1"
+          ],
+          "sha256": "1504dc74a084b71ec091abf2248ad79a2c554aa1a7be8246c8a01875cfbaf253"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/immutable_list_group_entry.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1"
+          ],
+          "sha256": "d568d3f960ace441cd2c206f160c68ee3ac7cf6071d0f12893fbebf6fc707e96"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/immutable_cache_group_entry.rs",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-5.1"
+          ],
+          "sha256": "9c8a09ff2e16fab8cc201ec7bce85519ac9c92f9c36d0dc3e19c88ef5f279ccf"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/change_key_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "KEY-1.1"
+          ],
+          "sha256": "e95c268585c4b9b6fc7658411babca95cd79840d91777c2b44eee78018ef4670"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/sync_transform_many_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "KEY-1.2"
+          ],
+          "sha256": "03b83930f7524dc7011b1d7e2c3742eb5f5dd5ae9bad9e7ef0896a164ce8db1d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_sorted_page_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "f2e13a983e2d65c39956c55e62dd4a8c95966a5fae1c8321913143d3dbde4ae8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/keyed_cache_page_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1"
+          ],
+          "sha256": "6d9b77b6b8037289720404a606f10f55fd5aa643e856ccdb8aaaaf5084129f75"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/09-filtering-and-transforming.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "KEY-1.1",
+            "KEY-1.2",
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1"
+          ],
+          "sha256": "dad854ced6890bfb60a997e92c87559bee159a1c18fa23a915c78e637e33722a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/10-sorting-paging-virtualization.md",
+          "kind": "source",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "3e056aabfb02592e00c7469ea9387ba4fd73c9ab9c958c2fba09b20567371c87"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/README.md",
+          "kind": "source",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "WIN-1.1"
+          ],
+          "sha256": "1ff24b6e6211366f1f7b1eed62ee05cdcba25764c5145035970d6dbef7d888d0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/group_and_combiner_indexes/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3"
+          ],
+          "sha256": "9f7f085964bd49d80655342c8ead9d72d050560a15ee997784f00d7b55db7afd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/key_bridge_indexes/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3"
+          ],
+          "sha256": "3b120a24b28a7dd914edb2ea009363a7d5df00867ef5ad87277b9c0543563146"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/keyed_state_operators/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3"
+          ],
+          "sha256": "a6c81687befd509c41e7b4df028e5237cb9a49d8078c5200a3b3a62da23de8a6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/window_responses/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3"
+          ],
+          "sha256": "985ec56dfbcce93475c844f53eef096dca43ea5784257b96bed0ba45f40cb7e1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/aggregation_diagnostics_diff/value_stream_snapshot_edit_diff_emits_list_changes.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-6.3"
+          ],
+          "sha256": "d87c5687fd43bb1d269f3266a2a354d286156c3295cd4e96b4a748c94b445188"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/side_effects_options_bridges/list_add_key_converts_list_changes_to_keyed_cache_changes.rs",
+          "kind": "test",
+          "criterionIds": [
+            "IDX-6.1"
+          ],
+          "sha256": "a0f39df8703420329393835e677fe8ede14335891228c91ee8e24d94bb26edab"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/side_effects_options_bridges/cache_change_key_preserves_reasons_and_remaps_keys.rs",
+          "kind": "test",
+          "criterionIds": [
+            "KEY-1.1"
+          ],
+          "sha256": "197d94f60d452aaf3d8f691d5c9230be610672fa2ea114125cf516af7e67a38f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/scheduler.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.1",
+            "TIM-1.5"
+          ],
+          "sha256": "1c9e22dc3f24a05e9c01053a40ca7604c04d83eca32b5f644abb0e4b4e7533e9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/timer.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "af5d7ded43192ad4d07a423ab436e0be1ffe00c75cc5b0a217553d2423b3f732"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/scheduler.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.1",
+            "TIM-1.5"
+          ],
+          "sha256": "4f7d3743542cfbdf85857f91bc82f1bef422c9413d85b0a7e90987ccc0c18ae7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/stream/flush_initial_buffer.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.4"
+          ],
+          "sha256": "3cc3b009b2da4808ab45c7d7239da26350f4577f551fc14386996e40398c7356"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/mod.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "LIF-1.4"
+          ],
+          "sha256": "617ffe631fc410c7ab5796a025a1acab06cfea272c51690c237d470dbebac2f8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/timed_stream_controls/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "TIM-1.5"
+          ],
+          "sha256": "5d51049d56bff85265ea90dfa01fd94cd79232805ec7d189fdb80dc26baaef7f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/cache_expire_after_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-2.1",
+            "TIM-2.3"
+          ],
+          "sha256": "50c5956f7689006dbcc91d539f4c86f07a67be811d92456e736f1e76f34917a1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/run_expiration_timer.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.4"
+          ],
+          "sha256": "6118566b383eee4da603801d0aeaf81689176b0f13f18fcce85123de7647e84d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/source_list_expiration_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.3",
+            "TIM-2.4"
+          ],
+          "sha256": "8caea413f3fcca4323374158181c6d04c18a882dbc5572b4b42698436c1ca6e7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/expiration_rework/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3",
+            "TIM-2.4"
+          ],
+          "sha256": "cda6635c784c22401be3808a820c157e3ddbb3574cb2820d03b1a7884cdf6e68"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/limit_size_rework/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-2.3",
+            "TIM-3.1"
+          ],
+          "sha256": "d9446e3d6edef291d1126d0338528b090a18c136ffb71d52297619b1276c09d5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/timed_value_stream_operators.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.3",
+            "TIM-4.1"
+          ],
+          "sha256": "a3b594ac0b848e41a6adae3d66f0cc103b929ed8a70ffbbf39b29182232b6797"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/13-stream-control-and-aggregation.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.2"
+          ],
+          "sha256": "ee0d32c51cd18d1bd0f29e7ac1b66b753c651175d688261d00bebb513e52473a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/12-item-lifecycle.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3",
+            "ASY-3.1",
+            "LIF-1.1",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "8aa6146b78adfdb80f2e902a70359bb86d214b329f6a1c9a7b74c581ab7d005b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/async_jobs.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "d0d1c8b47e9ddeb08c8d1439c218d44abe3f47a9ad9f332a9448c52e44596f6c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_async_safe_job.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "13ed13b57351697f68bdce215936a11e1024665077f9f99d189508b7b25bf189"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_many_async_iterable_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.3"
+          ],
+          "sha256": "e0b81258b60bcbbe90b7e2fdcf8e4e9229cf3c812e459ce597d43f5437cc6b19"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_many_safe_async_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "5d19285e9442e724d2861689b478e39c5e6bf34ade95a085c5e043d5ca21cbf8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_async_transform_many_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2"
+          ],
+          "sha256": "4851e7a80062e5def6dae94607ccfeddc02fc337acd3db6bf13b581d00ae9cf3"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_transform_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1"
+          ],
+          "sha256": "0736f27e94ecd4d6a61613398de72d26525606555f6c6b175a9e77bc1ec9f910"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/transform_error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.3"
+          ],
+          "sha256": "bd015a8a57466bb354999425bd80765ee6ed418e0dccd9af714fd0d6277210dc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/async_transform_workers/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "e41c2348226449f415c6a49d9148645f8d1cc3992ca6e6f53a331517dd98e87a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/list_async_transform_options/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-2.1"
+          ],
+          "sha256": "648e61692a2b81afa13ea517ff7866cfadc57159c1c834846196bfeacf4586ee"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/async_dispose_hardening/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-3.1"
+          ],
+          "sha256": "b802796c1fd04748a43283963c21c2bda0a72a188f5572f7fead09d224100343"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/transforms_filters/cache_transform_many_async_ignores_stale_materialization_after_parent_re.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2"
+          ],
+          "sha256": "e600adc860890b2190f361363c8044ca1d46d909a2ace6b6d69f50b7ec6413dc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/transforms_filters/cache_transform_safe_forced_retries_failed_source_items.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3"
+          ],
+          "sha256": "fbd171cf85ca412453fcdbe7ee17f456cf8cc034afea1928400bb13dee298227"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s10-review-scratch/src/main.rs",
+          "kind": "runtime",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-2.1"
+          ],
+          "sha256": "cd2abaa98bc53abbd5c1b4b7aa77cc611b517bc071f8c1b817ad7bc3656f0975"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/numeric_totals.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "sha256": "9a7931b2ec0ea0d3b20e3fcdc6a53a95e36953c48571eb56f7a91c73bac255e1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/cache_query.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.1"
+          ],
+          "sha256": "8c6d3b94d95421571d6de8a92f43a1e4ff375aa564ab9a697279c4ca857e0c74"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/distinct_values.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.2"
+          ],
+          "sha256": "3e4acfd72629f8d9e3591796efeb0241296bd9a7dd86f85d71f6cd7c7b62c3c4"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/aggregation/apply_list_std_dev_changes.rs",
+          "kind": "source",
+          "criterionIds": [
+            "AGG-1.2"
+          ],
+          "sha256": "e7b1807cfa4e7c8bc5b9f340950593421c0e00ab0e22b312d010e5052faa5eb9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/diagnostics.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.2"
+          ],
+          "sha256": "06a6f3be1f9bcc6416d051f77fb217681378052f83d26c677dff14c09c9b0685"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/true_for/true_for_state_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "LIF-1.3"
+          ],
+          "sha256": "a8b662a24063b603321c0bdef76bb17db017a325e8ed3360e480973d5bd40971"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/aggregate_robustness/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2"
+          ],
+          "sha256": "0525bab1ca2b4314e3e370f7105faebcde8ad37cc03887ed36a1f739cd08b1e0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/lifecycle_semantics/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "1bb9e16d859c2f90e8328aa0003450d38099cb896129d254a0bdfd7b12eb9886"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "8f24beb31f8fef8805f49f31c87b55084d4c014274ee8d52ed6653d45ff5e2c1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs",
+          "kind": "test",
+          "criterionIds": [
+            "AGG-1.1"
+          ],
+          "sha256": "13e9668596434e1fe64211c6b1371e52468e22afbd673e3cb2ce554118ec671c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s11-review-scratch/s11_review_probe.rs",
+          "kind": "runtime",
+          "criterionIds": [
+            "AGG-1.2",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4"
+          ],
+          "sha256": "21bb38ecf368c0ef8832930ac0ea9f133be4951c942ce311b211c820b1a0ec86"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/key_order.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-2.1",
+            "PRF-3.1"
+          ],
+          "sha256": "678cbed1599b65d6d8ae8fd6428218da4427fd927b8e4f1c086d9e94fad11dc7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_dynamic_filter_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-2.2"
+          ],
+          "sha256": "371fcf9524596e0bf4ed9b516a309ea8fbea0efdcbe76f50698960597b001991"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/joins.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "1b16839a8227b4babefe5ffb7dcd35b2c344aec637e4fee1dd00ca51279e3276"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/tree.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "baaa9c428f22f4a4d686a1653e217219c5474818dbf40a186cfedca127e03ef3"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/benches/sort_and_page.rs",
+          "kind": "source",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "2f4e84f6238e8fbd02b653af4b622d2185d338a445e95cbe4f9560c9f1739591"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/source_bookkeeping_costs/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-1.2"
+          ],
+          "sha256": "bfa8873b49ee81a83df9bf21dcabfd14ad364e6598226092176a609649bd583a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/operator_bookkeeping_costs/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-2.3"
+          ],
+          "sha256": "6d6d562254fbcca8c17dd2fd25ff33342ab1e16d8515f44eb3fc6fac3e9a45d2"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/relation_operator_costs/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "PRF-3.1",
+            "PRF-3.2"
+          ],
+          "sha256": "2a41d5e946f4bdaa3d575af754d6ec8cbc969f7458ab75f2ca49f797f56d219a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-fuzz.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-2.1",
+            "PRF-2.3"
+          ],
+          "sha256": "cd9bfe0e9b7b80954199c5df6182dad314c090002188a22032d53fd658d07b3b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-fuzz2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-3.1"
+          ],
+          "sha256": "340b6b7f0d9a9148cff8ba218f3eb83eab382a4750e7bbd40367e65aad65ed68"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-tree_disposal.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-3.2"
+          ],
+          "sha256": "18e456d999f69821b9418e044548ebf316e209f7fcac25cf7027258c6ac15ea8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-budget.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-2.3"
+          ],
+          "sha256": "194205d0d42deaa39f9dad96a860b661fbd5d7d2b1e2da44ef400ca0b0252bde"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/s12-rr-scale.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-1.1",
+            "PRF-2.1"
+          ],
+          "sha256": "b799b733e570137ddc6112ee500defb7749fc32ba63db580ebb45b9995af14d9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s12-bench-build.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "PRF-3.3"
+          ],
+          "sha256": "b1e78f12f56f975b2666ded757b7ff68191fff76e1e4c18a0f182a8c72e29909"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-fmt.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.1"
+          ],
+          "sha256": "0819f3787c6ace14f68aac1f3437f10d593611ca94318bf1ce40e754889b509b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-clippy.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.1",
+            "DOC-1.1"
+          ],
+          "sha256": "4aa71d2bff93a5ab3eeee849929c2c25836d40eb7ea060c5710259db39c22472"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-rustdoc.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "397308c32f147098e56e5f17a5bc6147396057779671d59a3a4774ab16f55e1b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-doctests.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1.1",
+            "REL-1.1"
+          ],
+          "sha256": "ba84399cf2fced5f75871fd2e231ef4fe1c42961ddc3e5a93bc04c84af71909e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-doc-examples.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "a3ac3e6ed9720e41489a0e2b938311b8a2ccc59d155bed178fa3cb8d64969e2c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-msrv.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CI-1.1"
+          ],
+          "sha256": "be79a7dc2fb9ae704c229e47e5120c945bb41b8bd572088d439d850c66020590"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-wasm.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CI-1.1"
+          ],
+          "sha256": "75361a3b89d1d3e9d6c00070fa6f9b607c8a31c7729e4ec205902efb1e3d70c8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-api_hygiene-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.1",
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "78d80455338c1e02afc2c9504676d9879e7a16ef4d9992cea94909b5495c038a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-api_hygiene-2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "78d80455338c1e02afc2c9504676d9879e7a16ef4d9992cea94909b5495c038a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-disposal-reentry.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "2ac148dbb5999be699fdfb550954a71425d343f792d7123f7317eab614f1c842"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-lib-scalar.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "103a1698307381998f353c0d7afcaccba6948b3ca43a71a0fd6c246060bdcd89"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-sources.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2"
+          ],
+          "sha256": "85ac6b7c98806423ae3aff218e280d9c7531406737d01909048a4b53613e6adc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-source-lock-policy.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2"
+          ],
+          "sha256": "cc0cb4ada7dea9c03bfb693c5c880abb30275e0dcf18080c75015466892809a5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr-probe.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "1912190ea192fdbea98ee59b48a4d42d356611c5788eed3fb4a2591a09cf089a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-consumer_scenarios-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "52d7f30145447a387d5a189c80dc2df4067a10974aa79987893315878dd9feb6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-consumer_scenarios-2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "52d7f30145447a387d5a189c80dc2df4067a10974aa79987893315878dd9feb6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-collections_public_api-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "94019ec0a074fe951cd57f033779d91854f458d6cf4a3fe4fc79f3f5dad1fd65"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-collections_public_api-2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "94019ec0a074fe951cd57f033779d91854f458d6cf4a3fe4fc79f3f5dad1fd65"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-join-many.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "3ee78453369432afab00cf4d86d86be9352d289b9af5155b23b251fc0957c789"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-lib-collections-nongroup.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "3b8056d3cf230fd0cf8f5eeda22d99e0c2ca0d5b1932cb8a3e67a27f72e28afc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/api_hygiene.rs",
+          "kind": "test",
+          "criterionIds": [
+            "HYG-1.1",
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "ddbbea244461bd0226a2fed4a49c5070c6cec11ae567e46f11c49c52c4ff31fd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/disposal_reentry.rs",
+          "kind": "test",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "69c6956c1520e4702f92ea6af5867cce7237575b9fb642a1a343fcf1f67ef04c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/consumer_scenarios.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "00e76177fb48f6f65c651edadbee67f08d569e076a73039ef80f5bcba42d00f6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/collections_public_api.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "898582a3d9a7bfad986506f7cd493a260ee892dee400fa70c3a08d6e8f224237"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/join_many_right_moves/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "3e5337dd89c69b47874ba407efbb1dcffa216729ae99ef59eb030fd9ec22c455"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/disposal.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "75fc0af6498349a17491fc89c49aaf76b366526ccb9be26e4e135c66f40fedd7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/lib.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "1320d18c0c5f3b346694d0dc15883aaf35d6fdde8d1b695731eaa538b1a74621"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/Cargo.toml",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "5fb6159a5417b108cdb7c93f7ee50ce4cf8219bb43bd3921bb1a122093f7b942"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".github/workflows/ci.yml",
+          "kind": "source",
+          "criterionIds": [
+            "CI-1.1",
+            "CI-1.2"
+          ],
+          "sha256": "1d7b19fecf08a5405abeb1d92f3efb869ae182ebaaa057b6a426e43ebf844c48"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".claude/skills/rayx-reactive/references/reactive-state-commands-events.md",
+          "kind": "source",
+          "criterionIds": [
+            "REL-1.2"
+          ],
+          "sha256": "6fbca13d2c3be9be6c63a06953aaa932103c33528cba3ef06fce14abae15b3d8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/subscription.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.1"
+          ],
+          "sha256": "d9944c59f9f85b9d7c0f9207d6b0b538d55bae4c254c655303d25f0bebbe97e7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/consumer_scenarios.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "00e76177fb48f6f65c651edadbee67f08d569e076a73039ef80f5bcba42d00f6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/collections_public_api.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "898582a3d9a7bfad986506f7cd493a260ee892dee400fa70c3a08d6e8f224237"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/epic-check.json",
+          "kind": "runtime",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.4",
+            "DLV-2.5",
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4",
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5",
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4",
+            "SIG-1.5",
+            "ACT-1.1",
+            "ACT-1.2",
+            "ACT-1.3",
+            "INT-1.1",
+            "INT-1.2",
+            "INT-1.3",
+            "INT-2.1",
+            "INT-2.2",
+            "INT-3.1",
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3",
+            "SRC-3.1",
+            "SRC-4.1",
+            "SRC-4.2",
+            "SRC-5.1",
+            "MAT-1.1",
+            "MAT-2.1",
+            "MAT-2.2",
+            "MAT-3.1",
+            "EMT-1.1",
+            "EMT-1.2",
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-2.2",
+            "IDX-3.1",
+            "IDX-3.2",
+            "IDX-3.3",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3",
+            "IDX-5.1",
+            "IDX-5.2",
+            "IDX-5.3",
+            "IDX-6.1",
+            "IDX-6.2",
+            "IDX-6.3",
+            "KEY-1.1",
+            "KEY-1.2",
+            "KEY-1.3",
+            "WIN-1.1",
+            "WIN-1.2",
+            "WIN-1.3",
+            "TIM-1.1",
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3",
+            "TIM-2.4",
+            "TIM-3.1",
+            "TIM-4.1",
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1",
+            "ASY-3.1",
+            "AGG-1.1",
+            "AGG-1.2",
+            "LIF-1.1",
+            "LIF-1.2",
+            "LIF-1.3",
+            "LIF-1.4",
+            "PRF-1.1",
+            "PRF-1.2",
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-2.3",
+            "PRF-3.1",
+            "PRF-3.2",
+            "PRF-3.3",
+            "HYG-1.1",
+            "HYG-1.2",
+            "HYG-1.3",
+            "DOC-1.1",
+            "CI-1.1",
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4",
+            "SCN-1.5",
+            "REL-1.1"
+          ],
+          "sha256": "5c85f5f2a1ab2890c8fabb6183ceff428c0821fc72c417b0f068afb96e272fdc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/final-rr-probe.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CMD-1.3",
+            "INT-2.1",
+            "SRC-2.1",
+            "SRC-3.1",
+            "EMT-1.1",
+            "EMT-1.2",
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-3.1",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3",
+            "WIN-1.2",
+            "TIM-1.2",
+            "TIM-2.2",
+            "TIM-3.1",
+            "AGG-1.1",
+            "AGG-1.2",
+            "PRF-1.1",
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-2.3",
+            "PRF-3.1",
+            "SCN-1.2"
+          ],
+          "sha256": "93ecfaa5fa9391e4bea0cde744271416369c702130565472011fe8809217779b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/final-rr-probe-source.rs.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CMD-1.3",
+            "INT-2.1",
+            "SRC-2.1",
+            "SRC-3.1",
+            "EMT-1.1",
+            "EMT-1.2",
+            "IDX-1.1",
+            "IDX-2.1",
+            "IDX-3.1",
+            "IDX-3.4",
+            "IDX-4.1",
+            "IDX-4.2",
+            "IDX-4.3",
+            "WIN-1.2",
+            "TIM-1.2",
+            "TIM-2.2",
+            "TIM-3.1",
+            "AGG-1.1",
+            "AGG-1.2",
+            "PRF-1.1",
+            "PRF-2.1",
+            "PRF-2.2",
+            "PRF-2.3",
+            "PRF-3.1",
+            "SCN-1.2"
+          ],
+          "sha256": "e46973cacca8d4a3629cc110b8a323e4033df2d672ff203a67a71a2400ddddd0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/final-rr-groups-rerun.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DLV-1.1",
+            "DLV-2.1",
+            "DLV-2.2",
+            "DLV-2.3",
+            "DLV-2.4",
+            "DLV-2.5",
+            "CMD-1.1",
+            "CMD-1.2",
+            "CMD-1.3",
+            "CMD-1.4",
+            "CMP-1.1",
+            "CMP-1.2",
+            "CMP-1.3",
+            "CMP-1.4",
+            "CMP-1.5",
+            "SIG-1.1",
+            "SIG-1.2",
+            "SIG-1.3",
+            "SIG-1.4",
+            "SIG-1.5",
+            "SRC-1.1",
+            "SRC-1.2",
+            "SRC-1.3",
+            "SRC-2.1",
+            "SRC-2.2",
+            "SRC-2.3",
+            "SRC-3.1",
+            "MAT-2.1",
+            "MAT-2.2",
+            "EMT-1.1",
+            "EMT-1.2",
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3",
+            "TIM-2.4",
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1",
+            "ASY-3.1"
+          ],
+          "sha256": "3ed555bf1f27fc3293cf02df7de2b807307643fdb9cf8ed59a30943108566d06"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/final-rr-public-api-diff.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "INT-1.1",
+            "INT-1.2",
+            "INT-2.1",
+            "HYG-1.1",
+            "HYG-1.3",
+            "REL-1.2"
+          ],
+          "sha256": "f1add528a7ba41f78a78e545a013c2521737202f7792f168f46000e82fe779a9"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".claude/skills/rayx-reactive/SKILL.md",
+          "kind": "source",
+          "criterionIds": [
+            "REL-1.2"
+          ],
+          "sha256": "85bda3a1f2abb9fcab8bd8c33ee1abdf5a2d18d5c646eb9396713d31b8a69905"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/command_lifecycle.rs",
+          "kind": "test",
+          "criterionIds": [
+            "CMD-1.3"
+          ],
+          "sha256": "e1bdbe6f8ee958b472514e5c22e9bc60f56d0517f01355e2ccf3e7b1d3fb76fd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/final-rr-delta-f1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CMD-1.3"
+          ],
+          "sha256": "d546cc1c2663dd8fcc337aa53bf01f7f8dc4d247fc65417fe72cbba05fee4be3"
+        }
+      ],
+      "summaryMarkdown": "**Re-review at snapshot 7a0aa149 (revision 133, HEAD `844d1d0`): passed.** FINAL-F1 is resolved, there are no open findings, and all 111 criteria hold.\n\n**Delta verified.** Since the first final review, the only changes are `844d1d0` (the CMD-1.3 fix in `crates/src/command.rs`, a new `command_lifecycle` test and a CHANGELOG note) and the AgentX state commit `0460655`. `scalar_tests::command_lifecycle` passes (11 tests). The factory-panic probe now gets `Failed(\"panicked: …\")`, and the refreshed `epic-check.json` (revision 133, 53 checks executed, 0 failures, 0 skipped) supplies the runtime evidence for every automated criterion.\n\n---\n\n**First final review (snapshot f4e338fe, revision 132):**\n\n**Final review of `reactive-audit-remediation` at HEAD `0460655` (source identical to `e6b1414`; the extra commit only records `.agentx` state; snapshot f4e338fe…, revision 132): failed, with one minor open finding (FINAL-F1, CMD-1.3).** The other 110 criteria hold at HEAD.\n\n**Evidence reused.** `epic-check.json` (final phase): 53 of 54 checks executed, 0 failures, 0 skipped. The 54th check is not missing: `c-t08-docs` and `c-t45` share the argv `cargo test -p rayx_reactive_doc_examples`, which ran 135 doc examples. The run covers:\n- `cargo fmt --check`, workspace clippy with `-D warnings`, the wasm32 check and `cargo package`;\n- `cargo test --workspace --all-features` (632 lib tests plus integration and doc tests);\n- rustdoc with `-D missing_docs`, the MSRV `+1.95` check and `cargo bench --no-run`;\n- every feature test group.\n\n**Fresh verification** (logs in `artifacts-temp/agentx/reactive-audit-remediation/final-rr-*`):\n\n- **Stability re-runs** (`final-rr-groups-rerun.txt`). I re-ran 16 high-risk groups one at a time with `RUST_TEST_THREADS=4`: source_lock_policy, source_commit_order, ordered_emission_core, ordered_emission_relations, suspension_versions, ref_count_lifecycle, timed_stream_controls, expiration_rework, async_transform_workers, list_async_transform_options, async_dispose_hardening, panic_safe_delivery, ordered_delivery, command_lifecycle, computed_consistency, signal_robustness. All passed.\n- **Public-API differential, HEAD vs `main`** (`final-rr-public-api-diff.txt`). I compared nightly rustdoc JSON for both, building `main` in a temporary worktree that I removed afterwards.\n  - No inherent or trait method was lost.\n  - The 14 \"lost\" `ValueStream` trait impls are only re-anchored from `collections::stream::ValueStream` to `primitives::stream::ValueStream`.\n  - `ReactiveError` keeps `PartialEq`/`Eq` (now a manual impl) but loses `StructuralPartialEq`, a consequence of the permitted `External` variant.\n  - The 101 changed signatures are generic stream-error parameters, the documented `T: PartialEq` bound on list `dispose_many*`, and path renames.\n- **Differential probes through the public API.** These ran in a temporary integration test, deleted afterwards; its source is kept as `final-rr-probe-source.rs.txt` and its output as `final-rr-probe.txt`. A strict `CacheChange` index-contract applier validated every emitted index against the operator's own output, then compared with a naive recomputation. The probes covered:\n  - cache `sort_keyed_by`, `sort_keyed_by → filter_with_state`, `→ page_keyed_dynamic`, `filter_with_state` (source order) and `top_keyed`. These ran over 200 seeds × 120 random ops, with suspension guards, late subscribers connecting during a suspension, `move_key`, `edit_diff` and `clear`.\n  - list `filter_with_state → sort_with_resort` (comparer flips plus resort), `page_dynamic` and `sort_by → virtualize_dynamic`, over 200 seeds.\n  - concurrent cache pipelines: 3 writer threads, 1 thread changing filter state and page, and a late foreground connect, over 10 rounds. No overlapping subscriber calls occurred, and all mirrors converged.\n  - `left_join`, `full_join` and `left_join_many`, over 150 seeds.\n  - `transform_to_tree` with re-parenting and parent cycles (roots, child order, items), over 150 seeds.\n  - stream `expire_after_with_scheduler` on `ManualScheduler`, over 150 seeds.\n  - the incremental stream `limit_size_to`, which replaced `diff_limited_cache`, over 200 seeds.\n  - aggregate numerics: inf, NaN, 1e17 and -1e300 added and removed, and NaN order independence of `max_by`/`min_by`.\n\n  Every probe passed except the AsyncCommand factory-panic case (FINAL-F1).\n\n**Hard constraints:**\n- Runtime dependencies are still only futures, rxrust, serde and thiserror (`cargo tree -e normal`).\n- The wasm32 check is green.\n- Sources keep no replay history; `suspended` is only the suspension buffer.\n- `PageRequest`/`VirtualRequest` are zero-based.\n- Scalar modules never import `collections`, and `DeliveryQueue` holds no collection-specific state.\n- Only `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`; the change and reason enums stay exhaustive.\n- The wasm32 non-blocking policy holds. `lock_blocking` is used only on the keyed registry, for short sections that run no user code.\n- TIM-1.5 (manual, checked by code review): `thread::spawn`/`Instant::now` appear only in `ThreadScheduler`, the non-time async and dispose workers, and `#[cfg(test)]` helpers. `SystemTime::now` appears only in `diagnostics`, and chapter 16 shows a custom `Scheduler`.\n- The new pub field `ChangeSetAdapterOptions::scheduler` and the new extension-trait methods are breaking changes outside the permitted list. TIM-1.2 forces them and `CHANGELOG.md` documents them with migration notes, so they are accepted, as in the s09 review.\n\n**Manual criteria:**\n- **REL-1.2: passed.** `CHANGELOG.md` *Unreleased* lists every behavior, breaking and new-API change with migration notes. The `rayx-reactive` skill references cover the new APIs (Contended, Scheduler/ManualScheduler, ExecutionPolicy, try_get, from_stream, the combinators, CacheView, the index contract, …) and no longer mention `collection_stream`.\n- **CI-1.2: pending.** Nothing has been pushed yet. This is noted and does not count against the epic.\n\n**Working tree.** `git status --short` is empty. The AgentX `state.json` change that was pending at the start was committed by the orchestrator as `0460655` during this review; the reviewer did not touch it. All scratch output is under the ignored `artifacts-temp/`.\n",
+      "findingIds": [
+        "FINAL-F1"
+      ],
+      "recordedAt": "2026-10-07T08:42:07Z"
     }
   },
   "checkpoints": {
@@ -6942,6 +9667,16 @@
       "severity": "minor",
       "status": "resolved",
       "descriptionMarkdown": "**An updated test is not named in the CHANGELOG.** The repository constraint requires that existing tests pinning a defective behavior be updated *with a note in the changelog*. `CHANGELOG.md:239-242` names only `aggregation_diagnostics_diff::list_aggregations_track_snapshots_counts_sum_and_average`. The same file also changes the pinned `is_not_empty` sequence of `cache_aggregations_track_query_counts_sum_and_average` (`aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs:342`, `[false, true, true, false]` -> `[false, true, false]`), and that test is not mentioned. Fix: name both updated tests in the `### Aggregates` entry.\n\n**Re-review: resolved.** `CHANGELOG.md` `### Aggregates` now names both `list_aggregations_track_snapshots_counts_sum_and_average` and `cache_aggregations_track_query_counts_sum_and_average`, and documents the overflow behavior."
+    },
+    {
+      "id": "FINAL-F1",
+      "boundaryId": "final",
+      "criterionIds": [
+        "CMD-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`AsyncCommand` publishes `Cancelled`, not `Failed(\"panicked: ...\")`, when the action's future factory panics.**\n\n`crates/src/command.rs:401` evaluates the action as `AssertUnwindSafe((self.action)()).catch_unwind().await`. Only the returned future is guarded by `catch_unwind`. The synchronous call `(self.action)()`, which builds the future, runs outside the guard. If that call panics, the unwind skips `ticket.finish(...)`, and `ExecutionTicket::drop` (`crates/src/command.rs:170`) publishes `CommandState::Cancelled`.\n\n**Scenario.** I reproduced this through the public API in a temporary integration probe (output in `artifacts-temp/agentx/reactive-audit-remediation/final-rr-probe.txt`, test `probe_async_command_factory_panic`; source in `final-rr-probe-source.rs.txt`):\n\n```rust\nlet command = AsyncCommand::new(|| -> std::future::Ready<Result<(), CommandError>> { panic!(\"factory boom\") });\nlet _ = catch_unwind(AssertUnwindSafe(|| block_on(command.execute()))); // the panic propagates (ok)\ncommand.state().get()        // == CommandState::Cancelled  (CMD-1.3 expects Failed(\"panicked: factory boom\"))\ncommand.is_executing().get() // == false (ok)\n```\n\nTypical code is `|| async move { ... }`, so most panics happen inside the future. That path is tested and correct (`scalar_tests::command_lifecycle::a_panicking_async_action_fails_the_command_and_propagates_out_of_the_future`). Any work in the closure before the `async` block can still panic, though: cloning captured state, `lock().unwrap()`, `expect`.\n\nThis contradicts CMD-1.3 (\"an action that panics leaves the command consistent: the state becomes `Failed` with a message that identifies a panic\"). It also contradicts the documented meaning of `Cancelled` in `CHANGELOG.md` (\"`CommandState::Cancelled` now means an `AsyncCommand::execute()` future was dropped after it started\") and in `docs/06-commands-and-events.md:65-66`.\n\nThe collection async operators already guard the factory. `run_async_job` in `crates/src/collections/operators/async_jobs.rs` wraps `start` in `catch_unwind`. The command path is therefore inconsistent with them.\n\n**Suggested fix.** Guard the factory call too. One option is `match AssertUnwindSafe(async { (self.action)().await }).catch_unwind().await { ... }`. Another is `catch_unwind(AssertUnwindSafe(|| (self.action)()))` before awaiting, mapping `Err(panic)` to `ticket.finish(CommandState::Failed(panic_message(..)))` followed by `resume_unwind(panic)`. Add a case to the `scalar_tests::command_lifecycle` group whose async action panics before returning its future, asserting `Failed(\"panicked: …\")`, `is_executing() == false` and that the panic propagates.\n\n\n**Re-check: resolved** at snapshot 7a0aa149 (revision 133, commit `844d1d0`). `AsyncCommand::execute` now runs `AssertUnwindSafe(async { (self.action)().await }).catch_unwind().await`. This guards the call that builds the future as well as polling. The new test `scalar_tests::command_lifecycle::an_async_action_panicking_before_returning_its_future_fails_the_command` covers it, and `command_lifecycle` passes (11 tests). I re-ran the original public-API probe `probe_async_command_factory_panic`, which now reports `Failed(\"panicked: factory boom\")` with `is_executing() == false` and the panic propagated. The CHANGELOG Commands bullet notes the fix. Log: `final-rr-delta-f1.txt`."
     }
   ],
   "handoffMarkdown": "REL-1.1: README and docs chapters reviewed against final code (README platform table, Computed constructors, scheduler/commit-order notes; ch01 module map and non_exhaustive; ch03 from_stream/Default/Debug; ch04 CompositeSubscription methods, must_use, ConnectionStatus; ch05 DisposeBag clear/len, Contended; ch06 emit ordering, non-Clone events; ch08 contention wording; ch09 ignore/include_update_when take (current, previous); ch10 signals plug in directly; ch11 group_by and join-many member order, tree node replaced on item Update (also TreeNode rustdoc); ch12 true_for no flicker; ch14 limit_size_to_with_errors; ch16 panic/poison semantics, CI platforms; ch17 delivery snapshot, derive_distinct; ch18 contention, ManualScheduler, wasm CI; ch19 DynamicData mappings; ch20 test layout and CI jobs). doc-examples 135 pass. REL-1.2: CHANGELOG audited against all 58 epic commits: generic stream error parameters relabelled Breaking with migration note, scheduler API completed, ChangeSetAdapterOptions and list dispose_many migration notes, new breaking note for unsealed extension traits, API hygiene section (Debug wording corrected), connection test note, join-many moving-update fix. .claude/skills/rayx-reactive SKILL.md and all references updated for the new APIs and semantics.",
