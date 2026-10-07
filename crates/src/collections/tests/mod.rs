@@ -5,6 +5,7 @@ mod support;
 
 #[cfg(feature = "diagnostics")]
 mod aggregation_diagnostics_diff;
+mod async_dispose_hardening;
 mod async_transform_workers;
 mod combination_materialization_population;
 mod connect_late_delivery;

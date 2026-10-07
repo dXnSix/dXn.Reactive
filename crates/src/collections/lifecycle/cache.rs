@@ -3710,7 +3710,11 @@ where
     let (sender, receiver) = mpsc::channel::<Fut>();
     thread::spawn(move || {
         for disposal in receiver {
-            futures::executor::block_on(disposal);
+            // A panicking finalizer must not stop the later ones, or the completion.
+            let finished = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                futures::executor::block_on(disposal);
+            }));
+            drop(finished);
         }
         completion.complete();
     });
@@ -3725,7 +3729,11 @@ fn enqueue_async_disposals<K, T, Fut>(
     Fut: Future<Output = ()> + Send + 'static,
 {
     for (key, item) in items {
-        let _ = sender.send(dispose(item, key));
+        // A finalizer factory that panics skips its item only.
+        let created = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispose(item, key)));
+        if let Ok(disposal) = created {
+            let _ = sender.send(disposal);
+        }
     }
 }
 
