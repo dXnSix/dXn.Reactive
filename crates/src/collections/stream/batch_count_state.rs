@@ -3,6 +3,7 @@ impl<C> ChangeStream<C>
 where
     C: Clone + Send + Sync + 'static,
 {
+    /// Emits an empty batch first, then every batch of the source.
     pub fn start_with_empty(&self) -> Self {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
@@ -11,6 +12,7 @@ where
         })
     }
 
+    /// Drops empty batches.
     pub fn not_empty(&self) -> Self {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
@@ -22,6 +24,7 @@ where
         })
     }
 
+    /// Reports the loading state: `Pending` on subscription, then `Loaded` at the first batch.
     pub fn monitor_status(&self) -> ValueStream<ConnectionStatus> {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
@@ -35,6 +38,7 @@ where
         })
     }
 
+    /// Suppresses everything until the first non-empty batch, then forwards non-empty batches.
     pub fn defer_until_loaded(&self) -> Self {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
@@ -61,6 +65,9 @@ where
         })
     }
 
+    /// Drops the first non-empty batch (the `connect` snapshot) and forwards the rest.
+    ///
+    /// Under concurrent writes it forwards exactly the batches committed after the snapshot point.
     pub fn skip_initial(&self) -> Self {
         let source = self.defer_until_loaded();
         ChangeStream::new(move |subscriber| {
@@ -85,6 +92,11 @@ where
         })
     }
 
+    /// Holds the batches arriving within `initial_buffer` after the first one and emits them
+    /// merged, then passes batches through. Its timer runs on the default scheduler.
+    ///
+    /// Merging concatenates the buffered changes, in order, into one batch carrying the last
+    /// batch's version. A zero duration behaves like [`not_empty`](Self::not_empty).
     pub fn buffer_initial(&self, initial_buffer: Duration) -> Self {
         self.buffer_initial_with_scheduler(initial_buffer, default_scheduler())
     }
@@ -167,6 +179,12 @@ where
         })
     }
 
+    /// Coalesces batches into time windows: the first batch opens a window of `window`, and
+    /// everything until it closes is emitted merged. Its timer runs on the default scheduler.
+    ///
+    /// The next window is armed only after a flush has been delivered. Dropping the subscription
+    /// cancels a pending timer and releases the buffered changes. A zero window behaves like
+    /// [`not_empty`](Self::not_empty).
     pub fn batch(&self, window: Duration) -> Self {
         self.batch_with_scheduler(window, default_scheduler())
     }
@@ -228,6 +246,10 @@ where
         })
     }
 
+    /// Accumulates changes until at least `count` changes are buffered, then emits them merged.
+    ///
+    /// There is no time-based flush: a tail of fewer than `count` changes stays buffered until
+    /// more arrive. A `count` of `0` or `1` passes batches through.
     pub fn batch_count(&self, count: usize) -> Self {
         if count <= 1 {
             return self.clone();
@@ -257,6 +279,11 @@ where
         })
     }
 
+    /// Buffers batches while `pause_if_true` is `true` and emits them merged when it turns
+    /// `false`.
+    ///
+    /// `initial_pause_state` applies until `pause_if_true` emits; any `ValueStream<bool>` works,
+    /// for example `signal.values()`.
     pub fn batch_if<E>(
         &self,
         pause_if_true: crate::primitives::ValueStream<bool, E>,
@@ -270,6 +297,7 @@ where
         self.batch_if_core(pause_if_true, initial_pause_state, None)
     }
 
+    /// An alias of [`batch_if`](Self::batch_if).
     pub fn buffer_if<E>(
         &self,
         pause_if_true: crate::primitives::ValueStream<bool, E>,
@@ -283,6 +311,8 @@ where
         self.batch_if::<CollectionError>(pause_if_true, initial_pause_state)
     }
 
+    /// Like [`batch_if`](Self::batch_if), but also flushes after `timeout` while still paused.
+    /// Its timer runs on the default scheduler.
     pub fn batch_if_with_timeout<E>(
         &self,
         pause_if_true: crate::primitives::ValueStream<bool, E>,
@@ -325,6 +355,7 @@ where
         )
     }
 
+    /// An alias of [`batch_if_with_timeout`](Self::batch_if_with_timeout).
     pub fn buffer_if_with_timeout<E>(
         &self,
         pause_if_true: crate::primitives::ValueStream<bool, E>,

@@ -36,7 +36,18 @@ where
     }
 }
 
+/// Per-item observables, lifecycle callbacks and disposal for list change streams.
+///
+/// Every operator owns its per-item subscriptions: it subscribes when an item is added,
+/// re-subscribes when it is replaced, disposes on removal or clear, and disposes everything when
+/// the downstream subscription is dropped. Selectors receive `&item` and may return a stream of any
+/// error type that converts into `CollectionError`.
 pub trait ListLifecycleExt<T> {
+    /// Shows an item only while the latest value of its stream is `true`.
+    ///
+    /// An item is hidden until its stream emits `true`. Values emitted while the streams are being
+    /// subscribed are folded into the source batch. A replaced item keeps its previous inclusion
+    /// until its new stream has been subscribed.
     fn filter_on_observable<E>(
         &self,
         filter: impl Fn(&T) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
@@ -46,6 +57,11 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits a `Refresh` for an item whenever its stream emits, so downstream operators re-evaluate
+    /// it.
+    ///
+    /// Every emission refreshes, including a synchronous initial one: prefer a stream that emits
+    /// only on change (such as `Signal::changes`).
     fn auto_refresh<S, E>(
         &self,
         reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
@@ -56,6 +72,11 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`auto_refresh`](Self::auto_refresh), but collects item-triggered refreshes for
+    /// `buffer` and emits them as one batch, on the default scheduler.
+    ///
+    /// Source batches are forwarded immediately and stay in order with the refresh batches.
+    /// Dropping the subscription cancels a pending flush.
     fn auto_refresh_buffered<S, E>(
         &self,
         reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
@@ -80,6 +101,7 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Merges the streams of every live item into one stream of their values.
     fn merge_many<U, E>(
         &self,
         observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
@@ -90,6 +112,7 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits each value of every live item's stream.
     fn when_value_changed<U, E>(
         &self,
         observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
@@ -100,6 +123,8 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`when_value_changed`](Self::when_value_changed), but first emits `current_value` for
+    /// each current item.
     fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T) -> U + Send + Sync + 'static,
@@ -111,6 +136,7 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits each value of every live item's stream, paired with its item.
     fn when_item_value_changed<U, E>(
         &self,
         observable_selector: impl Fn(&T) -> crate::primitives::ValueStream<U, E> + Send + Sync + 'static,
@@ -121,6 +147,8 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`when_item_value_changed`](Self::when_item_value_changed), but first emits
+    /// `current_value` for each current item.
     fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T) -> U + Send + Sync + 'static,
@@ -132,6 +160,10 @@ pub trait ListLifecycleExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Flattens each item's child list stream into one list of all children.
+    ///
+    /// A departing item's children are removed. Children emitted while a child stream is being
+    /// subscribed are folded into the parent batch.
     fn merge_many_list_change_sets<U>(
         &self,
         observable_selector: impl Fn(&T) -> ChangeStream<ListChange<U>> + Send + Sync + 'static,
@@ -140,6 +172,9 @@ pub trait ListLifecycleExt<T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Flattens each item's child cache stream into one cache of all children.
+    ///
+    /// On duplicate child keys, the first live parent in list order wins.
     fn merge_many_cache_change_sets<K, U>(
         &self,
         observable_selector: impl Fn(&T) -> ChangeStream<CacheChange<K, U>> + Send + Sync + 'static,
@@ -149,6 +184,8 @@ pub trait ListLifecycleExt<T> {
         K: Clone + Eq + std::hash::Hash + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`merge_many_cache_change_sets`](Self::merge_many_cache_change_sets), but `compare`
+    /// picks the winner for duplicate child keys, recomputing it when a winner changes or leaves.
     fn merge_many_cache_change_sets_by<K, U>(
         &self,
         observable_selector: impl Fn(&T) -> ChangeStream<CacheChange<K, U>> + Send + Sync + 'static,
@@ -184,6 +221,7 @@ pub trait ListLifecycleExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each added item and forwards the batches unchanged.
     fn on_item_added(
         &self,
         action: impl Fn(&T) + Send + Sync + 'static,
@@ -191,6 +229,7 @@ pub trait ListLifecycleExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each removed item, including clears, and forwards the batches unchanged.
     fn on_item_removed(
         &self,
         action: impl Fn(&T) + Send + Sync + 'static,
@@ -198,6 +237,8 @@ pub trait ListLifecycleExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`on_item_removed`](Self::on_item_removed); with `invoke_on_unsubscribe`, also calls
+    /// `action` for every remaining item when the subscription is dropped.
     fn on_item_removed_with_unsubscribe(
         &self,
         action: impl Fn(&T) + Send + Sync + 'static,
@@ -206,6 +247,7 @@ pub trait ListLifecycleExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each refreshed item and forwards the batches unchanged.
     fn on_item_refreshed(
         &self,
         action: impl Fn(&T) + Send + Sync + 'static,
@@ -213,6 +255,10 @@ pub trait ListLifecycleExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Keeps one subscription per live item, created by `subscription_factory`.
+    ///
+    /// The subscription is disposed when its item is removed or replaced, and every remaining one
+    /// when the downstream subscription is dropped.
     fn subscribe_many(
         &self,
         subscription_factory: impl Fn(&T) -> Subscription + Send + Sync + 'static,

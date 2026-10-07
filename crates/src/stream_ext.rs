@@ -17,10 +17,12 @@ use crate::primitives::{
 /// values from several sources (`combine_latest`) or replay (`share_replay`) may deliver a
 /// value on the thread that is already delivering to that subscriber.
 pub trait ReactiveValueStreamExt<T, E = ReactiveError> {
+    /// Forwards the values for which `predicate` returns `true`.
     fn filter(&self, predicate: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValueStream<T, E>
     where
         T: Send + Sync + 'static;
 
+    /// Maps each value with `mapper` and forwards the `Some` results.
     fn filter_map<U>(
         &self,
         mapper: impl Fn(&T) -> Option<U> + Send + Sync + 'static,
@@ -29,6 +31,8 @@ pub trait ReactiveValueStreamExt<T, E = ReactiveError> {
         T: Send + Sync + 'static,
         U: Send + Sync + 'static;
 
+    /// Forwards a value unless it equals the previously forwarded one; the first value is always
+    /// forwarded.
     fn distinct_until_changed(&self) -> ValueStream<T, E>
     where
         T: Clone + PartialEq + Send + Sync + 'static;
@@ -41,6 +45,7 @@ pub trait ReactiveValueStreamExt<T, E = ReactiveError> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Drops the first `count` values and forwards the rest.
     fn skip(&self, count: usize) -> ValueStream<T, E>
     where
         T: Send + Sync + 'static;
@@ -1062,6 +1067,7 @@ impl<T> ShareEntry<T> {
     }
 }
 
+/// Returns a [`Subscription`] that disposes nothing.
 pub fn empty_subscription() -> Subscription {
     Subscription::empty()
 }

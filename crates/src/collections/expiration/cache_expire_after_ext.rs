@@ -15,7 +15,14 @@ use crate::collections::subscription::Subscription;
 use crate::primitives::timer::{OperatorTimer, schedule_timer};
 use crate::primitives::{ScheduledTask, Scheduler, default_scheduler};
 
+/// Time-based expiration for a cache stream: expired items disappear from this view only.
+///
+/// The selector returns each item's time to live, counted from when the operator sees the
+/// item, or `None` to keep it indefinitely; adding or updating an item restarts it. Expired
+/// items stay in the source: a later update adds them back, and their refreshes, moves and
+/// removals are dropped. The plain methods use the default scheduler.
 pub trait CacheExpireAfterExt<K, T> {
+    /// Removes each item from the output once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -24,6 +31,8 @@ pub trait CacheExpireAfterExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due items every
+    /// `polling_interval` while items wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -56,7 +65,14 @@ pub trait CacheExpireAfterExt<K, T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Time-based expiration for a list stream: expired items disappear from this view only.
+///
+/// The selector returns each item's time to live, counted from when the operator sees the
+/// item, or `None` to keep it indefinitely; adding or replacing an item restarts it. Expired
+/// items stay in the source, and the output's indexes skip them. The plain methods use the
+/// default scheduler.
 pub trait ListExpireAfterExt<T> {
+    /// Removes each item from the output once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -64,6 +80,8 @@ pub trait ListExpireAfterExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due items every
+    /// `polling_interval` while items wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -93,7 +111,14 @@ pub trait ListExpireAfterExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Time-based expiration for a `SourceCache`: expired entries are removed from the source.
+///
+/// The returned stream is cold: expiration is enforced only while it is subscribed. Due
+/// entries are removed in one source edit, which is retried when the source is busy, and each
+/// removed batch is emitted as `(key, item)` pairs. The plain methods use the default
+/// scheduler.
 pub trait SourceCacheExpireAfterExt<K, T> {
+    /// Removes each entry from the source once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -102,6 +127,8 @@ pub trait SourceCacheExpireAfterExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due entries every
+    /// `polling_interval` while entries wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -134,7 +161,13 @@ pub trait SourceCacheExpireAfterExt<K, T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Time-based expiration for a `SourceList`: expired items are removed from the source.
+///
+/// The returned stream is cold: expiration is enforced only while it is subscribed. Due
+/// items are removed in one source edit, which is retried when the source is busy, and each
+/// removed batch is emitted. The plain methods use the default scheduler.
 pub trait SourceListExpireAfterExt<T> {
+    /// Removes each item from the source once the time to live from `time_selector` has elapsed.
     fn expire_after(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -142,6 +175,8 @@ pub trait SourceListExpireAfterExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`expire_after`](Self::expire_after), but checks for due items every
+    /// `polling_interval` while items wait instead of firing at each due time.
     fn expire_after_with_polling(
         &self,
         time_selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,

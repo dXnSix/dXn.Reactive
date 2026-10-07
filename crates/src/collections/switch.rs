@@ -11,7 +11,14 @@ use crate::collections::operators::apply_list_changes;
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
 
+/// Follows the latest inner list change stream of a stream of change streams.
 pub trait ListSwitchExt<T> {
+    /// Mirrors the most recent inner stream.
+    ///
+    /// When a new inner stream arrives, the previous one's items are cleared from the output and
+    /// its subscription is disposed before the new one is connected; nothing from a superseded
+    /// inner stream reaches the output after its clear. If subscribing to an inner stream fails,
+    /// the output stays empty until the outer stream emits again.
     fn switch(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
@@ -26,7 +33,14 @@ pub trait ListSwitchExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Follows the latest inner cache change stream of a stream of change streams.
 pub trait CacheSwitchExt<K, T> {
+    /// Mirrors the most recent inner stream.
+    ///
+    /// When a new inner stream arrives, the previous one's items are cleared from the output and
+    /// its subscription is disposed before the new one is connected; nothing from a superseded
+    /// inner stream reaches the output after its clear. If subscribing to an inner stream fails,
+    /// the output stays empty until the outer stream emits again.
     fn switch(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -43,7 +57,13 @@ pub trait CacheSwitchExt<K, T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Follows the latest `SourceList` of a stream of sources.
 pub trait SourceListSwitchExt<T> {
+    /// Mirrors the most recent source.
+    ///
+    /// When a new source arrives, the previous one's items are cleared from the output and its
+    /// subscription is disposed before the new one is connected. Use it for views whose backing
+    /// collection is chosen at runtime, such as the messages of the active channel.
     fn switch(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
@@ -58,7 +78,13 @@ pub trait SourceListSwitchExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Follows the latest `SourceCache` of a stream of sources.
 pub trait SourceCacheSwitchExt<K, T> {
+    /// Mirrors the most recent source.
+    ///
+    /// When a new source arrives, the previous one's items are cleared from the output and its
+    /// subscription is disposed before the new one is connected. Use it for views whose backing
+    /// collection is chosen at runtime, such as the rows of the selected project.
     fn switch(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,

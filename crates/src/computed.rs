@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
 use crate::primitives::{Result, ValueStream};
@@ -14,23 +15,39 @@ use crate::signal::{ReadSignal, Signal, SignalChange, SignalRefresh};
 /// [`read_signal`](Self::read_signal)) compare the inputs' versions with the ones the
 /// current value was computed from and recompute when they differ, so a read right after
 /// an input write is fresh even while another thread is still delivering that write.
+#[must_use = "a `Computed` stops following its inputs when dropped"]
 pub struct Computed<T> {
     core: Arc<ComputedCore<T>>,
     _subscriptions: DisposeBag,
+}
+
+impl<T: fmt::Debug + Clone> fmt::Debug for Computed<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Computed")
+            .field(
+                "value",
+                &crate::signal::DebugRead(self.core.signal.try_get().ok().flatten()),
+            )
+            .finish()
+    }
 }
 
 impl<T> Computed<T>
 where
     T: Clone,
 {
+    /// Returns the current derived value, recomputing first when an input moved on.
     pub fn get(&self) -> Result<T> {
         self.core.signal.get()
     }
 
+    /// Returns a [`ReadSignal`] of the derived value, to expose or to feed into another
+    /// `Computed`.
     pub fn read_signal(&self) -> ReadSignal<T> {
         self.core.signal.read_only()
     }
 
+    /// A stream of the current derived value followed by every later one.
     pub fn values(&self) -> ValueStream<T>
     where
         T: Send + Sync + 'static,
@@ -56,6 +73,7 @@ where
             .load(std::sync::atomic::Ordering::SeqCst)
     }
 
+    /// A stream of every later published value, as [`SignalChange`]s.
     pub fn changes(&self) -> ValueStream<SignalChange<T>>
     where
         T: Send + Sync + 'static,
@@ -385,6 +403,27 @@ impl<T> Computed<T>
 where
     T: Clone + Send + Sync + 'static,
 {
+    /// Derives a value from one signal with `derive`.
+    ///
+    /// The value is recomputed after every change of `source` and republished even when the
+    /// result is equal; use [`derive_distinct`](Self::derive_distinct) to publish only real
+    /// changes. A panic in `derive` propagates to the writer whose change triggered it.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::prelude::*;
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let items = Signal::new(vec![1, 2, 3]);
+    /// let count = Computed::derive(items.read_only(), |items| items.len())?;
+    /// assert_eq!(count.get()?, 3);
+    ///
+    /// items.update(|items| items.push(4))?;
+    /// assert_eq!(count.get()?, 4); // updated synchronously by the write
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn derive<S>(
         source: ReadSignal<S>,
         derive: impl Fn(&S) -> T + Send + Sync + 'static,
@@ -447,6 +486,10 @@ where
         )
     }
 
+    /// Derives a value from two signals with `combine`.
+    ///
+    /// A write that reaches both inputs (a diamond) publishes once, and every value is computed
+    /// from the latest value of each input.
     pub fn combine2<A, B>(
         first: ReadSignal<A>,
         second: ReadSignal<B>,

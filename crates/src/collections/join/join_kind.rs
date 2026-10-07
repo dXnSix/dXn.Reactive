@@ -29,7 +29,12 @@ type JoinSelector<K, L, R, U> = dyn Fn(&K, Option<&L>, Option<&R>) -> Option<U>;
 type JoinManySelector<K, L, RK, R, U> =
     dyn Fn(&K, Option<&L>, &RayCacheGroup<K, RK, R>) -> Option<U>;
 
+/// Joins of two keyed cache streams.
+///
+/// The output is a cache stream keyed by the left key. When either side changes, only the
+/// affected keys are selected again.
 pub trait CacheJoinExt<K, L> {
+    /// Emits `selector(key, left, right)` for every key present on both sides.
     fn inner_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -41,6 +46,7 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Emits `selector(key, left, right)` for every left key, with the right item if present.
     fn left_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -52,6 +58,7 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Emits `selector(key, left, right)` for every right key, with the left item if present.
     fn right_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -63,6 +70,7 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Emits `selector(key, left, right)` for every key present on either side.
     fn full_join<R, U>(
         &self,
         right: ChangeStream<CacheChange<K, R>>,
@@ -74,6 +82,11 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every left key with at least one right item.
+    ///
+    /// The group is a live [`RayCacheGroup`] of the matching right items. When right-side
+    /// membership changes, only the affected left keys are selected again.
     fn inner_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -87,6 +100,8 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every left key; the group may be empty.
     fn left_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -100,6 +115,9 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every key with right items, with the left item if
+    /// present.
     fn right_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,
@@ -113,6 +131,8 @@ pub trait CacheJoinExt<K, L> {
         R: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// One-to-many join: groups the right items by `right_key_selector` and emits
+    /// `selector(key, left, group)` for every key present on either side.
     fn full_join_many<RK, R, U>(
         &self,
         right: ChangeStream<CacheChange<RK, R>>,

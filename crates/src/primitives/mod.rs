@@ -8,6 +8,8 @@ pub(crate) mod timer;
 #[cfg(test)]
 mod tests;
 
+/// The primitive types, re-exported at [`primitives`](crate::primitives) and in the crate
+/// prelude.
 pub mod prelude {
     pub use crate::primitives::delivery::DeliveryQueue;
     pub use crate::primitives::error::{ReactiveError, Result};

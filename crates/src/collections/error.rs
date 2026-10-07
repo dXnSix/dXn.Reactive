@@ -1,9 +1,14 @@
+/// The error type of collection sources, operators and materialized collections.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum CollectionError {
+    /// A lock guarding collection state was poisoned by a panic.
     #[error("collection state is poisoned")]
     Poisoned,
+    /// A key-based operation named a key that the cache does not contain.
     #[error("key was not found")]
     MissingKey,
+    /// An index-based operation named an index outside the list.
     #[error("index was out of range")]
     IndexOutOfRange,
     /// A source was accessed from inside its own edit (or key selector, or `T::clone`
@@ -42,4 +47,5 @@ impl From<CollectionError> for crate::primitives::ReactiveError {
     }
 }
 
+/// A `Result` whose error is [`CollectionError`].
 pub type Result<T> = std::result::Result<T, CollectionError>;

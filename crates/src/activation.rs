@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -7,6 +8,49 @@ use crate::disposal::DisposeBag;
 
 type ActivationCallback = Arc<dyn Fn(&DisposeBag) -> Result<()> + Send + Sync>;
 
+/// Scopes a ViewModel's subscriptions to the time a view is active, by reference count.
+///
+/// Register work with [`when_activated`](Self::when_activated). The first live
+/// [`ActivationToken`] from [`activate`](Self::activate) starts a generation: a fresh
+/// [`DisposeBag`] against which every registered callback runs. Further tokens only raise the
+/// count; dropping the last token disposes the generation's bag. Callbacks run after the
+/// activator's lock is released, so they may register callbacks or activate other ViewModels.
+/// Clones share the same activation state.
+///
+/// # Examples
+///
+/// ```rust
+/// use rayx_reactive::prelude::*;
+/// use std::sync::{Arc, Mutex};
+///
+/// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+/// let activator = ViewModelActivator::default();
+/// let ticks = Signal::new(0);
+/// let seen = Arc::new(Mutex::new(Vec::new()));
+/// {
+///     let ticks = ticks.clone();
+///     let seen = Arc::clone(&seen);
+///     activator.when_activated(move |bag| {
+///         let seen = Arc::clone(&seen);
+///         ticks
+///             .changes()
+///             .subscribe(move |change| seen.lock().unwrap().push(change.current))?
+///             .dispose_with(bag);
+///         Ok(())
+///     })?;
+/// }
+///
+/// let token = activator.activate()?;
+/// ticks.set(1)?;
+/// drop(token); // the last token: the activation's subscriptions are disposed
+/// ticks.set(2)?;
+///
+/// assert_eq!(*seen.lock().unwrap(), [1]);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// [`DisposeBag`]: crate::disposal::DisposeBag
 #[derive(Clone, Default)]
 pub struct ViewModelActivator {
     state: Arc<Mutex<ActivationState>>,
@@ -47,15 +91,49 @@ impl GenerationPhase {
     }
 }
 
+/// A ViewModel with a [`ViewModelActivator`], so view code can activate any ViewModel
+/// uniformly.
 pub trait ActivatableViewModel {
+    /// The ViewModel's activator.
     fn activator(&self) -> &ViewModelActivator;
 }
 
+/// Keeps a [`ViewModelActivator`] generation alive; dropping the last token deactivates it.
+///
+/// A token remembers its generation, so a token from an old generation never disposes a newer
+/// one.
+#[must_use = "dropping an `ActivationToken` deactivates its view model"]
 pub struct ActivationToken {
     activator: ViewModelActivator,
     generation: u64,
     phase: Arc<GenerationPhase>,
     active: bool,
+}
+
+impl fmt::Debug for ViewModelActivator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug = f.debug_struct("ViewModelActivator");
+        match self.state.try_lock() {
+            Ok(state) => debug.field("callbacks", &state.callbacks.len()).field(
+                "active_tokens",
+                &state
+                    .active_generation
+                    .as_ref()
+                    .map_or(0, |generation| generation.active_count),
+            ),
+            Err(_) => debug.field("state", &format_args!("<locked>")),
+        };
+        debug.finish()
+    }
+}
+
+impl fmt::Debug for ActivationToken {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ActivationToken")
+            .field("generation", &self.generation)
+            .field("active", &self.is_active())
+            .finish()
+    }
 }
 
 impl ActivationToken {
@@ -98,6 +176,12 @@ impl ViewModelActivator {
         })
     }
 
+    /// Registers `callback` to run against the bag of every activation generation.
+    ///
+    /// When a generation is active, `callback` also runs immediately against its bag; if it then
+    /// fails, the work it registered is disposed, it is unregistered, and the error is returned.
+    /// Registering from inside an activation callback adds one more callback on every activation;
+    /// use [`when_activated_scoped`](Self::when_activated_scoped) there.
     pub fn when_activated(
         &self,
         callback: impl Fn(&DisposeBag) -> Result<()> + Send + Sync + 'static,
@@ -151,6 +235,12 @@ impl ViewModelActivator {
         }
     }
 
+    /// Returns a token that keeps the ViewModel active.
+    ///
+    /// The first live token starts a generation and runs every registered callback against a new
+    /// bag. If a callback fails, the partially built bag is disposed, the generation is
+    /// abandoned, and the error is returned; tokens that joined it meanwhile report
+    /// [`is_active`](ActivationToken::is_active) `false`.
     pub fn activate(&self) -> Result<ActivationToken> {
         let (generation, phase, callbacks) = {
             let mut state = self.state.lock().map_err(|_| ReactiveError::Poisoned)?;

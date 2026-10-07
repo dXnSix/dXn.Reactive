@@ -15,13 +15,20 @@ use crate::collections::stream::ValueStream;
 use crate::collections::subscription::Subscription;
 use crate::primitives::{Scheduler, default_scheduler};
 
+/// Returns an item's time to live, counted from when the item is seen; `None` never expires.
 pub type ExpirationSelector<T> = Arc<dyn Fn(&T) -> Option<Duration> + Send + Sync>;
 
+/// Bounds for the private source behind a `to_*_change_set*` adapter: a size limit, expiration and
+/// the expiration timer.
 pub struct ChangeSetAdapterOptions<T> {
+    /// Keeps at most this many items, evicting the oldest (for caches, the least recently added or
+    /// updated).
     pub limit_size_to: Option<usize>,
+    /// Removes each item after the duration its selector returns.
     pub expire_after: Option<ExpirationSelector<T>>,
+    /// Checks expirations every interval instead of at each due time.
     pub polling_interval: Option<Duration>,
-    /// Runs the expiration timer; `None` uses [`default_scheduler`](crate::primitives::default_scheduler).
+    /// Runs the expiration timer; `None` uses [`default_scheduler`].
     pub scheduler: Option<Arc<dyn Scheduler>>,
 }
 
@@ -48,18 +55,26 @@ impl<T> Default for ChangeSetAdapterOptions<T> {
 }
 
 impl<T> ChangeSetAdapterOptions<T> {
+    /// Returns options without any bounds.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns options that keep at most `size` items.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `size` is zero.
     pub fn limit_size_to(size: usize) -> Self {
         Self::new().with_limit_size_to(size)
     }
 
+    /// Returns options that remove each item after the duration `selector` returns for it.
     pub fn expire_after(selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static) -> Self {
         Self::new().with_expire_after(selector)
     }
 
+    /// Returns options that expire items by `selector`, checking every `polling_interval`.
     pub fn expire_after_with_polling(
         selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
         polling_interval: Duration,
@@ -93,12 +108,18 @@ impl<T> ChangeSetAdapterOptions<T> {
         self
     }
 
+    /// Keeps at most `size` items, evicting the oldest.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `size` is zero.
     pub fn with_limit_size_to(mut self, size: usize) -> Self {
         assert!(size > 0, "size limit must be greater than zero");
         self.limit_size_to = Some(size);
         self
     }
 
+    /// Removes each item after the duration `selector` returns for it (`None` never expires).
     pub fn with_expire_after(
         mut self,
         selector: impl Fn(&T) -> Option<Duration> + Send + Sync + 'static,
@@ -107,12 +128,18 @@ impl<T> ChangeSetAdapterOptions<T> {
         self
     }
 
+    /// Checks expirations every `polling_interval` instead of at each due time.
     pub fn with_polling_interval(mut self, polling_interval: Duration) -> Self {
         self.polling_interval = Some(polling_interval);
         self
     }
 }
 
+/// Applies a list change stream to an existing `SourceList`.
+///
+/// Each batch is applied inside one destination edit, in order. A batch whose edit fails is kept
+/// and retried when the destination's lock is next released, and in any case before the next batch;
+/// a retry runs on the thread that releases the lock. A `Poisoned` destination drops the batch.
 pub trait ListPopulateExt<T> {
     /// Applies every batch to `destination`. A batch whose edit fails (for example under
     /// contention) is kept and applied before the next one, never dropped.
@@ -131,6 +158,13 @@ pub trait ListPopulateExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Applies a cache change stream to an existing `SourceCache`, keeping the stream's keys and
+/// positions.
+///
+/// Each batch is applied inside one destination edit, in order, with `add_or_update_key_at`, so
+/// keys are not recomputed by the destination's selector. A batch whose edit fails is kept and
+/// retried when the destination's lock is next released, and in any case before the next batch. A
+/// `Poisoned` destination drops the batch.
 pub trait CachePopulateExt<K, T> {
     /// Applies every batch to `destination`. A batch whose edit fails (for example under
     /// contention) is kept and applied before the next one, never dropped.
@@ -151,7 +185,11 @@ pub trait CachePopulateExt<K, T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Feeds a `SourceList` from a value stream.
 pub trait SourceListPopulateFromExt<T> {
+    /// Appends every item `source` emits; the returned subscription keeps the feed connected.
+    ///
+    /// An item whose edit fails is kept and retried before the next one.
     fn populate_from<E>(
         &self,
         source: &crate::primitives::ValueStream<T, E>,
@@ -161,6 +199,7 @@ pub trait SourceListPopulateFromExt<T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Appends each `Vec` that `source` emits as one range, in one edit.
     fn populate_from_batches<E>(
         &self,
         source: &crate::primitives::ValueStream<Vec<T>, E>,
@@ -193,7 +232,12 @@ pub trait SourceListPopulateFromExt<T> {
         CollectionError: From<E>;
 }
 
+/// Feeds a `SourceCache` from a value stream.
 pub trait SourceCachePopulateFromExt<K, T> {
+    /// Adds or updates every item `source` emits; the returned subscription keeps the feed
+    /// connected.
+    ///
+    /// An item whose edit fails is kept and retried before the next one.
     fn populate_from<E>(
         &self,
         source: &crate::primitives::ValueStream<T, E>,
@@ -204,6 +248,7 @@ pub trait SourceCachePopulateFromExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Adds or updates each `Vec` that `source` emits, in one edit per batch.
     fn populate_from_batches<E>(
         &self,
         source: &crate::primitives::ValueStream<Vec<T>, E>,
@@ -239,11 +284,17 @@ pub trait SourceCachePopulateFromExt<K, T> {
         CollectionError: From<E>;
 }
 
+/// Turns a value stream of items into a list change stream.
+///
+/// Each subscriber gets its own private backing list. The adapter subscribes its output before its
+/// input, so items a stream emits synchronously on subscription are not lost.
 pub trait ValueStreamListChangeSetExt<T> {
+    /// Appends every emitted item to the output list.
     fn to_list_change_set(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Appends every emitted item, bounded by `options`.
     fn to_list_change_set_with_options(
         &self,
         options: ChangeSetAdapterOptions<T>,
@@ -263,11 +314,16 @@ pub trait ValueStreamListChangeSetExt<T> {
         T: Clone + PartialEq + Send + Sync + 'static;
 }
 
+/// Turns a value stream of item batches into a list change stream.
+///
+/// Each subscriber gets its own private backing list.
 pub trait ValueStreamListBatchChangeSetExt<T> {
+    /// Appends each emitted batch to the output list as one range.
     fn to_list_change_set_batches(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Appends each emitted batch as one range, bounded by `options`.
     fn to_list_change_set_batches_with_options(
         &self,
         options: ChangeSetAdapterOptions<T>,
@@ -286,7 +342,12 @@ pub trait ValueStreamListBatchChangeSetExt<T> {
         T: Clone + PartialEq + Send + Sync + 'static;
 }
 
+/// Turns a value stream of items into a cache change stream.
+///
+/// Each subscriber gets its own private backing cache. The adapter subscribes its output before its
+/// input, so items a stream emits synchronously on subscription are not lost.
 pub trait ValueStreamCacheChangeSetExt<T> {
+    /// Adds or updates every emitted item by the key `key_selector` derives.
     fn to_cache_change_set<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -295,6 +356,7 @@ pub trait ValueStreamCacheChangeSetExt<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Adds or updates every emitted item by key, bounded by `options`.
     fn to_cache_change_set_with_options<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -317,7 +379,11 @@ pub trait ValueStreamCacheChangeSetExt<T> {
         T: Clone + PartialEq + Send + Sync + 'static;
 }
 
+/// Turns a value stream of item batches into a cache change stream.
+///
+/// Each subscriber gets its own private backing cache.
 pub trait ValueStreamCacheBatchChangeSetExt<T> {
+    /// Adds or updates each emitted batch by key, in one edit per batch.
     fn to_cache_change_set_batches<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -326,6 +392,7 @@ pub trait ValueStreamCacheBatchChangeSetExt<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Adds or updates each emitted batch by key in one edit, bounded by `options`.
     fn to_cache_change_set_batches_with_options<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,

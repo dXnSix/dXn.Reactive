@@ -8,7 +8,13 @@ use crate::collections::change::{
 use crate::collections::operators::apply_list_changes;
 use crate::collections::stream::{ChangeStream, ValueStream};
 
+/// Side-effect operators for list streams: they run a callback and forward the original
+/// batches unchanged.
+///
+/// Use them for logging, metrics, tracing and test probes; keep domain logic in real
+/// operators.
 pub trait ListSideEffectExt<T> {
+    /// Calls `action` with each batch before forwarding it.
     fn for_each_batch(
         &self,
         action: impl Fn(&ChangeSet<ListChange<T>>) + Send + Sync + 'static,
@@ -16,6 +22,7 @@ pub trait ListSideEffectExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` with each change of a batch, in order, before forwarding the batch.
     fn for_each_change(
         &self,
         action: impl Fn(&ListChange<T>) + Send + Sync + 'static,
@@ -23,6 +30,8 @@ pub trait ListSideEffectExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` with one item-level record per affected item (range changes expanded),
+    /// before forwarding the batch.
     fn for_each_item_change(
         &self,
         action: impl Fn(&ListItemChange<T>) + Send + Sync + 'static,
@@ -30,20 +39,31 @@ pub trait ListSideEffectExt<T> {
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Applies each batch to the `target` vector, keeping it a mirror of the list, before
+    /// forwarding the batch.
     fn clone_into_vec(&self, target: Arc<Mutex<Vec<T>>>) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Flattens each batch into one item-level record per affected item; range changes expand
+    /// into per-item records.
     fn flatten_item_changes(&self) -> ValueStream<ListItemChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`flatten_item_changes`](Self::flatten_item_changes), with the indexes cleared.
     fn flatten_item_changes_without_indexes(&self) -> ValueStream<ListItemChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Side-effect operators for cache streams: they run a callback and forward the original
+/// batches unchanged.
+///
+/// Use them for logging, metrics, tracing and test probes; keep domain logic in real
+/// operators.
 pub trait CacheSideEffectExt<K, T> {
+    /// Calls `action` with each batch before forwarding it.
     fn for_each_batch(
         &self,
         action: impl Fn(&ChangeSet<CacheChange<K, T>>) + Send + Sync + 'static,
@@ -52,6 +72,7 @@ pub trait CacheSideEffectExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` with each change of a batch, in order, before forwarding the batch.
     fn for_each_change(
         &self,
         action: impl Fn(&CacheChange<K, T>) + Send + Sync + 'static,
@@ -60,24 +81,33 @@ pub trait CacheSideEffectExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Applies each batch to the `target` vector, keeping it a mirror of the cache's items,
+    /// before forwarding the batch.
     fn clone_into_vec(&self, target: Arc<Mutex<Vec<T>>>) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Flattens each batch into one value per change.
     fn flatten_changes(&self) -> ValueStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 }
 
+/// Turns a stream of buffered list batches back into a change stream.
 pub trait ListBufferExt<T> {
+    /// Concatenates the batches of each buffer into one batch carrying the last batch's version;
+    /// an empty buffer publishes nothing.
     fn flatten_buffer_result(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Turns a stream of buffered cache batches back into a change stream.
 pub trait CacheBufferExt<K, T> {
+    /// Concatenates the batches of each buffer into one batch carrying the last batch's version;
+    /// an empty buffer publishes nothing.
     fn flatten_buffer_result(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,

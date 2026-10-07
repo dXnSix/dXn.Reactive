@@ -36,7 +36,7 @@ fn live_group_touched_members(c: &mut Criterion) {
                             group: (count / 2) % 8,
                         })
                         .expect("update one member");
-                    black_box(subscription);
+                    drop(black_box(subscription));
                 });
             },
         );

@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::fmt;
 use std::future::Future;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -10,23 +11,42 @@ use futures::future::BoxFuture;
 
 use crate::signal::{ReadSignal, Signal};
 
+/// The result of a command action: `Ok(())` or a [`CommandError`].
 pub type CommandResult = std::result::Result<(), CommandError>;
 
+/// The state of the most recently started execution of a [`Command`] or [`AsyncCommand`].
+///
+/// An execution that starts while none is running publishes `Running`, and the most recently
+/// started execution publishes its terminal state when it ends, even when the previous one ended
+/// the same way. Overlapping executions (the default `ExecutionPolicy::Concurrent`) therefore
+/// publish one `Running` and the latest one's terminal state.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CommandState {
+    /// Created and never executed.
     Idle,
+    /// The action has started and not finished yet.
     Running,
+    /// The action returned `Ok(())`.
     Succeeded,
+    /// The action returned an error (the message is its `Display` text) or panicked (the message
+    /// starts with `panicked: `).
     Failed(String),
+    /// An [`AsyncCommand::execute`] future was dropped after it started and before it finished.
     Cancelled,
 }
 
+/// Why a command execution failed.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum CommandError {
+    /// `execute` was called while the command could not run: `can_execute` was `false`, or the
+    /// [`ExecutionPolicy`] refused an overlapping execution.
     #[error("command cannot execute")]
     Disabled,
+    /// The action failed for a domain reason, described by the message.
     #[error("command failed: {0}")]
     Failed(String),
+    /// A reactive operation inside the action failed; `?` on signal operations converts into it.
     #[error(transparent)]
     Reactive(#[from] ReactiveError),
 }
@@ -173,6 +193,70 @@ fn terminal_state(result: &CommandResult) -> CommandState {
     }
 }
 
+impl fmt::Debug for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.execution.debug("Command", &self.can_execute, f)
+    }
+}
+
+impl fmt::Debug for AsyncCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.execution.debug("AsyncCommand", &self.can_execute, f)
+    }
+}
+
+impl Execution {
+    fn debug(
+        &self,
+        name: &str,
+        can_execute: &ReadSignal<bool>,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        use crate::signal::DebugRead;
+        f.debug_struct(name)
+            .field(
+                "can_execute",
+                &DebugRead(can_execute.try_get().ok().flatten()),
+            )
+            .field("state", &DebugRead(self.state.try_get().ok().flatten()))
+            .field(
+                "executing",
+                &DebugRead(self.executing.try_get().ok().flatten()),
+            )
+            .field("policy", &self.policy)
+            .finish()
+    }
+}
+
+/// A synchronous action with observable enablement, state and progress.
+///
+/// Bind a button's enabled state to [`can_execute`](Self::can_execute), a busy indicator to
+/// [`is_executing`](Self::is_executing), and outcome reporting to [`state`](Self::state).
+/// Cloning shares the action and the execution state.
+///
+/// # Examples
+///
+/// ```rust
+/// use rayx_reactive::prelude::*;
+///
+/// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+/// let items = Signal::new(vec!["a", "b"]);
+/// let has_items = Computed::derive(items.read_only(), |items| !items.is_empty())?;
+/// let clear = {
+///     let items = items.clone();
+///     Command::with_can_execute(has_items.read_signal(), move || {
+///         items.set(Vec::new())?;
+///         Ok(())
+///     })
+/// };
+///
+/// clear.execute()?;
+/// assert_eq!(clear.state().get()?, CommandState::Succeeded);
+/// assert!(!clear.can_execute().get()?); // follows the derived signal
+/// assert_eq!(clear.execute(), Err(CommandError::Disabled));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone)]
 pub struct Command {
     can_execute: ReadSignal<bool>,
@@ -180,6 +264,11 @@ pub struct Command {
     action: CommandAction,
 }
 
+/// An asynchronous action with observable enablement, state and progress.
+///
+/// It has the same shape as [`Command`], but its action returns a future and
+/// [`execute`](Self::execute) is an `async fn`. The crate spawns nothing: drive the future on
+/// the application's executor. Cloning shares the action and the execution state.
 #[derive(Clone)]
 pub struct AsyncCommand {
     can_execute: ReadSignal<bool>,
@@ -188,10 +277,12 @@ pub struct AsyncCommand {
 }
 
 impl Command {
+    /// Creates a command that is always enabled.
     pub fn new(action: impl Fn() -> CommandResult + Send + Sync + 'static) -> Self {
         Self::with_can_execute(Signal::new(true).read_only(), action)
     }
 
+    /// Creates a command that is enabled while `can_execute` is `true`.
     pub fn with_can_execute(
         can_execute: ReadSignal<bool>,
         action: impl Fn() -> CommandResult + Send + Sync + 'static,
@@ -209,14 +300,17 @@ impl Command {
         self
     }
 
+    /// The policy for overlapping executions; [`ExecutionPolicy::Concurrent`] by default.
     pub fn execution_policy(&self) -> ExecutionPolicy {
         self.execution.policy
     }
 
+    /// Whether the command may run now.
     pub fn can_execute(&self) -> ReadSignal<bool> {
         self.can_execute.clone()
     }
 
+    /// The state of the most recently started execution.
     pub fn state(&self) -> ReadSignal<CommandState> {
         self.execution.state.read_only()
     }
@@ -248,6 +342,7 @@ impl Command {
 }
 
 impl AsyncCommand {
+    /// Creates a command that is always enabled.
     pub fn new<F, Fut>(action: F) -> Self
     where
         F: Fn() -> Fut + Send + Sync + 'static,
@@ -256,6 +351,7 @@ impl AsyncCommand {
         Self::with_can_execute(Signal::new(true).read_only(), action)
     }
 
+    /// Creates a command that is enabled while `can_execute` is `true`.
     pub fn with_can_execute<F, Fut>(can_execute: ReadSignal<bool>, action: F) -> Self
     where
         F: Fn() -> Fut + Send + Sync + 'static,
@@ -274,14 +370,17 @@ impl AsyncCommand {
         self
     }
 
+    /// The policy for overlapping executions; [`ExecutionPolicy::Concurrent`] by default.
     pub fn execution_policy(&self) -> ExecutionPolicy {
         self.execution.policy
     }
 
+    /// Whether the command may run now.
     pub fn can_execute(&self) -> ReadSignal<bool> {
         self.can_execute.clone()
     }
 
+    /// The state of the most recently started execution.
     pub fn state(&self) -> ReadSignal<CommandState> {
         self.execution.state.read_only()
     }

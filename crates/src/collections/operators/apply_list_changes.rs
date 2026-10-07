@@ -162,6 +162,10 @@ where
     }
 }
 
+/// Applies list `changes` to `target` front to back, as a materialized mirror would.
+///
+/// A change whose index is out of range for `target` is skipped. `Refresh` writes the carried
+/// item into its slot, and `Clear` empties `target` whatever items it lists.
 pub fn apply_list_changes<T: Clone>(target: &mut Vec<T>, changes: &[ListChange<T>]) {
     for change in changes {
         match change {

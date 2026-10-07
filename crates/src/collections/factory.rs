@@ -8,10 +8,20 @@ use crate::collections::list::SourceList;
 use crate::collections::stream::ChangeStream;
 use crate::collections::subscription::Subscription;
 
+/// The driver of [`create_list_change_stream`]: fills the per-subscription source and returns
+/// the subscription that keeps its producer alive.
 pub type ListSourceDriver<T> = Arc<dyn Fn(SourceList<T>) -> Result<Subscription> + Send + Sync>;
+/// The driver of [`create_cache_change_stream`]: fills the per-subscription source and
+/// returns the subscription that keeps its producer alive.
 pub type CacheSourceDriver<K, T> =
     Arc<dyn Fn(SourceCache<K, T>) -> Result<Subscription> + Send + Sync>;
 
+/// Creates a list change stream backed by a fresh `SourceList` per subscription.
+///
+/// On subscribe, the subscriber is connected to a new empty source and `driver` runs with a
+/// handle to it; the driver seeds or feeds the source and returns a subscription for its
+/// producer. Disposing the stream subscription disposes the driver's subscription. A driver
+/// error is returned from `subscribe`.
 pub fn create_list_change_stream<T>(
     driver: impl Fn(SourceList<T>) -> Result<Subscription> + Send + Sync + 'static,
 ) -> ChangeStream<ListChange<T>>
@@ -31,6 +41,13 @@ where
     })
 }
 
+/// Creates a cache change stream backed by a fresh `SourceCache` per subscription, keyed by
+/// `key_selector`.
+///
+/// On subscribe, the subscriber is connected to a new empty source and `driver` runs with a
+/// handle to it; the driver seeds or feeds the source and returns a subscription for its
+/// producer. Disposing the stream subscription disposes the driver's subscription. A driver
+/// error is returned from `subscribe`.
 pub fn create_cache_change_stream<K, T>(
     key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
     driver: impl Fn(SourceCache<K, T>) -> Result<Subscription> + Send + Sync + 'static,

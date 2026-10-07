@@ -10,6 +10,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+documentation = "https://docs.rs/rayx_reactive"
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 default = []

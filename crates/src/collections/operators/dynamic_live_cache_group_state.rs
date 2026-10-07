@@ -270,6 +270,9 @@ fn total_pages(total_count: usize, page_size: usize) -> usize {
     }
 }
 
+/// Applies every change of a list `change_set` to `target` in order.
+///
+/// Same semantics as [`apply_list_changes`]; it currently always returns `Ok`.
 pub fn apply_change_set_to_vec<T: Clone>(
     target: &mut Vec<T>,
     change_set: &ChangeSet<ListChange<T>>,
@@ -278,6 +281,7 @@ pub fn apply_change_set_to_vec<T: Clone>(
     Ok(())
 }
 
+/// Locks a shared vector, mapping a poisoned mutex to [`CollectionError::Poisoned`].
 pub fn lock_vec<T>(target: &Arc<Mutex<Vec<T>>>) -> Result<std::sync::MutexGuard<'_, Vec<T>>> {
     target.lock().map_err(|_| CollectionError::Poisoned)
 }

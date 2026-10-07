@@ -3,6 +3,31 @@ where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
 {
+    /// Creates an empty cache whose keys are derived by `key_selector`.
+    ///
+    /// The selector must be cheap and deterministic: it runs on every upsert, removal and refresh
+    /// by item, while the cache is locked.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// #[derive(Clone, Debug, PartialEq)]
+    /// struct Product {
+    ///     sku: String,
+    ///     price_cents: u32,
+    /// }
+    ///
+    /// let products = SourceCache::new(|product: &Product| product.sku.clone());
+    /// products.add_or_update(Product { sku: "A-1".into(), price_cents: 999 })?;
+    /// products.add_or_update(Product { sku: "A-1".into(), price_cents: 899 })?; // update by key
+    ///
+    /// assert_eq!(products.count()?, 1);
+    /// assert_eq!(products.lookup(&"A-1".to_string())?.map(|p| p.price_cents), Some(899));
+    /// # Ok(()) }
+    /// ```
     pub fn new(key_selector: impl Fn(&T) -> K + Send + Sync + 'static) -> Self {
         let changes = DeliveryQueue::new();
         let keyed_changes = KeyedChangeHub::new();
@@ -80,11 +105,19 @@ where
         cache
     }
 
+    /// The count and version, read without waiting: `None` while the state is locked (by
+    /// another thread, or by this one inside an edit).
+    pub(crate) fn debug_snapshot(&self) -> Option<(usize, u64)> {
+        let state = self.state.try_lock_now()?;
+        Some((state.items.len(), state.version))
+    }
+
     /// Runs `callback` once, when this source's state lock is next released (or now).
     pub(crate) fn on_next_release(&self, callback: Box<dyn FnOnce() + Send>) {
         self.state.on_next_release(callback);
     }
 
+    /// Returns whether an entry with `key` is present.
     pub fn contains_key(&self, key: &K) -> Result<bool> {
         Ok(self.state.lock()?.items.contains_key(key))
     }
@@ -99,10 +132,12 @@ where
         }))
     }
 
+    /// Returns the number of entries.
     pub fn count(&self) -> Result<usize> {
         Ok(self.state.lock()?.items.len())
     }
 
+    /// Returns a cloned snapshot of the items in key order.
     pub fn items(&self) -> Result<Vec<T>> {
         let state = self.state.lock()?;
         Ok(state
@@ -112,10 +147,12 @@ where
             .collect())
     }
 
+    /// Returns the keys in cache order.
     pub fn keys(&self) -> Result<Vec<K>> {
         Ok(self.state.lock()?.order.to_vec())
     }
 
+    /// Returns cloned `(key, item)` pairs in key order.
     pub fn key_values(&self) -> Result<Vec<(K, T)>> {
         let state = self.state.lock()?;
         Ok(state
@@ -131,14 +168,52 @@ where
             .collect())
     }
 
+    /// Returns a clone of the item stored under `key`, if any.
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
         Ok(self.state.lock()?.items.get(key).cloned())
     }
 
+    /// Returns the version of the last committed batch: the number of non-empty edits applied so
+    /// far.
     pub fn version(&self) -> Result<u64> {
         Ok(self.state.lock()?.version)
     }
 
+    /// Applies every change `edit` makes through the `CacheUpdater` as one batch, and returns it.
+    ///
+    /// The updater's reads see the changes already made in the same edit, so a read-modify-write
+    /// inside one edit is atomic, even with several writer threads. A non-empty batch advances the
+    /// version by one and is delivered after the cache is unlocked: first to `preview()`, then to
+    /// `changes()`, `connect()` and key watchers, then to `count_changed()`, in commit order across
+    /// threads. While a notification suspension is alive, the batch is held and published with the
+    /// other suspended edits when the last guard drops. An empty edit publishes nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CollectionError::NestedUpdate` when called from inside this cache's own edit or
+    /// `read` on the same thread (the outer edit continues and publishes what it recorded), and
+    /// `CollectionError::Contended` on `wasm32` when another thread holds the cache.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let stock = SourceCache::new(|entry: &(&'static str, u32)| entry.0);
+    /// stock.add_or_update(("apples", 3))?;
+    ///
+    /// let batch = stock.edit(|cache| {
+    ///     let apples = cache.lookup(&"apples").map_or(0, |entry| entry.1);
+    ///     cache.add_or_update(("apples", apples + 2));
+    ///     cache.add_or_update(("pears", 1));
+    /// })?;
+    ///
+    /// assert_eq!(batch.changes.len(), 2);
+    /// assert_eq!(stock.lookup(&"apples")?, Some(("apples", 5)));
+    /// assert_eq!(stock.version()?, 2);
+    /// # Ok(()) }
+    /// ```
     pub fn edit(
         &self,
         edit: impl FnOnce(&mut CacheUpdater<'_, K, T>),
@@ -201,10 +276,15 @@ where
         Ok(batch)
     }
 
+    /// Inserts `item`, or updates the entry with the same key, in one edit.
+    ///
+    /// An update is published even when the value is equal; use
+    /// [`add_or_update_if_changed`](Self::add_or_update_if_changed) to skip no-op updates.
     pub fn add_or_update(&self, item: T) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| updater.add_or_update(item))
     }
 
+    /// Inserts or updates `item`, publishing nothing when the stored value is equal.
     pub fn add_or_update_if_changed(&self, item: T) -> Result<ChangeSet<CacheChange<K, T>>>
     where
         T: PartialEq,
@@ -212,6 +292,7 @@ where
         self.edit(|updater| updater.add_or_update_if_changed(item))
     }
 
+    /// Inserts or updates `item`, publishing nothing when `equals(previous, item)` returns `true`.
     pub fn add_or_update_by(
         &self,
         item: T,
@@ -220,10 +301,14 @@ where
         self.edit(|updater| updater.add_or_update_by(item, equals))
     }
 
+    /// Inserts or updates `item` under an explicit `key` instead of the selector's key.
     pub fn add_or_update_key(&self, key: K, item: T) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| updater.add_or_update_key(key, item))
     }
 
+    /// Inserts or updates `item` under `key`, placing the key at `index` in cache order.
+    ///
+    /// `None` keeps an existing key's position or appends a new key; an index past the end appends.
     pub fn add_or_update_key_at(
         &self,
         key: K,
@@ -233,6 +318,7 @@ where
         self.edit(|updater| updater.add_or_update_key_at(key, item, index))
     }
 
+    /// Inserts or updates every item in `items`, as one batch.
     pub fn add_or_update_range(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -240,6 +326,8 @@ where
         self.edit(|updater| updater.add_or_update_range(items))
     }
 
+    /// Inserts or updates every item in `items` as one batch, skipping items equal to the stored
+    /// value.
     pub fn add_or_update_range_if_changed(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -250,6 +338,8 @@ where
         self.edit(|updater| updater.add_or_update_range_if_changed(items))
     }
 
+    /// Inserts or updates every item in `items` as one batch, skipping those for which
+    /// `equals(previous, item)` returns `true`.
     pub fn add_or_update_range_by(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -258,18 +348,21 @@ where
         self.edit(|updater| updater.add_or_update_range_by(items, equals))
     }
 
+    /// Removes the entry stored under `key`; a missing key publishes nothing.
     pub fn remove_key(&self, key: &K) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| {
             let _ = updater.remove_key(key);
         })
     }
 
+    /// Removes the entry with `item`'s key; a missing key publishes nothing.
     pub fn remove_item(&self, item: &T) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| {
             let _ = updater.remove_item(item);
         })
     }
 
+    /// Removes the entries stored under `keys`, as one batch.
     pub fn remove_keys(
         &self,
         keys: impl IntoIterator<Item = K>,
@@ -277,6 +370,7 @@ where
         self.edit(|updater| updater.remove_keys(keys))
     }
 
+    /// Removes the entries with the keys of `items`, as one batch.
     pub fn remove_items<'a>(
         &self,
         items: impl IntoIterator<Item = &'a T>,
@@ -287,18 +381,23 @@ where
         self.edit(|updater| updater.remove_items(items))
     }
 
+    /// Publishes a `Refresh` for `key`, telling observers to re-evaluate its item.
+    ///
+    /// A missing key publishes nothing.
     pub fn refresh_key(&self, key: &K) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| {
             let _ = updater.refresh_key(key);
         })
     }
 
+    /// Publishes a `Refresh` for the key of `item`; a missing key publishes nothing.
     pub fn refresh_item(&self, item: &T) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| {
             let _ = updater.refresh_item(item);
         })
     }
 
+    /// Publishes a `Refresh` for the key of each of `items`, as one batch.
     pub fn refresh_items<'a>(
         &self,
         items: impl IntoIterator<Item = &'a T>,
@@ -309,16 +408,23 @@ where
         self.edit(|updater| updater.refresh_items(items))
     }
 
+    /// Publishes a `Refresh` for every entry, in key order.
     pub fn refresh(&self) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| updater.refresh())
     }
 
+    /// Moves `key` to position `to` in cache order and publishes a `Move`.
+    ///
+    /// A missing key or an out-of-range `to` publishes nothing.
     pub fn move_key(&self, key: &K, to: usize) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| {
             let _ = updater.move_key(key, to);
         })
     }
 
+    /// Transforms the cache into `items` with the fewest changes, comparing values with `==`.
+    ///
+    /// See [`edit_diff_by`](Self::edit_diff_by).
     pub fn edit_diff(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -329,6 +435,11 @@ where
         self.edit(|updater| updater.edit_diff(items))
     }
 
+    /// Transforms the cache into `items` by key, comparing values with `are_items_equal`.
+    ///
+    /// Keys missing from `items` are removed, new keys are added, changed values are updated, and
+    /// unchanged entries that changed position are moved; the cache adopts the snapshot's order.
+    /// When a key occurs more than once, the last occurrence wins.
     pub fn edit_diff_by(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -337,14 +448,48 @@ where
         self.edit(|updater| updater.edit_diff_by(items, are_items_equal))
     }
 
+    /// Removes every entry, publishing one `Clear` that carries the removed entries.
     pub fn clear(&self) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| updater.clear())
     }
 
+    /// Replaces the contents with `items`: a `Clear` followed by the adds, in one batch.
+    ///
+    /// Prefer [`edit_diff`](Self::edit_diff) when a UI is bound to the cache.
     pub fn load(&self, items: impl IntoIterator<Item = T>) -> Result<ChangeSet<CacheChange<K, T>>> {
         self.edit(|updater| updater.load(items))
     }
 
+    /// Returns a stream of the current contents as a snapshot batch of `Add`s, then every live
+    /// batch.
+    ///
+    /// The subscription registers for live batches before taking the snapshot, and drops the live
+    /// batches the snapshot already contains, so a subscriber connecting during concurrent edits or
+    /// a notification suspension sees every change exactly once. An empty cache sends no snapshot.
+    /// Subscribing fails with the cache's lock errors (see the type documentation).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    /// use std::sync::{Arc, Mutex};
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let cache = SourceCache::from_items(|n: &u32| *n, [1, 2]);
+    /// let seen = Arc::new(Mutex::new(Vec::new()));
+    /// let sink = Arc::clone(&seen);
+    /// let _subscription = cache.connect().subscribe(move |batch| {
+    ///     let mut seen = sink.lock().unwrap();
+    ///     seen.extend(batch.changes.iter().map(|change| change.reason()));
+    /// })?;
+    ///
+    /// cache.remove_key(&1)?;
+    /// assert_eq!(
+    ///     *seen.lock().unwrap(),
+    ///     [ChangeReason::Add, ChangeReason::Add, ChangeReason::Remove]
+    /// );
+    /// # Ok(()) }
+    /// ```
     pub fn connect(&self) -> ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         ChangeStream::new(move |subscriber| source.connect_subscriber(subscriber))
@@ -394,6 +539,7 @@ where
         self.keyed_changes.with_registry_lock_held(action)
     }
 
+    /// Returns a stream of live batches only, without a snapshot.
     pub fn changes(&self) -> ChangeStream<CacheChange<K, T>> {
         let changes = self.changes.clone();
         ChangeStream::new(move |subscriber| {
@@ -402,6 +548,11 @@ where
         })
     }
 
+    /// Returns a stream of live batches delivered before `changes()` sees them.
+    ///
+    /// When a batch is drained on one thread, its preview is delivered before its `changes()` and
+    /// `connect()` delivery. With several writer threads each stream stays in commit order, but the
+    /// two streams may interleave.
     pub fn preview(&self) -> ChangeStream<CacheChange<K, T>> {
         let preview = self.preview.clone();
         ChangeStream::new(move |subscriber| {
@@ -410,6 +561,10 @@ where
         })
     }
 
+    /// Returns a stream of the changes for one key: the current entry as a snapshot (if present),
+    /// then each batch's changes for that key.
+    ///
+    /// A `Clear` is forwarded with only the key's own entry.
     pub fn watch(&self, watch_key: K) -> ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
@@ -417,6 +572,32 @@ where
         })
     }
 
+    /// Returns the current value of `watch_key` (if present), then at most one value per batch.
+    ///
+    /// Each value is the one the key's last change in the batch carries; a removal emits the
+    /// removed value.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    /// use std::sync::{Arc, Mutex};
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let settings = SourceCache::new(|entry: &(&'static str, u32)| entry.0);
+    /// settings.add_or_update(("volume", 7))?;
+    ///
+    /// let seen = Arc::new(Mutex::new(Vec::new()));
+    /// let sink = Arc::clone(&seen);
+    /// let _volume = settings
+    ///     .watch_value("volume")
+    ///     .subscribe(move |entry| sink.lock().unwrap().push(entry.1))?;
+    ///
+    /// settings.add_or_update(("volume", 8))?;
+    /// settings.add_or_update(("brightness", 50))?; // another key: not observed
+    /// assert_eq!(*seen.lock().unwrap(), [7, 8]);
+    /// # Ok(()) }
+    /// ```
     pub fn watch_value(&self, watch_key: K) -> ValueStream<T> {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
@@ -429,6 +610,12 @@ where
         })
     }
 
+    /// Returns the state of `watch_key` as `Some(value)` or `None`, at most once per batch.
+    ///
+    /// Each value is the key's final state in the batch, and repeated equal values are suppressed,
+    /// so a `load` that keeps the key emits only the new value. Nothing is emitted for an absent
+    /// key until it is added; see
+    /// [`watch_optional_with_initial`](Self::watch_optional_with_initial).
     pub fn watch_optional(&self, watch_key: K) -> ValueStream<Option<T>>
     where
         T: PartialEq,
@@ -436,6 +623,8 @@ where
         self.watch_optional_with_initial(watch_key, false)
     }
 
+    /// Like [`watch_optional`](Self::watch_optional), but when `initial_none_when_missing` is
+    /// `true` and the key is absent at subscription, `None` is emitted immediately.
     pub fn watch_optional_with_initial(
         &self,
         watch_key: K,
@@ -531,6 +720,42 @@ where
         Ok(())
     }
 
+    /// Holds published batches until the returned guard (and every other live guard) is dropped.
+    ///
+    /// While a guard is alive, edits are applied immediately and versions advance, but their
+    /// batches are held; dropping the last guard publishes them as one combined batch. Guards nest,
+    /// and `count_changed()` is not suspended. A `connect()` or `watch` that subscribes during the
+    /// suspension snapshots the current state and later receives only the held changes its snapshot
+    /// did not contain. A guard dropped inside the cache's own edit, or on `wasm32` while another
+    /// thread holds the cache, resumes when the cache is released.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    /// use std::sync::{Arc, Mutex};
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let cache = SourceCache::new(|n: &u32| *n);
+    /// let batches = Arc::new(Mutex::new(Vec::new()));
+    /// let sink = Arc::clone(&batches);
+    /// let _subscription = cache
+    ///     .changes()
+    ///     .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.len()))?;
+    ///
+    /// {
+    ///     let _guard = cache.suspend_notifications()?;
+    ///     cache.add_or_update(1)?;
+    ///     cache.edit(|cache| {
+    ///         cache.add_or_update(2);
+    ///         cache.remove_key(&1);
+    ///     })?;
+    ///     assert!(batches.lock().unwrap().is_empty());
+    /// } // the guard is dropped: one batch with all three changes
+    ///
+    /// assert_eq!(*batches.lock().unwrap(), [3]);
+    /// # Ok(()) }
+    /// ```
     pub fn suspend_notifications(&self) -> Result<CacheNotificationSuspension<K, T>> {
         let mut state = self.state.lock()?;
         state.suspend_depth = state.suspend_depth.saturating_add(1);
@@ -674,6 +899,21 @@ where
             subscription,
             startup.disposal_subscription(),
         ]))
+    }
+}
+
+impl<K, T> std::fmt::Debug for SourceCache<K, T>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug = f.debug_struct("SourceCache");
+        match self.debug_snapshot() {
+            Some((count, version)) => debug.field("count", &count).field("version", &version),
+            None => debug.field("state", &format_args!("<locked>")),
+        };
+        debug.finish()
     }
 }
 

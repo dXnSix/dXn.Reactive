@@ -26,6 +26,55 @@ struct ListState<T> {
     suspended: Vec<(u64, Vec<ListChange<T>>)>,
 }
 
+/// An ordered, mutable list that allows duplicates: the root of every list pipeline.
+///
+/// Cloning a `SourceList` gives another handle to the same list, which is how it is shared between
+/// a service, a view model and a background task.
+///
+/// Every mutation runs inside one [`edit`](Self::edit) and is published as one `ChangeSet`. Each
+/// mutator on the list itself is a one-edit convenience for the `ListUpdater` method of the same
+/// name and returns the published change set. Out-of-range indexes and missing items are not
+/// errors: they record no change. An edit that records no change publishes nothing and does not
+/// advance the version. Batches are delivered in commit order, also with several writer threads;
+/// editing the list from a subscriber queues the new batch until the current one has reached every
+/// subscriber.
+///
+/// # Errors
+///
+/// Every method that reads or edits the list returns:
+///
+/// - `CollectionError::NestedUpdate` when called on the same thread from inside this list's own
+///   edit or `read` closure (or an item clone that runs while it is locked);
+/// - `CollectionError::Contended` on `wasm32` only, when another thread holds the list (native
+///   targets wait instead);
+/// - `CollectionError::Poisoned` when a thread panicked while holding the list.
+///
+/// # Examples
+///
+/// ```rust
+/// use rayx_reactive::collections::prelude::*;
+/// use std::sync::{Arc, Mutex};
+///
+/// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+/// let list = SourceList::new(vec!["a", "b"]);
+///
+/// let batches = Arc::new(Mutex::new(Vec::new()));
+/// let sink = Arc::clone(&batches);
+/// let _subscription = list
+///     .connect()
+///     .subscribe(move |batch| sink.lock().unwrap().push(batch.changes.clone()))?;
+///
+/// list.push("c")?;
+/// assert_eq!(
+///     *batches.lock().unwrap(),
+///     [
+///         vec![ListChange::AddRange { index: 0, items: vec!["a", "b"] }], // the snapshot
+///         vec![ListChange::Add { index: 2, item: "c" }],
+///     ]
+/// );
+/// assert_eq!(list.items()?, ["a", "b", "c"]);
+/// # Ok(()) }
+/// ```
 #[derive(Clone)]
 pub struct SourceList<T> {
     state: Arc<SourceLock<ListState<T>>>,
@@ -42,6 +91,23 @@ impl<T> SourceList<T>
 where
     T: Clone + Send + Sync + 'static,
 {
+    /// Creates a list holding `items`, at version 0.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let list = SourceList::new(vec![3, 1, 2]);
+    /// assert_eq!(list.items()?, [3, 1, 2]);
+    /// assert_eq!(list.version()?, 0); // no edits yet
+    ///
+    /// list.push(4)?;
+    /// assert_eq!(list.len()?, 4);
+    /// assert_eq!(list.version()?, 1);
+    /// # Ok(()) }
+    /// ```
     pub fn new(items: Vec<T>) -> Self {
         let changes = DeliveryQueue::new();
         let state = Arc::new(SourceLock::new(ListState {
@@ -82,19 +148,29 @@ where
         }
     }
 
+    /// The length and version, read without waiting: `None` while the state is locked (by
+    /// another thread, or by this one inside an edit).
+    pub(crate) fn debug_snapshot(&self) -> Option<(usize, u64)> {
+        let state = self.state.try_lock_now()?;
+        Some((state.items.len(), state.version))
+    }
+
     /// Runs `callback` once, when this source's state lock is next released (or now).
     pub(crate) fn on_next_release(&self, callback: Box<dyn FnOnce() + Send>) {
         self.state.on_next_release(callback);
     }
 
+    /// Returns a cloned snapshot of the items.
     pub fn items(&self) -> Result<Vec<T>> {
         Ok(self.state.lock()?.items.clone())
     }
 
+    /// Returns the number of items.
     pub fn len(&self) -> Result<usize> {
         Ok(self.state.lock()?.items.len())
     }
 
+    /// Returns whether the list has no items.
     pub fn is_empty(&self) -> Result<bool> {
         Ok(self.len()? == 0)
     }
@@ -104,6 +180,7 @@ where
         Ok(self.state.lock()?.items.get(index).cloned())
     }
 
+    /// Returns whether an item equal to `item` is present.
     pub fn contains(&self, item: &T) -> Result<bool>
     where
         T: PartialEq,
@@ -117,10 +194,45 @@ where
         Ok(read(&self.state.lock()?.items))
     }
 
+    /// Returns the version of the last committed batch: the number of non-empty edits applied so
+    /// far.
     pub fn version(&self) -> Result<u64> {
         Ok(self.state.lock()?.version)
     }
 
+    /// Applies every change `edit` makes through the `ListUpdater` as one batch, and returns it.
+    ///
+    /// The updater's reads see the changes already made in the same edit, so a read-modify-write
+    /// inside one edit is atomic, even with several writer threads. Adjacent appends and removals
+    /// coalesce into `AddRange` and `RemoveRange` changes. A non-empty batch advances the version
+    /// by one and is delivered after the list is unlocked: first to `preview()`, then to
+    /// `changes()` and `connect()`, then to `count_changed()`, in commit order across threads.
+    /// While a notification suspension is alive, the batch is held and published with the other
+    /// suspended edits when the last guard drops. An empty edit publishes nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CollectionError::NestedUpdate` when called from inside this list's own edit or
+    /// `read` on the same thread (the outer edit continues and publishes what it recorded), and
+    /// `CollectionError::Contended` on `wasm32` when another thread holds the list.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rayx_reactive::collections::prelude::*;
+    ///
+    /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    /// let list = SourceList::new(vec!["a", "b", "c"]);
+    /// let batch = list.edit(|list| {
+    ///     list.insert(1, "x");
+    ///     list.move_item(0, 3);
+    ///     assert_eq!(list.remove(0), Some("x"));
+    /// })?;
+    ///
+    /// assert_eq!(batch.changes.len(), 3);
+    /// assert_eq!(list.items()?, ["b", "c", "a"]);
+    /// # Ok(()) }
+    /// ```
     pub fn edit(
         &self,
         edit: impl FnOnce(&mut ListUpdater<'_, T>),
@@ -180,10 +292,12 @@ where
         Ok(batch)
     }
 
+    /// Appends `item`, in one edit.
     pub fn push(&self, item: T) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| list.push(item))
     }
 
+    /// Appends `items` as one `AddRange`, in one edit.
     pub fn add_range(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -191,12 +305,14 @@ where
         self.edit(|list| list.add_range(items))
     }
 
+    /// Inserts `item` at `index`; an index past the end publishes nothing.
     pub fn insert(&self, index: usize, item: T) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| {
             let _ = list.insert(index, item);
         })
     }
 
+    /// Inserts `items` starting at `index`; an index past the end publishes nothing.
     pub fn insert_range(
         &self,
         index: usize,
@@ -207,12 +323,15 @@ where
         })
     }
 
+    /// Replaces the item at `index`, publishing a `Replace`; an out-of-range index publishes
+    /// nothing.
     pub fn replace(&self, index: usize, item: T) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| {
             let _ = list.replace(index, item);
         })
     }
 
+    /// Replaces the first item equal to `original`; a missing item publishes nothing.
     pub fn replace_item(&self, original: &T, item: T) -> Result<ChangeSet<ListChange<T>>>
     where
         T: PartialEq,
@@ -222,18 +341,21 @@ where
         })
     }
 
+    /// Moves the item at `from` to `to`; out-of-range indexes publish nothing.
     pub fn move_item(&self, from: usize, to: usize) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| {
             let _ = list.move_item(from, to);
         })
     }
 
+    /// Removes the item at `index`; an out-of-range index publishes nothing.
     pub fn remove(&self, index: usize) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| {
             let _ = list.remove(index);
         })
     }
 
+    /// Removes the first item equal to `item`; a missing item publishes nothing.
     pub fn remove_item(&self, item: &T) -> Result<ChangeSet<ListChange<T>>>
     where
         T: PartialEq,
@@ -243,6 +365,7 @@ where
         })
     }
 
+    /// Removes the first item equal to each of `items`, as one batch.
     pub fn remove_many(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -255,30 +378,40 @@ where
         })
     }
 
+    /// Removes up to `count` items starting at `index`, as one `RemoveRange`.
     pub fn remove_range(&self, index: usize, count: usize) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| {
             let _ = list.remove_range(index, count);
         })
     }
 
+    /// Publishes a `Refresh` for the item at `index`, telling observers to re-evaluate it.
     pub fn refresh(&self, index: usize) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| {
             let _ = list.refresh(index);
         })
     }
 
+    /// Publishes a `Refresh` for every item.
     pub fn refresh_all(&self) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| list.refresh_all())
     }
 
+    /// Removes every item, publishing one `Clear` that carries the removed items.
     pub fn clear(&self) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| list.clear())
     }
 
+    /// Replaces the contents with `items`: a `Clear` followed by an `AddRange`, in one batch.
+    ///
+    /// Prefer [`edit_diff`](Self::edit_diff) when a UI is bound to the list.
     pub fn load(&self, items: impl IntoIterator<Item = T>) -> Result<ChangeSet<ListChange<T>>> {
         self.edit(|list| list.load(items))
     }
 
+    /// Transforms the list into `items` with minimal changes, comparing items with `==`.
+    ///
+    /// See [`edit_diff_by`](Self::edit_diff_by).
     pub fn edit_diff(&self, items: impl IntoIterator<Item = T>) -> Result<ChangeSet<ListChange<T>>>
     where
         T: PartialEq,
@@ -286,6 +419,13 @@ where
         self.edit(|list| list.edit_diff(items))
     }
 
+    /// Transforms the list into `items` with minimal changes, comparing items with
+    /// `are_items_equal`.
+    ///
+    /// Equal-length lists are compared position by position, producing a `Replace` per differing
+    /// position. Otherwise the common prefix and suffix are trimmed and the middle is diffed; a
+    /// large middle is replaced wholesale. Moves are not detected; use a `SourceCache` when
+    /// identity matters.
     pub fn edit_diff_by(
         &self,
         items: impl IntoIterator<Item = T>,
@@ -294,6 +434,12 @@ where
         self.edit(|list| list.edit_diff_by(items, are_items_equal))
     }
 
+    /// Returns a stream of the current items as one snapshot `AddRange`, then every live batch.
+    ///
+    /// The subscription registers for live batches before taking the snapshot, and drops the live
+    /// batches the snapshot already contains, so a subscriber connecting during concurrent edits or
+    /// a notification suspension sees every change exactly once. An empty list sends no snapshot.
+    /// Subscribing fails with the list's lock errors (see the type documentation).
     pub fn connect(&self) -> ChangeStream<ListChange<T>> {
         let source = self.clone();
         ChangeStream::new(move |subscriber| source.connect_subscriber(subscriber))
@@ -333,6 +479,7 @@ where
         .join();
     }
 
+    /// Returns a stream of live batches only, without a snapshot.
     pub fn changes(&self) -> ChangeStream<ListChange<T>> {
         let changes = self.changes.clone();
         ChangeStream::new(move |subscriber| {
@@ -341,6 +488,11 @@ where
         })
     }
 
+    /// Returns a stream of live batches delivered before `changes()` sees them.
+    ///
+    /// When a batch is drained on one thread, its preview is delivered before its `changes()` and
+    /// `connect()` delivery. With several writer threads each stream stays in commit order, but the
+    /// two streams may interleave.
     pub fn preview(&self) -> ChangeStream<ListChange<T>> {
         let preview = self.preview.clone();
         ChangeStream::new(move |subscriber| {
@@ -393,6 +545,14 @@ where
         Ok(())
     }
 
+    /// Holds published batches until the returned guard (and every other live guard) is dropped.
+    ///
+    /// While a guard is alive, edits are applied immediately and versions advance, but their
+    /// batches are held; dropping the last guard publishes them as one combined batch. Guards nest,
+    /// and `count_changed()` is not suspended. A `connect()` that subscribes during the suspension
+    /// snapshots the current items and later receives only the held changes its snapshot did not
+    /// contain. A guard dropped inside the list's own edit, or on `wasm32` while another thread
+    /// holds the list, resumes when the list is released.
     pub fn suspend_notifications(&self) -> Result<ListNotificationSuspension<T>> {
         let mut state = self.state.lock()?;
         state.suspend_depth = state.suspend_depth.saturating_add(1);
@@ -480,6 +640,10 @@ where
     }
 }
 
+/// A guard returned by `SourceList::suspend_notifications` that holds published batches.
+///
+/// Dropping the last live guard of a list publishes the edits made while it was alive as one batch.
+#[must_use = "notifications resume when the suspension guard is dropped"]
 pub struct ListNotificationSuspension<T>
 where
     T: Clone + Send + Sync + 'static,
@@ -498,6 +662,20 @@ where
     }
 }
 
+impl<T> std::fmt::Debug for SourceList<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug = f.debug_struct("SourceList");
+        match self.debug_snapshot() {
+            Some((len, version)) => debug.field("len", &len).field("version", &version),
+            None => debug.field("state", &format_args!("<locked>")),
+        };
+        debug.finish()
+    }
+}
+
 impl<T> Default for SourceList<T>
 where
     T: Clone + Send + Sync + 'static,
@@ -507,6 +685,10 @@ where
     }
 }
 
+/// The mutable view of a `SourceList` passed to `edit`; every change it makes joins one batch.
+///
+/// Out-of-range indexes and missing items are not errors: the method reports them through its
+/// return value and records no change. Its reads see the changes already made in the same edit.
 pub struct ListUpdater<'a, T> {
     items: &'a mut Vec<T>,
     changes: &'a mut Vec<ListChange<T>>,
@@ -515,18 +697,22 @@ pub struct ListUpdater<'a, T> {
 /// Reads inside an edit see the changes already made in the same edit, so a
 /// read-modify-write inside one `edit` is atomic.
 impl<T> ListUpdater<'_, T> {
+    /// Returns the items, including changes made earlier in this edit.
     pub fn items(&self) -> &[T] {
         self.items
     }
 
+    /// Returns the number of items, including changes made earlier in this edit.
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
+    /// Returns whether the list is empty, including changes made earlier in this edit.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
+    /// Returns the item at `index`, including changes made earlier in this edit.
     pub fn get(&self, index: usize) -> Option<&T> {
         self.items.get(index)
     }

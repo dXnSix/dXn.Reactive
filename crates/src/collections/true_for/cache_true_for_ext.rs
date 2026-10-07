@@ -12,7 +12,13 @@ use crate::collections::subscription::Subscription;
 type TrueForSelector<K, T, U> = Arc<dyn Fn(&T, &K) -> ValueStream<U> + Send + Sync>;
 type TrueForCondition<T, U> = Arc<dyn Fn(&T, &U) -> bool + Send + Sync>;
 
+/// Collection-wide predicates over a per-item stream of a cache stream.
+///
+/// Items whose stream has not emitted yet count as `false`. The result is evaluated after a
+/// batch's item streams have been subscribed, and repeated results are suppressed.
 pub trait CacheTrueForExt<K, T> {
+    /// Emits whether `equality_condition(item, value)` holds for the latest value of every
+    /// item's stream; an empty cache is `true`.
     fn true_for_all<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -28,6 +34,8 @@ pub trait CacheTrueForExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits whether `equality_condition(value)` holds for the latest value of every item's
+    /// stream; an empty cache is `true`.
     fn true_for_all_value<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -43,6 +51,8 @@ pub trait CacheTrueForExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits whether `equality_condition(item, value)` holds for the latest value of at least one
+    /// item's stream; an empty cache is `false`.
     fn true_for_any<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -58,6 +68,8 @@ pub trait CacheTrueForExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits whether `equality_condition(value)` holds for the latest value of at least one
+    /// item's stream; an empty cache is `false`.
     fn true_for_any_value<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -74,7 +86,13 @@ pub trait CacheTrueForExt<K, T> {
         CollectionError: From<E>;
 }
 
+/// Collection-wide predicates over a per-item stream, directly on a `SourceCache`.
+///
+/// Items whose stream has not emitted yet count as `false`, and repeated results are
+/// suppressed.
 pub trait SourceCacheTrueForExt<K, T> {
+    /// Emits whether `equality_condition(item, value)` holds for the latest value of every
+    /// item's stream; an empty cache is `true`.
     fn true_for_all<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -90,6 +108,8 @@ pub trait SourceCacheTrueForExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits whether `equality_condition(value)` holds for the latest value of every item's
+    /// stream; an empty cache is `true`.
     fn true_for_all_value<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -105,6 +125,8 @@ pub trait SourceCacheTrueForExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits whether `equality_condition(item, value)` holds for the latest value of at least one
+    /// item's stream; an empty cache is `false`.
     fn true_for_any<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -120,6 +142,8 @@ pub trait SourceCacheTrueForExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits whether `equality_condition(value)` holds for the latest value of at least one
+    /// item's stream; an empty cache is `false`.
     fn true_for_any_value<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>

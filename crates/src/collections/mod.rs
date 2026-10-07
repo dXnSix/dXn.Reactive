@@ -1,46 +1,89 @@
 #![cfg_attr(test, allow(clippy::expect_used, clippy::unwrap_used))]
 
+/// Snapshot queries and aggregates (`count`, `sum_by`, `avg_by`, `max_by`, ...) over
+/// cache and list change streams.
 pub mod aggregation;
+/// `SourceCache`, the mutable keyed source, with its updater, read view and notification
+/// suspension guard.
 pub mod cache;
+/// Change-set types: `ChangeSet`, `CacheChange`, `ListChange`, change reasons and the
+/// paging and virtualization requests and responses.
 pub mod change;
+/// Set-style combinators (`and`, `or`, `xor`, `except`) over two or more cache or list
+/// change streams.
 pub mod combine;
 mod connection;
+/// The serialized delivery queue that sources and operators publish through.
 pub mod delivery;
+/// Change statistics for debugging pipelines (requires the `diagnostics` feature).
 #[cfg(feature = "diagnostics")]
 pub mod diagnostics;
+/// Adapters that turn a stream of whole snapshots into minimal change sets.
 pub mod diff;
+/// Operators that track the distinct values selected from a collection.
 pub mod distinct;
 mod emit;
+/// `CollectionError` and the collection `Result` alias.
 pub mod error;
+/// Time-based expiry of items in sources and change streams.
 pub mod expiration;
+/// Constructors for custom change streams driven by a closure.
 pub mod factory;
+/// Cache groups produced by the grouping operators.
 pub mod group;
+/// Inner, left, right and full joins between keyed change streams.
 pub mod join;
 mod key_order;
 mod keyed_delivery;
+/// Per-item lifecycle operators: disposal, per-item subscriptions, item observables and
+/// item callbacks.
 pub mod lifecycle;
+/// Size limits for sources and keyed change streams.
 pub mod limit;
+/// `SourceList`, the mutable ordered source, with its updater and notification suspension
+/// guard.
 pub mod list;
+/// List groups produced by the list grouping operators.
 pub mod list_group;
 mod materialize;
+/// Functions that merge several change streams into one.
 pub mod merge;
+/// `ObservableCache`, a read-only materialized cache that shares one upstream
+/// subscription.
 pub mod observable_cache;
+/// `ObservableList`, a read-only materialized list that shares one upstream
+/// subscription.
 pub mod observable_list;
+/// The core change-stream operators (filter, transform, sort, page, group, ...) as
+/// extension traits on `ChangeStream`.
 pub mod operators;
+/// Helpers for optional values and iterables in reactive pipelines.
 pub mod option;
+/// Materialization into sources and adapters from value streams to change streams.
 pub mod populate;
+/// Stable projections of grouped collections for rendering.
 pub mod projection;
+/// Reference-counted sharing of one upstream subscription between subscribers.
 pub mod ref_count;
+/// Side-effect and buffering operators that observe change sets without changing them.
 pub mod side_effect;
 mod source_lock;
+/// `ChangeStream` and the value-stream types that collection pipelines are built from.
 pub mod stream;
+/// The `Subscription` handle that keeps a stream subscription alive.
 pub mod subscription;
+/// Operators that switch between the latest of several sources or change streams.
 pub mod switch;
+/// Error and panic types reported by fallible transforms.
 pub mod transform_error;
+/// Parent-child trees built from keyed change streams.
 pub mod tree;
+/// Operators that evaluate a condition over every or any item of a cache.
 pub mod true_for;
+/// Filtering a cache of type-erased items by concrete type.
 pub mod type_filter;
 
+/// Re-exports of every public collection type and extension trait, for glob imports.
 pub mod prelude {
     pub use crate::collections::aggregation::{
         CacheAggregationExt, CacheQuery, ListAggregationExt,

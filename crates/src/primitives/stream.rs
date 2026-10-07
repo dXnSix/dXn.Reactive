@@ -4,18 +4,40 @@ use std::thread::{self, ThreadId};
 use crate::primitives::error::{ReactiveError, Result as ReactiveResult};
 use crate::primitives::subscription::Subscription;
 
+/// The loading state of a connection, as reported by `ChangeStream::monitor_status`.
+///
+/// Streams have no terminal events, so the collection layer currently produces `Pending` and
+/// then `Loaded`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ConnectionStatus {
+    /// Subscribed, but nothing has been received yet.
     Pending,
+    /// The first value has been received.
     Loaded,
+    /// The connection failed.
     Errored,
+    /// The connection finished.
     Completed,
 }
 
+/// A shared subscriber callback, as handed to the subscribe function of a [`ValueStream`].
 pub type ValueSubscriber<T> = Arc<dyn Fn(&T) + Send + Sync>;
 
+/// A cold stream of values: each subscription runs its subscribe function afresh.
+///
+/// Streams are cheap to clone and do no work until subscribed. `subscribe` returns a
+/// [`Subscription`] that keeps the subscription alive; dropping it unsubscribes. Setup
+/// failures are returned from `subscribe` as `E`; there is no error or completion channel
+/// after that.
+#[must_use = "streams are lazy and do nothing unless subscribed"]
 pub struct ValueStream<T, E = ReactiveError> {
     subscribe: Arc<dyn Fn(ValueSubscriber<T>) -> Result<Subscription, E> + Send + Sync>,
+}
+
+impl<T, E> std::fmt::Debug for ValueStream<T, E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ValueStream").finish_non_exhaustive()
+    }
 }
 
 impl<T, E> Clone for ValueStream<T, E> {
@@ -27,6 +49,7 @@ impl<T, E> Clone for ValueStream<T, E> {
 }
 
 impl<T> ValueStream<T, ReactiveError> {
+    /// Creates a stream whose setup error is [`ReactiveError`]; see [`ValueStream::new`].
     pub fn from_reactive(
         subscribe: impl Fn(ValueSubscriber<T>) -> ReactiveResult<Subscription> + Send + Sync + 'static,
     ) -> Self {
@@ -38,6 +61,10 @@ impl<T, E> ValueStream<T, E>
 where
     E: Send + Sync + 'static,
 {
+    /// Creates a stream from its subscribe function.
+    ///
+    /// `subscribe` runs once per subscription with the subscriber callback and returns the
+    /// [`Subscription`] that ends it.
     pub fn new(
         subscribe: impl Fn(ValueSubscriber<T>) -> Result<Subscription, E> + Send + Sync + 'static,
     ) -> Self {
@@ -46,6 +73,8 @@ where
         }
     }
 
+    /// Subscribes `subscriber`; it receives values until the returned [`Subscription`] is
+    /// dropped or disposed.
     pub fn subscribe(
         &self,
         subscriber: impl Fn(&T) + Send + Sync + 'static,
@@ -53,6 +82,7 @@ where
         (self.subscribe)(Arc::new(subscriber))
     }
 
+    /// Transforms every value with `mapper`.
     pub fn map<U>(&self, mapper: impl Fn(&T) -> U + Send + Sync + 'static) -> ValueStream<U, E>
     where
         T: Send + Sync + 'static,

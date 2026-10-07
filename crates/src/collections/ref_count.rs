@@ -11,13 +11,29 @@ use crate::collections::source_lock::non_blocking;
 use crate::collections::stream::{ChangeStream, StreamSubscriber};
 use crate::collections::subscription::Subscription;
 
+/// Shares one upstream subscription of a list stream among all subscribers.
 pub trait ListRefCountExt<T> {
+    /// Shares the upstream subscription while at least one subscriber exists.
+    ///
+    /// The first subscriber connects upstream and materializes the result; a subscriber arriving
+    /// on another thread while it connects waits for the outcome (on `wasm32` it gets
+    /// `Contended` instead). Later subscribers receive a snapshot of the current state, then
+    /// live batches. The upstream subscription and its state are dropped when the last
+    /// subscriber leaves, and a failed connection is rolled back so the next subscriber retries.
     fn ref_count(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Shares one upstream subscription of a cache stream among all subscribers.
 pub trait CacheRefCountExt<K, T> {
+    /// Shares the upstream subscription while at least one subscriber exists.
+    ///
+    /// The first subscriber connects upstream and materializes the result; a subscriber arriving
+    /// on another thread while it connects waits for the outcome (on `wasm32` it gets
+    /// `Contended` instead). Later subscribers receive a snapshot of the current state, then
+    /// live batches. The upstream subscription and its state are dropped when the last
+    /// subscriber leaves, and a failed connection is rolled back so the next subscriber retries.
     fn ref_count(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,

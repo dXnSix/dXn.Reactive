@@ -1,40 +1,56 @@
 mod cache;
 mod list;
 
+/// An item that owns a resource and releases it synchronously, used by `dispose_many`.
 pub trait DisposeItem {
+    /// Releases the item's resource. Called once the item has left the collection or been replaced.
     fn dispose(&self);
 }
 
+/// An item whose cleanup is asynchronous, used by `async_dispose_many`.
 pub trait AsyncDisposeItem {
+    /// The future that performs the cleanup.
     type DisposeFuture: std::future::Future<Output = ()> + Send + 'static;
 
+    /// Starts the item's cleanup; the returned future is awaited on the operator's worker thread.
     fn dispose_async(self) -> Self::DisposeFuture;
 }
 
+/// An item with an evaluation hook, called by `invoke_evaluate` when the item is refreshed.
 pub trait EvaluateItem {
+    /// Recomputes the item's derived state; called before its refresh is forwarded.
     fn evaluate(&self);
 }
 
+/// A value emitted by an item's stream, paired with the item that produced it.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ItemValue<T, U> {
+    /// The item whose stream emitted the value.
     pub item: T,
+    /// The emitted value.
     pub value: U,
 }
 
 impl<T, U> ItemValue<T, U> {
+    /// Pairs `item` with `value`.
     pub fn new(item: T, value: U) -> Self {
         Self { item, value }
     }
 }
 
+/// A value emitted by an item's stream, paired with the item and its key.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct KeyedItemValue<K, T, U> {
+    /// The key of the item whose stream emitted the value.
     pub key: K,
+    /// The item whose stream emitted the value.
     pub item: T,
+    /// The emitted value.
     pub value: U,
 }
 
 impl<K, T, U> KeyedItemValue<K, T, U> {
+    /// Pairs `key` and `item` with `value`.
     pub fn new(key: K, item: T, value: U) -> Self {
         Self { key, item, value }
     }

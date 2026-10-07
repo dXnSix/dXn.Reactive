@@ -151,6 +151,7 @@ impl std::fmt::Debug for ThreadScheduler {
 }
 
 impl ThreadScheduler {
+    /// Creates a scheduler; its timer thread starts with the first scheduled task.
     pub fn new() -> Self {
         Self {
             shared: Arc::new(ThreadShared {
@@ -276,6 +277,7 @@ impl std::fmt::Debug for ManualScheduler {
 }
 
 impl ManualScheduler {
+    /// Creates a scheduler whose virtual clock starts at zero.
     pub fn new() -> Self {
         Self {
             shared: Arc::new(Mutex::new(ManualState {

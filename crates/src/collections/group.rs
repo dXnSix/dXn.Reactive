@@ -42,12 +42,19 @@ impl<K, T> Drop for RayCacheGroupInner<K, T> {
     }
 }
 
+/// A live group of cache items sharing one group key, as emitted by the cache `group`
+/// operators.
+///
+/// The outer stream changes only when a group appears or disappears; membership changes flow
+/// through the group's own [`connect`](Self::connect) stream. Cloning shares the group.
 #[derive(Clone)]
 pub struct RayCacheGroup<G, K, T> {
     key: G,
     inner: Arc<RayCacheGroupInner<K, T>>,
 }
 
+/// A snapshot of one cache group, as emitted by `group_immutable`: its key and its
+/// `(key, item)` pairs at the time of the batch.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImmutableCacheGroup<G, K, T> {
     key: G,
@@ -55,18 +62,22 @@ pub struct ImmutableCacheGroup<G, K, T> {
 }
 
 impl<G, K, T> ImmutableCacheGroup<G, K, T> {
+    /// Creates a snapshot of the group `key` holding `key_values`.
     pub fn new(key: G, key_values: Vec<(K, T)>) -> Self {
         Self { key, key_values }
     }
 
+    /// The group key.
     pub fn key(&self) -> &G {
         &self.key
     }
 
+    /// The group's `(key, item)` pairs.
     pub fn key_values(&self) -> &[(K, T)] {
         &self.key_values
     }
 
+    /// Consumes the snapshot and returns its `(key, item)` pairs.
     pub fn into_key_values(self) -> Vec<(K, T)> {
         self.key_values
     }
@@ -92,6 +103,7 @@ where
         }
     }
 
+    /// The group key.
     pub fn key(&self) -> G {
         self.key.clone()
     }
@@ -103,10 +115,12 @@ where
     T: Clone + Send + Sync + 'static,
     G: Clone + Send + Sync + 'static,
 {
+    /// The number of items in the group.
     pub fn count(&self) -> Result<usize> {
         Ok(self.inner.state.lock()?.items.len())
     }
 
+    /// The group's items, in group order.
     pub fn items(&self) -> Result<Vec<T>> {
         let state = self.inner.state.lock()?;
         Ok(state
@@ -116,10 +130,12 @@ where
             .collect())
     }
 
+    /// The keys of the group's items, in group order.
     pub fn keys(&self) -> Result<Vec<K>> {
         Ok(self.inner.state.lock()?.order.to_vec())
     }
 
+    /// The group's `(key, item)` pairs, in group order.
     pub fn key_values(&self) -> Result<Vec<(K, T)>> {
         let state = self.inner.state.lock()?;
         Ok(state
@@ -135,10 +151,12 @@ where
             .collect())
     }
 
+    /// The item with `key`, if it belongs to the group.
     pub fn lookup(&self, key: &K) -> Result<Option<T>> {
         Ok(self.inner.state.lock()?.items.get(key).cloned())
     }
 
+    /// A stream of the group's membership: the current items first, then every later change.
     pub fn connect(&self) -> ChangeStream<CacheChange<K, T>> {
         let group = self.clone();
         ChangeStream::new(move |subscriber| group.connect_subscriber(subscriber))

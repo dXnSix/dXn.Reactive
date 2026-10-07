@@ -70,7 +70,19 @@ where
     }
 }
 
+/// Per-item observables, lifecycle callbacks and disposal for cache change streams.
+///
+/// Every operator owns its per-item subscriptions: it subscribes when an item is added,
+/// re-subscribes when it is updated, disposes on removal or clear, and disposes everything when the
+/// downstream subscription is dropped. Selectors receive `(&item, &key)` and may return a stream of
+/// any error type that converts into `CollectionError`.
 pub trait CacheLifecycleExt<K, T> {
+    /// Shows an item only while the latest value of its stream is `true`.
+    ///
+    /// An item is hidden until its stream emits `true`. Values emitted while the streams are being
+    /// subscribed are folded into the source batch. An item updated at the same position keeps its
+    /// previous inclusion until its new stream has been subscribed; an update that moves it hides
+    /// it until the new stream emits `true`.
     fn filter_on_observable<E>(
         &self,
         filter: impl Fn(&T, &K) -> crate::primitives::ValueStream<bool, E> + Send + Sync + 'static,
@@ -81,6 +93,11 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits a `Refresh` for an item whenever its stream emits, so downstream filters, sorts and
+    /// groups re-evaluate it.
+    ///
+    /// Every emission refreshes, including a synchronous initial one: prefer a stream that emits
+    /// only on change (such as `Signal::changes`).
     fn auto_refresh<S, E>(
         &self,
         reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
@@ -92,6 +109,12 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`auto_refresh`](Self::auto_refresh), but collects item-triggered refreshes for
+    /// `buffer` and emits them as one batch, on the default scheduler.
+    ///
+    /// Source batches are forwarded immediately and stay in order with the refresh batches. Each
+    /// refresh index is the item's position when the refresh batch is delivered. Dropping the
+    /// subscription cancels a pending flush.
     fn auto_refresh_buffered<S, E>(
         &self,
         reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
@@ -118,6 +141,11 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Projects each item to the latest value of its stream.
+    ///
+    /// The item appears with an `Add` when its stream first emits, and later distinct values become
+    /// `Update`s. When the source item is updated, the previous projected value stays until the new
+    /// stream emits.
     fn transform_on_observable<U, E>(
         &self,
         transform_factory: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -132,6 +160,10 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Groups items by the latest value of a per-item stream, producing live groups like `group`.
+    ///
+    /// Items are not grouped until their stream emits. Empty groups are removed after each source
+    /// or child turn.
     fn group_on_observable<G, E>(
         &self,
         group_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<G, E> + Send + Sync + 'static,
@@ -143,6 +175,7 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Merges the streams of every live item into one stream of their values.
     fn merge_many<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -157,6 +190,7 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Merges the streams of every live item, pairing each value with its item.
     fn merge_many_items<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -171,6 +205,7 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Merges the streams of every live item, pairing each value with its item and key.
     fn merge_many_keyed_items<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -185,6 +220,7 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits each value of every live item's stream.
     fn when_value_changed<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -199,6 +235,8 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`when_value_changed`](Self::when_value_changed), but first emits `current_value` for
+    /// each current item.
     fn when_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
@@ -214,6 +252,7 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits each value of every live item's stream, paired with its item.
     fn when_item_value_changed<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -228,6 +267,8 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`when_item_value_changed`](Self::when_item_value_changed), but first emits
+    /// `current_value` for each current item.
     fn when_item_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
@@ -243,6 +284,7 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Emits each value of every live item's stream, paired with its item and key.
     fn when_keyed_value_changed<U, E>(
         &self,
         observable_selector: impl Fn(&T, &K) -> crate::primitives::ValueStream<U, E>
@@ -257,6 +299,8 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Like [`when_keyed_value_changed`](Self::when_keyed_value_changed), but first emits
+    /// `current_value` for each current item.
     fn when_keyed_value_changed_with_initial<U, E>(
         &self,
         current_value: impl Fn(&T, &K) -> U + Send + Sync + 'static,
@@ -272,6 +316,11 @@ pub trait CacheLifecycleExt<K, T> {
         E: Send + Sync + 'static,
         CollectionError: From<E>;
 
+    /// Flattens each item's child list stream into one list of all children.
+    ///
+    /// A departing item's children are removed. Children emitted while a child stream is being
+    /// subscribed are folded into the parent batch, and an item updated with identical children
+    /// changes nothing.
     fn merge_many_list_change_sets<U>(
         &self,
         observable_selector: impl Fn(&T, &K) -> ChangeStream<ListChange<U>> + Send + Sync + 'static,
@@ -281,6 +330,9 @@ pub trait CacheLifecycleExt<K, T> {
         T: Clone + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Flattens each item's child cache stream into one cache of all children.
+    ///
+    /// On duplicate child keys, the first live parent in source order wins.
     fn merge_many_cache_change_sets<ChildKey, Child>(
         &self,
         observable_selector: impl Fn(&T, &K) -> ChangeStream<CacheChange<ChildKey, Child>>
@@ -294,6 +346,8 @@ pub trait CacheLifecycleExt<K, T> {
         ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
         Child: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`merge_many_cache_change_sets`](Self::merge_many_cache_change_sets), but `compare`
+    /// picks the winner for duplicate child keys, recomputing it when a winner changes or leaves.
     fn merge_many_cache_change_sets_by<ChildKey, Child>(
         &self,
         observable_selector: impl Fn(&T, &K) -> ChangeStream<CacheChange<ChildKey, Child>>
@@ -308,11 +362,17 @@ pub trait CacheLifecycleExt<K, T> {
         ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
         Child: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Calls `DisposeItem::dispose` on items that leave or are replaced by an unequal item, and on
+    /// the remaining items when the subscription is dropped.
+    ///
+    /// Each batch is forwarded before its items are finalized, so downstream observers never see a
+    /// disposed item.
     fn dispose_many(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: DisposeItem + Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`dispose_many`](Self::dispose_many), with `dispose` as the finalizer.
     fn dispose_many_with(
         &self,
         dispose: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -321,6 +381,8 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`dispose_many_with`](Self::dispose_many_with), with `same_item(previous, current)`
+    /// deciding whether an update kept the item (then it is not finalized).
     fn dispose_many_by(
         &self,
         same_item: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -330,6 +392,12 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Runs `AsyncDisposeItem::dispose_async` for items that leave or are replaced, on a worker
+    /// thread owned by the subscription.
+    ///
+    /// Source delivery never waits for the finalizers. `disposals_completed` receives a stream that
+    /// fires once every queued finalizer, including those queued by teardown, has finished. A
+    /// finalizer that panics is skipped.
     fn async_dispose_many(
         &self,
         disposals_completed: impl Fn(ValueStream<()>) + Send + Sync + 'static,
@@ -338,6 +406,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: AsyncDisposeItem + Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`async_dispose_many`](Self::async_dispose_many), with `dispose` as the finalizer.
     fn async_dispose_many_with<Fut>(
         &self,
         dispose: impl Fn(T, K) -> Fut + Send + Sync + 'static,
@@ -348,6 +417,8 @@ pub trait CacheLifecycleExt<K, T> {
         T: Clone + PartialEq + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static;
 
+    /// Like [`async_dispose_many_with`](Self::async_dispose_many_with), with `same_item(previous,
+    /// current)` deciding whether an update kept the item.
     fn async_dispose_many_by<Fut>(
         &self,
         same_item: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -359,11 +430,15 @@ pub trait CacheLifecycleExt<K, T> {
         T: Clone + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static;
 
+    /// Calls `EvaluateItem::evaluate` for each refreshed item before forwarding the refresh.
+    ///
+    /// Other changes pass through untouched.
     fn invoke_evaluate(&self) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: EvaluateItem + Clone + Send + Sync + 'static;
 
+    /// Calls `evaluate` for each refreshed item before forwarding the refresh.
     fn invoke_evaluate_with(
         &self,
         evaluate: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -372,6 +447,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each added item and forwards the batches unchanged.
     fn on_item_added(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -380,6 +456,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each removed item, including clears, and forwards the batches unchanged.
     fn on_item_removed(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -388,6 +465,8 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`on_item_removed`](Self::on_item_removed); with `invoke_on_unsubscribe`, also calls
+    /// `action` for every remaining item when the subscription is dropped.
     fn on_item_removed_with_unsubscribe(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -397,6 +476,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action(current, previous, key)` for each update and forwards the batches unchanged.
     fn on_item_updated(
         &self,
         action: impl Fn(&T, &T, &K) + Send + Sync + 'static,
@@ -405,6 +485,7 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Calls `action` for each refreshed item and forwards the batches unchanged.
     fn on_item_refreshed(
         &self,
         action: impl Fn(&T, &K) + Send + Sync + 'static,
@@ -413,6 +494,10 @@ pub trait CacheLifecycleExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Keeps one subscription per live item, created by `subscription_factory`.
+    ///
+    /// The subscription is disposed when its item is removed or updated (an update creates a new
+    /// one), and every remaining one when the downstream subscription is dropped.
     fn subscribe_many(
         &self,
         subscription_factory: impl Fn(&T, &K) -> Subscription + Send + Sync + 'static,

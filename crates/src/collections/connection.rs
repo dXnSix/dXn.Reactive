@@ -441,15 +441,15 @@ mod tests {
         )));
         assert_eq!(
             dropped.load(Ordering::SeqCst),
-            1,
-            "the temporary envelope is released while the startup clone remains buffered"
+            0,
+            "the buffered envelope shares the batch, so releasing the caller's keeps it alive"
         );
 
         connection.disposal_subscription().dispose();
         assert_eq!(
             dropped.load(Ordering::SeqCst),
-            2,
-            "disposing startup releases the remaining buffered clone"
+            1,
+            "disposing startup releases the buffered batch, dropping its item once"
         );
     }
 
@@ -468,16 +468,16 @@ mod tests {
         assert_eq!(connection.buffered_batch_count_for_test(), 1);
         assert_eq!(
             dropped.load(Ordering::SeqCst),
-            1,
-            "the temporary envelope is released while the startup clone remains buffered"
+            0,
+            "the buffered envelope shares the batch, so releasing the caller's keeps it alive"
         );
 
         connection.disposal_subscription().dispose();
         assert_eq!(connection.buffered_batch_count_for_test(), 0);
         assert_eq!(
             dropped.load(Ordering::SeqCst),
-            2,
-            "disposing startup releases the remaining buffered clone"
+            1,
+            "disposing startup releases the buffered batch, dropping its item once"
         );
 
         let abandoned = StartupConnection::new(Arc::new(|_: &ChangeSet<u64>| {}));

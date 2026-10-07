@@ -10,9 +10,18 @@ use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
 use crate::collections::tree::TreeNode;
 
+/// Decides which nodes appear in the output of
+/// [`transform_to_tree_with_predicate`](CacheTreeExt::transform_to_tree_with_predicate).
 pub type TreePredicate<K, T> = Arc<dyn Fn(&TreeNode<K, T>) -> bool + Send + Sync>;
 
+/// Builds a hierarchy of [`TreeNode`]s from a flat keyed cache whose items name their parent.
 pub trait CacheTreeExt<K, T> {
+    /// Emits the root nodes of the tree, where `pivot_on` returns each item's parent key.
+    ///
+    /// An item whose parent key is not in the cache is a root. Late-arriving parents adopt their
+    /// existing children, children of a removed parent become roots, and an update that changes
+    /// the parent key re-parents the node. Disposing the subscription empties the children of
+    /// nodes on a parent cycle so that they are freed.
     fn transform_to_tree(
         &self,
         pivot_on: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -21,6 +30,8 @@ pub trait CacheTreeExt<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + Send + Sync + 'static;
 
+    /// Like [`transform_to_tree`](Self::transform_to_tree), but emits the nodes accepted by the
+    /// latest predicate from `predicates` instead of only the roots.
     fn transform_to_tree_with_predicate<E>(
         &self,
         pivot_on: impl Fn(&T) -> K + Send + Sync + 'static,

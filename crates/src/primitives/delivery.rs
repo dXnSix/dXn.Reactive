@@ -44,9 +44,16 @@ impl<T> DeliveryState<T> {
 /// subscription order. Only one thread drains a queue at a time: an item pushed
 /// while another thread (or a subscriber on the draining thread) is delivering
 /// is queued and delivered by that draining thread, never recursively.
-#[derive(Clone)]
 pub struct DeliveryQueue<T> {
     state: Arc<Mutex<DeliveryState<T>>>,
+}
+
+impl<T> Clone for DeliveryQueue<T> {
+    fn clone(&self) -> Self {
+        Self {
+            state: Arc::clone(&self.state),
+        }
+    }
 }
 
 impl<T> Default for DeliveryQueue<T> {
@@ -56,6 +63,7 @@ impl<T> Default for DeliveryQueue<T> {
 }
 
 impl<T> DeliveryQueue<T> {
+    /// Creates a queue without subscribers or pending items.
     pub fn new() -> Self {
         Self {
             state: Arc::new(Mutex::new(DeliveryState {
@@ -91,6 +99,10 @@ impl<T> DeliveryQueue<T> {
 }
 
 impl<T: Send + 'static> DeliveryQueue<T> {
+    /// Registers `subscriber` for every item delivered from now on.
+    ///
+    /// Dropping or disposing the returned [`Subscription`] unregisters it; once its disposal
+    /// returns on the delivering thread, the subscriber is not called again.
     pub fn subscribe(
         &self,
         subscriber: impl Fn(&T) + Send + Sync + 'static,

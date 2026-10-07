@@ -63,19 +63,29 @@ mod tests {
     }
 }
 
+/// Change counts for one batch, or accumulated over several batches.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChangeStatistics {
+    /// The zero-based number of the last batch counted, or `-1` before the first batch.
     pub index: i64,
+    /// Added items; a list range change counts each of its items.
     pub adds: usize,
+    /// Updated or replaced items.
     pub updates: usize,
+    /// Removed items; a list range change and a cache `Clear` count each removed item.
     pub removes: usize,
+    /// Refreshed items.
     pub refreshes: usize,
+    /// Moved items.
     pub moves: usize,
+    /// Change records counted (a range change is one record).
     pub count: usize,
+    /// When these statistics were computed; the Unix epoch for empty statistics.
     pub last_updated: SystemTime,
 }
 
 impl ChangeStatistics {
+    /// Creates statistics with the given counts, stamped with the current time.
     pub fn new(
         index: i64,
         adds: usize,
@@ -97,6 +107,7 @@ impl ChangeStatistics {
         }
     }
 
+    /// Returns statistics with zero counts, index `-1` and the Unix epoch as `last_updated`.
     pub fn empty() -> Self {
         Self {
             index: -1,
@@ -117,14 +128,19 @@ impl Default for ChangeStatistics {
     }
 }
 
+/// The statistics `collect_update_stats` emits after every batch.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChangeSummary {
+    /// The zero-based number of the latest batch, or `-1` before the first batch.
     pub index: i64,
+    /// Counts for the most recent batch.
     pub latest: ChangeStatistics,
+    /// Cumulative counts since subscription.
     pub overall: ChangeStatistics,
 }
 
 impl ChangeSummary {
+    /// Returns a summary of empty statistics, with index `-1`.
     pub fn empty() -> Self {
         Self {
             index: -1,
@@ -140,13 +156,17 @@ impl Default for ChangeSummary {
     }
 }
 
+/// Change statistics for list change streams.
 pub trait ListDiagnosticsExt<T> {
+    /// Emits a `ChangeSummary` after every batch, in batch order and outside the operator's lock.
     fn collect_update_stats(&self) -> ValueStream<ChangeSummary>
     where
         T: Clone + Send + Sync + 'static;
 }
 
+/// Change statistics for cache change streams.
 pub trait CacheDiagnosticsExt<K, T> {
+    /// Emits a `ChangeSummary` after every batch, in batch order and outside the operator's lock.
     fn collect_update_stats(&self) -> ValueStream<ChangeSummary>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,

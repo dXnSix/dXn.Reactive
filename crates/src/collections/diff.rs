@@ -7,7 +7,14 @@ use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::operators::{apply_list_changes, diff_list_by};
 use crate::collections::stream::ChangeStream;
 
+/// Turns a stream of full snapshots into an incremental keyed cache stream.
+///
+/// Each snapshot is diffed by key against the previous one, so a poll, file listing or query
+/// result publishes only the removes, updates, adds and moves that it implies. A snapshot
+/// that changes nothing publishes nothing.
 pub trait ValueStreamCacheDiffExt<T> {
+    /// Diffs each snapshot by the key from `key_selector`, treating items as updated when they
+    /// differ (`PartialEq`).
     fn edit_diff<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -16,6 +23,8 @@ pub trait ValueStreamCacheDiffExt<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`edit_diff`](Self::edit_diff), with `are_items_equal` deciding whether an item with
+    /// an existing key was updated.
     fn edit_diff_by<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -26,11 +35,17 @@ pub trait ValueStreamCacheDiffExt<T> {
         T: Clone + Send + Sync + 'static;
 }
 
+/// Turns a stream of full snapshots into an incremental list stream.
+///
+/// Each snapshot is diffed positionally against the previous one (like the list `edit_diff`),
+/// so unchanged items keep their identity. A snapshot that changes nothing publishes nothing.
 pub trait ValueStreamListDiffExt<T> {
+    /// Diffs each snapshot against the previous one, comparing items with `PartialEq`.
     fn edit_diff_list(&self) -> ChangeStream<ListChange<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`edit_diff_list`](Self::edit_diff_list), with `are_items_equal` as the item equality.
     fn edit_diff_list_by(
         &self,
         are_items_equal: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -162,7 +177,11 @@ where
     }
 }
 
+/// Turns a stream of optional values into a zero-or-one item keyed cache stream.
 pub trait OptionalValueStreamCacheDiffExt<T> {
+    /// Diffs each value against the previous one by the key from `key_selector`: `None` removes
+    /// the item, a value with another key removes the previous item and adds the new one, and a
+    /// changed item (`PartialEq`) under the same key updates it.
     fn edit_diff_optional<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
@@ -171,6 +190,8 @@ pub trait OptionalValueStreamCacheDiffExt<T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`edit_diff_optional`](Self::edit_diff_optional), with `are_items_equal` deciding
+    /// whether an item under the same key was updated.
     fn edit_diff_optional_by<K>(
         &self,
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,

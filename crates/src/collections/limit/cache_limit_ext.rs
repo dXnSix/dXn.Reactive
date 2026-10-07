@@ -12,13 +12,28 @@ use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::list::SourceList;
 use crate::collections::stream::{ChangeStream, ValueStream};
 
+/// A size limit on a cache stream view; the source is untouched.
 pub trait CacheLimitExt<K, T> {
+    /// Keeps the `size` most recently added or updated keys in the output, removing the oldest.
+    ///
+    /// Refreshes and updates of kept keys are forwarded; an update of an evicted key adds it back
+    /// as the newest and evicts the oldest. Indexes are positions in the output.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `size` is zero.
     fn limit_size_to(&self, size: usize) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 }
 
+/// A size limit enforced on a `SourceCache`, by removing entries from it.
+///
+/// The returned stream is cold: the limit applies only while it is subscribed, and
+/// subscribing trims the source immediately. Evictions are separate source edits made after
+/// delivery, so while several threads commit faster than the source delivers, the source can
+/// briefly hold more than `size` entries. The methods panic if `size` is zero.
 pub trait SourceCacheLimitExt<K, T> {
     /// Keeps at most `size` items in the cache, removing the least recently added or updated
     /// ones, and emits each batch of removed items. An eviction whose edit fails (for example
@@ -40,6 +55,12 @@ pub trait SourceCacheLimitExt<K, T> {
         T: Clone + PartialEq + Send + Sync + 'static;
 }
 
+/// A size limit enforced on a `SourceList`, by removing items from it.
+///
+/// The returned stream is cold: the limit applies only while it is subscribed, and
+/// subscribing trims the source immediately. Evictions are separate source edits made after
+/// delivery, so while several threads commit faster than the source delivers, the source can
+/// briefly hold more than `size` items. The methods panic if `size` is zero.
 pub trait SourceListLimitExt<T> {
     /// Keeps at most `size` items in the list, removing the oldest ones, and emits each batch
     /// of removed items. An eviction whose edit fails (for example under contention) is

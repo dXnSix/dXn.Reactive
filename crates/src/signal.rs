@@ -1,24 +1,104 @@
 use std::collections::VecDeque;
+use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, TryLockError, Weak};
 
 use crate::primitives::{DeliveryQueue, Result, ValueStream};
 
+/// A committed write to a [`Signal`], as published by [`Signal::changes`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SignalChange<T> {
+    /// The value before the write.
     pub previous: T,
+    /// The value after the write.
     pub current: T,
+    /// The signal's version after the write: `1` for the first write, then incremented on every
+    /// write (wrapping back to `1`, never to `0`).
     pub version: u64,
 }
 
+/// A single observable current value.
+///
+/// Cloning a `Signal` is cheap and yields another handle to the same state, not a copy of
+/// the value. Writes commit atomically, advance the [version](Self::version), and publish a
+/// [`SignalChange`] to subscribers through a FIFO queue in commit order. A subscriber that
+/// writes to the signal while being notified queues its change behind the current one
+/// instead of recursing. Expose a [`ReadSignal`] (from [`read_only`](Self::read_only)) to
+/// code that may observe but not write.
+///
+/// A panic inside an `update` closure, or in `T::eq` or `T::clone` during a write, propagates
+/// to the caller and leaves the value and version unchanged; the signal stays usable.
+///
+/// # Examples
+///
+/// ```rust
+/// use rayx_reactive::prelude::*;
+/// use std::sync::{Arc, Mutex};
+///
+/// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+/// let count = Signal::new(0);
+/// let seen = Arc::new(Mutex::new(Vec::new()));
+/// let sink = Arc::clone(&seen);
+/// let _subscription = count.values().subscribe(move |value| sink.lock().unwrap().push(*value))?;
+///
+/// assert!(count.set(0)?.is_none()); // equal: nothing is published
+/// count.set(5)?;
+/// count.update(|value| *value += 1)?;
+///
+/// assert_eq!(*seen.lock().unwrap(), [0, 5, 6]);
+/// assert_eq!(count.version()?, 2);
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone)]
 pub struct Signal<T> {
     inner: Arc<SignalInner<T>>,
 }
 
+/// A cloneable, read-only handle to the state of a [`Signal`] or a [`Computed`].
+///
+/// It offers the reads and streams of a `Signal` but no writes, so a ViewModel can expose
+/// state that views observe without mutating it.
+///
+/// [`Computed`]: crate::computed::Computed
 #[derive(Clone)]
 pub struct ReadSignal<T> {
     inner: Arc<SignalInner<T>>,
+}
+
+impl<T: Default> Default for Signal<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
+/// A value read without waiting for `Debug` output: `<locked>` while another thread
+/// holds it.
+pub(crate) struct DebugRead<T>(pub(crate) Option<T>);
+
+impl<T: fmt::Debug> fmt::Debug for DebugRead<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Some(value) => value.fmt(f),
+            None => f.write_str("<locked>"),
+        }
+    }
+}
+
+impl<T: fmt::Debug + Clone> fmt::Debug for Signal<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Signal")
+            .field("value", &DebugRead(self.try_get().ok().flatten()))
+            .finish()
+    }
+}
+
+impl<T: fmt::Debug + Clone> fmt::Debug for ReadSignal<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ReadSignal")
+            .field("value", &DebugRead(self.try_get().ok().flatten()))
+            .finish()
+    }
 }
 
 /// Brings a derived signal up to date before it is read (used by `Computed`).
@@ -260,6 +340,7 @@ where
 }
 
 impl<T> Signal<T> {
+    /// Creates a signal holding `value`, at version `0`.
     pub fn new(value: T) -> Self {
         Self {
             inner: Arc::new(SignalInner {
@@ -270,16 +351,23 @@ impl<T> Signal<T> {
         }
     }
 
+    /// Returns a read-only handle to the same state.
     pub fn read_only(&self) -> ReadSignal<T> {
         ReadSignal {
             inner: Arc::clone(&self.inner),
         }
     }
 
+    /// The number of committed writes: `0` until the first write, then incremented by every
+    /// write and wrapping back to `1`, never to `0`.
     pub fn version(&self) -> Result<u64> {
         Ok(self.inner.version())
     }
 
+    /// Runs `read` against the current value while the signal's lock is held.
+    ///
+    /// Use it to project a large value without cloning it. Do not write to the same signal
+    /// inside `read`: the lock is not re-entrant, so that write would deadlock.
     pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> Result<R> {
         Ok(self.inner.read(read))
     }
@@ -303,6 +391,7 @@ impl<T> Signal<T>
 where
     T: Clone,
 {
+    /// Returns a clone of the current value.
     pub fn get(&self) -> Result<T> {
         self.read(Clone::clone)
     }
@@ -312,6 +401,9 @@ where
         self.try_read(Clone::clone)
     }
 
+    /// Stores `value` and publishes the change even when it equals the current value.
+    ///
+    /// Use it when every assignment is meaningful, such as a retry trigger.
     pub fn replace(&self, value: T) -> Result<SignalChange<T>>
     where
         T: Send + 'static,
@@ -321,6 +413,9 @@ where
         Ok(change)
     }
 
+    /// Stores `value` and publishes the change only when it differs from the current value.
+    ///
+    /// Returns `Ok(None)`, without advancing the version, when `value` equals the current value.
     pub fn set(&self, value: T) -> Result<Option<SignalChange<T>>>
     where
         T: PartialEq + Send + 'static,
@@ -332,6 +427,10 @@ where
         Ok(change)
     }
 
+    /// Mutates the value in place with `update` and publishes the change.
+    ///
+    /// It always publishes, even when `update` changed nothing. A panic inside `update`
+    /// restores the previous value and propagates to the caller.
     pub fn update(&self, update: impl FnOnce(&mut T)) -> Result<SignalChange<T>>
     where
         T: Send + 'static,
@@ -360,6 +459,11 @@ where
             .map(|change| change.is_some())
     }
 
+    /// A stream of the current value followed by every later value.
+    ///
+    /// The current value is delivered synchronously, before `subscribe` returns. A subscriber
+    /// never receives an older version after a newer one, and a write it makes during its
+    /// initial callback is delivered after the baseline.
     pub fn values(&self) -> ValueStream<T>
     where
         T: Send + Sync + 'static,
@@ -379,6 +483,7 @@ where
         SignalInner::values(&self.inner, Some(after_snapshot))
     }
 
+    /// A stream of every later committed write, without the current value.
     pub fn changes(&self) -> ValueStream<SignalChange<T>>
     where
         T: Send + Sync + 'static,
@@ -388,10 +493,13 @@ where
 }
 
 impl<T> ReadSignal<T> {
+    /// The number of committed writes; see [`Signal::version`].
     pub fn version(&self) -> Result<u64> {
         Ok(self.inner.version())
     }
 
+    /// Runs `read` against the current value while the signal's lock is held; see
+    /// [`Signal::read`].
     pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> Result<R> {
         Ok(self.inner.read(read))
     }
@@ -422,6 +530,7 @@ impl<T> ReadSignal<T>
 where
     T: Clone,
 {
+    /// Returns a clone of the current value.
     pub fn get(&self) -> Result<T> {
         self.read(Clone::clone)
     }
@@ -431,6 +540,7 @@ where
         self.try_read(Clone::clone)
     }
 
+    /// A stream of the current value followed by every later value; see [`Signal::values`].
     pub fn values(&self) -> ValueStream<T>
     where
         T: Send + Sync + 'static,
@@ -442,6 +552,7 @@ where
         )
     }
 
+    /// A stream of every later committed write, without the current value.
     pub fn changes(&self) -> ValueStream<SignalChange<T>>
     where
         T: Send + Sync + 'static,

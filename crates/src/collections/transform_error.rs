@@ -1,11 +1,18 @@
+/// A failed transform, as passed to the error callback of the `transform_safe*` operators.
+///
+/// The projection for that key is left untouched (absent if it never succeeded).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransformError<K, T, E> {
+    /// The error the transform returned.
     pub error: E,
+    /// The key of the item that failed.
     pub key: K,
+    /// The item that failed.
     pub value: T,
 }
 
 impl<K, T, E> TransformError<K, T, E> {
+    /// Creates a transform failure from its parts.
     pub fn new(error: E, key: K, value: T) -> Self {
         Self { error, key, value }
     }
@@ -24,6 +31,7 @@ pub struct TransformPanic {
 }
 
 impl TransformPanic {
+    /// Creates a panic report with `message`.
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),

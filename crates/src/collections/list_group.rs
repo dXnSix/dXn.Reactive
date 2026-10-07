@@ -23,12 +23,20 @@ struct RayListGroupInner<T> {
     changes: DeliveryQueue<VersionedChangeSet<ListChange<T>>>,
 }
 
+/// A live group of list items sharing one group key, as emitted by the list `group`
+/// operators.
+///
+/// The outer stream changes only when a group appears or disappears; membership changes,
+/// including pure source moves inside the group, flow through the group's own
+/// [`connect`](Self::connect) stream. Cloning shares the group.
 #[derive(Clone)]
 pub struct RayListGroup<G, T> {
     key: G,
     inner: Arc<RayListGroupInner<T>>,
 }
 
+/// A snapshot of one list group, as emitted by `group_immutable`: its key and its items at
+/// the time of the batch.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImmutableListGroup<G, T> {
     key: G,
@@ -36,18 +44,22 @@ pub struct ImmutableListGroup<G, T> {
 }
 
 impl<G, T> ImmutableListGroup<G, T> {
+    /// Creates a snapshot of the group `key` holding `items`.
     pub fn new(key: G, items: Vec<T>) -> Self {
         Self { key, items }
     }
 
+    /// The group key.
     pub fn key(&self) -> &G {
         &self.key
     }
 
+    /// The group's items.
     pub fn items(&self) -> &[T] {
         &self.items
     }
 
+    /// Consumes the snapshot and returns its items.
     pub fn into_items(self) -> Vec<T> {
         self.items
     }
@@ -71,6 +83,7 @@ where
         }
     }
 
+    /// The group key.
     pub fn key(&self) -> G {
         self.key.clone()
     }
@@ -81,22 +94,27 @@ where
     G: Clone + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
 {
+    /// The number of items in the group.
     pub fn len(&self) -> Result<usize> {
         Ok(self.inner.state.lock()?.items.len())
     }
 
+    /// The number of items in the group; the same as [`len`](Self::len).
     pub fn count(&self) -> Result<usize> {
         self.len()
     }
 
+    /// `true` when the group holds no items.
     pub fn is_empty(&self) -> Result<bool> {
         Ok(self.len()? == 0)
     }
 
+    /// The group's items, in group order.
     pub fn items(&self) -> Result<Vec<T>> {
         Ok(self.inner.state.lock()?.items.clone())
     }
 
+    /// A stream of the group's membership: the current items first, then every later change.
     pub fn connect(&self) -> ChangeStream<ListChange<T>> {
         let group = self.clone();
         ChangeStream::new(move |subscriber| group.connect_subscriber(subscriber))

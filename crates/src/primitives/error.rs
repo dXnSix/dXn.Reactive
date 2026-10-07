@@ -1,8 +1,11 @@
 use std::error::Error;
 use std::sync::Arc;
 
+/// The error type of scalar state and stream subscriptions.
 #[derive(Clone, Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum ReactiveError {
+    /// A lock guarding reactive state was poisoned by a panic.
     #[error("reactive state is poisoned")]
     Poisoned,
     /// An error from another layer (for example a collection operation) carried into scalar
@@ -33,4 +36,5 @@ impl PartialEq for ReactiveError {
 
 impl Eq for ReactiveError {}
 
+/// A `Result` whose error is [`ReactiveError`].
 pub type Result<T> = std::result::Result<T, ReactiveError>;
