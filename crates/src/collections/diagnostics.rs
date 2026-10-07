@@ -6,7 +6,9 @@ use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::stream::{ChangeStream, ValueStream};
+use crate::collections::subscription::Subscription;
 
 static RETAINED_IMPLICIT_STARTUP_BATCH_COUNT: AtomicUsize = AtomicUsize::new(0);
 
@@ -158,15 +160,18 @@ impl<T> ListDiagnosticsExt<T> for ChangeStream<ListChange<T>> {
     {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
+            // Summaries are computed under the lock and delivered after it, in order.
+            let (emitter, delivery) =
+                OrderedEmitter::new(move |summary: &ChangeSummary| subscriber(summary))?;
             let summary = Mutex::new(ChangeSummary::empty());
-            source.subscribe(move |batch| {
-                if let Ok(mut summary) = summary.lock() {
-                    let next = next_list_summary(&summary, batch);
+            let subscription = source.subscribe(move |batch| {
+                emitter.update(&summary, |summary| {
+                    let next = next_list_summary(summary, batch);
                     *summary = next.clone();
-                    drop(summary);
-                    subscriber(&next);
-                }
-            })
+                    Some(next)
+                });
+            })?;
+            Ok(Subscription::many(vec![subscription, delivery]))
         })
     }
 }
@@ -179,15 +184,18 @@ impl<K, T> CacheDiagnosticsExt<K, T> for ChangeStream<CacheChange<K, T>> {
     {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
+            // Summaries are computed under the lock and delivered after it, in order.
+            let (emitter, delivery) =
+                OrderedEmitter::new(move |summary: &ChangeSummary| subscriber(summary))?;
             let summary = Mutex::new(ChangeSummary::empty());
-            source.subscribe(move |batch| {
-                if let Ok(mut summary) = summary.lock() {
-                    let next = next_cache_summary(&summary, batch);
+            let subscription = source.subscribe(move |batch| {
+                emitter.update(&summary, |summary| {
+                    let next = next_cache_summary(summary, batch);
                     *summary = next.clone();
-                    drop(summary);
-                    subscriber(&next);
-                }
-            })
+                    Some(next)
+                });
+            })?;
+            Ok(Subscription::many(vec![subscription, delivery]))
         })
     }
 }

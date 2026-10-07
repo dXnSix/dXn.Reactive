@@ -12,9 +12,12 @@ use crate::collections::subscription::Subscription;
 use crate::primitives::timer::{OperatorTimer, schedule_timer};
 use crate::primitives::{ScheduledTask, Scheduler, default_scheduler};
 
-use super::{DisposeItem, ItemValue, RefreshBuffer};
+use super::{
+    DisposeItem, FilterRestart, ItemValue, RefreshBuffer, StartPhase, reconcile_merged_children,
+};
 
 type ListAction<T> = Arc<dyn Fn(&T) + Send + Sync>;
+type ListSameItem<T> = Arc<dyn Fn(&T, &T) -> bool + Send + Sync>;
 type ListFilterFactory<T> = Arc<dyn Fn(&T) -> ValueStream<bool> + Send + Sync>;
 type ListRefreshFactory<T, S> = Arc<dyn Fn(&T) -> ValueStream<S> + Send + Sync>;
 type ListSubscriptionFactory<T> = Arc<dyn Fn(&T) -> Subscription + Send + Sync>;
@@ -156,12 +159,26 @@ pub trait ListLifecycleExt<T> {
         K: Clone + Eq + std::hash::Hash + Send + Sync + 'static,
         U: Clone + PartialEq + Send + Sync + 'static;
 
+    /// Disposes items when they leave (removed, or replaced by a different item) and the
+    /// remaining items when the subscription is disposed. An item replaced by an equal item is
+    /// not disposed.
     fn dispose_many(&self) -> ChangeStream<ListChange<T>>
     where
-        T: DisposeItem + Clone + Send + Sync + 'static;
+        T: DisposeItem + Clone + PartialEq + Send + Sync + 'static;
 
+    /// Like [`dispose_many`](Self::dispose_many) with a custom finalizer.
     fn dispose_many_with(
         &self,
+        dispose: impl Fn(&T) + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + PartialEq + Send + Sync + 'static;
+
+    /// Like [`dispose_many_with`](Self::dispose_many_with), with `same_item` deciding whether
+    /// a replacement keeps the item (then it is not disposed).
+    fn dispose_many_by(
+        &self,
+        same_item: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
         dispose: impl Fn(&T) + Send + Sync + 'static,
     ) -> ChangeStream<ListChange<T>>
     where
@@ -218,35 +235,42 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         let source = self.clone();
         let filter: ListFilterFactory<T> = Arc::new(filter);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(FilterOnObservableListState::<T>::default()));
             let state_for_source = Arc::clone(&state);
             let filter_for_source = Arc::clone(&filter);
-            let subscriber_for_source = Arc::clone(&subscriber);
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, starts) = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    (Vec::new(), Vec::new())
+                let starts = {
+                    let Ok(mut state) = state_for_source.lock() else {
+                        return;
+                    };
+                    state.phase.begin();
+                    let (changes, starts) = state.apply_source(batch);
+                    state.phase.pending.extend(changes);
+                    starts
                 };
-
-                if !changes.is_empty() {
-                    subscriber_for_source(&ChangeSet::new(changes, batch.version));
-                }
                 start_list_filter_subscriptions(
                     &state_for_source,
-                    &subscriber_for_source,
+                    &emitter,
                     &starts,
                     &*filter_for_source,
                 );
+                emitter.update(&state_for_source, |state| state.finish_start());
             })?;
 
             let cleanup = Subscription::new(move || {
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
+                let released = match state.lock() {
+                    Ok(mut state) => state.clear_subscriptions(),
+                    Err(_) => Vec::new(),
+                };
+                drop(released);
             });
 
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
+            Ok(Subscription::many(vec![
+                source_subscription,
+                cleanup,
+                delivery,
+            ]))
         })
     }
 
@@ -427,19 +451,19 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
                     let Ok(mut state) = state_for_source.lock() else {
                         return;
                     };
+                    state.phase.begin();
                     let (changes, starts) = state.apply_parent_changes(batch);
-                    if !changes.is_empty() {
-                        emitter_for_source.push(ChangeSet::new(changes, batch.version));
-                    }
+                    state.phase.pending.extend(changes);
                     starts
                 };
-                emitter_for_source.drain();
                 start_list_change_set_subscriptions(
                     &state_for_source,
                     &emitter_for_source,
                     &starts,
                     &*selector_for_source,
                 );
+                emitter_for_source
+                    .update(&state_for_source, |state| state.finish_start(batch.version));
             })?;
 
             let cleanup = Subscription::new(move || {
@@ -483,7 +507,7 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
 
     fn dispose_many(&self) -> ChangeStream<ListChange<T>>
     where
-        T: DisposeItem + Clone + Send + Sync + 'static,
+        T: DisposeItem + Clone + PartialEq + Send + Sync + 'static,
     {
         self.dispose_many_with(|item| item.dispose())
     }
@@ -493,17 +517,30 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         dispose: impl Fn(&T) + Send + Sync + 'static,
     ) -> ChangeStream<ListChange<T>>
     where
+        T: Clone + PartialEq + Send + Sync + 'static,
+    {
+        self.dispose_many_by(|previous, current| previous == current, dispose)
+    }
+
+    fn dispose_many_by(
+        &self,
+        same_item: impl Fn(&T, &T) -> bool + Send + Sync + 'static,
+        dispose: impl Fn(&T) + Send + Sync + 'static,
+    ) -> ChangeStream<ListChange<T>>
+    where
         T: Clone + Send + Sync + 'static,
     {
         let source = self.clone();
         let dispose: ListAction<T> = Arc::new(dispose);
+        let same_item: ListSameItem<T> = Arc::new(same_item);
         ChangeStream::new(move |subscriber| {
             let tracked = Arc::new(Mutex::new(Vec::<T>::new()));
             let tracked_for_source = Arc::clone(&tracked);
             let dispose_for_source = Arc::clone(&dispose);
+            let same_item = Arc::clone(&same_item);
             let source_subscription = source.subscribe(move |batch| {
                 let removed = if let Ok(mut tracked) = tracked_for_source.lock() {
-                    apply_list_disposal_changes(&mut tracked, &batch.changes)
+                    apply_list_disposal_changes(&mut tracked, &batch.changes, &*same_item)
                 } else {
                     removed_list_items_from_changes(&batch.changes)
                 };
@@ -674,19 +711,18 @@ where
                 let Ok(mut state) = state_for_source.lock() else {
                     return;
                 };
+                state.phase.begin();
                 let (changes, starts) = state.apply_parent_changes(batch);
-                if !changes.is_empty() {
-                    emitter_for_source.push(ChangeSet::new(changes, batch.version));
-                }
+                state.phase.pending.extend(changes);
                 starts
             };
-            emitter_for_source.drain();
             start_list_cache_change_set_subscriptions(
                 &state_for_source,
                 &emitter_for_source,
                 &starts,
                 &*selector_for_source,
             );
+            emitter_for_source.update(&state_for_source, |state| state.finish_start(batch.version));
         })?;
 
         let cleanup = Subscription::new(move || {
@@ -716,6 +752,11 @@ struct MergeManyListCacheChangeSetsState<K, U> {
     comparer: Option<Comparer<U>>,
     next_id: u64,
     version: u64,
+    /// The batch being started: deferred results and the child keys to recompute.
+    phase: StartPhase<CacheChange<K, U>>,
+    deferred: Vec<K>,
+    deferred_seen: HashSet<K>,
+    deferred_refreshes: HashMap<K, Vec<U>>,
 }
 
 impl<K, U> MergeManyListCacheChangeSetsState<K, U> {
@@ -726,6 +767,10 @@ impl<K, U> MergeManyListCacheChangeSetsState<K, U> {
             result_order: Vec::new(),
             comparer,
             next_id: 0,
+            phase: StartPhase::default(),
+            deferred: Vec::new(),
+            deferred_seen: HashSet::new(),
+            deferred_refreshes: HashMap::new(),
             version: 0,
         }
     }
@@ -851,12 +896,15 @@ where
                     self.result_order.clear();
                     touched.clear();
                     touched_seen.clear();
+                    self.deferred.clear();
+                    self.deferred_seen.clear();
+                    self.deferred_refreshes.clear();
                 }
                 ListChange::Refresh { .. } => {}
             }
         }
 
-        self.recompute_keys(touched, &HashMap::new(), &mut changes);
+        self.recompute_or_defer(touched, HashMap::new(), &mut changes);
         drop(removed_subscriptions);
         (changes, starts)
     }
@@ -913,11 +961,47 @@ where
         }
 
         let mut changes = Vec::new();
-        self.recompute_keys(touched, &refreshes, &mut changes);
+        self.recompute_or_defer(touched, refreshes, &mut changes);
         if changes.is_empty() {
             return None;
         }
         Some(ChangeSet::new(changes, self.next_version(batch.version)))
+    }
+
+    /// Recomputes `keys` now, or after the batch's children have started.
+    fn recompute_or_defer(
+        &mut self,
+        keys: Vec<K>,
+        refreshes: HashMap<K, Vec<U>>,
+        changes: &mut Vec<CacheChange<K, U>>,
+    ) {
+        if self.phase.is_active() {
+            for key in keys {
+                push_unique_key(&mut self.deferred, &mut self.deferred_seen, key);
+            }
+            for (key, items) in refreshes {
+                self.deferred_refreshes
+                    .entry(key)
+                    .or_default()
+                    .extend(items);
+            }
+        } else {
+            self.recompute_keys(keys, &refreshes, changes);
+        }
+    }
+
+    /// Ends a source batch's start phase: emits its changes, recomputing the deferred keys once
+    /// (a parent restarted with identical children changes nothing).
+    fn finish_start(&mut self, source_version: u64) -> Option<ChangeSet<CacheChange<K, U>>> {
+        let mut changes = self.phase.end()?;
+        let keys = std::mem::take(&mut self.deferred);
+        self.deferred_seen.clear();
+        let refreshes = std::mem::take(&mut self.deferred_refreshes);
+        self.recompute_keys(keys, &refreshes, &mut changes);
+        if changes.is_empty() {
+            return None;
+        }
+        Some(ChangeSet::new(changes, self.next_version(source_version)))
     }
 
     fn recompute_keys(
@@ -1093,6 +1177,10 @@ struct MergeManyListChangeSetsState<U> {
     merged: Vec<U>,
     next_id: u64,
     version: u64,
+    /// The batch being started, and the replaced parents' previous items (still merged), by
+    /// the new child's id.
+    phase: StartPhase<ListChange<U>>,
+    retiring: Vec<(u64, Vec<U>)>,
 }
 
 impl<U> Default for MergeManyListChangeSetsState<U> {
@@ -1101,6 +1189,8 @@ impl<U> Default for MergeManyListChangeSetsState<U> {
             children: Vec::new(),
             merged: Vec::new(),
             next_id: 0,
+            phase: StartPhase::default(),
+            retiring: Vec::new(),
             version: 0,
         }
     }
@@ -1164,7 +1254,7 @@ where
                                 subscription: None,
                             },
                         );
-                        remove_many_from_merged(&mut self.merged, &previous.items, &mut changes);
+                        self.retire_or_remove(id, previous.items, &mut changes);
                         if let Some(subscription) = previous.subscription {
                             removed_subscriptions.push(subscription);
                         }
@@ -1180,6 +1270,7 @@ where
                 ListChange::Remove { index, .. } => {
                     if *index < self.children.len() {
                         let previous = self.children.remove(*index);
+                        self.drop_retiring(previous.id, &mut changes);
                         remove_many_from_merged(&mut self.merged, &previous.items, &mut changes);
                         if let Some(subscription) = previous.subscription {
                             removed_subscriptions.push(subscription);
@@ -1189,7 +1280,9 @@ where
                 ListChange::RemoveRange { index, old } => {
                     if *index < self.children.len() {
                         let end = index.saturating_add(old.len()).min(self.children.len());
-                        for previous in self.children.drain(*index..end) {
+                        let removed = self.children.drain(*index..end).collect::<Vec<_>>();
+                        for previous in removed {
+                            self.drop_retiring(previous.id, &mut changes);
                             remove_many_from_merged(
                                 &mut self.merged,
                                 &previous.items,
@@ -1207,6 +1300,7 @@ where
                             old: std::mem::take(&mut self.merged),
                         });
                     }
+                    self.retiring.clear();
                     for child in self.children.drain(..) {
                         if let Some(subscription) = child.subscription {
                             removed_subscriptions.push(subscription);
@@ -1230,14 +1324,60 @@ where
             .children
             .iter()
             .position(|child| child.id == child_id)?;
+        if self.phase.is_active() && self.retiring.iter().any(|(id, _)| *id == child_id) {
+            // A replaced parent's new child is reconciled when the batch has started.
+            apply_list_changes(&mut self.children[child_index].items, &batch.changes);
+            return None;
+        }
         let previous_items = self.children[child_index].items.clone();
         let mut changes = Vec::new();
         apply_child_list_changes_to_merged(&mut self.merged, &previous_items, batch, &mut changes);
         apply_list_changes(&mut self.children[child_index].items, &batch.changes);
+        if self.phase.is_active() {
+            self.phase.pending.extend(changes);
+            return None;
+        }
         if changes.is_empty() {
             return None;
         }
         Some(ChangeSet::new(changes, self.next_version(batch.version)))
+    }
+
+    /// Keeps a replaced parent's previous items merged until its batch has started, or removes
+    /// them at once outside a start phase.
+    fn retire_or_remove(&mut self, child_id: u64, items: Vec<U>, changes: &mut Vec<ListChange<U>>) {
+        if self.phase.is_active() {
+            self.retiring.push((child_id, items));
+        } else {
+            remove_many_from_merged(&mut self.merged, &items, changes);
+        }
+    }
+
+    /// Removes the previous items of a replaced parent that is now gone.
+    fn drop_retiring(&mut self, child_id: u64, changes: &mut Vec<ListChange<U>>) {
+        if let Some(position) = self.retiring.iter().position(|(id, _)| *id == child_id) {
+            let (_, items) = self.retiring.remove(position);
+            remove_many_from_merged(&mut self.merged, &items, changes);
+        }
+    }
+
+    /// Ends a source batch's start phase: reconciles the replaced parents' previous and new
+    /// items (identical children change nothing) and emits the batch once.
+    fn finish_start(&mut self, source_version: u64) -> Option<ChangeSet<ListChange<U>>> {
+        let mut changes = self.phase.end()?;
+        for (child_id, previous) in std::mem::take(&mut self.retiring) {
+            let current = self
+                .children
+                .iter()
+                .find(|child| child.id == child_id)
+                .map(|child| child.items.clone())
+                .unwrap_or_default();
+            reconcile_merged_children(&mut self.merged, &previous, &current, &mut changes);
+        }
+        if changes.is_empty() {
+            return None;
+        }
+        Some(ChangeSet::new(changes, self.next_version(source_version)))
     }
 
     fn set_subscription(&mut self, child_id: u64, subscription: Subscription) {
@@ -1408,6 +1548,7 @@ struct FilterOnObservableListEntry<T> {
     item: T,
     included: bool,
     subscription: Option<Subscription>,
+    restart: Option<FilterRestart<T>>,
 }
 
 struct FilterOnObservableListState<T> {
@@ -1415,6 +1556,7 @@ struct FilterOnObservableListState<T> {
     positions: HashMap<u64, usize>,
     next_id: u64,
     version: u64,
+    phase: StartPhase<ListChange<T>>,
 }
 
 impl<T> Default for FilterOnObservableListState<T> {
@@ -1424,7 +1566,19 @@ impl<T> Default for FilterOnObservableListState<T> {
             positions: HashMap::new(),
             next_id: 0,
             version: 0,
+            phase: StartPhase::default(),
         }
+    }
+}
+
+impl<T: Clone> FilterOnObservableListEntry<T> {
+    /// The item the output holds for this entry (a restarted entry still shows its previous
+    /// item).
+    fn shown(&self) -> T {
+        self.restart
+            .as_ref()
+            .and_then(|restart| restart.shown.clone())
+            .unwrap_or_else(|| self.item.clone())
     }
 }
 
@@ -1453,6 +1607,7 @@ where
                             item: item.clone(),
                             included: false,
                             subscription: None,
+                            restart: None,
                         },
                     );
                     starts.push((id, item.clone()));
@@ -1470,6 +1625,7 @@ where
                                 item: item.clone(),
                                 included: false,
                                 subscription: None,
+                                restart: None,
                             }
                         })
                         .collect::<Vec<_>>();
@@ -1478,23 +1634,23 @@ where
                 }
                 ListChange::Replace { index, new, .. } => {
                     if *index < self.entries.len() {
-                        let visible_index = self.visible_index_at_source_index(*index);
                         let id = self.next_id();
+                        let shown = self.entries[*index].shown();
+                        let included = self.entries[*index].included;
+                        // The previous result holds until the new item's child has started.
                         let previous = std::mem::replace(
                             &mut self.entries[*index],
                             FilterOnObservableListEntry {
                                 id,
                                 item: new.clone(),
-                                included: false,
+                                included,
                                 subscription: None,
+                                restart: Some(FilterRestart {
+                                    shown: included.then_some(shown),
+                                    next: None,
+                                }),
                             },
                         );
-                        if previous.included {
-                            changes.push(ListChange::Remove {
-                                index: visible_index,
-                                old: previous.item,
-                            });
-                        }
                         if let Some(subscription) = previous.subscription {
                             removed_subscriptions.push(subscription);
                         }
@@ -1514,7 +1670,7 @@ where
                             && let Some(to_visible) = self.visible_index_of(id)
                             && from_visible != to_visible
                         {
-                            let item = self.entries[self.positions[&id]].item.clone();
+                            let item = self.entries[self.positions[&id]].shown();
                             changes.push(ListChange::Move {
                                 from: from_visible,
                                 to: to_visible,
@@ -1530,7 +1686,7 @@ where
                         if entry.included {
                             changes.push(ListChange::Remove {
                                 index: visible_index,
-                                old: entry.item,
+                                old: entry.shown(),
                             });
                         }
                         if let Some(subscription) = entry.subscription {
@@ -1546,7 +1702,7 @@ where
                         let mut removed = Vec::new();
                         for entry in self.entries.drain(*index..end) {
                             if entry.included {
-                                removed.push(entry.item);
+                                removed.push(entry.shown());
                             }
                             if let Some(subscription) = entry.subscription {
                                 removed_subscriptions.push(subscription);
@@ -1564,7 +1720,8 @@ where
                 ListChange::Refresh { index, item } => {
                     if let Some(entry) = self.entries.get_mut(*index) {
                         entry.item = item.clone();
-                        if entry.included {
+                        // A restarted entry settles when its batch has started.
+                        if entry.included && entry.restart.is_none() {
                             let visible_index = self.visible_index_at_source_index(*index);
                             changes.push(ListChange::Refresh {
                                 index: visible_index,
@@ -1578,7 +1735,7 @@ where
                         .entries
                         .iter()
                         .filter(|entry| entry.included)
-                        .map(|entry| entry.item.clone())
+                        .map(FilterOnObservableListEntry::shown)
                         .collect::<Vec<_>>();
                     for entry in self.entries.drain(..) {
                         if let Some(subscription) = entry.subscription {
@@ -1599,6 +1756,11 @@ where
 
     fn apply_filter(&mut self, id: u64, included: bool) -> Option<ChangeSet<ListChange<T>>> {
         let source_index = *self.positions.get(&id)?;
+        if let Some(restart) = self.entries.get_mut(source_index)?.restart.as_mut() {
+            // Settled when the start phase ends.
+            restart.next = Some(included);
+            return None;
+        }
         let was_included = self.entries.get(source_index)?.included;
         if was_included == included {
             return None;
@@ -1607,7 +1769,6 @@ where
         let visible_index = self.visible_index_at_source_index(source_index);
         let item = self.entries.get(source_index)?.item.clone();
         self.entries[source_index].included = included;
-        self.version = self.version.saturating_add(1);
         let change = if included {
             ListChange::Add {
                 index: visible_index,
@@ -1619,7 +1780,48 @@ where
                 old: item,
             }
         };
+        if self.phase.is_active() {
+            self.phase.pending.push(change);
+            return None;
+        }
+        self.version = self.version.saturating_add(1);
         Some(ChangeSet::new(vec![change], self.version))
+    }
+
+    /// Ends a source batch's start phase: settles the restarted entries (a replacement with an
+    /// unchanged result is a `Replace`, not a remove and an add) and emits the batch once.
+    fn finish_start(&mut self) -> Option<ChangeSet<ListChange<T>>> {
+        let mut changes = self.phase.end()?;
+        for source_index in 0..self.entries.len() {
+            let Some(restart) = self.entries[source_index].restart.take() else {
+                continue;
+            };
+            let visible_index = self.visible_index_at_source_index(source_index);
+            let entry = &mut self.entries[source_index];
+            let included = restart.next.unwrap_or(false);
+            match (restart.shown, included) {
+                (Some(old), true) => changes.push(ListChange::Replace {
+                    index: visible_index,
+                    old,
+                    new: entry.item.clone(),
+                }),
+                (Some(old), false) => changes.push(ListChange::Remove {
+                    index: visible_index,
+                    old,
+                }),
+                (None, true) => changes.push(ListChange::Add {
+                    index: visible_index,
+                    item: entry.item.clone(),
+                }),
+                (None, false) => {}
+            }
+            entry.included = included;
+        }
+        if changes.is_empty() {
+            return None;
+        }
+        self.version = self.version.saturating_add(1);
+        Some(ChangeSet::new(changes, self.version))
     }
 
     fn is_live(&self, id: u64) -> bool {
@@ -1635,9 +1837,10 @@ where
         }
     }
 
-    fn clear_subscriptions(&mut self) {
-        self.entries.clear();
+    /// Ends the operator: returns the entries to drop after unlocking.
+    fn clear_subscriptions(&mut self) -> Vec<FilterOnObservableListEntry<T>> {
         self.positions.clear();
+        std::mem::take(&mut self.entries)
     }
 
     fn next_id(&mut self) -> u64 {
@@ -1678,7 +1881,7 @@ where
 
 fn start_list_filter_subscriptions<T>(
     state: &Arc<Mutex<FilterOnObservableListState<T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<ListChange<T>>,
+    emitter: &OrderedEmitter<ChangeSet<ListChange<T>>>,
     starts: &[(u64, T)],
     filter: &dyn Fn(&T) -> ValueStream<bool>,
 ) where
@@ -1695,17 +1898,10 @@ fn start_list_filter_subscriptions<T>(
 
         let stream = filter(item);
         let state_for_filter = Arc::clone(state);
-        let subscriber_for_filter = Arc::clone(subscriber);
+        let emitter_for_filter = emitter.clone();
         let id = *id;
         if let Ok(subscription) = stream.subscribe(move |included| {
-            let change = if let Ok(mut state) = state_for_filter.lock() {
-                state.apply_filter(id, *included)
-            } else {
-                None
-            };
-            if let Some(change) = change {
-                subscriber_for_filter(&change);
-            }
+            emitter_for_filter.update(&state_for_filter, |state| state.apply_filter(id, *included));
         }) && let Ok(mut state) = state.lock()
         {
             state.set_subscription(id, subscription);
@@ -2106,7 +2302,13 @@ fn invoke_removed_items<T>(batch: &ChangeSet<ListChange<T>>, action: &dyn Fn(&T)
     }
 }
 
-fn apply_list_disposal_changes<T>(tracked: &mut Vec<T>, changes: &[ListChange<T>]) -> Vec<T>
+/// Applies `changes` to the tracked items, returning the items that left: removed, or
+/// replaced by an item that is not the same (`same_item`).
+fn apply_list_disposal_changes<T>(
+    tracked: &mut Vec<T>,
+    changes: &[ListChange<T>],
+    same_item: &dyn Fn(&T, &T) -> bool,
+) -> Vec<T>
 where
     T: Clone,
 {
@@ -2123,9 +2325,14 @@ where
             }
             ListChange::Replace { index, old, new } => {
                 if let Some(slot) = tracked.get_mut(*index) {
-                    removed.push(std::mem::replace(slot, new.clone()));
+                    let previous = std::mem::replace(slot, new.clone());
+                    if !same_item(&previous, new) {
+                        removed.push(previous);
+                    }
                 } else {
-                    removed.push(old.clone());
+                    if !same_item(old, new) {
+                        removed.push(old.clone());
+                    }
                     tracked.push(new.clone());
                 }
             }

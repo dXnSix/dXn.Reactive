@@ -19,6 +19,7 @@ mod key_bridge_indexes;
 mod keyed_sort_positions;
 mod keyed_state_operators;
 mod lifecycle_observables;
+mod lifecycle_semantics;
 mod limit_size_rework;
 mod limits_expiration_streams;
 mod list_async_transform_options;
