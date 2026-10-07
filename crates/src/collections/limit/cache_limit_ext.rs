@@ -1,3 +1,5 @@
+use crate::collections::error::CollectionError;
+use crate::collections::materialize::{ErrorSink, OrderedWriter, WriterOptions};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
@@ -15,14 +17,41 @@ pub trait CacheLimitExt<K, T> {
 }
 
 pub trait SourceCacheLimitExt<K, T> {
+    /// Keeps at most `size` items in the cache, removing the least recently added or updated
+    /// ones, and emits each batch of removed items. An eviction whose edit fails (for example
+    /// under contention) is recomputed and retried; only items actually removed are emitted.
     fn limit_size_to(&self, size: usize) -> ValueStream<Vec<(K, T)>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + PartialEq + Send + Sync + 'static;
+
+    /// Like [`limit_size_to`](Self::limit_size_to), and reports each failed eviction edit
+    /// to `on_error`.
+    fn limit_size_to_with_errors(
+        &self,
+        size: usize,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ValueStream<Vec<(K, T)>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static;
 }
 
 pub trait SourceListLimitExt<T> {
+    /// Keeps at most `size` items in the list, removing the oldest ones, and emits each batch
+    /// of removed items. An eviction whose edit fails (for example under contention) is
+    /// recomputed and retried; only items actually removed are emitted.
     fn limit_size_to(&self, size: usize) -> ValueStream<Vec<T>>
+    where
+        T: Clone + PartialEq + Send + Sync + 'static;
+
+    /// Like [`limit_size_to`](Self::limit_size_to), and reports each failed eviction edit
+    /// to `on_error`.
+    fn limit_size_to_with_errors(
+        &self,
+        size: usize,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ValueStream<Vec<T>>
     where
         T: Clone + PartialEq + Send + Sync + 'static;
 }
@@ -57,39 +86,81 @@ impl<T> SourceListLimitExt<T> for SourceList<T> {
     where
         T: Clone + PartialEq + Send + Sync + 'static,
     {
-        assert!(size > 0, "size limit must be greater than zero");
-        let source = self.clone();
-        ValueStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(ListSizeLimitState::<T>::new(size)));
-            let source_for_subscriber = source.clone();
-            source.connect().subscribe(move |batch| {
-                let expired = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.apply_and_collect_expired(batch)
-                };
-                if expired.is_empty() {
-                    return;
-                }
-
-                let mut expired_indices =
-                    expired.iter().map(|(index, _)| *index).collect::<Vec<_>>();
-                expired_indices.sort_unstable_by(|left, right| right.cmp(left));
-                let expired_items = expired
-                    .into_iter()
-                    .map(|(_, item)| item)
-                    .collect::<Vec<_>>();
-
-                let _ = source_for_subscriber.edit(|list| {
-                    for index in expired_indices {
-                        let _ = list.remove(index);
-                    }
-                });
-                subscriber(&expired_items);
-            })
-        })
+        list_size_limit(self, size, None)
     }
+
+    fn limit_size_to_with_errors(
+        &self,
+        size: usize,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ValueStream<Vec<T>>
+    where
+        T: Clone + PartialEq + Send + Sync + 'static,
+    {
+        list_size_limit(self, size, Some(Arc::new(on_error)))
+    }
+}
+
+/// The limiter mirrors the source through `connect()` and computes, after every batch, the
+/// complete set of items over the limit. Evictions go through a latest-wins writer: a newer
+/// computation replaces a pending one, so a failed eviction is never applied twice. Inside
+/// the edit each item is checked against the source (the mirror can lag behind batches that
+/// are still being delivered); a stale eviction is skipped and recomputed from the next
+/// batch. Only items actually removed are emitted.
+fn list_size_limit<T>(
+    source: &SourceList<T>,
+    size: usize,
+    errors: Option<ErrorSink>,
+) -> ValueStream<Vec<T>>
+where
+    T: Clone + PartialEq + Send + Sync + 'static,
+{
+    assert!(size > 0, "size limit must be greater than zero");
+    let source = source.clone();
+    ValueStream::new(move |subscriber| {
+        let state = Arc::new(Mutex::new(ListSizeLimitState::<T>::new(size)));
+        let eviction_source = source.clone();
+        let retry_source = source.clone();
+        let evictions = OrderedWriter::new(
+            move |expired: &Vec<(usize, T)>| {
+                // Highest index first, so earlier removals keep later indexes valid.
+                let mut by_index = expired.clone();
+                by_index.sort_unstable_by_key(|entry| std::cmp::Reverse(entry.0));
+                let mut removed = Vec::new();
+                eviction_source.edit(|list| {
+                    let current = by_index
+                        .iter()
+                        .all(|(index, item)| list.get(*index) == Some(item));
+                    if current {
+                        for (index, item) in &by_index {
+                            if list.remove(*index).is_some() {
+                                removed.push(item.clone());
+                            }
+                        }
+                    }
+                })?;
+                if !removed.is_empty() {
+                    removed.reverse();
+                    subscriber(&removed);
+                }
+                Ok(())
+            },
+            WriterOptions::new(errors.clone())
+                .latest_wins()
+                .retry_on_release(Box::new(move |retry| retry_source.on_next_release(retry))),
+        );
+        source.connect().subscribe(move |batch| {
+            let expired = {
+                let Ok(mut state) = state.lock() else {
+                    return;
+                };
+                state.apply_and_collect_expired(batch)
+            };
+            if !expired.is_empty() {
+                evictions.submit(&expired);
+            }
+        })
+    })
 }
 
 impl<K, T> SourceCacheLimitExt<K, T> for SourceCache<K, T> {
@@ -98,34 +169,72 @@ impl<K, T> SourceCacheLimitExt<K, T> for SourceCache<K, T> {
         K: Clone + Eq + Hash + Send + Sync + 'static,
         T: Clone + PartialEq + Send + Sync + 'static,
     {
-        assert!(size > 0, "size limit must be greater than zero");
-        let source = self.clone();
-        ValueStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(SizeLimitState::<K, T>::new(size)));
-            let source_for_subscriber = source.clone();
-            source.connect().subscribe(move |batch| {
-                let expired = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.apply_and_collect_expired(batch)
-                };
-                if expired.is_empty() {
-                    return;
-                }
-                let expired_keys = expired
-                    .iter()
-                    .map(|(key, _)| key.clone())
-                    .collect::<Vec<_>>();
-                let _ = source_for_subscriber.edit(|cache| {
-                    for key in &expired_keys {
-                        let _ = cache.remove_key(key);
-                    }
-                });
-                subscriber(&expired);
-            })
-        })
+        cache_size_limit(self, size, None)
     }
+
+    fn limit_size_to_with_errors(
+        &self,
+        size: usize,
+        on_error: impl Fn(&CollectionError) + Send + Sync + 'static,
+    ) -> ValueStream<Vec<(K, T)>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + PartialEq + Send + Sync + 'static,
+    {
+        cache_size_limit(self, size, Some(Arc::new(on_error)))
+    }
+}
+
+/// Like [`list_size_limit`] for caches: the mirror follows the source's own removals, an
+/// eviction removes a key only while it still holds the item that was found over the limit,
+/// and only removed pairs are emitted.
+fn cache_size_limit<K, T>(
+    source: &SourceCache<K, T>,
+    size: usize,
+    errors: Option<ErrorSink>,
+) -> ValueStream<Vec<(K, T)>>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + PartialEq + Send + Sync + 'static,
+{
+    assert!(size > 0, "size limit must be greater than zero");
+    let source = source.clone();
+    ValueStream::new(move |subscriber| {
+        let state = Arc::new(Mutex::new(SizeLimitState::<K, T>::new(size)));
+        let eviction_source = source.clone();
+        let retry_source = source.clone();
+        let evictions = OrderedWriter::new(
+            move |expired: &Vec<(K, T)>| {
+                let mut removed = Vec::new();
+                eviction_source.edit(|cache| {
+                    for (key, item) in expired {
+                        if cache.lookup(key) == Some(item) {
+                            cache.remove_key(key);
+                            removed.push((key.clone(), item.clone()));
+                        }
+                    }
+                })?;
+                if !removed.is_empty() {
+                    subscriber(&removed);
+                }
+                Ok(())
+            },
+            WriterOptions::new(errors.clone())
+                .latest_wins()
+                .retry_on_release(Box::new(move |retry| retry_source.on_next_release(retry))),
+        );
+        source.connect().subscribe(move |batch| {
+            let expired = {
+                let Ok(mut state) = state.lock() else {
+                    return;
+                };
+                state.apply_and_collect_expired(batch)
+            };
+            if !expired.is_empty() {
+                evictions.submit(&expired);
+            }
+        })
+    })
 }
 
 #[derive(Clone)]
@@ -305,11 +414,9 @@ where
             self.apply_change(&mut next, change);
         }
 
+        // The source's own removals update the mirror; an eviction that fails is found
+        // again from the next batch.
         let expired = collect_expired_items(&next, self.size);
-        for (key, _) in &expired {
-            let _ = next.items.remove(key);
-            remove_key(&mut next.order, key);
-        }
         self.cache = next;
         expired
     }

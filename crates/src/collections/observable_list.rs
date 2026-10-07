@@ -1,8 +1,9 @@
 use std::{hash::Hash, sync::Arc};
 
 use crate::collections::change::{CacheChange, ListChange};
-use crate::collections::error::Result;
+use crate::collections::error::{CollectionError, Result};
 use crate::collections::list::SourceList;
+use crate::collections::materialize::ErrorChannel;
 use crate::collections::operators::CacheStreamExt;
 use crate::collections::populate::ListPopulateExt;
 use crate::collections::stream::{ChangeStream, ValueStream};
@@ -15,6 +16,7 @@ where
 {
     source: SourceList<T>,
     _subscription: Option<Arc<Subscription>>,
+    errors: Option<ErrorChannel>,
 }
 
 impl<T> ObservableList<T>
@@ -25,16 +27,37 @@ where
         Self {
             source,
             _subscription: None,
+            errors: None,
         }
     }
 
     pub fn from_stream(source: &ChangeStream<ListChange<T>>) -> Result<Self> {
         let list = SourceList::default();
-        let subscription = source.populate_into(&list)?;
+        let errors = ErrorChannel::default();
+        let subscription = source.populate_into_with_errors(&list, {
+            let sink = errors.sink();
+            move |error| sink(error)
+        })?;
         Ok(Self {
             source: list,
             _subscription: Some(Arc::new(subscription)),
+            errors: Some(errors),
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn backing_for_test(&self) -> &SourceList<T> {
+        &self.source
+    }
+
+    /// Errors of edits that could not be applied to this materialized view (for example
+    /// under contention). The failed batch is kept and applied before the next one, so the
+    /// view still converges. A view created with `from_source` never reports errors.
+    pub fn errors(&self) -> ValueStream<CollectionError> {
+        match &self.errors {
+            Some(errors) => errors.stream(),
+            None => ValueStream::new(|_subscriber| Ok(Subscription::empty())),
+        }
     }
 
     pub fn items(&self) -> Result<Vec<T>> {

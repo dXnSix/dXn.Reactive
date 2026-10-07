@@ -20,6 +20,7 @@ pub mod lifecycle;
 pub mod limit;
 pub mod list;
 pub mod list_group;
+mod materialize;
 pub mod merge;
 pub mod observable_cache;
 pub mod observable_list;

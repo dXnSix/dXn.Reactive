@@ -1,65 +1,7 @@
-impl<T, E> ValueStreamCacheBatchChangeSetExt<T> for crate::primitives::ValueStream<Vec<T>, E>
-where
-    E: Send + Sync + 'static,
-    CollectionError: From<E>,
-{
-    fn to_cache_change_set_batches<K>(
-        &self,
-        key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
-    ) -> ChangeStream<CacheChange<K, T>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + Send + Sync + 'static,
-    {
-        let source = self.err_into::<CollectionError>();
-        let key_selector = std::sync::Arc::new(key_selector);
-        ChangeStream::new(move |subscriber| {
-            let key_selector_for_cache = std::sync::Arc::clone(&key_selector);
-            let backing = SourceCache::new(move |item: &T| key_selector_for_cache(item));
-            let output = backing
-                .changes()
-                .subscribe(move |batch| subscriber(batch))?;
-            let input_backing = backing.clone();
-            let input = source.subscribe(move |items| {
-                let _ = input_backing.add_or_update_range(items.clone());
-            })?;
-            Ok(Subscription::many(vec![output, input]))
-        })
-    }
-
-    fn to_cache_change_set_batches_with_options<K>(
-        &self,
-        key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
-        options: ChangeSetAdapterOptions<T>,
-    ) -> ChangeStream<CacheChange<K, T>>
-    where
-        K: Clone + Eq + Hash + Send + Sync + 'static,
-        T: Clone + PartialEq + Send + Sync + 'static,
-    {
-        let source = self.err_into::<CollectionError>();
-        let key_selector = Arc::new(key_selector);
-        ChangeStream::new(move |subscriber| {
-            let key_selector_for_cache = Arc::clone(&key_selector);
-            let backing = SourceCache::new(move |item: &T| key_selector_for_cache(item));
-            let mut subscriptions = Vec::new();
-            subscriptions.push(
-                backing
-                    .changes()
-                    .subscribe(move |batch| subscriber(batch))?,
-            );
-            subscriptions.extend(activate_cache_adapter_options(&backing, options.clone())?);
-            let input_backing = backing.clone();
-            subscriptions.push(source.subscribe(move |items| {
-                let _ = input_backing.add_or_update_range(items.clone());
-            })?);
-            Ok(Subscription::many(subscriptions))
-        })
-    }
-}
-
 fn activate_list_adapter_options<T>(
     backing: &SourceList<T>,
     options: ChangeSetAdapterOptions<T>,
+    errors: Option<&ErrorSink>,
 ) -> Result<Vec<Subscription>>
 where
     T: Clone + PartialEq + Send + Sync + 'static,
@@ -79,7 +21,16 @@ where
     }
 
     if let Some(size) = options.limit_size_to {
-        subscriptions.push(SourceListLimitExt::limit_size_to(backing, size).subscribe(|_| {})?);
+        let limit = match errors {
+            Some(errors) => {
+                let errors = Arc::clone(errors);
+                SourceListLimitExt::limit_size_to_with_errors(backing, size, move |error| {
+                    errors(error);
+                })
+            }
+            None => SourceListLimitExt::limit_size_to(backing, size),
+        };
+        subscriptions.push(limit.subscribe(|_| {})?);
     }
 
     Ok(subscriptions)
@@ -88,6 +39,7 @@ where
 fn activate_cache_adapter_options<K, T>(
     backing: &SourceCache<K, T>,
     options: ChangeSetAdapterOptions<T>,
+    errors: Option<&ErrorSink>,
 ) -> Result<Vec<Subscription>>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -108,7 +60,16 @@ where
     }
 
     if let Some(size) = options.limit_size_to {
-        subscriptions.push(SourceCacheLimitExt::limit_size_to(backing, size).subscribe(|_| {})?);
+        let limit = match errors {
+            Some(errors) => {
+                let errors = Arc::clone(errors);
+                SourceCacheLimitExt::limit_size_to_with_errors(backing, size, move |error| {
+                    errors(error);
+                })
+            }
+            None => SourceCacheLimitExt::limit_size_to(backing, size),
+        };
+        subscriptions.push(limit.subscribe(|_| {})?);
     }
 
     Ok(subscriptions)

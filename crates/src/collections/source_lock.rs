@@ -36,7 +36,8 @@ pub(crate) fn with_non_blocking_policy<R>(action: impl FnOnce() -> R) -> R {
     action()
 }
 
-fn non_blocking() -> bool {
+/// Whether this thread must not wait for another thread (wasm32, or the test policy).
+pub(crate) fn non_blocking() -> bool {
     #[cfg(test)]
     if FORCE_NON_BLOCKING.with(std::cell::Cell::get) {
         return true;
@@ -45,12 +46,15 @@ fn non_blocking() -> bool {
 }
 
 type ReleaseHook = Box<dyn Fn() + Send + Sync>;
+type ReleaseCallback = Box<dyn FnOnce() + Send>;
 
 pub(crate) struct SourceLock<S> {
     state: Mutex<S>,
     /// Work deferred to whoever releases the lock next (see [`SourceLock::defer`]).
     release_requested: AtomicBool,
     release_hook: OnceLock<ReleaseHook>,
+    /// One-shot work queued with [`on_next_release`](SourceLock::on_next_release).
+    release_callbacks: Mutex<Vec<ReleaseCallback>>,
 }
 
 impl<S> SourceLock<S> {
@@ -59,6 +63,7 @@ impl<S> SourceLock<S> {
             state: Mutex::new(state),
             release_requested: AtomicBool::new(false),
             release_hook: OnceLock::new(),
+            release_callbacks: Mutex::new(Vec::new()),
         }
     }
 
@@ -72,6 +77,31 @@ impl<S> SourceLock<S> {
     pub(crate) fn request_release(&self) {
         self.release_requested.store(true, Ordering::SeqCst);
         std::sync::atomic::fence(Ordering::SeqCst);
+    }
+
+    /// Runs `callback` once, when the lock is next released (or now, if it is free).
+    /// Never blocks: used to retry work that failed because the lock was held.
+    pub(crate) fn on_next_release(&self, callback: ReleaseCallback) {
+        self.release_callbacks
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .push(callback);
+        std::sync::atomic::fence(Ordering::SeqCst);
+        // If the holder released before the callback was queued, nobody would run it: take
+        // the lock now (only if free) so its release runs the queue.
+        drop(self.try_lock_now());
+    }
+
+    fn run_release_callbacks(&self) {
+        let callbacks = std::mem::take(
+            &mut *self
+                .release_callbacks
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        );
+        for callback in callbacks {
+            callback();
+        }
     }
 
     fn run_release_hook(&self) {
@@ -145,6 +175,7 @@ impl<S> Drop for SourceGuard<'_, S> {
         });
         // Released: run work deferred while the lock was held.
         self.lock.run_release_hook();
+        self.lock.run_release_callbacks();
     }
 }
 

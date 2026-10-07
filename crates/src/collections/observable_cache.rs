@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use crate::collections::cache::SourceCache;
 use crate::collections::change::CacheChange;
-use crate::collections::error::Result;
+use crate::collections::error::{CollectionError, Result};
+use crate::collections::materialize::ErrorChannel;
 use crate::collections::populate::CachePopulateExt;
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
@@ -16,6 +17,7 @@ where
 {
     source: SourceCache<K, T>,
     _subscription: Option<Arc<Subscription>>,
+    errors: Option<ErrorChannel>,
 }
 
 impl<K, T> ObservableCache<K, T>
@@ -27,6 +29,7 @@ where
         Self {
             source,
             _subscription: None,
+            errors: None,
         }
     }
 
@@ -35,11 +38,31 @@ where
         key_selector: impl Fn(&T) -> K + Send + Sync + 'static,
     ) -> Result<Self> {
         let cache = SourceCache::new(key_selector);
-        let subscription = source.populate_into(&cache)?;
+        let errors = ErrorChannel::default();
+        let subscription = source.populate_into_with_errors(&cache, {
+            let sink = errors.sink();
+            move |error| sink(error)
+        })?;
         Ok(Self {
             source: cache,
             _subscription: Some(Arc::new(subscription)),
+            errors: Some(errors),
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn backing_for_test(&self) -> &SourceCache<K, T> {
+        &self.source
+    }
+
+    /// Errors of edits that could not be applied to this materialized view (for example
+    /// under contention). The failed batch is kept and applied before the next one, so the
+    /// view still converges. A view created with `from_source` never reports errors.
+    pub fn errors(&self) -> ValueStream<CollectionError> {
+        match &self.errors {
+            Some(errors) => errors.stream(),
+            None => ValueStream::new(|_subscriber| Ok(Subscription::empty())),
+        }
     }
 
     pub fn count(&self) -> Result<usize> {

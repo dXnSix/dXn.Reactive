@@ -91,6 +91,11 @@ where
         }
     }
 
+    /// Runs `callback` once, when this source's state lock is next released (or now).
+    pub(crate) fn on_next_release(&self, callback: Box<dyn FnOnce() + Send>) {
+        self.state.on_next_release(callback);
+    }
+
     pub fn items(&self) -> Result<Vec<T>> {
         Ok(self
             .state
