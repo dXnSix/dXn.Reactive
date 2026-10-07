@@ -6,7 +6,7 @@ use std::future::Future;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::thread;
 use std::time::Duration;
 
@@ -15,8 +15,12 @@ use crate::collections::group::RayCacheGroup;
 use crate::collections::operators::{Comparer, apply_list_changes};
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
+use crate::primitives::timer::{OperatorTimer, schedule_timer};
+use crate::primitives::{ScheduledTask, Scheduler, default_scheduler};
 
-use super::{AsyncDisposeItem, DisposeItem, EvaluateItem, ItemValue, KeyedItemValue};
+use super::{
+    AsyncDisposeItem, DisposeItem, EvaluateItem, ItemValue, KeyedItemValue, RefreshBuffer,
+};
 
 type CacheItemAction<K, T> = Arc<dyn Fn(&T, &K) + Send + Sync>;
 type CacheItemEquality<T> = Arc<dyn Fn(&T, &T) -> bool + Send + Sync>;
@@ -90,6 +94,20 @@ pub trait CacheLifecycleExt<K, T> {
         &self,
         reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    /// [`auto_refresh_buffered`](Self::auto_refresh_buffered) with its timer on `scheduler`.
+    fn auto_refresh_buffered_with_scheduler<S, E>(
+        &self,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+        buffer: Duration,
+        scheduler: Arc<dyn Scheduler>,
     ) -> ChangeStream<CacheChange<K, T>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -465,37 +483,7 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let reevaluator = move |argument_0: &T, argument_1: &K| {
             reevaluator(argument_0, argument_1).err_into::<CollectionError>()
         };
-        let source = self.clone();
-        let reevaluator: CacheRefreshFactory<K, T, S> = Arc::new(reevaluator);
-        ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(AutoRefreshCacheState::<K, T>::default()));
-            let state_for_source = Arc::clone(&state);
-            let reevaluator_for_source = Arc::clone(&reevaluator);
-            let subscriber_for_source = Arc::clone(&subscriber);
-            let source_subscription = source.subscribe(move |batch| {
-                let starts = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    HashMap::new()
-                };
-
-                subscriber_for_source(batch);
-                start_cache_refresh_subscriptions(
-                    &state_for_source,
-                    &subscriber_for_source,
-                    starts,
-                    &*reevaluator_for_source,
-                );
-            })?;
-
-            let cleanup = Subscription::new(move || {
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
-            });
-
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
-        })
+        cache_auto_refresh(self.clone(), Arc::new(reevaluator), None)
     }
 
     fn auto_refresh_buffered<S, E>(
@@ -510,49 +498,30 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         E: Send + Sync + 'static,
         CollectionError: From<E>,
     {
+        self.auto_refresh_buffered_with_scheduler(reevaluator, buffer, default_scheduler())
+    }
+
+    fn auto_refresh_buffered_with_scheduler<S, E>(
+        &self,
+        reevaluator: impl Fn(&T, &K) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+        buffer: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<CacheChange<K, T>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
         let reevaluator = move |argument_0: &T, argument_1: &K| {
             reevaluator(argument_0, argument_1).err_into::<CollectionError>()
         };
-        if buffer.is_zero() {
-            return self.auto_refresh::<_, CollectionError>(reevaluator);
-        }
-
-        let source = self.clone();
-        let reevaluator: CacheRefreshFactory<K, T, S> = Arc::new(reevaluator);
-        ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(AutoRefreshCacheState::<K, T>::default()));
-            let active = Arc::new(AtomicBool::new(true));
-            let state_for_source = Arc::clone(&state);
-            let active_for_source = Arc::clone(&active);
-            let reevaluator_for_source = Arc::clone(&reevaluator);
-            let subscriber_for_source = Arc::clone(&subscriber);
-            let source_subscription = source.subscribe(move |batch| {
-                let starts = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    HashMap::new()
-                };
-
-                subscriber_for_source(batch);
-                start_cache_refresh_subscriptions_buffered(
-                    &state_for_source,
-                    &subscriber_for_source,
-                    Arc::clone(&active_for_source),
-                    starts,
-                    &*reevaluator_for_source,
-                    buffer,
-                );
-            })?;
-
-            let cleanup = Subscription::new(move || {
-                active.store(false, AtomicOrdering::Release);
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
-            });
-
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
-        })
+        cache_auto_refresh(
+            self.clone(),
+            Arc::new(reevaluator),
+            RefreshBuffer::new(buffer, scheduler),
+        )
     }
 
     fn transform_on_observable<U, E>(
@@ -3313,7 +3282,7 @@ struct AutoRefreshCacheState<K, T> {
     order: Vec<K>,
     pending_refresh_keys: Vec<K>,
     pending_refresh_seen: HashSet<K>,
-    refresh_timer_started: bool,
+    timer: OperatorTimer,
     version: u64,
 }
 
@@ -3324,7 +3293,7 @@ impl<K, T> Default for AutoRefreshCacheState<K, T> {
             order: Vec::new(),
             pending_refresh_keys: Vec::new(),
             pending_refresh_seen: HashSet::new(),
-            refresh_timer_started: false,
+            timer: OperatorTimer::default(),
             version: 0,
         }
     }
@@ -3335,7 +3304,12 @@ where
     K: Clone + Eq + Hash,
     T: Clone,
 {
-    fn apply_source(&mut self, batch: &ChangeSet<CacheChange<K, T>>) -> HashMap<K, T> {
+    /// Applies a source batch, returning the items to subscribe to and the subscriptions of
+    /// the removed ones (drop them after unlocking).
+    fn apply_source(
+        &mut self,
+        batch: &ChangeSet<CacheChange<K, T>>,
+    ) -> (HashMap<K, T>, Vec<Subscription>) {
         self.version = self.version.max(batch.version);
         let mut starts = HashMap::new();
         let mut removed_subscriptions = Vec::new();
@@ -3433,8 +3407,7 @@ where
             }
         }
 
-        drop(removed_subscriptions);
-        starts
+        (starts, removed_subscriptions)
     }
 
     fn refresh_for(&mut self, key: &K) -> Option<ChangeSet<CacheChange<K, T>>> {
@@ -3451,27 +3424,22 @@ where
         ))
     }
 
-    fn queue_refresh(&mut self, key: &K) -> bool {
+    /// Queues a refresh of `key`, returning the timer generation to schedule when this
+    /// starts a buffering window.
+    fn queue_refresh(&mut self, key: &K) -> Option<u64> {
         if !self.is_live(key) {
-            return false;
+            return None;
         }
 
         if self.pending_refresh_seen.insert(key.clone()) {
             self.pending_refresh_keys.push(key.clone());
         }
-
-        if self.refresh_timer_started {
-            false
-        } else {
-            self.refresh_timer_started = true;
-            true
-        }
+        self.timer.arm()
     }
 
     fn flush_queued_refreshes(&mut self) -> Option<ChangeSet<CacheChange<K, T>>> {
         let keys = std::mem::take(&mut self.pending_refresh_keys);
         self.pending_refresh_seen.clear();
-        self.refresh_timer_started = false;
 
         let mut changes = Vec::new();
         for key in keys {
@@ -3498,140 +3466,159 @@ where
         self.items.contains_key(key)
     }
 
-    fn set_subscription(&mut self, key: &K, subscription: Subscription) {
-        if let Some(entry) = self.items.get_mut(key) {
-            let previous = entry.subscription.replace(subscription);
-            drop(previous);
+    /// Keeps `subscription` for a live key; returns what to drop after unlocking.
+    fn set_subscription(&mut self, key: &K, subscription: Subscription) -> Option<Subscription> {
+        match self.items.get_mut(key) {
+            Some(entry) => entry.subscription.replace(subscription),
+            None => Some(subscription),
         }
     }
 
-    fn clear_subscriptions(&mut self) {
-        self.items.clear();
+    /// Ends the operator: returns the entries and the pending timer to drop after unlocking.
+    fn close(&mut self) -> (HashMap<K, AutoRefreshCacheEntry<T>>, Option<ScheduledTask>) {
         self.order.clear();
         self.pending_refresh_keys.clear();
         self.pending_refresh_seen.clear();
-        self.refresh_timer_started = false;
+        (std::mem::take(&mut self.items), self.timer.close())
     }
 }
 
-fn start_cache_refresh_subscriptions<K, T, S>(
-    state: &Arc<Mutex<AutoRefreshCacheState<K, T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
-    starts: HashMap<K, T>,
-    reevaluator: &dyn Fn(&T, &K) -> ValueStream<S>,
-) where
+fn cache_auto_refresh<K, T, S>(
+    source: ChangeStream<CacheChange<K, T>>,
+    reevaluator: CacheRefreshFactory<K, T, S>,
+    buffer: Option<RefreshBuffer>,
+) -> ChangeStream<CacheChange<K, T>>
+where
     K: Clone + Eq + Hash + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
     S: Send + Sync + 'static,
 {
-    for (key, item) in starts {
-        let is_live = state
-            .lock()
-            .map(|state| state.is_live(&key))
-            .unwrap_or(false);
-        if !is_live {
-            continue;
-        }
+    ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let state = Arc::new(Mutex::new(AutoRefreshCacheState::<K, T>::default()));
+        let refresher = CacheRefresher {
+            state: Arc::downgrade(&state),
+            emitter: emitter.clone(),
+            buffer: buffer.clone(),
+        };
 
-        let stream = reevaluator(&item, &key);
-        let state_for_trigger = Arc::clone(state);
-        let subscriber_for_trigger = Arc::clone(subscriber);
-        let key_for_trigger = key.clone();
-        if let Ok(subscription) = stream.subscribe(move |_| {
-            let refresh = if let Ok(mut state) = state_for_trigger.lock() {
-                state.refresh_for(&key_for_trigger)
+        let state_for_source = Arc::clone(&state);
+        let reevaluator = Arc::clone(&reevaluator);
+        let source_subscription = source.subscribe(move |batch| {
+            let mut applied = (HashMap::new(), Vec::new());
+            emitter.update(&state_for_source, |state| {
+                if state.timer.is_closed() {
+                    return None;
+                }
+                applied = state.apply_source(batch);
+                Some(batch.clone())
+            });
+            let (starts, removed) = applied;
+            drop(removed);
+            refresher.start(&state_for_source, starts, &*reevaluator);
+        })?;
+
+        Ok(Subscription::new(move || {
+            drop(source_subscription);
+            let closed = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .close();
+            drop(closed);
+            drop(delivery);
+        }))
+    })
+}
+
+/// Emits the refreshes of one cache `auto_refresh` subscription, at once or buffered.
+struct CacheRefresher<K, T> {
+    state: Weak<Mutex<AutoRefreshCacheState<K, T>>>,
+    emitter: OrderedEmitter<ChangeSet<CacheChange<K, T>>>,
+    buffer: Option<RefreshBuffer>,
+}
+
+impl<K, T> Clone for CacheRefresher<K, T> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            emitter: self.emitter.clone(),
+            buffer: self.buffer.clone(),
+        }
+    }
+}
+
+impl<K, T> CacheRefresher<K, T>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    fn start<S>(
+        &self,
+        state: &Mutex<AutoRefreshCacheState<K, T>>,
+        starts: HashMap<K, T>,
+        reevaluator: &dyn Fn(&T, &K) -> ValueStream<S>,
+    ) where
+        S: Send + Sync + 'static,
+    {
+        for (key, item) in starts {
+            let is_live = state
+                .lock()
+                .map(|state| state.is_live(&key))
+                .unwrap_or(false);
+            if !is_live {
+                continue;
+            }
+
+            let refresher = self.clone();
+            let key_for_trigger = key.clone();
+            if let Ok(subscription) =
+                reevaluator(&item, &key).subscribe(move |_| refresher.refresh(&key_for_trigger))
+            {
+                let replaced = match state.lock() {
+                    Ok(mut state) => state.set_subscription(&key, subscription),
+                    Err(_) => Some(subscription),
+                };
+                drop(replaced);
+            }
+        }
+    }
+
+    fn refresh(&self, key: &K) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        let Some(buffer) = &self.buffer else {
+            self.emitter.update(&state, |state| state.refresh_for(key));
+            return;
+        };
+        let generation = match state.lock() {
+            Ok(mut state) => state.queue_refresh(key),
+            Err(_) => None,
+        };
+        if let Some(generation) = generation {
+            let refresher = self.clone();
+            schedule_timer(
+                &*buffer.scheduler,
+                &state,
+                |state| &mut state.timer,
+                generation,
+                buffer.delay,
+                move || refresher.flush(generation),
+            );
+        }
+    }
+
+    fn flush(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        self.emitter.update(&state, |state| {
+            if state.timer.fire(generation) {
+                state.flush_queued_refreshes()
             } else {
                 None
-            };
-            if let Some(refresh) = refresh {
-                subscriber_for_trigger(&refresh);
             }
-        }) && let Ok(mut state) = state.lock()
-        {
-            state.set_subscription(&key, subscription);
-        }
-    }
-}
-
-fn start_cache_refresh_subscriptions_buffered<K, T, S>(
-    state: &Arc<Mutex<AutoRefreshCacheState<K, T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
-    active: Arc<AtomicBool>,
-    starts: HashMap<K, T>,
-    reevaluator: &dyn Fn(&T, &K) -> ValueStream<S>,
-    buffer: Duration,
-) where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
-    S: Send + Sync + 'static,
-{
-    for (key, item) in starts {
-        let is_live = state
-            .lock()
-            .map(|state| state.is_live(&key))
-            .unwrap_or(false);
-        if !is_live {
-            continue;
-        }
-
-        let stream = reevaluator(&item, &key);
-        let state_for_trigger = Arc::clone(state);
-        let subscriber_for_trigger = Arc::clone(subscriber);
-        let active_for_trigger = Arc::clone(&active);
-        let key_for_trigger = key.clone();
-        if let Ok(subscription) = stream.subscribe(move |_| {
-            if !active_for_trigger.load(AtomicOrdering::Acquire) {
-                return;
-            }
-
-            let start_timer = if let Ok(mut state) = state_for_trigger.lock() {
-                state.queue_refresh(&key_for_trigger)
-            } else {
-                false
-            };
-
-            if start_timer {
-                let state_for_flush = Arc::clone(&state_for_trigger);
-                let subscriber_for_flush = Arc::clone(&subscriber_for_trigger);
-                let active_for_flush = Arc::clone(&active_for_trigger);
-                thread::spawn(move || {
-                    thread::sleep(buffer);
-                    flush_cache_refresh_buffer(
-                        state_for_flush,
-                        subscriber_for_flush,
-                        active_for_flush,
-                    );
-                });
-            }
-        }) && let Ok(mut state) = state.lock()
-        {
-            state.set_subscription(&key, subscription);
-        }
-    }
-}
-
-fn flush_cache_refresh_buffer<K, T>(
-    state: Arc<Mutex<AutoRefreshCacheState<K, T>>>,
-    subscriber: crate::collections::stream::StreamSubscriber<CacheChange<K, T>>,
-    active: Arc<AtomicBool>,
-) where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
-{
-    if !active.load(AtomicOrdering::Acquire) {
-        return;
-    }
-
-    let refresh = if let Ok(mut state) = state.lock() {
-        state.flush_queued_refreshes()
-    } else {
-        None
-    };
-
-    if let Some(refresh) = refresh
-        && active.load(AtomicOrdering::Acquire)
-    {
-        subscriber(&refresh);
+        });
     }
 }
 

@@ -40,5 +40,21 @@ impl<K, T, U> KeyedItemValue<K, T, U> {
     }
 }
 
+/// The window in which `auto_refresh_buffered` coalesces refreshes, on its scheduler.
+#[derive(Clone)]
+struct RefreshBuffer {
+    delay: std::time::Duration,
+    scheduler: std::sync::Arc<dyn crate::primitives::Scheduler>,
+}
+
+impl RefreshBuffer {
+    fn new(
+        delay: std::time::Duration,
+        scheduler: std::sync::Arc<dyn crate::primitives::Scheduler>,
+    ) -> Option<Self> {
+        (!delay.is_zero()).then_some(Self { delay, scheduler })
+    }
+}
+
 pub use cache::CacheLifecycleExt;
 pub use list::ListLifecycleExt;

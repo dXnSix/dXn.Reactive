@@ -1,43 +1,3 @@
-fn flush_initial_buffer<C>(
-    state: Arc<Mutex<InitialBufferState<C>>>,
-    subscriber: StreamSubscriber<C>,
-    active: Arc<AtomicBool>,
-) where
-    C: Clone + Send + Sync + 'static,
-{
-    loop {
-        if !active.load(Ordering::Acquire) {
-            return;
-        }
-
-        let batch = {
-            let Ok(mut state) = state.lock() else {
-                return;
-            };
-            if state.buffer.is_empty() {
-                state.buffering = false;
-                return;
-            }
-            flatten_change_sets(&std::mem::take(&mut state.buffer))
-        };
-
-        if let Some(batch) = batch {
-            if !active.load(Ordering::Acquire) {
-                return;
-            }
-            subscriber(&batch);
-        }
-
-        let Ok(mut state) = state.lock() else {
-            return;
-        };
-        if state.buffer.is_empty() {
-            state.buffering = false;
-            return;
-        }
-    }
-}
-
 fn flatten_change_sets<C>(updates: &[ChangeSet<C>]) -> Option<ChangeSet<C>>
 where
     C: Clone,
@@ -55,43 +15,29 @@ where
 
 struct BatchIfState<C> {
     paused: bool,
-    timer_started: bool,
-    generation: u64,
     buffer: Vec<C>,
     version: u64,
+    timer: OperatorTimer,
 }
 
 impl<C> Default for BatchIfState<C> {
     fn default() -> Self {
         Self {
             paused: false,
-            timer_started: false,
-            generation: 0,
             buffer: Vec::new(),
             version: 0,
+            timer: OperatorTimer::default(),
         }
     }
 }
 
 impl<C> BatchIfState<C> {
-    fn start_pause_cycle(&mut self) {
-        self.timer_started = false;
-        self.generation = self.generation.saturating_add(1);
-    }
-
-    fn end_pause_cycle(&mut self) {
-        self.paused = false;
-        self.timer_started = false;
-        self.generation = self.generation.saturating_add(1);
-    }
-
-    fn arm_timeout_if_needed(&mut self, timeout: Option<Duration>) -> Option<u64> {
-        timeout?;
-        if self.timer_started || self.buffer.is_empty() {
+    /// Arms the pause timeout once the paused buffer holds changes.
+    fn arm_timeout(&mut self, has_timeout: bool) -> Option<u64> {
+        if !has_timeout || self.buffer.is_empty() {
             return None;
         }
-        self.timer_started = true;
-        Some(self.generation)
+        self.timer.arm()
     }
 
     fn take_batch_if_not_empty(&mut self) -> Option<ChangeSet<C>> {
@@ -106,33 +52,52 @@ impl<C> BatchIfState<C> {
     }
 }
 
-fn flush_batch_if_timeout<C>(
-    state: Arc<Mutex<BatchIfState<C>>>,
-    subscriber: StreamSubscriber<C>,
-    active: Arc<AtomicBool>,
-    generation: u64,
-) where
+/// The pause timeout of `batch_if_with_timeout`: when it fires while still paused, the
+/// buffer is flushed and the stream resumes.
+struct BatchIfTimeout<C> {
+    state: Weak<Mutex<BatchIfState<C>>>,
+    emitter: OrderedEmitter<ChangeSet<C>>,
+    scheduler: Arc<dyn Scheduler>,
+    timeout: Duration,
+}
+
+impl<C> Clone for BatchIfTimeout<C> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            emitter: self.emitter.clone(),
+            scheduler: Arc::clone(&self.scheduler),
+            timeout: self.timeout,
+        }
+    }
+}
+
+impl<C> BatchIfTimeout<C>
+where
     C: Clone + Send + Sync + 'static,
 {
-    if !active.load(Ordering::Acquire) {
-        return;
+    fn schedule(&self, state: &Mutex<BatchIfState<C>>, generation: u64) {
+        let timed = self.clone();
+        schedule_timer(
+            &*self.scheduler,
+            state,
+            |state| &mut state.timer,
+            generation,
+            self.timeout,
+            move || timed.fire(generation),
+        );
     }
 
-    let batch = {
-        let Ok(mut state) = state.lock() else {
+    fn fire(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
             return;
         };
-        if !state.paused || state.generation != generation {
-            return;
-        }
-        state.end_pause_cycle();
-        state.take_batch_if_not_empty()
-    };
-
-    if let Some(batch) = batch {
-        if !active.load(Ordering::Acquire) {
-            return;
-        }
-        subscriber(&batch);
+        self.emitter.update(&state, |state| {
+            if !state.paused || !state.timer.fire(generation) {
+                return None;
+            }
+            state.paused = false;
+            state.take_batch_if_not_empty()
+        });
     }
 }

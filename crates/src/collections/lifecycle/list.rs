@@ -2,17 +2,17 @@ use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::operators::{Comparer, apply_list_changes};
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
+use crate::primitives::timer::{OperatorTimer, schedule_timer};
+use crate::primitives::{ScheduledTask, Scheduler, default_scheduler};
 
-use super::{DisposeItem, ItemValue};
+use super::{DisposeItem, ItemValue, RefreshBuffer};
 
 type ListAction<T> = Arc<dyn Fn(&T) + Send + Sync>;
 type ListFilterFactory<T> = Arc<dyn Fn(&T) -> ValueStream<bool> + Send + Sync>;
@@ -57,6 +57,19 @@ pub trait ListLifecycleExt<T> {
         &self,
         reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
         buffer: Duration,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>;
+
+    /// [`auto_refresh_buffered`](Self::auto_refresh_buffered) with its timer on `scheduler`.
+    fn auto_refresh_buffered_with_scheduler<S, E>(
+        &self,
+        reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+        buffer: Duration,
+        scheduler: Arc<dyn Scheduler>,
     ) -> ChangeStream<ListChange<T>>
     where
         T: Clone + Send + Sync + 'static,
@@ -249,37 +262,7 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
     {
         let reevaluator =
             move |argument_0: &T| reevaluator(argument_0).err_into::<CollectionError>();
-        let source = self.clone();
-        let reevaluator: ListRefreshFactory<T, S> = Arc::new(reevaluator);
-        ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(AutoRefreshListState::<T>::default()));
-            let state_for_source = Arc::clone(&state);
-            let reevaluator_for_source = Arc::clone(&reevaluator);
-            let subscriber_for_source = Arc::clone(&subscriber);
-            let source_subscription = source.subscribe(move |batch| {
-                let starts = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    Vec::new()
-                };
-
-                subscriber_for_source(batch);
-                start_list_refresh_subscriptions(
-                    &state_for_source,
-                    &subscriber_for_source,
-                    &starts,
-                    &*reevaluator_for_source,
-                );
-            })?;
-
-            let cleanup = Subscription::new(move || {
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
-            });
-
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
-        })
+        list_auto_refresh(self.clone(), Arc::new(reevaluator), None)
     }
 
     fn auto_refresh_buffered<S, E>(
@@ -293,48 +276,28 @@ impl<T> ListLifecycleExt<T> for ChangeStream<ListChange<T>> {
         E: Send + Sync + 'static,
         CollectionError: From<E>,
     {
+        self.auto_refresh_buffered_with_scheduler(reevaluator, buffer, default_scheduler())
+    }
+
+    fn auto_refresh_buffered_with_scheduler<S, E>(
+        &self,
+        reevaluator: impl Fn(&T) -> crate::primitives::ValueStream<S, E> + Send + Sync + 'static,
+        buffer: Duration,
+        scheduler: Arc<dyn Scheduler>,
+    ) -> ChangeStream<ListChange<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+        S: Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        CollectionError: From<E>,
+    {
         let reevaluator =
             move |argument_0: &T| reevaluator(argument_0).err_into::<CollectionError>();
-        if buffer.is_zero() {
-            return self.auto_refresh::<_, CollectionError>(reevaluator);
-        }
-
-        let source = self.clone();
-        let reevaluator: ListRefreshFactory<T, S> = Arc::new(reevaluator);
-        ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new(AutoRefreshListState::<T>::default()));
-            let active = Arc::new(AtomicBool::new(true));
-            let state_for_source = Arc::clone(&state);
-            let active_for_source = Arc::clone(&active);
-            let reevaluator_for_source = Arc::clone(&reevaluator);
-            let subscriber_for_source = Arc::clone(&subscriber);
-            let source_subscription = source.subscribe(move |batch| {
-                let starts = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_source(batch)
-                } else {
-                    Vec::new()
-                };
-
-                subscriber_for_source(batch);
-                start_list_refresh_subscriptions_buffered(
-                    &state_for_source,
-                    &subscriber_for_source,
-                    Arc::clone(&active_for_source),
-                    &starts,
-                    &*reevaluator_for_source,
-                    buffer,
-                );
-            })?;
-
-            let cleanup = Subscription::new(move || {
-                active.store(false, AtomicOrdering::Release);
-                if let Ok(mut state) = state.lock() {
-                    state.clear_subscriptions();
-                }
-            });
-
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
-        })
+        list_auto_refresh(
+            self.clone(),
+            Arc::new(reevaluator),
+            RefreshBuffer::new(buffer, scheduler),
+        )
     }
 
     fn merge_many<U, E>(
@@ -1761,7 +1724,7 @@ struct AutoRefreshListState<T> {
     positions: HashMap<u64, usize>,
     pending_refresh_ids: Vec<u64>,
     pending_refresh_seen: HashSet<u64>,
-    refresh_timer_started: bool,
+    timer: OperatorTimer,
     next_id: u64,
     version: u64,
 }
@@ -1773,7 +1736,7 @@ impl<T> Default for AutoRefreshListState<T> {
             positions: HashMap::new(),
             pending_refresh_ids: Vec::new(),
             pending_refresh_seen: HashSet::new(),
-            refresh_timer_started: false,
+            timer: OperatorTimer::default(),
             next_id: 0,
             version: 0,
         }
@@ -1784,7 +1747,12 @@ impl<T> AutoRefreshListState<T>
 where
     T: Clone,
 {
-    fn apply_source(&mut self, batch: &ChangeSet<ListChange<T>>) -> Vec<(u64, T)> {
+    /// Applies a source batch, returning the items to subscribe to and the subscriptions of
+    /// the removed ones (drop them after unlocking).
+    fn apply_source(
+        &mut self,
+        batch: &ChangeSet<ListChange<T>>,
+    ) -> (Vec<(u64, T)>, Vec<Subscription>) {
         self.version = self.version.max(batch.version);
         let mut starts = Vec::new();
         let mut removed_subscriptions = Vec::new();
@@ -1875,8 +1843,7 @@ where
         }
 
         self.rebuild_positions();
-        drop(removed_subscriptions);
-        starts
+        (starts, removed_subscriptions)
     }
 
     fn refresh_for(&mut self, id: u64) -> Option<ChangeSet<ListChange<T>>> {
@@ -1889,27 +1856,22 @@ where
         ))
     }
 
-    fn queue_refresh(&mut self, id: u64) -> bool {
+    /// Queues a refresh of `id`, returning the timer generation to schedule when this starts
+    /// a buffering window.
+    fn queue_refresh(&mut self, id: u64) -> Option<u64> {
         if !self.is_live(id) {
-            return false;
+            return None;
         }
 
         if self.pending_refresh_seen.insert(id) {
             self.pending_refresh_ids.push(id);
         }
-
-        if self.refresh_timer_started {
-            false
-        } else {
-            self.refresh_timer_started = true;
-            true
-        }
+        self.timer.arm()
     }
 
     fn flush_queued_refreshes(&mut self) -> Option<ChangeSet<ListChange<T>>> {
         let ids = std::mem::take(&mut self.pending_refresh_ids);
         self.pending_refresh_seen.clear();
-        self.refresh_timer_started = false;
 
         let mut changes = Vec::new();
         for id in ids {
@@ -1937,21 +1899,23 @@ where
         self.positions.contains_key(&id)
     }
 
-    fn set_subscription(&mut self, id: u64, subscription: Subscription) {
+    /// Keeps `subscription` for a live item; returns what to drop after unlocking.
+    fn set_subscription(&mut self, id: u64, subscription: Subscription) -> Option<Subscription> {
         if let Some(index) = self.positions.get(&id).copied()
             && let Some(entry) = self.entries.get_mut(index)
         {
-            let previous = entry.subscription.replace(subscription);
-            drop(previous);
+            entry.subscription.replace(subscription)
+        } else {
+            Some(subscription)
         }
     }
 
-    fn clear_subscriptions(&mut self) {
-        self.entries.clear();
+    /// Ends the operator: returns the entries and the pending timer to drop after unlocking.
+    fn close(&mut self) -> (Vec<AutoRefreshListEntry<T>>, Option<ScheduledTask>) {
         self.positions.clear();
         self.pending_refresh_ids.clear();
         self.pending_refresh_seen.clear();
-        self.refresh_timer_started = false;
+        (std::mem::take(&mut self.entries), self.timer.close())
     }
 
     fn next_id(&mut self) -> u64 {
@@ -1971,121 +1935,138 @@ where
     }
 }
 
-fn start_list_refresh_subscriptions<T, S>(
-    state: &Arc<Mutex<AutoRefreshListState<T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<ListChange<T>>,
-    starts: &[(u64, T)],
-    reevaluator: &dyn Fn(&T) -> ValueStream<S>,
-) where
+fn list_auto_refresh<T, S>(
+    source: ChangeStream<ListChange<T>>,
+    reevaluator: ListRefreshFactory<T, S>,
+    buffer: Option<RefreshBuffer>,
+) -> ChangeStream<ListChange<T>>
+where
     T: Clone + Send + Sync + 'static,
     S: Send + Sync + 'static,
 {
-    for (id, item) in starts {
-        let is_live = state
-            .lock()
-            .map(|state| state.is_live(*id))
-            .unwrap_or(false);
-        if !is_live {
-            continue;
-        }
+    ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let state = Arc::new(Mutex::new(AutoRefreshListState::<T>::default()));
+        let refresher = ListRefresher {
+            state: Arc::downgrade(&state),
+            emitter: emitter.clone(),
+            buffer: buffer.clone(),
+        };
 
-        let stream = reevaluator(item);
-        let state_for_trigger = Arc::clone(state);
-        let subscriber_for_trigger = Arc::clone(subscriber);
-        let id = *id;
-        if let Ok(subscription) = stream.subscribe(move |_| {
-            let refresh = if let Ok(mut state) = state_for_trigger.lock() {
-                state.refresh_for(id)
+        let state_for_source = Arc::clone(&state);
+        let reevaluator = Arc::clone(&reevaluator);
+        let source_subscription = source.subscribe(move |batch| {
+            let mut applied = (Vec::new(), Vec::new());
+            emitter.update(&state_for_source, |state| {
+                if state.timer.is_closed() {
+                    return None;
+                }
+                applied = state.apply_source(batch);
+                Some(batch.clone())
+            });
+            let (starts, removed) = applied;
+            drop(removed);
+            refresher.start(&state_for_source, &starts, &*reevaluator);
+        })?;
+
+        Ok(Subscription::new(move || {
+            drop(source_subscription);
+            let closed = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .close();
+            drop(closed);
+            drop(delivery);
+        }))
+    })
+}
+
+/// Emits the refreshes of one list `auto_refresh` subscription, at once or buffered.
+struct ListRefresher<T> {
+    state: Weak<Mutex<AutoRefreshListState<T>>>,
+    emitter: OrderedEmitter<ChangeSet<ListChange<T>>>,
+    buffer: Option<RefreshBuffer>,
+}
+
+impl<T> Clone for ListRefresher<T> {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            emitter: self.emitter.clone(),
+            buffer: self.buffer.clone(),
+        }
+    }
+}
+
+impl<T> ListRefresher<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn start<S>(
+        &self,
+        state: &Mutex<AutoRefreshListState<T>>,
+        starts: &[(u64, T)],
+        reevaluator: &dyn Fn(&T) -> ValueStream<S>,
+    ) where
+        S: Send + Sync + 'static,
+    {
+        for (id, item) in starts {
+            let is_live = state
+                .lock()
+                .map(|state| state.is_live(*id))
+                .unwrap_or(false);
+            if !is_live {
+                continue;
+            }
+
+            let refresher = self.clone();
+            let id = *id;
+            if let Ok(subscription) = reevaluator(item).subscribe(move |_| refresher.refresh(id)) {
+                let replaced = match state.lock() {
+                    Ok(mut state) => state.set_subscription(id, subscription),
+                    Err(_) => Some(subscription),
+                };
+                drop(replaced);
+            }
+        }
+    }
+
+    fn refresh(&self, id: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        let Some(buffer) = &self.buffer else {
+            self.emitter.update(&state, |state| state.refresh_for(id));
+            return;
+        };
+        let generation = match state.lock() {
+            Ok(mut state) => state.queue_refresh(id),
+            Err(_) => None,
+        };
+        if let Some(generation) = generation {
+            let refresher = self.clone();
+            schedule_timer(
+                &*buffer.scheduler,
+                &state,
+                |state| &mut state.timer,
+                generation,
+                buffer.delay,
+                move || refresher.flush(generation),
+            );
+        }
+    }
+
+    fn flush(&self, generation: u64) {
+        let Some(state) = self.state.upgrade() else {
+            return;
+        };
+        self.emitter.update(&state, |state| {
+            if state.timer.fire(generation) {
+                state.flush_queued_refreshes()
             } else {
                 None
-            };
-            if let Some(refresh) = refresh {
-                subscriber_for_trigger(&refresh);
             }
-        }) && let Ok(mut state) = state.lock()
-        {
-            state.set_subscription(id, subscription);
-        }
-    }
-}
-
-fn start_list_refresh_subscriptions_buffered<T, S>(
-    state: &Arc<Mutex<AutoRefreshListState<T>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<ListChange<T>>,
-    active: Arc<AtomicBool>,
-    starts: &[(u64, T)],
-    reevaluator: &dyn Fn(&T) -> ValueStream<S>,
-    buffer: Duration,
-) where
-    T: Clone + Send + Sync + 'static,
-    S: Send + Sync + 'static,
-{
-    for (id, item) in starts {
-        let is_live = state
-            .lock()
-            .map(|state| state.is_live(*id))
-            .unwrap_or(false);
-        if !is_live {
-            continue;
-        }
-
-        let stream = reevaluator(item);
-        let state_for_trigger = Arc::clone(state);
-        let subscriber_for_trigger = Arc::clone(subscriber);
-        let active_for_trigger = Arc::clone(&active);
-        let id = *id;
-        if let Ok(subscription) = stream.subscribe(move |_| {
-            if !active_for_trigger.load(AtomicOrdering::Acquire) {
-                return;
-            }
-
-            let start_timer = if let Ok(mut state) = state_for_trigger.lock() {
-                state.queue_refresh(id)
-            } else {
-                false
-            };
-
-            if start_timer {
-                let state_for_flush = Arc::clone(&state_for_trigger);
-                let subscriber_for_flush = Arc::clone(&subscriber_for_trigger);
-                let active_for_flush = Arc::clone(&active_for_trigger);
-                thread::spawn(move || {
-                    thread::sleep(buffer);
-                    flush_list_refresh_buffer(
-                        state_for_flush,
-                        subscriber_for_flush,
-                        active_for_flush,
-                    );
-                });
-            }
-        }) && let Ok(mut state) = state.lock()
-        {
-            state.set_subscription(id, subscription);
-        }
-    }
-}
-
-fn flush_list_refresh_buffer<T>(
-    state: Arc<Mutex<AutoRefreshListState<T>>>,
-    subscriber: crate::collections::stream::StreamSubscriber<ListChange<T>>,
-    active: Arc<AtomicBool>,
-) where
-    T: Clone + Send + Sync + 'static,
-{
-    if !active.load(AtomicOrdering::Acquire) {
-        return;
-    }
-
-    let refresh = if let Ok(mut state) = state.lock() {
-        state.flush_queued_refreshes()
-    } else {
-        None
-    };
-
-    if let Some(refresh) = refresh
-        && active.load(AtomicOrdering::Acquire)
-    {
-        subscriber(&refresh);
+        });
     }
 }
 

@@ -31,6 +31,7 @@ mod sources;
 mod subset_operator_indexes;
 mod suspension_versions;
 mod switch_reliability;
+mod timed_stream_controls;
 mod transforms_filters;
 mod watch_batch_coalescing;
 mod window_responses;

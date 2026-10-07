@@ -1,7 +1,10 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
+
+use crate::collections::emit::OrderedEmitter;
+use crate::primitives::timer::{OperatorTimer, schedule_timer};
+use crate::primitives::{Scheduler, default_scheduler};
 
 use crate::collections::change::ChangeSet;
 use crate::collections::error::Result;
@@ -34,4 +37,3 @@ impl<C> ChangeStream<C> {
         (self.subscribe)(Arc::new(subscriber))
     }
 }
-
