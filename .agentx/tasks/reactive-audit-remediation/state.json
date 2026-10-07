@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 45,
+  "revision": 56,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -94,13 +94,22 @@
       ]
     },
     "t15-materialization-reliability": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t16-ref-count-lifecycle": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t17-switch-reliability": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t18-ordered-emission-core": {
       "status": "pending"
@@ -223,6 +232,15 @@
         }
       },
       "recordedAt": "2026-10-06T23:19:57Z"
+    },
+    "1fd23c6549734274cfa14b66280a2fd1ea6f4ca0ab8db4190fa0487f1769a79a": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "fa0ff03fb0cd3af2a53f07a100eb77a924abf08e4debb08c4b35aec0e911fa0d"
+        }
+      },
+      "recordedAt": "2026-10-07T00:07:16Z"
     }
   },
   "checkResults": {
@@ -480,6 +498,57 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s04-sources-final-67b42c78c817.log",
       "logSha256": "11fcc488483184bb8598bb0ca46ffb28cac914525bcea0e4413dab4ea11babe5",
       "inputsHash": "4c70f6f08e5348530a5a1b7a3c2991b7407703c8770c5fdac8263967b83d43d1"
+    },
+    "s05-composition/c-t15/final": {
+      "checkId": "c-t15",
+      "boundaryId": "s05-composition",
+      "phase": "final",
+      "batchId": "1fd23c6549734274cfa14b66280a2fd1ea6f4ca0ab8db4190fa0487f1769a79a",
+      "definitionHash": "579ce212f175c4df43022e23d7e255822bf1f13bc444f03ac5f3aff52169b7a1",
+      "basisHash": "aadbceefefc25fc132cea8791a2b69465bffc59fd3800bbf3509f7571298b240",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 11,
+      "durationSeconds": 0.1883,
+      "recordedAt": "2026-10-07T00:07:16Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s05-composition-final-c601703a52a3.log",
+      "logSha256": "585e4ad08d351128206db07aa868b496c984934d0b50aa33cb51487ffd42e6f3",
+      "inputsHash": "fdfc2272856b45dc3bab1825c008347cb39f8f02400a2087957d9ce25c8422c6"
+    },
+    "s05-composition/c-t16/final": {
+      "checkId": "c-t16",
+      "boundaryId": "s05-composition",
+      "phase": "final",
+      "batchId": "1fd23c6549734274cfa14b66280a2fd1ea6f4ca0ab8db4190fa0487f1769a79a",
+      "definitionHash": "a4f147db5a18347afc1d8b7c39356ac68e5cf88054d941642118e275cb6818bc",
+      "basisHash": "dfb21a08a6b621275d14fc6a51d51d9989eb305f8f80de7b0c76d5ea621ebb27",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 8,
+      "durationSeconds": 0.2183,
+      "recordedAt": "2026-10-07T00:07:16Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s05-composition-final-d0b15641b712.log",
+      "logSha256": "c15a5310c7ff4f3d44c81ee58d00b1d8976fabfc6821b4b1dbcf490191e793b4",
+      "inputsHash": "fdfc2272856b45dc3bab1825c008347cb39f8f02400a2087957d9ce25c8422c6"
+    },
+    "s05-composition/c-t17/final": {
+      "checkId": "c-t17",
+      "boundaryId": "s05-composition",
+      "phase": "final",
+      "batchId": "1fd23c6549734274cfa14b66280a2fd1ea6f4ca0ab8db4190fa0487f1769a79a",
+      "definitionHash": "33d1470b687fd885506f6b25d6166be868320bc5b5d3e7046887ad739f5e1f55",
+      "basisHash": "35e18f73652c332b83c6a0e34cc366f007a2f828475c1d02f1903880d249e074",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 5,
+      "durationSeconds": 0.2177,
+      "recordedAt": "2026-10-07T00:07:16Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s05-composition-final-0fd34575bc3a.log",
+      "logSha256": "92adfe20a7288b9213a9d2efdc649d02b438c3195e99ce76357b3d55232dce5f",
+      "inputsHash": "fdfc2272856b45dc3bab1825c008347cb39f8f02400a2087957d9ce25c8422c6"
     }
   },
   "reviews": {
@@ -1290,6 +1359,144 @@
         "S04-F7"
       ],
       "recordedAt": "2026-10-06T23:20:58Z"
+    },
+    "s05-composition": {
+      "reviewerId": "reviewer-s05-indep-c7f2",
+      "snapshotId": "1fd23c6549734274cfa14b66280a2fd1ea6f4ca0ab8db4190fa0487f1769a79a",
+      "criterionIds": [
+        "MAT-1.1",
+        "MAT-2.1",
+        "MAT-2.2",
+        "MAT-3.1"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/materialize.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "e37efd27d8056d88e30abe7a6f1a2fb2156c8246cad0f79dedf63390fd5c9252"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/expiration_selector.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "a0156d573ee5c7a2f59c5c9d7f0942703b0a8788ca4d8218857bb880bf7f8a41"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/activate_list_adapter_options.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "aa3dc361a88c08a27414f8236d2aa27517ef91a275b22e865bea7c1bf2fba309"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "2781137d42f8ed0cc9498590b9d81774caa61874153a46d8800bb4ea6faf75e1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/observable_cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "f6ffd4b2a01d89e45e8159143d783f4e811f3ba3360e5ae22adef26f9eecfd23"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/limit/cache_limit_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "f9ba0a71e05691d195178bd4c71f4a16c80ac56e51e19c4372ac123c01e2ac64"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/ref_count.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-2.1",
+            "MAT-2.2"
+          ],
+          "sha256": "9e053251e44d373d149505bcf98493b2b233f82394d924ac70381efc0f8908ff"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/switch.rs",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-3.1"
+          ],
+          "sha256": "ea7e24114835f833ad4de219e616bd70c5fd015f3fa9ac6f64cd6520086fcb4c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/14-materialization-population-sharing.md",
+          "kind": "source",
+          "criterionIds": [
+            "MAT-1.1",
+            "MAT-2.1",
+            "MAT-2.2",
+            "MAT-3.1"
+          ],
+          "sha256": "08577001402c123608283ea7ff93d80aa898aea78691e0af3a385f01849f75d1"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/failed_writes_are_kept.rs",
+          "kind": "test",
+          "criterionIds": [
+            "MAT-1.1"
+          ],
+          "sha256": "9db0e085a3858ad6a387fa5f75858db6c5460462c768b0e8d2baa5e704b2081a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/startup_and_teardown.rs",
+          "kind": "test",
+          "criterionIds": [
+            "MAT-2.1",
+            "MAT-2.2"
+          ],
+          "sha256": "7c7b89e26dff2943332af52f2677109a6458a03ac1ed39c78dbffbbf42f0284a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/switch_reliability/failures_generations_disposal.rs",
+          "kind": "test",
+          "criterionIds": [
+            "MAT-3.1"
+          ],
+          "sha256": "7a62284359376d2c81345a6951222c8618427037481355e8fff3f404db4ddd02"
+        }
+      ],
+      "summaryMarkdown": "Passed. All eight findings (S05-F1 to S05-F8) are resolved and re-verified against current source and tests. MAT-1.1 holds:\n\n- Every listed materializer goes through `OrderedWriter`.\n- Retryable failures are kept in order and retried on lock release or before the next batch; other failures are reported and dropped.\n- Each failure is reported through the `_with_errors` and `errors()` APIs.\n- Size limits use latest-wins evictions and emit only removed items.\n\nMAT-2.1 and MAT-2.2 hold through waiting joiners, `StartAttempt` rollback, per-subscriber startup buffers and epochs. MAT-3.1 holds through the ordered output queue, the generation check, the `disposed` flag, error reporting and retry on the next outer emission. Bounded group runs (`RUST_TEST_THREADS=4 timeout 600`) passed: `materialization_reliability` 11, `ref_count_lifecycle` 8, `switch_reliability` 5.",
+      "findingIds": [
+        "S05-F1",
+        "S05-F2",
+        "S05-F3",
+        "S05-F4",
+        "S05-F5",
+        "S05-F6",
+        "S05-F7",
+        "S05-F8"
+      ],
+      "recordedAt": "2026-10-07T00:08:00Z"
     }
   },
   "checkpoints": {
@@ -1324,6 +1531,14 @@
       },
       "reviewHash": "72bc562060ce1791b12852fa4715bebfae9e13aec5295b748dfcc627fe8bd760",
       "recordedAt": "2026-10-06T23:21:19Z"
+    },
+    "s05-composition": {
+      "snapshotId": "1fd23c6549734274cfa14b66280a2fd1ea6f4ca0ab8db4190fa0487f1769a79a",
+      "commits": {
+        "reactive": "ce6567a45999028e6d4292cb37b65f95ba7a9c22"
+      },
+      "reviewHash": "84264f2ec307313713d58a39e76cbde1de38c1e12069b9857e880d573a8b8898",
+      "recordedAt": "2026-10-07T00:08:34Z"
     }
   },
   "findings": [
@@ -1912,6 +2127,201 @@
           "repositoryId": "reactive",
           "path": "crates/src/collections/tests/source_lock_policy/contention_and_reentry.rs",
           "symbol": "a_reentrant_clone_during_a_deferred_resume_gets_nested_update"
+        }
+      ]
+    },
+    {
+      "id": "S05-F1",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-2.1",
+        "MAT-2.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**ref_count strands a subscriber that joined while a failing upstream start was in progress.** `ref_count.rs` registers every subscriber before the start; a joiner arriving while `starting == true` skips the start, delivers its snapshot and returns `Ok`. If the first subscriber's `start_upstream` then fails, the `Err` branch removes only the first entry; because `subscribers` is not empty it neither restarts the upstream nor clears the state or bumps the epoch, and `upstream` stays `None`.\n\n- Expected: a subscriber that `subscribe` returned `Ok` for receives the source's snapshot and live batches (MAT-2.1: after a failed first start a later subscriber starts upstream and gets snapshot + live batches; MAT-2.2: it sees exactly the source state).\n- Observed (bounded scratch probe outside the repo: upstream blocks on a gate on the first attempt, then fails; a joiner subscribes from the main thread meanwhile): `joiner subscribe ok = true`, `first result = Some(Contended)`, `attempts = 1`, and after `list.push(3)` the joiner's items are `[]` while the source is `[1, 2, 3]`. The joiner only receives data once some *other* subscriber arrives and restarts the upstream. Any partial state applied by the failed attempt is also kept (no `clear`/epoch bump) and would be duplicated by the next upstream's startup snapshot.\n\nRepair: on start failure with remaining subscribers, bump the epoch and clear the state, then either let a remaining subscriber (or the failing thread) retry `start_upstream` for them, or fail/notify the joiners that registered during the attempt (for example joiners wait for the in-flight start and return its error, rolling themselves back). Add a deterministic test to `ref_count_lifecycle` (gate inside the first upstream subscribe, joiner on another thread, then failure) asserting the joiner converges to the source without a third subscriber and without duplicates.\n\n**Resolution:** Re-verified: a joiner from another thread now waits on `start_finished` while a start is in progress (wasm/non-blocking: `Contended`), and the `StartAttempt` guard clears state, bumps the epoch, removes nested registrations and notifies on failure or unwind; the waiting joiner then starts the upstream itself (attempts 2, items [1,2,3]).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/deterministic_interleavings.rs",
+          "symbol": "a_joiner_waiting_on_a_failed_start_starts_the_upstream_itself"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/deterministic_interleavings.rs",
+          "symbol": "a_joiner_under_the_non_blocking_policy_reports_contention_instead_of_waiting"
+        }
+      ]
+    },
+    {
+      "id": "S05-F2",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-1.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Retried list-limit evictions over-evict and double-report.** `SourceListLimitExt::limit_size_to` now keeps a failed eviction in the `OrderedWriter` FIFO, but `ListSizeLimitState` still contains the not-yet-removed items, so the next batch recomputes an eviction that already includes them. The writer then applies both the stale eviction and the recomputed one; the value fallback (`position(|existing| existing == item)`) removes *another* equal item when values repeat, and the `expired` stream reports the same item twice (even for distinct values).\n\n- Expected: after contention ends the source converges to the limit (size 2 keeps the 2 newest items) and each evicted item is reported once.\n- Observed (bounded scratch probe: limit 2, push `x`,`x`, then a third `x` while another thread holds the source lock under `with_non_blocking_policy`, then push `y`): final list `[\"y\"]` instead of `[\"x\", \"y\"]`; expired reported `[x, x, x, x]` although only one `x` should be evicted. The pre-sprint code (which dropped the failed eviction and let the recomputation catch up) produced `[\"x\", \"y\"]` here, so this is a regression for duplicate values.\n\nRepair: make a newer eviction supersede pending ones for the limit helpers (the limit state recomputes from the full state, so the latest eviction set is authoritative), or mark items with a pending eviction in `ListSizeLimitState` (by sequence) so they are neither re-expired nor re-reported, and remove by tracked identity instead of value. Only report items whose removal was applied (or document otherwise). Cover list and cache limit helpers under forced contention, including duplicate values, in `materialization_reliability`.\n\n**Resolution:** Re-verified: limit evictions use a latest-wins writer with an all-entries-match check (list) / still-holds-item check (cache) and emit only removed items. Re-running the original duplicate-value probe on the repaired code gives final list [\"x\",\"y\"] and expired [x, x] (one per real eviction).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/adapters_and_limits.rs",
+          "symbol": "a_contended_list_eviction_is_retried_on_release_and_emitted_once"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/adapters_and_limits.rs",
+          "symbol": "a_contended_cache_eviction_is_retried_on_release_and_emitted_once"
+        }
+      ]
+    },
+    {
+      "id": "S05-F3",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-1.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Bridge and limit-helper failures are not reported, and these materializers are untested.** MAT-1.1 requires that for every listed materializer \"each failure is reported through an additive error stream\". Every `to_*_change_set*` bridge (`expiration_selector.rs`, `activate_list_adapter_options.rs`) and both source limit helpers (`limit/cache_limit_ext.rs`) build their `OrderedWriter` with `errors: None`, so their failures are silently retried and there is no additive API to observe them. These failures are reachable: on wasm32 the bridge's private backing is also edited by the adapter options' expiration/limit timers, and the limit helpers edit the caller's source, which any other thread may hold. `materialization_reliability` covers `populate_into` (list, cache), `ObservableList/Cache::from_stream` and list `populate_from`; it has no test for any `to_*_change_set*` bridge, the limit helpers, cache `populate_from`, or list `populate_from_batches` under contention.\n\n- Expected: a failure in any listed materializer is reported on an additive error stream, and each one has convergence coverage under the non-blocking policy.\n- Observed: no error reporting for bridges/limit helpers; no tests for them.\n\nRepair: add additive reporting variants (for example `to_list_change_set_with_errors(on_error)` or an options field on `ChangeSetAdapterOptions`, and `limit_size_to_with_errors`) wired to the existing `ErrorSink`, update chapter 14 and the changelog, and add contention tests for each bridge family and both limit helpers. Alternatively amend MAT-1.1 explicitly if reporting for private backings is intentionally out of scope.\n\n**Resolution:** Re-verified: `to_*_change_set*_with_errors` variants and `limit_size_to_with_errors` exist and are wired (adapter size limits report through the adapter's sink); contention tests cover list/cache adapters, both limit helpers, cache `populate_from` and list `populate_from_batches`.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/adapters_and_limits.rs",
+          "symbol": "list_and_cache_adapters_report_contended_writes_and_converge_on_release"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/failed_writes_are_kept.rs",
+          "symbol": "populate_from_batches_and_cache_populate_from_converge_after_contention"
+        }
+      ]
+    },
+    {
+      "id": "S05-F4",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-1.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**A failed last batch never converges.** `OrderedWriter` retries pending batches only from the next `submit`. When the final batch of a burst fails (the normal wasm32 case: a worker briefly holds the destination), the view stays stale until the source happens to emit again, possibly never. The task's own test pins this (`assert_eq!(mirror.items().unwrap(), vec![1], \"not applied yet\")`, then a follow-up `source.push(3)` is needed). Chapter 14 nevertheless says the batch \"is kept and applied before the next one, so the view still converges\".\n\n- Expected (MAT-1.1): with the non-blocking policy forcing contention, a materialized view converges to its source once the contention ends.\n- Observed: convergence depends on future source traffic.\n\nRepair: retry pending batches when the contended destination lock is released. `SourceLock` already has a release-hook/`request_release` mechanism for deferred work. Generalize it to a list of deferred callbacks, or add a per-destination retry registration, so a writer whose apply failed with `Contended` gets a retry when the holder releases (re-entrant `NestedUpdate` can retry when the outer edit completes). Add a test where the last batch fails and the view converges after release with no further source batch, and make the chapter 14 wording match the actual contract.\n\n**Resolution:** Re-verified: `SourceLock::on_next_release` queues one-shot callbacks run after the guard and HELD entry are released (with a fence + `try_lock_now` against a lost wake-up); `OrderedWriter::failed` schedules a retry for Contended/NestedUpdate, wired into every materializer. Tests now assert convergence on release with no further batch; chapter 14 and the changelog describe it.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/failed_writes_are_kept.rs",
+          "symbol": "materialized_views_report_errors_and_converge"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/failed_writes_are_kept.rs",
+          "symbol": "populate_into_keeps_batches_rejected_by_a_contended_destination"
+        }
+      ]
+    },
+    {
+      "id": "S05-F5",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-2.2",
+        "MAT-3.1"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**The concurrency tests for MAT-2.2 and MAT-3.1 do not detect the old behavior.** I swapped in the pre-sprint (`HEAD`) implementations in a scratch copy and ran the new groups, bounded. `late_subscribers_get_their_snapshot_before_concurrent_live_batches` and `a_released_upstream_cannot_repopulate_the_next_connection` passed 5/5 against the old `ref_count.rs` (only the MAT-2.1 test failed). `a_superseded_inner_never_reaches_downstream_after_the_clear` and `disposing_while_the_outer_emits_leaves_no_live_inner` passed 3/3 against the old `switch.rs`. These are probabilistic races whose windows the tests almost never hit, and in the dispose test `drop(subscription)` after `yield_now` often runs before the toggler starts.\n\n- Expected: each criterion's own group fails on the defective behavior.\n- Observed: these four tests pass on the old code, so they do not protect the fixes.\n\nRepair: replace or supplement them with deterministic, bounded interleavings that use public fakes and gates (every wait has a timeout):\n\n- **Released upstream:** a fake upstream `ChangeStream` keeps its subscriber callback, and the test invokes it *after* the last unsubscribe. The next subscriber must see only the source state.\n- **Dispose race:** an inner `ChangeStream` whose `subscribe` blocks on a gate while the switch is disposed. Releasing the gate must leave 0 live inner subscriptions.\n- **Ordering/concurrency:** a downstream callback blocks on a gate while another thread emits the outer or inner stream. Assert there is no concurrent entry and nothing stale after the `Clear`.\n- **Late-subscriber snapshot:** a `cfg(test)` hook between registration and `entry.start` that publishes from another thread and waits for that delivery.\n\nConfirm that each new test fails against the `HEAD` implementation.\n\n**Resolution:** Re-verified: six deterministic gated tests added (coordinator confirmed they fail on HEAD); the three groups pass (10, 8, 5 tests).",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/deterministic_interleavings.rs",
+          "symbol": "a_live_batch_racing_a_late_snapshot_is_delivered_after_it"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/deterministic_interleavings.rs",
+          "symbol": "a_released_upstream_callback_cannot_repopulate_the_next_connection"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/switch_reliability/deterministic_interleavings.rs",
+          "symbol": "a_superseded_inner_batch_in_flight_finishes_before_the_clear"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/switch_reliability/deterministic_interleavings.rs",
+          "symbol": "an_inner_subscription_completing_after_disposal_is_released"
+        }
+      ]
+    },
+    {
+      "id": "S05-F6",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-1.1",
+        "MAT-3.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**D-MATERIALIZE invariant \"no error path is discarded with `let _ =`\" is violated in the new code.** `switch.rs` discards the `Result` of the ordered output queue with `let _ = outer_output.push(batch)` / `let _ = outer_output.drain()` / `let _ = inner_output.push(batch)` / `let _ = inner_output.drain()` (around lines 333-352), and `materialize.rs:151` discards `queue.enqueue(..)` in `ErrorChannel::sink`. A failed `push` would silently lose an output batch or an error report. These are only reachable on a poisoned queue mutex today, but the invariant is stated without exception.\n\n- Expected: no `let _ =` on a `Result` in the composition paths.\n- Observed: five such sites.\n\nRepair: handle the results explicitly. Route a failed output push/drain to the switch's error sink when present, and otherwise document unreachability with an explicit `if let Err(..)` and a comment, or use a poison-recovering queue operation. For the error channel, match and ignore with a comment explaining why a reporting failure cannot itself be reported.\n\n**Resolution:** Re-verified: switch push/drain results go through `report` into the `switch_with_errors` sink; `ErrorChannel::sink` matches explicitly with a comment.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/switch.rs",
+          "symbol": "report"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/materialize.rs",
+          "symbol": "ErrorChannel::sink"
+        }
+      ]
+    },
+    {
+      "id": "S05-F7",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**A permanently failing destination makes `OrderedWriter` grow without bound.** A poisoned `SourceLock` (a panic in a key selector or `T::clone` during an edit) returns `CollectionError::Poisoned` forever. `OrderedWriter` keeps the failed head, appends every later batch behind it, and reports again on every submit. It does not schedule a retry for this error, correctly, but it never drops anything either.\n\n- Expected: a non-retryable failure does not leak memory proportional to the upstream traffic.\n- Observed (bounded scratch probe: an apply that always returns `Poisoned`, 100 submits): `pending = 100, reports = 100`. Before this sprint such batches were dropped.\n\nRepair: treat non-retryable errors (`Poisoned`, and any error that cannot clear) as terminal for the writer. Report once, then clear `pending` and stop queueing, or bound the queue and report an overflow. Add a unit test in `materialization_reliability` (an apply that returns `Poisoned`, N submits, pending stays bounded, reports bounded), and document the behavior in chapter 14.\n\n**Resolution:** Re-verified: `OrderedWriter` now keeps a failed batch only for `retryable()` errors (Contended, NestedUpdate). Any other failure is reported, its batch dropped, and draining continues. `a_failure_that_cannot_clear_drops_its_batch_instead_of_accumulating` checks that 100 `Poisoned` submits leave `pending_len` at 0 with 100 reports, and that a later good batch is applied. Chapter 14 and the changelog document it, together with the note that retries run on the releasing thread.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/failed_writes_are_kept.rs",
+          "symbol": "a_failure_that_cannot_clear_drops_its_batch_instead_of_accumulating"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/materialize.rs",
+          "symbol": "retryable"
+        }
+      ]
+    },
+    {
+      "id": "S05-F8",
+      "boundaryId": "s05-composition",
+      "criterionIds": [
+        "MAT-2.1",
+        "MAT-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**A new ref_count test relies on a fixed short sleep and fails under scheduler load.** The epic constraint is that timing-dependent assertions never use fixed short sleeps. `failing_first_start` in `ref_count_lifecycle/deterministic_interleavings.rs` holds the first start with `thread::sleep(200ms)`.\n\n- In `a_joiner_under_the_non_blocking_policy_reports_contention_instead_of_waiting`, if the main thread reaches its `subscribe` more than 200 ms after `started`, the first start has already failed and rolled back. The joiner then starts the upstream successfully, so `joined` is `None` instead of `Some(Contended)` and the test fails on a loaded CI runner.\n- In `a_joiner_waiting_on_a_failed_start_starts_the_upstream_itself`, the same delay makes the test silently skip the waiting path it is meant to cover.\n\nSeparately, `adapter_size_limits_report_through_the_adapter_error_sink` never causes a failure (it asserts 0 errors), so it does not check that adapter limit errors reach the adapter's sink.\n\n- Expected: deterministic gates with generous timeouts.\n- Observed: a 200 ms sleep gate.\n\nRepair: hold the first start on a channel instead of sleeping. In the non-blocking test, release it from the main thread after the joiner has returned `Contended`. In the waiting test, release it from a helper thread after the joiner thread is blocked (for example after it signals it is about to subscribe, plus a generous margin), and assert the joiner did not return before the release. Make the adapter-limit test hold the adapter backing's lock (via `LAST_ADAPTER_BACKING`) during an eviction and assert that the sink receives `Contended` and the limit converges on release.\n\n**Resolution:** Re-verified: the sleep is replaced by a `release` channel with a 20 s safety timeout. The waiting-joiner test uses the `#[cfg(test)]` `ON_JOIN_WAIT` hook, which fires before the Condvar wait while the shared lock is still held, so the starting thread cannot notify before the wait and no wakeup is lost; the test asserts the joiner waited. The non-blocking test releases the gate only after the joiner has returned `Contended`. The adapter size-limit test now forces contention on the private source: it asserts errors `[Contended]`, items `[1,2,3]` until release, `[2,3]` on release, then `[3,4]`, with one error.",
+      "regressionRefs": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/deterministic_interleavings.rs",
+          "symbol": "a_joiner_waiting_on_a_failed_start_starts_the_upstream_itself"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/ref_count_lifecycle/deterministic_interleavings.rs",
+          "symbol": "a_joiner_under_the_non_blocking_policy_reports_contention_instead_of_waiting"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/materialization_reliability/adapters_and_limits.rs",
+          "symbol": "adapter_size_limits_report_through_the_adapter_error_sink"
         }
       ]
     }
