@@ -33,3 +33,4 @@ mod suspension_versions;
 mod switch_reliability;
 mod transforms_filters;
 mod watch_batch_coalescing;
+mod window_responses;

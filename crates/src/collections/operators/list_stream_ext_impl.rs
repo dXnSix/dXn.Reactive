@@ -408,7 +408,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
             let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
-            let state = Arc::new(Mutex::new(ListPageState::<T>::new(PageRequest::new(0, 25))));
+            let state = Arc::new(Mutex::new(ListPageState::<T>::default()));
 
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
@@ -514,9 +514,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
             let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
-            let state = Arc::new(Mutex::new(ListWindowState::<T>::new(VirtualRequest::new(
-                0, 25,
-            ))));
+            let state = Arc::new(Mutex::new(ListWindowState::<T>::default()));
 
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
@@ -554,9 +552,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
         let source = self.clone();
         ValueStream::new(move |subscriber| {
             let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
-            let state = Arc::new(Mutex::new(ListWindowState::<T>::new(VirtualRequest::new(
-                0, 25,
-            ))));
+            let state = Arc::new(Mutex::new(ListWindowState::<T>::default()));
 
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
