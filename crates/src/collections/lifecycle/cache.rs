@@ -1,3 +1,4 @@
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -910,19 +911,23 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
             ));
             let state_for_source = Arc::clone(&state);
             let selector_for_source = Arc::clone(&observable_selector);
-            let subscriber_for_source = Arc::clone(&subscriber);
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+            let emitter_for_source = emitter.clone();
             let source_subscription = source.subscribe(move |batch| {
-                let (changes, starts) = if let Ok(mut state) = state_for_source.lock() {
-                    state.apply_parent_changes(batch)
-                } else {
-                    (Vec::new(), Vec::new())
+                let starts = {
+                    let Ok(mut state) = state_for_source.lock() else {
+                        return;
+                    };
+                    let (changes, starts) = state.apply_parent_changes(batch);
+                    if !changes.is_empty() {
+                        emitter_for_source.push(ChangeSet::new(changes, batch.version));
+                    }
+                    starts
                 };
-                if !changes.is_empty() {
-                    subscriber_for_source(&ChangeSet::new(changes, batch.version));
-                }
+                emitter_for_source.drain();
                 start_cache_list_change_set_subscriptions(
                     &state_for_source,
-                    &subscriber_for_source,
+                    &emitter_for_source,
                     &starts,
                     &*selector_for_source,
                 );
@@ -934,7 +939,11 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
                 }
             });
 
-            Ok(Subscription::many(vec![source_subscription, cleanup]))
+            Ok(Subscription::many(vec![
+                source_subscription,
+                cleanup,
+                delivery,
+            ]))
         })
     }
 
@@ -1330,19 +1339,23 @@ where
         >::new(comparer.clone())));
         let state_for_source = Arc::clone(&state);
         let selector_for_source = Arc::clone(&observable_selector);
-        let subscriber_for_source = Arc::clone(&subscriber);
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
+        let emitter_for_source = emitter.clone();
         let source_subscription = source.subscribe(move |batch| {
-            let (changes, starts) = if let Ok(mut state) = state_for_source.lock() {
-                state.apply_parent_changes(batch)
-            } else {
-                (Vec::new(), Vec::new())
+            let starts = {
+                let Ok(mut state) = state_for_source.lock() else {
+                    return;
+                };
+                let (changes, starts) = state.apply_parent_changes(batch);
+                if !changes.is_empty() {
+                    emitter_for_source.push(ChangeSet::new(changes, batch.version));
+                }
+                starts
             };
-            if !changes.is_empty() {
-                subscriber_for_source(&ChangeSet::new(changes, batch.version));
-            }
+            emitter_for_source.drain();
             start_cache_cache_change_set_subscriptions(
                 &state_for_source,
-                &subscriber_for_source,
+                &emitter_for_source,
                 &starts,
                 &selector_for_source,
             );
@@ -1354,7 +1367,11 @@ where
             }
         });
 
-        Ok(Subscription::many(vec![source_subscription, cleanup]))
+        Ok(Subscription::many(vec![
+            source_subscription,
+            cleanup,
+            delivery,
+        ]))
     })
 }
 
@@ -1699,7 +1716,7 @@ where
 
 fn start_cache_cache_change_set_subscriptions<K, T, ChildKey, Child>(
     state: &Arc<Mutex<MergeManyCacheCacheChangeSetsState<K, ChildKey, Child>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<CacheChange<ChildKey, Child>>,
+    emitter: &OrderedEmitter<ChangeSet<CacheChange<ChildKey, Child>>>,
     starts: &[(K, T)],
     selector: &CacheCacheChangeStreamFactory<K, T, ChildKey, Child>,
 ) where
@@ -1719,17 +1736,12 @@ fn start_cache_cache_change_set_subscriptions<K, T, ChildKey, Child>(
 
         let stream = selector(parent, key);
         let state_for_child = Arc::clone(state);
-        let subscriber_for_child = Arc::clone(subscriber);
+        let emitter_for_child = emitter.clone();
         let key_for_child = key.clone();
         if let Ok(subscription) = stream.subscribe(move |batch| {
-            let batch = if let Ok(mut state) = state_for_child.lock() {
+            emitter_for_child.update(&state_for_child, |state| {
                 state.apply_child_changes(&key_for_child, batch)
-            } else {
-                None
-            };
-            if let Some(batch) = batch {
-                subscriber_for_child(&batch);
-            }
+            });
         }) && let Ok(mut state) = state.lock()
         {
             state.set_subscription(key, subscription);
@@ -1934,7 +1946,7 @@ where
 
 fn start_cache_list_change_set_subscriptions<K, T, U>(
     state: &Arc<Mutex<MergeManyCacheListChangeSetsState<K, U>>>,
-    subscriber: &crate::collections::stream::StreamSubscriber<ListChange<U>>,
+    emitter: &OrderedEmitter<ChangeSet<ListChange<U>>>,
     starts: &[(K, T)],
     selector: &dyn Fn(&T, &K) -> ChangeStream<ListChange<U>>,
 ) where
@@ -1953,17 +1965,12 @@ fn start_cache_list_change_set_subscriptions<K, T, U>(
 
         let stream = selector(parent, key);
         let state_for_child = Arc::clone(state);
-        let subscriber_for_child = Arc::clone(subscriber);
+        let emitter_for_child = emitter.clone();
         let key_for_child = key.clone();
         if let Ok(subscription) = stream.subscribe(move |batch| {
-            let batch = if let Ok(mut state) = state_for_child.lock() {
+            emitter_for_child.update(&state_for_child, |state| {
                 state.apply_child_changes(&key_for_child, batch)
-            } else {
-                None
-            };
-            if let Some(batch) = batch {
-                subscriber_for_child(&batch);
-            }
+            });
         }) && let Ok(mut state) = state.lock()
         {
             state.set_subscription(key, subscription);

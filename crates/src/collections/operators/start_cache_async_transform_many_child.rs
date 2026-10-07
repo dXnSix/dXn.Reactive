@@ -215,41 +215,31 @@ where
 {
     let source = source.clone();
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(CacheTransformState::<K, T, U>::default()));
 
         let source_state = Arc::clone(&state);
         let source_transform = Arc::clone(&transform);
-        let source_subscriber = Arc::clone(&subscriber);
+        let source_emitter = emitter.clone();
         let source_subscription = source.subscribe(move |batch| {
-            let batch = {
-                let Ok(mut state) = source_state.lock() else {
-                    return;
-                };
+            source_emitter.update(&source_state, |state| {
                 state.apply_source(batch, &*source_transform, transform_on_refresh)
-            };
-            if let Some(batch) = batch {
-                source_subscriber(&batch);
-            }
+            });
         })?;
 
         let mut subscriptions = vec![source_subscription];
         if let Some(force_transform) = force_transform.clone() {
             let force_state = Arc::clone(&state);
             let force_transform_factory = Arc::clone(&transform);
-            let force_subscriber = Arc::clone(&subscriber);
+            let force_emitter = emitter.clone();
             subscriptions.push(force_transform.subscribe(move |predicate| {
-                let batch = {
-                    let Ok(mut state) = force_state.lock() else {
-                        return;
-                    };
+                force_emitter.update(&force_state, |state| {
                     state.force_transform(predicate, &*force_transform_factory)
-                };
-                if let Some(batch) = batch {
-                    force_subscriber(&batch);
-                }
+                });
             })?);
         }
 
+        subscriptions.push(delivery);
         Ok(Subscription::many(subscriptions))
     })
 }
@@ -269,27 +259,22 @@ where
 {
     let source = source.clone();
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(CacheTransformState::<K, T, U>::default()));
 
         let source_state = Arc::clone(&state);
         let source_transform = Arc::clone(&transform);
         let source_on_error = Arc::clone(&on_error);
-        let source_subscriber = Arc::clone(&subscriber);
+        let source_emitter = emitter.clone();
         let source_subscription = source.subscribe(move |batch| {
-            let batch = {
-                let Ok(mut state) = source_state.lock() else {
-                    return;
-                };
+            source_emitter.update(&source_state, |state| {
                 state.apply_source_safe(
                     batch,
                     &*source_transform,
                     &*source_on_error,
                     transform_on_refresh,
                 )
-            };
-            if let Some(batch) = batch {
-                source_subscriber(&batch);
-            }
+            });
         })?;
 
         let mut subscriptions = vec![source_subscription];
@@ -297,24 +282,19 @@ where
             let force_state = Arc::clone(&state);
             let force_transform_factory = Arc::clone(&transform);
             let force_on_error = Arc::clone(&on_error);
-            let force_subscriber = Arc::clone(&subscriber);
+            let force_emitter = emitter.clone();
             subscriptions.push(force_transform.subscribe(move |predicate| {
-                let batch = {
-                    let Ok(mut state) = force_state.lock() else {
-                        return;
-                    };
+                force_emitter.update(&force_state, |state| {
                     state.force_transform_safe(
                         predicate,
                         &*force_transform_factory,
                         &*force_on_error,
                     )
-                };
-                if let Some(batch) = batch {
-                    force_subscriber(&batch);
-                }
+                });
             })?);
         }
 
+        subscriptions.push(delivery);
         Ok(Subscription::many(subscriptions))
     })
 }

@@ -187,5 +187,7 @@ struct JoinManyState<K, L, RK, R, U> {
     groups: HashMap<K, RayCacheGroup<K, RK, R>>,
     group_order: Vec<K>,
     result: OrderedCache<K, U>,
+    /// Right groups with changes queued under the join's lock, delivered after it is released.
+    staged: Vec<RayCacheGroup<K, RK, R>>,
 }
 

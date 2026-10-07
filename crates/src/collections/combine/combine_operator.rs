@@ -3,6 +3,7 @@ use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::list::SourceList;
 use crate::collections::stream::ChangeStream;
@@ -352,6 +353,7 @@ where
 {
     let streams = Arc::new(streams);
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(CacheCombineState::<K, T>::new(
             streams.len(),
             operator,
@@ -360,20 +362,16 @@ where
 
         for (source_index, stream) in streams.iter().cloned().enumerate() {
             let state = Arc::clone(&state);
-            let subscriber = Arc::clone(&subscriber);
+            let emitter = emitter.clone();
             subscriptions.push(stream.subscribe(move |batch| {
-                let changes = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.update_source(source_index, batch)
-                };
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                emitter.update(&state, |state| {
+                    let changes = state.update_source(source_index, batch);
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
             })?);
         }
 
+        subscriptions.push(delivery);
         Ok(Subscription::many(subscriptions))
     })
 }
@@ -387,6 +385,7 @@ where
 {
     let streams = Arc::new(streams);
     ChangeStream::new(move |subscriber| {
+        let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(ListCombineState::<T>::new(
             streams.len(),
             operator,
@@ -395,20 +394,16 @@ where
 
         for (source_index, stream) in streams.iter().cloned().enumerate() {
             let state = Arc::clone(&state);
-            let subscriber = Arc::clone(&subscriber);
+            let emitter = emitter.clone();
             subscriptions.push(stream.subscribe(move |batch| {
-                let changes = {
-                    let Ok(mut state) = state.lock() else {
-                        return;
-                    };
-                    state.update_source(source_index, batch)
-                };
-                if !changes.is_empty() {
-                    subscriber(&ChangeSet::new(changes, batch.version));
-                }
+                emitter.update(&state, |state| {
+                    let changes = state.update_source(source_index, batch);
+                    (!changes.is_empty()).then(|| ChangeSet::new(changes, batch.version))
+                });
             })?);
         }
 
+        subscriptions.push(delivery);
         Ok(Subscription::many(subscriptions))
     })
 }

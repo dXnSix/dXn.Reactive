@@ -1,3 +1,4 @@
+use crate::collections::connection::PendingChanges;
 impl<K, L, RK, R, U> JoinManyState<K, L, RK, R, U>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -15,7 +16,21 @@ where
             groups: HashMap::new(),
             group_order: Vec::new(),
             result: OrderedCache::default(),
+            staged: Vec::new(),
         }
+    }
+
+    /// Queues `pending` on `group` (the join's lock is held); delivered by
+    /// [`take_staged`](Self::take_staged)'s caller after the lock is released.
+    fn stage_group(&mut self, group: &RayCacheGroup<K, RK, R>, pending: PendingChanges<CacheChange<RK, R>>) {
+        if matches!(group.stage_pending(pending), Ok(true)) {
+            self.staged.push(group.clone());
+        }
+    }
+
+    /// The groups whose staged changes must be delivered once the join's lock is released.
+    fn take_staged(&mut self) -> Vec<RayCacheGroup<K, RK, R>> {
+        std::mem::take(&mut self.staged)
     }
 
     fn apply_left(
@@ -132,9 +147,9 @@ where
                 self.right_items
                     .insert(key.clone(), (group_key.clone(), current.clone()));
                 let group = self.group_for(&group_key);
-                let mut pending = crate::collections::connection::PendingChanges::new();
+                let mut pending = PendingChanges::new();
                 let _ = group.refresh_pending(key, current.clone(), &mut pending);
-                let _ = group.publish_pending(pending);
+                self.stage_group(&group, pending);
                 upsert_affected_key(affected, group_key, true);
             }
             CacheChange::Move {
@@ -152,11 +167,11 @@ where
                 self.right_items
                     .insert(key.clone(), (group_key.clone(), current.clone()));
                 let group = self.group_for(&group_key);
-                let mut pending = crate::collections::connection::PendingChanges::new();
+                let mut pending = PendingChanges::new();
                 if let Some(group_index) = self.group_index_for_right_key(key, &group_key) {
                     let _ = group.move_pending(key, group_index, &mut pending);
                 }
-                let _ = group.publish_pending(pending);
+                self.stage_group(&group, pending);
                 upsert_affected_key(affected, group_key, false);
             }
             CacheChange::Clear { previous } => {
@@ -190,10 +205,10 @@ where
 
     fn add_or_update_group_item(&mut self, key: &RK, item: R, group_key: &K) {
         let group = self.group_for(group_key);
-        let mut pending = crate::collections::connection::PendingChanges::new();
+        let mut pending = PendingChanges::new();
         let group_index = self.group_index_for_right_key(key, group_key);
         let _ = group.add_or_update_pending(key.clone(), item, group_index, &mut pending);
-        let _ = group.publish_pending(pending);
+        self.stage_group(&group, pending);
     }
 
     fn remove_right_item(&mut self, key: &RK, affected: &mut Vec<AffectedKey<K>>) {
@@ -211,9 +226,9 @@ where
         let Some(group) = self.groups.get(group_key).cloned() else {
             return;
         };
-        let mut pending = crate::collections::connection::PendingChanges::new();
+        let mut pending = PendingChanges::new();
         let _ = group.remove_pending(key, &mut pending);
-        let _ = group.publish_pending(pending);
+        self.stage_group(&group, pending);
     }
 
     fn update_key(

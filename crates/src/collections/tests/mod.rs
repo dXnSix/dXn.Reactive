@@ -13,6 +13,7 @@ mod limits_expiration_streams;
 mod materialization_reliability;
 mod operator_input_interop;
 mod ordered_emission_core;
+mod ordered_emission_relations;
 mod ref_count_lifecycle;
 mod side_effects_options_bridges;
 mod sorting_windowing;

@@ -1,3 +1,4 @@
+use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -63,39 +64,29 @@ impl<K, T> CacheTreeExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let pivot_on = Arc::new(pivot_on);
         ChangeStream::new(move |subscriber| {
+            let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
             let state = Arc::new(Mutex::new(TreeState::<K, T>::default()));
 
             let predicate_state = Arc::clone(&state);
-            let predicate_subscriber = Arc::clone(&subscriber);
+            let predicate_emitter = emitter.clone();
             let predicate_subscription = predicates.subscribe(move |predicate| {
-                let batch = {
-                    let Ok(mut state) = predicate_state.lock() else {
-                        return;
-                    };
+                predicate_emitter.update(&predicate_state, |state| {
                     state.set_predicate(Arc::clone(predicate))
-                };
-                if let Some(batch) = batch {
-                    predicate_subscriber(&batch);
-                }
+                });
             })?;
 
             let source_state = Arc::clone(&state);
             let source_pivot = Arc::clone(&pivot_on);
             let source_subscription = source.subscribe(move |batch| {
-                let batch = {
-                    let Ok(mut state) = source_state.lock() else {
-                        return;
-                    };
+                emitter.update(&source_state, |state| {
                     state.apply_source(batch, &*source_pivot)
-                };
-                if let Some(batch) = batch {
-                    subscriber(&batch);
-                }
+                });
             })?;
 
             Ok(Subscription::many(vec![
                 source_subscription,
                 predicate_subscription,
+                delivery,
             ]))
         })
     }
