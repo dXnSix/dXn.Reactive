@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 86,
+  "revision": 95,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -172,19 +172,34 @@
       ]
     },
     "t28-scheduler": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t29-timed-stream-controls": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t30-expiration-rework": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t31-limit-size-rework": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t32-timed-value-stream-operators": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t33-async-transform-workers": {
       "status": "pending"
@@ -298,6 +313,15 @@
         }
       },
       "recordedAt": "2026-10-07T02:42:10Z"
+    },
+    "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "ba25d3913db3d9533f72ccb623730813f0f8645effa8cc76ec2cadccfd06e8b6"
+        }
+      },
+      "recordedAt": "2026-10-07T04:11:16Z"
     }
   },
   "checkResults": {
@@ -776,6 +800,91 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s08-keyed-operators-final-922a0e6feb36.log",
       "logSha256": "7def46702cd842b2940a58c9fca7c4839a9f03aebe3447154714e1f2411a7305",
       "inputsHash": "d0db1e4f2a0e01e478c547f5c0135672125f6250fb4ac16062835b52fb9e5168"
+    },
+    "s09-time/c-t28/final": {
+      "checkId": "c-t28",
+      "boundaryId": "s09-time",
+      "phase": "final",
+      "batchId": "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f",
+      "definitionHash": "01d0c18fc299f0c420cc5fa68a7f870fdbed5beed5f3826aa573c400b5291f9f",
+      "basisHash": "950a7762de624ae32b6834f42eed4b5c9973f8e8b8a8557d86a288c2326dec86",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 5,
+      "durationSeconds": 0.228,
+      "recordedAt": "2026-10-07T04:11:15Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s09-time-final-fa34165c0ccc.log",
+      "logSha256": "34366165c5f3e2bc71bf6f68283c21f0a498e75e6dbda0a9a80aa14f6465ff7c",
+      "inputsHash": "35fe5cd7f9dd2d580857c06793bbda9dc878dbb3c775782185e9e3195f442695"
+    },
+    "s09-time/c-t29/final": {
+      "checkId": "c-t29",
+      "boundaryId": "s09-time",
+      "phase": "final",
+      "batchId": "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f",
+      "definitionHash": "dbf81c62c33a204114791a50e759554e784eaac1224af7d3f1329fda64fce767",
+      "basisHash": "ff497c664ff537fd7d1bf75c429c162b0b62a488c869ad6fc8e8f7ee0c219c93",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 13,
+      "durationSeconds": 0.3308,
+      "recordedAt": "2026-10-07T04:11:15Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s09-time-final-3a8f21ee0c4e.log",
+      "logSha256": "483f529c72ae3608f4ff411a557cdfda47558d79f813f618a2a561b598724905",
+      "inputsHash": "35fe5cd7f9dd2d580857c06793bbda9dc878dbb3c775782185e9e3195f442695"
+    },
+    "s09-time/c-t30/final": {
+      "checkId": "c-t30",
+      "boundaryId": "s09-time",
+      "phase": "final",
+      "batchId": "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f",
+      "definitionHash": "a694a30483b2da4a8051880032c242a108918977414ea876aec9d762f7e42a47",
+      "basisHash": "c5c8deb8a04d8c135769b0e0bcb0a0467b9b5867384ae43679f68c36a80c5963",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 15,
+      "durationSeconds": 0.3449,
+      "recordedAt": "2026-10-07T04:11:16Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s09-time-final-9c56a42df0c6.log",
+      "logSha256": "a65959fc9ae055bb996369a60ce9efea535b026a0d363db50216b586c9c4d7b6",
+      "inputsHash": "35fe5cd7f9dd2d580857c06793bbda9dc878dbb3c775782185e9e3195f442695"
+    },
+    "s09-time/c-t31/final": {
+      "checkId": "c-t31",
+      "boundaryId": "s09-time",
+      "phase": "final",
+      "batchId": "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f",
+      "definitionHash": "acdbba61a05e98a61590d29916c1a9280ad870fabb7a0770c844c68e5f834e43",
+      "basisHash": "8f80929845207b8f1c679375b5ed4047e4845c04245b955544bc8434d6cea7b1",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.3438,
+      "recordedAt": "2026-10-07T04:11:16Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s09-time-final-a3914f249c89.log",
+      "logSha256": "fc1692f883c0a13b3c756c18f0b793f5832e4efbeca8010ebdf55dd63d46fa23",
+      "inputsHash": "35fe5cd7f9dd2d580857c06793bbda9dc878dbb3c775782185e9e3195f442695"
+    },
+    "s09-time/c-t32/final": {
+      "checkId": "c-t32",
+      "boundaryId": "s09-time",
+      "phase": "final",
+      "batchId": "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f",
+      "definitionHash": "a1582e30c9241569aa45c17063644e335cc84b68ccbe7436f48d09f9bfeff6c7",
+      "basisHash": "2afe8b4ab37d38fdc254cbdfe20314eda380b62e16769295a330c868e04e47a3",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.1695,
+      "recordedAt": "2026-10-07T04:11:16Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s09-time-final-69e7847312a9.log",
+      "logSha256": "af9bdc630093d578f37c124fdfc40c4d57759fc9274eb06a8e4c3dd971f325fd",
+      "inputsHash": "35fe5cd7f9dd2d580857c06793bbda9dc878dbb3c775782185e9e3195f442695"
     }
   },
   "reviews": {
@@ -2671,6 +2780,317 @@
         "S08-F7"
       ],
       "recordedAt": "2026-10-07T02:43:11Z"
+    },
+    "s09-time": {
+      "reviewerId": "reviewer-s09-indep-7c3a",
+      "snapshotId": "7caceedbad269d949ab832387a5b6f982386c8b9bed51c9c68521e0251c7ce0f",
+      "criterionIds": [
+        "TIM-1.1",
+        "TIM-1.2",
+        "TIM-1.3",
+        "TIM-1.4",
+        "TIM-1.5",
+        "TIM-2.1",
+        "TIM-2.2",
+        "TIM-2.3",
+        "TIM-2.4",
+        "TIM-3.1",
+        "TIM-4.1"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/scheduler.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.1",
+            "TIM-1.5"
+          ],
+          "sha256": "dc4e576bab42b6d1f68e05c707e520a093cc1543512c926e1299cb71f0e3d94b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/timer.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "af5d7ded43192ad4d07a423ab436e0be1ffe00c75cc5b0a217553d2423b3f732"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/tests/scheduler.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.1",
+            "TIM-1.5"
+          ],
+          "sha256": "4f7d3743542cfbdf85857f91bc82f1bef422c9413d85b0a7e90987ccc0c18ae7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/stream/batch_count_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "942e557cbceb0d98cb397628abda407bae79845f2b9a6d7c9dd437cd7a846650"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/stream/flush_initial_buffer.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.4"
+          ],
+          "sha256": "3cc3b009b2da4808ab45c7d7239da26350f4577f551fc14386996e40398c7356"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/list.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "178b6aa44774fb426ec7dbe19317ab918466fcc10c450024c5646ba5a3872301"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "f26cd5f74c20f02c8a1daeef2c873f2fdb06544044ca2f81a53d6e361bc87872"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/mod.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2"
+          ],
+          "sha256": "a91ce5d1c9adb04ec915b6a195e8258341d9ee0ad2ab01f664671366e021d165"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/emit.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.4"
+          ],
+          "sha256": "b57dc070100ff6a16d9ab8940e6bcbf827179d43a99f7ee22781b8f8a4766509"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/timed_stream_controls/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4",
+            "TIM-1.5"
+          ],
+          "sha256": "5d51049d56bff85265ea90dfa01fd94cd79232805ec7d189fdb80dc26baaef7f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/cache_expire_after_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-2.1",
+            "TIM-2.3"
+          ],
+          "sha256": "e661ecad8c5f6c38f3119484240aba81b65bca7943ad4b21f1227a1a5b02c663"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/run_expiration_timer.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.4"
+          ],
+          "sha256": "6b5cf2a701e4ce95a0ff3a34d7da09ab5b862031f9c632abf7ac975ff0b8ee6f"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/expiration/source_list_expiration_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.3",
+            "TIM-2.4"
+          ],
+          "sha256": "8caea413f3fcca4323374158181c6d04c18a882dbc5572b4b42698436c1ca6e7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.3"
+          ],
+          "sha256": "f412ffb2781bab3323743ea0571ac1e882c75ac85c2602fff92834cd2ee933d8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.3"
+          ],
+          "sha256": "6537b59e6c3a5d454bb185a995963f3cbdeeebd4eb2f733f48c6ba91f0dee85a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/expiration_selector.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-2.1"
+          ],
+          "sha256": "d382eba1f5b10d5743f71ec77e0d92cc67c6d97caebefe06bf55ddbd90550a46"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/populate/activate_list_adapter_options.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-2.1"
+          ],
+          "sha256": "d9bd82eac739916d0a22f4079fa07e027eccd02513ff2b4c2400760ab19ddb35"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/expiration_rework/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3",
+            "TIM-2.4"
+          ],
+          "sha256": "cda6635c784c22401be3808a820c157e3ddbb3574cb2820d03b1a7884cdf6e68"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/limit/cache_limit_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-2.3",
+            "TIM-3.1"
+          ],
+          "sha256": "769499e1ddaa6047e39a80d6fc1ff2af776a6b4f011bbdecf52d504c09d1cd23"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/limit_size_rework/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-2.3",
+            "TIM-3.1"
+          ],
+          "sha256": "d9446e3d6edef291d1126d0338528b090a18c136ffb71d52297619b1276c09d5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.3",
+            "TIM-4.1"
+          ],
+          "sha256": "6ee9b5fc370f0030353fd994983a93a4202eacae2f95a3c87507512c0728e817"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/timed_value_stream_operators.rs",
+          "kind": "test",
+          "criterionIds": [
+            "TIM-1.3",
+            "TIM-4.1"
+          ],
+          "sha256": "a3b594ac0b848e41a6adae3d66f0cc103b929ed8a70ffbbf39b29182232b6797"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.1",
+            "TIM-1.5"
+          ],
+          "sha256": "f2597591339d2cd72f2d9e894f325019156833cedd0fcaccfa19c6284001ee27"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/13-stream-control-and-aggregation.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-1.3",
+            "TIM-1.4"
+          ],
+          "sha256": "f299abae21dad532e4801d4608c95dd71cec12e0b887066de159055e57c83e2c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/12-item-lifecycle.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-2.1",
+            "TIM-2.2",
+            "TIM-2.3"
+          ],
+          "sha256": "875cbcecce0797b14bd61694321ade73fafb27bf854829260f29b03c53e5ed5b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/04-streams-and-subscriptions.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-4.1"
+          ],
+          "sha256": "2defbf2d5c50705c8bcc433020d3ca7720c2e8ef844838dbc4ae703d67483952"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "TIM-1.2",
+            "TIM-2.2",
+            "TIM-3.1",
+            "TIM-4.1"
+          ],
+          "sha256": "47a48657a7def5b663f0343b924e72d1995f746e9b99d679af19075ac646310a"
+        }
+      ],
+      "summaryMarkdown": "**Re-review at snapshot 7caceedb (revision 94): passed.** All five findings (S09-F1..F5) are resolved; no new findings.\n\n**Re-checked**\n- The repaired code paths: expiration disposal re-closing the timer; schedule-before-drain in stream expiry, source expiry, `buffer_initial` and `batch_if`; the `FlushEnd` drop guard in `batch` (poison-tolerant lock, schedules after unwinding).\n- The reworked `CacheExpirationState`: flag-in-`order`, the `live` counter, `known`, `live_before`, `output_at`, `place`/`revive`/`forget`. I traced the expired-flag invariants and index results for every change kind.\n- The doc and CHANGELOG wording.\n\n**Commands** (each test group on its own, `RUST_TEST_THREADS=4 timeout 600 ... --lib <group>`)\n- `expiration_rework`: 15 ok.\n- `timed_stream_controls`: 13 ok.\n- `limits_expiration_streams`: 29 ok.\n- `limit_size_rework`: 6 ok.\n- `lifecycle_observables`: 27 ok.\n- Doc examples: 135 ok.\n- `cargo fmt --check`: clean.\n- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: clean.\n- `cargo check --workspace --target wasm32-unknown-unknown`: ok.\n\n**Probes**\n- Re-ran the original bounded probes (copied into `crates/tests/` temporarily, then removed).\n- After disposal, `pending()` is 0.\n- After a caught subscriber panic, expiry and `batch` continue.\n- An 8k bulk add after one expiry takes 3.6 ms (HEAD 11.2 ms).\n- `git status` is unchanged.\n\n**Notes (non-blocking)**\n- `cache_stream_expiry_loads_linearly_after_an_expiry` asserts a wall-clock ratio (16k rows under 8x the time of 4k, best of two runs). Linear growth gives about 4x, so the margin is wide, but it is a timing assertion that could become flaky on a heavily loaded machine.\n- `SourceExpiry::fire` now schedules the next expiry before it reports the current removals. With a scheduler that runs tasks concurrently, removal reports from consecutive expiries could arrive out of order. `ThreadScheduler` and `ManualScheduler` run tasks sequentially, so the built-in schedulers are unaffected.\n- Single cache updates under stream expiration remain about 2.4x slower than HEAD (41 ms vs 16.8 ms per 200 updates at 8k keys). This is the same O(n) class.",
+      "findingIds": [
+        "S09-F1",
+        "S09-F2",
+        "S09-F3",
+        "S09-F4",
+        "S09-F5"
+      ],
+      "recordedAt": "2026-10-07T04:13:37Z"
     }
   },
   "checkpoints": {
@@ -3856,9 +4276,62 @@
           "symbol": "sort_and_window_follow_requests_and_comparers_between_batches"
         }
       ]
+    },
+    {
+      "id": "S09-F1",
+      "boundaryId": "s09-time",
+      "criterionIds": [
+        "TIM-1.3",
+        "TIM-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Every `expire_after*` operator (stream and source) can arm a new timer after its subscription was disposed.**\n\nDisposal replaces the whole state with `S::default()` (`std::mem::take(&mut *state)`, `crates/src/collections/expiration/cache_expire_after_ext.rs:461-465` for streams and `:573-577` for sources). The fresh default state's `OperatorTimer` has `closed == false`, so the `is_closed()` guard that is supposed to reject late input (`:447` and `:553`) no longer works. A source batch that is still in flight when disposal runs (blocked on the state lock on another thread, or from an upstream that delivers after unsubscribe) is then applied to the fresh state and plans and schedules a new timer. The other timed operators (`batch`, `buffer_initial`, `batch_if*`, `auto_refresh*`, `debounce`/`sample`) keep `closed = true` after disposal and are not affected.\n\n**Repro (deterministic, public API, ManualScheduler):** an upstream `ChangeStream::new` keeps its subscriber. Subscribe `.expire_after_with_scheduler(|_| Some(10ms), manual)`, drop the subscription, then deliver `Add { index: 0, item: 7 }` through the kept subscriber. Result: `clock.pending() == 1` after disposal (expected 0). Nothing reaches the subscriber because the delivery subscription is gone. But the task keeps the `StreamExpiry`/`SourceExpiry` (emitter queue, scheduler, and for sources a `SourceCache`/`SourceList` clone) in the scheduler until it fires, and generation numbers restart at 0. For the **source** variant with a near-zero TTL, the re-armed timer can fire while the in-flight callback still holds the state alive, so `S::expire` edits the source and **removes items after the `expire_after` subscription was disposed**. The existing test `disposal_cancels_expiration_timers` covers only disposal with no concurrent delivery. Probe kept in `artifacts-temp/agentx/reactive-audit-remediation/s09-review-scratch/zz_s09_probe3.rs`.\n\n**Fix:** keep the closed flag across disposal. For example, take only the payload (queue/items/order/mirror) and leave the closed timer in place, or also close the fresh state's timer after `mem::take`. Add a test that delivers a batch after disposal and asserts `pending() == 0` for the stream and source variants.\n\n**Re-check (snapshot 7caceedb): resolved.** Both `expire_stream` and `expire_source` disposal now close the fresh state's timer after `mem::take` (`cache_expire_after_ext.rs:465-471` and `:585-591`). I re-ran the original probe (an upstream that delivers `Add` after disposal): `pending()` is now 0 (was 1) and nothing is emitted. New regression test: `a_batch_arriving_after_disposal_starts_no_timer`."
+    },
+    {
+      "id": "S09-F2",
+      "boundaryId": "s09-time",
+      "criterionIds": [
+        "TIM-1.4",
+        "TIM-2.1",
+        "TIM-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**A single caught subscriber panic permanently stalls stream `expire_after*` and `batch`.**\n\n- Stream expiration arms its timer inside `emitter.update(...)` (`ExpiryTimer::plan` sets `armed = true` with a new generation), but schedules it only after `emitter.update` has drained: `crates/src/collections/expiration/cache_expire_after_ext.rs:444-456` (source path) and `:506-521` (timer path). If the downstream subscriber panics during that drain, `expiry.schedule(...)` is skipped. The timer then stays `armed` with no task ever scheduled. `plan` afterwards is a no-op forever (`is_armed() && due <= next`, or `is_armed()` with polling), so nothing expires again for that subscription.\n- `batch` sets `flushing = true` before draining and resets it only after the drain returns (`crates/src/collections/stream/batch_count_state.rs:524-556`). A panic in the flush delivery (on `ThreadScheduler` it is caught by the timer thread's `catch_unwind`) leaves `flushing = true` forever. Every later source batch is buffered and no timer is armed, so output stops and the buffer grows without bound.\n\n**Repro (ManualScheduler, `catch_unwind` around the panicking call):**\n- (a) `list.connect().expire_after_with_scheduler(|_| Some(10ms), manual)` with a subscriber that panics once. `catch_unwind(list.push(1))`, then `list.push(2)`. Result: `pending() == 0`, and after `advance_by(50ms)` no `Remove` is ever delivered.\n- (b) `batch_with_scheduler(10ms)` with a subscriber that panics on the first flush. After `catch_unwind(advance_by(10ms))`, `push(2)` gives `pending() == 0`, and `advance_by(50ms)` delivers nothing more.\n\nProbe: `s09-review-scratch/zz_s09_probe5.rs`.\n\nHEAD's per-subscription timer threads kept expiring after a panicking delivery. The ThreadScheduler deliberately catches task panics so timers keep running, and chapter 16 states that a caught subscriber panic does not stall delivery. These operators now go silently dead instead. `debounce`/`sample`, `auto_refresh_buffered`, `batch_if*` and `buffer_initial` recover because their timer is disarmed (or their flag reset) before they drain.\n\n**Fix:** schedule (or compute and store the `TimerUpdate`) before draining, for example by splitting `emitter.update` into push-under-lock, unlock, schedule, then drain. Or reset `flushing` and disarm in a drop guard on unwind. Add tests with a once-panicking subscriber for stream expiration and `batch`.\n\n**Re-check: resolved.** Stream expiry now pushes under the lock, schedules, then drains (source callback and `StreamExpiry::fire`). `SourceExpiry::fire` schedules before it reports. `batch` ends each flush through a `FlushEnd` drop guard that clears `flushing` and re-arms during unwind. `buffer_initial` and both `batch_if` callbacks schedule before they drain. Re-ran the original probes:\n- Expiry: `pending()` is 1 after the caught panic, and items 1 and 2 are later removed (`Remove{1}`, `Remove{0}`).\n- `batch`: `pending()` is 1 after the panic, and the second batch is delivered.\n\nNew regression tests: `expiration_continues_after_a_caught_subscriber_panic` and `batch_keeps_flushing_after_a_caught_subscriber_panic`."
+    },
+    {
+      "id": "S09-F3",
+      "boundaryId": "s09-time",
+      "criterionIds": [
+        "TIM-2.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Cache stream `expire_after` is 10-20x slower than HEAD once any key has expired: it does quadratic hashing on the delivering thread.**\n\n`CacheExpirationState::output_position` (`crates/src/collections/expiration/run_expiration_timer.rs:234-248`) walks the whole `order` vector and does a `HashSet::contains` (SipHash of every key) per element. It runs for every `Add`, twice per `Update`, and once per `Refresh`/`Move`/`Remove` and per expired key in `expire_due`. On top of that, `place`/`forget` do linear scans (`:250-271`). `SourceCache` always reports indexes, so `indexed` is true for every plain source cache. Once one key is in `expired`, every change costs O(n) hashes, under the operator's state lock.\n\n**Measured (release, bounded probe `s09-review-scratch/zz_s09_probe4.rs`; same probe on a `git archive HEAD` build):** `cache.connect().expire_after(...)` with one expired key, then `add_or_update_range` of n keys in one batch:\n- n = 2,000: **14.5 ms** vs HEAD 1.5 ms.\n- n = 8,000: **221 ms** vs HEAD 11.2 ms. Growth is quadratic (4x n gives about 15x time), so roughly 1.4 s at 20k keys.\n\n200 single updates at n = 8,000 take 40.7 ms vs 16.8 ms. This blocks the source's delivering (often UI) thread. The stream `limit_size_to` rewrite, by contrast, is much faster than HEAD on updates (40 ms vs 1.97 s).\n\n**Fix:** keep the expired flag inline with `order` (for example `Vec<(K, bool)>`, or an index map plus a Fenwick tree of unexpired counts) so positions need no hashing. At minimum, skip the hash test while `expired` is empty, and compute all positions for a batch of expiries in one pass, as `ListExpirationState::expire_due` already does.\n\n**Re-check: resolved.** `CacheExpirationState` now keeps `order: Vec<(K, bool)>` and a `live` count, so positions need no hashing; there are O(1) paths for appended adds and the last key. I reviewed index correctness for Add/Update/Refresh/Move/Remove/Clear and `expire_due`, and the naive-model fuzz passes. Same release probe, one key expired, then a bulk add:\n- n = 2,000: 1.09 ms (was 14.5 ms; HEAD 1.5 ms).\n- n = 8,000: 3.6 ms (was 221 ms; HEAD 11.2 ms).\n\n200 single updates at n = 8,000 still take 41 ms vs HEAD 16.8 ms (O(n) `index_of` plus `Vec` remove/insert). That is the same complexity class and acceptable."
+    },
+    {
+      "id": "S09-F4",
+      "boundaryId": "s09-time",
+      "criterionIds": [
+        "TIM-2.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Source `limit_size_to` is not enforced while several threads write continuously.** This is pre-existing (HEAD behaves the same), but it is now built into the design and undocumented.\n\nThe eviction edit runs only when the mirror's version equals the committed version (`crates/src/collections/limit/cache_limit_ext.rs:126-137` and `:205-215`). With two or more writers, another writer almost always commits between a batch's delivery and the eviction edit acquiring the lock, so each attempt returns without evicting.\n\n**Measured (release):** a cache with `limit_size_to(20)` and 3 threads adding distinct keys reaches **17,828 items after 2 s** (HEAD: 18,344). It converges to 20 only after the writers stop. With one writer it stays at 20-21. Throughput collapses because the source grows (18.7k edits vs 1.26M with one writer).\n\nThe TIM-2.3 convergence test checks only after the writers stop. The CHANGELOG and docs/14 (\"otherwise the next delivered batch triggers the eviction again\") imply prompt enforcement. Either document that the limit converges once writes pause, or keep a pending eviction and retry it from `on_next_release` instead of only on the next delivered batch.\n\n**Re-check: resolved (documented).** Chapter 14 and the CHANGELOG now say that eviction follows delivery and that the source can exceed the limit while writers outrun delivery. Wording suggestion, not blocking: \"until the limiter has received them\" understates the effect. My measurement showed the overshoot keeps growing (17.8k items for a limit of 20) for as long as several writers keep committing, so \"until writes pause\" would be more accurate."
+    },
+    {
+      "id": "S09-F5",
+      "boundaryId": "s09-time",
+      "criterionIds": [
+        "TIM-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Docs and CHANGELOG overstate the disposal guarantee.**\n\n`docs/13-stream-control-and-aggregation.md` and `CHANGELOG.md` (`### Time`) say \"nothing is delivered after the drop returns\", dropping TIM-1.3's qualifier \"on the disposing thread\". `DeliveryQueue` only guarantees that the disposing thread never sees a call after its disposal returned. A delivery already running on another thread (for example the scheduler's timer thread in mid-flush) can still be inside the subscriber when `drop` returns on a foreground thread. Add the qualifier, for example: \"on the disposing thread; a delivery already running on another thread may finish\".\n\nRelated note, not a defect: the new pub field `ChangeSetAdapterOptions::scheduler` and the new required trait methods are breaking changes outside the constraint's permitted list. TIM-1.2 forces them, and the CHANGELOG documents them with migration notes. They are accepted here as documented.\n\n**Re-check: resolved.** docs/13 (lines 44-45) and the CHANGELOG now say nothing more is delivered on the dropping thread once the drop returns, and that a delivery already running on another thread may still finish."
     }
   ],
-  "handoffMarkdown": "List/keyed/sort_and_* window states track last_response + loaded and emit whenever a response field changes (empty change set allowed) and the initial response once loaded; list dynamic windows start with request None; sort_and_* rebuilt on CacheSortState + window diff (shared next_window_version). Docs ch10 updated (stale-totals warning removed), README known issues trimmed, ch09 re-keying table updated. Group window_responses incl. comparer count for 8,000 items.",
+  "handoffMarkdown": "ReactiveValueStreamExt gains debounce/debounce_with_scheduler, throttle/throttle_with_scheduler (leading edge via scheduler.now(), no timer), sample/sample_with_scheduler (lazy tick on the subscription's grid, armed only while a value waits); zero duration = pass-through. debounce/sample share timed_value_stream (TimedValue state, OperatorTimer, TimedOutput delivering through an Arc<DeliveryQueue>, close on disposal). OperatorTimer/schedule_timer moved from collections/timer.rs to primitives/timer.rs (pub(crate)) since scalar and collections both use it (layering rule). Group scalar_tests::timed_value_stream_operators (6 tests on ManualScheduler: debounce bursts, throttle windows, sample ticks/grid/no idle timer, disposal cancels timers for debounce and sample, self-disposal inside delivery, zero durations). Docs: ch4 operator table + scheduler paragraph + debounce ManualScheduler example; ch16 tables/wasm list. CHANGELOG Time section.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",

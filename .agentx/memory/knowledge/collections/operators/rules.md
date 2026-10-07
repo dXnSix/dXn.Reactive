@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-08T08:00:00+02:00
+  updated: 2026-10-08T12:00:00+02:00
   topics:
     - operators
     - incremental
@@ -21,7 +21,7 @@ agentx:
 - Cache transform refreshes must forward the existing projected value by default; only explicit on-refresh or forced-transform APIs should re-run transform factories and emit updates.
 - Cache safe transforms must report per-item `Result` failures through `TransformError`, keep source mirrors/order current, leave existing projections untouched, and suppress empty output so later successful source or forced transforms can recover without a reset.
 - List transforms must be incremental and preserve indexed change reasons; default refresh forwards the existing projection, and only explicit on-refresh transform variants should re-run list transform factories.
-- Buffered auto-refresh operators must forward normal source changes immediately and buffer only child-triggered refreshes; resolve list indexes/cache indexes at flush time so moves between trigger and flush do not create stale refresh coordinates.
+- Buffered auto-refresh operators must forward normal source changes immediately and buffer only child-triggered refreshes; resolve list indexes/cache indexes at flush time so moves between trigger and flush do not create stale refresh coordinates. Source batches and refresh batches (buffered or not) go through one `OrderedEmitter`, so a refresh index is valid when it is delivered.
 - `std_dev_by` must intentionally mirror DynamicData's formula `sqrt(sum_squares - (sum * sum / count)) / (count - 1)` with fallback when fewer than two values are present; do not replace it with the conventional sample standard deviation formula without an explicit compatibility decision.
 - `min_by` and `max_by` aggregation streams should suppress unchanged extrema values, matching DynamicData's `DistinctUntilChanged` behavior for maximum/minimum streams and reducing downstream scalar invalidations.
 - For dynamic derived views, subscribe request/comparer/child streams under operator-owned state and dispose child subscriptions when their parent item leaves the source.
@@ -42,6 +42,9 @@ agentx:
 - For cache safe async transform-many operators, map failed parent materializations to an empty child stream and let the existing generation/subscription state remove previous children and suppress stale child output.
 - Immutable grouping operators should emit replacement snapshots for touched non-empty groups instead of live child streams; preserve group creation order across source/regrouper turns and remove a group only when it is empty after the complete source batch.
 - Source-mutating operators that subscribe to the same source, such as expiration managers and source size limiters, must not call `SourceList::edit` or `SourceCache::edit` while holding operator-owned state locks because source edits synchronously deliver changes back to the operator subscription.
+- Source-mutating operators pick what to remove inside the edit: `edit_at_version(|updater, version| …)` locks the operator mirror (lock order: source, then mirror) and acts only when the mirror has applied `version` (the last committed batch); otherwise the next delivered batch re-triggers (`catch_up` for expiration). Report the items from the edit's returned batch. Retry `Contended`/`NestedUpdate` with `on_next_release`, never by spinning.
+- Timed operators (`batch`, `buffer_initial`, `batch_if_with_timeout`, buffered `auto_refresh`, `expire_after*`) keep one `OperatorTimer` in their state and emit through `OrderedEmitter`; `batch` arms its next window only after a flush delivered. Stream expiration keeps expired items in its source mirror and translates later source changes to its own output (positions skip expired items; an update/replacement of an expired item adds it back; its refresh/move/remove is dropped). The expiration queue holds one slot per live item (`ExpiryQueue`); polling arms a periodic check only while items wait, and a source change never postpones it.
+- Stream `limit_size_to` is incremental (write-order map plus own-output positions): it forwards refreshes and same-value updates of the keys it holds and clones O(1) items per addition; an update of an evicted key re-adds it as the newest.
 - For source-list operators that remove items by index, let the source's emitted remove changes update the operator mirror; eagerly removing from the mirror before the source edit can apply the same index removal twice and corrupt duplicate/moved entries.
 - Cache-to-list bridge operators must maintain an ordered key mirror when producing `ListChange` values; list changes need concrete indices, unlike DynamicData's occasional unspecified-index list changes.
 - Keep Rust optional helpers native to `Option<T>` / `Result<T, E>` and `ValueStream<Option<T>>`; do not simulate Rx error channels for missing optional values in `ValueStream` operators.
