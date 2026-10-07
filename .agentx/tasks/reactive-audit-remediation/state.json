@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 96,
+  "revision": 104,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -202,13 +202,22 @@
       ]
     },
     "t33-async-transform-workers": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t34-list-async-transform-options": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t35-async-dispose-hardening": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t36-aggregate-robustness": {
       "status": "pending"
@@ -322,6 +331,15 @@
         }
       },
       "recordedAt": "2026-10-07T04:11:16Z"
+    },
+    "03e0a001cface32540e6f48033d768294b1de149b87074a6d121dcac7066a92c": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "19527cf19a2b398884eeff81679ac5f52d6c3ae6a83ed948fd251a61d7af2ff3"
+        }
+      },
+      "recordedAt": "2026-10-07T04:59:29Z"
     }
   },
   "checkResults": {
@@ -885,6 +903,57 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s09-time-final-69e7847312a9.log",
       "logSha256": "af9bdc630093d578f37c124fdfc40c4d57759fc9274eb06a8e4c3dd971f325fd",
       "inputsHash": "35fe5cd7f9dd2d580857c06793bbda9dc878dbb3c775782185e9e3195f442695"
+    },
+    "s10-async/c-t33/final": {
+      "checkId": "c-t33",
+      "boundaryId": "s10-async",
+      "phase": "final",
+      "batchId": "03e0a001cface32540e6f48033d768294b1de149b87074a6d121dcac7066a92c",
+      "definitionHash": "0c91d89147ba5479b4a595198c737a75bd7ffb909eca166d4635972ce9e8b474",
+      "basisHash": "d83f9ceca91150d5933e0621bed2445c715f0fe7772c90e12a647240fa1ff86a",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 12,
+      "durationSeconds": 1.6968,
+      "recordedAt": "2026-10-07T04:59:29Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s10-async-final-9650e8162881.log",
+      "logSha256": "a8df890366daa7d0ee945c9f6fd4b81672480b0a0989024cff703e7ea75221cc",
+      "inputsHash": "50ddfed3da1641766e24429c57f8352cc406cbbea4c79c75ca07ae7848f5e147"
+    },
+    "s10-async/c-t34/final": {
+      "checkId": "c-t34",
+      "boundaryId": "s10-async",
+      "phase": "final",
+      "batchId": "03e0a001cface32540e6f48033d768294b1de149b87074a6d121dcac7066a92c",
+      "definitionHash": "ce4c84dfc7bf95bce44470307d26115b551f4981c66108e514848ea2e8c37746",
+      "basisHash": "0bbf649ad8fef8509e5194dfab89f8559f56676b37fd9b6978b57f3c88444b20",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 4,
+      "durationSeconds": 0.2659,
+      "recordedAt": "2026-10-07T04:59:29Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s10-async-final-8bdbcd8d1114.log",
+      "logSha256": "ebd14b9dc7796b4b8280e0babe932a073a30699e2451e5058e28be2055aac57a",
+      "inputsHash": "50ddfed3da1641766e24429c57f8352cc406cbbea4c79c75ca07ae7848f5e147"
+    },
+    "s10-async/c-t35/final": {
+      "checkId": "c-t35",
+      "boundaryId": "s10-async",
+      "phase": "final",
+      "batchId": "03e0a001cface32540e6f48033d768294b1de149b87074a6d121dcac7066a92c",
+      "definitionHash": "c8696d3640f33ac407aa292c0d515a20facbd598196d5b1d8d2ce01c1fa2ee86",
+      "basisHash": "6806397a52b5e385764a455de3362b9d8053adf08ff74de538533276bab8ecc5",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 1,
+      "durationSeconds": 0.174,
+      "recordedAt": "2026-10-07T04:59:29Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s10-async-final-0eb1f72a157d.log",
+      "logSha256": "f322e0dd6f02e4c6f8f31113df6316338aa63bb0529c6f070a5b1c827476af30",
+      "inputsHash": "50ddfed3da1641766e24429c57f8352cc406cbbea4c79c75ca07ae7848f5e147"
     }
   },
   "reviews": {
@@ -3091,6 +3160,264 @@
         "S09-F5"
       ],
       "recordedAt": "2026-10-07T04:13:37Z"
+    },
+    "s10-async": {
+      "reviewerId": "reviewer-s10-indep-9e41",
+      "snapshotId": "03e0a001cface32540e6f48033d768294b1de149b87074a6d121dcac7066a92c",
+      "criterionIds": [
+        "ASY-1.1",
+        "ASY-1.2",
+        "ASY-1.3",
+        "ASY-1.4",
+        "ASY-2.1",
+        "ASY-3.1"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/async_jobs.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "d0d1c8b47e9ddeb08c8d1439c218d44abe3f47a9ad9f332a9448c52e44596f6c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_async_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3"
+          ],
+          "sha256": "42b47cb89423129abf7d9745d4a5c12783bc029af40de4367f2851ff5e92ec2c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_async_safe_job.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "eee0fad03a18ea57aa3813a1fbe2a22f8bde638e74af523a01b5ab1e3e67190b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_many_async_iterable_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.3"
+          ],
+          "sha256": "e0b81258b60bcbbe90b7e2fdcf8e4e9229cf3c812e459ce597d43f5437cc6b19"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_transform_many_safe_async_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "717b211d025c95f7ea821feef8f69bf6d3858b52558775ffceba3cb8d5214b64"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_async_transform_many_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2"
+          ],
+          "sha256": "4b1a3f94b35a0723e32ed1d032eeb29b8feb5267dfd133c48d0f36b52e2811d0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/cache_stream_ext.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.4"
+          ],
+          "sha256": "e22ddc9b911ece47a4d06d414423fd6b7d9f925c8467503d62e922160689e0ce"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_transform_stream.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1"
+          ],
+          "sha256": "0736f27e94ecd4d6a61613398de72d26525606555f6c6b175a9e77bc1ec9f910"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/predicate.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.4",
+            "ASY-2.1"
+          ],
+          "sha256": "138db7663d8d99601b35c31638b63c9d483ca912d204e7615b1cddee38efd8cb"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/operators/list_stream_ext_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-2.1"
+          ],
+          "sha256": "b601ba6bef8fc9fc951889f63f719979f28facab132d039f86d0700e49bc00e8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/transform_error.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.3"
+          ],
+          "sha256": "67c893b6c58cdac747d23159d9931eb266b6d77af15bca0ee61958a1825de1dd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/lifecycle/cache.rs",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-3.1"
+          ],
+          "sha256": "bc311762700b95c88be505b5e79f71e8bd4d97b0bc69e20b657c133d5069a487"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/09-filtering-and-transforming.md",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1"
+          ],
+          "sha256": "aae2ce738e8a1ba57db59a6dfa785a5e299ae97cc7919da9d285da9e2aeb218d"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/12-item-lifecycle.md",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-3.1"
+          ],
+          "sha256": "b81a65933ca6f1ff48b8a23f1f30ba32372d5e2184cdf0ac6273eeec4a40aaa5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/16-concurrency-and-platforms.md",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1"
+          ],
+          "sha256": "252c9b5ab9e7d65f8a6244cad3f56275ad15035c5dc661bdcc8916afcc3a4fcc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4",
+            "ASY-2.1",
+            "ASY-3.1"
+          ],
+          "sha256": "cb046449dbefcf416a038e0719c436821b481c03521a8c4f50d9e8ca6cb50718"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/async_transform_workers/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-1.4"
+          ],
+          "sha256": "e41c2348226449f415c6a49d9148645f8d1cc3992ca6e6f53a331517dd98e87a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/list_async_transform_options/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-2.1"
+          ],
+          "sha256": "648e61692a2b81afa13ea517ff7866cfadc57159c1c834846196bfeacf4586ee"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/async_dispose_hardening/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-3.1"
+          ],
+          "sha256": "b802796c1fd04748a43283963c21c2bda0a72a188f5572f7fead09d224100343"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/transforms_filters/cache_transform_many_async_ignores_stale_materialization_after_parent_re.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2"
+          ],
+          "sha256": "e600adc860890b2190f361363c8044ca1d46d909a2ace6b6d69f50b7ec6413dc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/transforms_filters/cache_transform_safe_forced_retries_failed_source_items.rs",
+          "kind": "test",
+          "criterionIds": [
+            "ASY-1.2",
+            "ASY-1.3"
+          ],
+          "sha256": "fbd171cf85ca412453fcdbe7ee17f456cf8cc034afea1928400bb13dee298227"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s10-review-scratch/src/main.rs",
+          "kind": "runtime",
+          "criterionIds": [
+            "ASY-1.1",
+            "ASY-1.2",
+            "ASY-1.3",
+            "ASY-2.1"
+          ],
+          "sha256": "cd2abaa98bc53abbd5c1b4b7aa77cc611b517bc071f8c1b817ad7bc3656f0975"
+        }
+      ],
+      "summaryMarkdown": "**Re-review at snapshot 03e0a001 (revision 103). Verdict: passed.** All findings are resolved:\n- S10-F1 to S10-F6, S10-F8 and S10-F9: resolved.\n- S10-F7: accepted as documented.\n- The nit on the disposal comment (under S10-F2) is fixed.\n\n**S10-F8:** the O(1) fast path for the last key holds because callers pass only projected keys. Bulk adds after one panicking key now take 12.9 ms at 10k and 39.8 ms at 30k, down from 507 ms and 5.18 s; HEAD takes 131 ms at 30k. The bounded fuzz still passes (80 seeds, 0 failures).\n\n**S10-F9:** I ran the updated test against a scratch copy with the old sequence-keyed `finish` restored. It failed 3 of 3 runs and passes on the real tree, so it now catches the original defect.\n\n**Earlier verification still applies:** the probes `oneshot`, `exit` and `dup`, the D-INDEX review, wasm32 and the doc examples (135 passed).\n\n**Commands this round** (`RUST_TEST_THREADS=4 timeout 600`, one group at a time):\n- `async_transform_workers`: 12 passed, 2 runs.\n- `transforms_filters` (30), `list_async_transform_options` (4), `async_dispose_hardening` (1): all passed.\n- `cargo fmt --check` and clippy `-D warnings` are clean.\n- Release probes run: `skip`, `perf30`, `fuzz`, `fuzz0`.\n\nScratch build outputs and the scratch copy were removed. The working tree is unchanged by the review (`git status` shows 36 entries).",
+      "findingIds": [
+        "S10-F1",
+        "S10-F2",
+        "S10-F3",
+        "S10-F4",
+        "S10-F5",
+        "S10-F6",
+        "S10-F7",
+        "S10-F8",
+        "S10-F9"
+      ],
+      "recordedAt": "2026-10-07T05:03:06Z"
     }
   },
   "checkpoints": {
@@ -4337,9 +4664,103 @@
       "severity": "minor",
       "status": "resolved",
       "descriptionMarkdown": "**Docs and CHANGELOG overstate the disposal guarantee.**\n\n`docs/13-stream-control-and-aggregation.md` and `CHANGELOG.md` (`### Time`) say \"nothing is delivered after the drop returns\", dropping TIM-1.3's qualifier \"on the disposing thread\". `DeliveryQueue` only guarantees that the disposing thread never sees a call after its disposal returned. A delivery already running on another thread (for example the scheduler's timer thread in mid-flush) can still be inside the subscriber when `drop` returns on a foreground thread. Add the qualifier, for example: \"on the disposing thread; a delivery already running on another thread may finish\".\n\nRelated note, not a defect: the new pub field `ChangeSetAdapterOptions::scheduler` and the new required trait methods are breaking changes outside the constraint's permitted list. TIM-1.2 forces them, and the CHANGELOG documents them with migration notes. They are accepted here as documented.\n\n**Re-check: resolved.** docs/13 (lines 44-45) and the CHANGELOG now say nothing more is delivered on the dropping thread once the drop returns, and that a delivery already running on another thread may still finish."
+    },
+    {
+      "id": "S10-F1",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.1",
+        "ASY-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**An existing test now fails: the change was not validated against the existing groups that use the touched operators.** `transforms_filters::cache_transform_many_async_ignores_stale_materialization_after_parent_re::cache_transform_many_async_ignores_stale_materialization_after_parent_removed` (`crates/src/collections/tests/transforms_filters/cache_transform_many_async_ignores_stale_materialization_after_parent_re.rs:35-48`) adds parent 1, waits for its pending future, removes the parent, then completes the future through the oneshot `sender` and returns `Err(\"receiver dropped\")` if `send` fails. With t33, removing the parent fires `AbortOnDrop` and drops the future, so the receiver is gone and `send` fails.\n\nReproduction: `RUST_TEST_THREADS=1 cargo test -p rayx_reactive --all-features --lib collections::tests::transforms_filters::cache_transform_many_async_ignores_stale_materialization_after_parent_re::cache_transform_many_async_ignores_stale_materialization_after_parent_removed` failed **10 of 10 runs** with `Error: Custom { kind: Other, error: \"receiver dropped\" }`. Running the whole `transforms_filters` group, it failed 1 of 4 runs (it is timing-dependent there). The author's final logs (`s10-async-final-*.log`) cover only the three new groups.\n\nExpected: every existing test that exercises the touched operators passes. A test that pins the old behavior is updated and noted in the CHANGELOG, as the constraints require.\n\nFix: update the test to the new contract. Assert that the removed parent's future is dropped, using a drop flag or by treating `send` failure as success, and that no batch is ever received. Mention it in the CHANGELOG next to the other updated test. Then rerun `transforms_filters`, `lifecycle_observables`, `limits_expiration_streams` and `operator_input_interop`, which also call async operators.\n\n**Re-review (snapshot b57f1918, revision 102): resolved.** The test now ignores the result of `send` and still asserts that nothing is published; the CHANGELOG names it among the updated tests. It passed 5 of 5 runs alone (`RUST_TEST_THREADS=1`), and `transforms_filters` passed 30/30. `lifecycle_observables` (27), `limits_expiration_streams` (29) and `operator_input_interop` (7) pass."
+    },
+    {
+      "id": "S10-F2",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.1",
+        "ASY-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**`transform_many_async*` / `*_async_stream*` drop all in-flight parent transforms when the source releases its subscriber, so children are lost (regression vs HEAD).** `CacheAsyncTransformManyJobs::run_worker` (`crates/src/collections/operators/cache_transform_many_safe_async_stream.rs:153` and `:158`) returns as soon as `receiver.next()` yields `None`. That drops `running` and `waiting`. The job channel closes whenever the source drops the operator's callback, not only on disposal. A one-shot `ChangeStream::new(|s| { s(&batch); Ok(Subscription::empty()) })` does exactly that. The crate uses this idiom itself, for example the one-shot request `ValueStream`s in `cache_stream_ext_impl.rs` and the children built in `cache_transform_many_async_iterable_stream.rs`. `select` polls the receiver first, so the worker exits even when the transform futures are immediately ready.\n\nReproduction: bounded probe `s10-review-scratch/src/main.rs` (`probe oneshot`) uses a one-shot source with 3 parents and `transform_many_async`. On HEAD it emits 3 of 3 children. On the working tree it emits **0 of 3**, both with immediately-ready futures and with futures that yield 5 times.\n\nExpected: closing the source does not cancel in-flight work. Only disposal or parent removal/update does. The cache and list workers get this right: `for message in receiver` still processes every buffered message.\n\nFix: when the channel closes, stop accepting jobs but keep driving `running` and `waiting` until both are empty. Disposal already aborts everything through `state.clear()`, whose `AbortOnDrop` makes the remaining futures finish at once. Alternatively, end the loop on an explicit closed flag that disposal sets. Add a regression test with a one-shot parent stream.\n\n**Re-review: resolved.** `run_worker` now marks the input closed and keeps driving `waiting` and `running` until both are empty. On disposal, `state.clear()` aborts the running futures through `AbortOnDrop`, and the queued jobs fail the new liveness check. Probe `oneshot` now yields 3 of 3 children, with immediately-ready futures and with 5-yield futures. Regression test `transform_many_finishes_transforms_of_a_finite_source` passes. Probe `exit` confirms the transform-many worker still exits after disposal, including self-disposal inside the subscriber. Nit: the comment in the disposal closure (`cache_transform_many_safe_async_stream.rs:97`, \"the worker ends and drops its running futures\") is now slightly stale.\n\n**Re-review (snapshot 03e0a001, revision 103):** the stale disposal comment is fixed. It now says that clearing the state aborts the pending transforms and that dropping the source subscription closes the job channel."
+    },
+    {
+      "id": "S10-F3",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.2"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Cancellation bookkeeping loses abort handles when a key appears twice in one batch, so the future can no longer be cancelled and the worker never exits.** `AsyncCancellation::finish(id, sequence)` (`crates/src/collections/operators/async_jobs.rs:84-91`) removes *every* running entry with that `(id, sequence)`. A cache batch can hold two jobs for the same key. A single `edit` that adds and then updates a key emits `Add` + `Update`. `batch(window)` upstream merges successive updates of one key. When the first job finishes, it also deletes the second job's `AbortHandle`. After that, `supersede` (a later update or removal) and `close` (disposal) cannot abort the second future.\n\nReproduction (`probe dup`): one `edit` adds `(1, 0)` then updates to `(1, 1)`. The source batch is `[Add{key:1,..}, Update{key:1,..}]`. The future for value 1 never completes. Results:\n- A later `add_or_update((1, 2))` does **not** drop the pending future.\n- Disposing the subscription does **not** drop it either.\n- The worker thread **never exits**: the transform closure's `Arc` is still held after 2 s.\n- All later batches for the subscription stay blocked behind that future.\n\nExpected (ASY-1.2): in-flight futures are dropped when their key is updated or removed and on disposal, and the worker exits promptly.\n\nFix: give each job a unique token, such as a per-registry counter returned by `start`, and have `finish` remove only that entry. Alternatively, keep handles in a slab keyed by job. Add a test with a duplicate key in one batch, a never-completing future, a later update, and disposal.\n\n**Re-review: resolved (fix verified; see S10-F9 about the tests).** Each job now gets its own token from `start`, and `finish(id, token)` removes only that job. Probe `dup` reproduces the failing interleaving: the first job finishes, then the second job of the same key, from the same batch, stays pending. A later update now drops the pending future, disposal drops it, and the worker exits. Emitted: `Add{1,0}` then `Update{1,2}`."
+    },
+    {
+      "id": "S10-F4",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.3"
+      ],
+      "severity": "major",
+      "status": "resolved",
+      "descriptionMarkdown": "**Large performance regression in cache `transform_async*` / `transform_safe_async*` at realistic sizes.** `apply_cache_async_results` (`crates/src/collections/operators/cache_async_safe_job.rs:278-293`) computes each emitted index with `position(order, projected, key)`. That linear scan does one `HashMap::contains_key` per preceding key and runs for every change. `current_index.and(position(..))` (for example `:313`, `:385`) evaluates the scan eagerly even when the index is `None`. A batch of n adds costs O(n²) hash lookups, compared with O(n²) plain `==` comparisons in HEAD's `insert_cache_key` alone.\n\nMeasured with the bounded release-mode probe (`probe perf` / `probe perf30`) against a `git archive` of HEAD 80957b0. Pass-through `transform_async` over a `SourceCache<u32, (u32,u32)>`:\n\n| scenario | HEAD | working tree |\n|---|---|---|\n| bulk add 2,000 (one batch) | 2.5 ms | 26 ms |\n| bulk add 10,000 | 20 ms | 516 ms |\n| bulk add 30,000 | 132 ms | **5.28 s** (40x) |\n| 200 single updates at 30k | 160 ms | 244 ms |\n\nThe list replay is also slower but stays small in absolute terms: 1,000 single inserts at 30k take 4.6 ms on HEAD and 34 ms now (`present` vector plus `output_index` scans per batch). Source delivery is not blocked, but the first output of a 30k-item cache arrives about 5 s late, and keys like `String` make it worse.\n\nFix:\n- Compute positions only when an index is needed, using `and_then`/`map` instead of `and`.\n- Add a fast path when every key in `order` is projected. The position then equals the order index, which `insert_cache_key` already finds.\n- Keep a projected-count structure, such as a Fenwick tree over `order` or a per-batch prefix count, so positions are O(log n).\n- Add a bounded perf guard test, for example 20k adds within a generous deadline.\n\n(Criterion mapping: the own-output index work was introduced for the ASY-1.3 skip semantics.)\n\n**Re-review: resolved for the reported case.** Positions are computed lazily (`and_then`), new keys are inserted without a scan, and the position is O(1) while every key is projected. Re-measured in release mode against a `git archive` of HEAD 80957b0 (this tree vs HEAD):\n\n| scenario | this tree | HEAD |\n|---|---|---|\n| bulk add 10k | 12.7 ms | 19.7 ms |\n| bulk add 30k | 41 ms | 131 ms |\n| 200 single updates at 30k | 242 ms | 161 ms |\n| 1,000 single updates at 10k | 210 ms | 133 ms |\n\nBulk loads are now faster than HEAD; single changes are about 1.5x slower, which is acceptable. The bounded fuzz passes 40 seeds with panics and 40 more with no panics (exercising the all-projected fast path): 0 failures. The new test `cache_async_transforms_load_linearly` passes. A slow path remains whenever any key is unprojected; it is tracked as S10-F8."
+    },
+    {
+      "id": "S10-F5",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**`transform_many_async*` still calls the user transform for parents that were already removed or replaced before their job started.** `CacheAsyncTransformManyJobs::run` (`cache_transform_many_safe_async_stream.rs:177`) calls `run_async_job(Some(registration), || transform(item, key))`. `run_async_job` (`async_jobs.rs:142`) calls `start()` before `Abortable` sees the abort, so the synchronous part of the transform runs and the future is built and then dropped unpolled. With 2,000 parents added and removed, that is 2,000 wasted transform calls with their side effects. The CHANGELOG says \"A future superseded before it ran is not run\", which holds for cache and list `transform_async` but not for transform-many.\n\nFix: skip the job when its generation is no longer live (check `state.is_live_generation` before `start`), or check the abort handle first, for example by keeping the `AbortHandle` next to the registration.\n\n**Re-review: resolved.** `run` checks `is_live_generation` before calling the transform. Removed or replaced parents and disposed subscriptions are no longer transformed, apart from a harmless race between the check and `start`, where the future is still aborted before its first poll."
+    },
+    {
+      "id": "S10-F6",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.2",
+        "ASY-1.4",
+        "ASY-1.1"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Test gaps and timing:**\n1. No test checks the ASY-1.2 clause \"worker threads exit promptly after disposal\". The new tests only check that futures are dropped. My probe confirmed exit for cache, list and transform-many workers, including self-disposal inside the subscriber and a never-waking future. A test could hold an `Arc` marker in the transform, drop the stream, dispose, and wait for `strong_count == 1`. Such a test would also have caught S10-F3.\n2. `Some(0)` is tested for cache `transform_async_with_previous` and `transform_many_async_with_options`, but not for list `transform_async_with_options`.\n3. `transform_many_leaves_no_stale_children_behind_a_slow_subscriber` (`async_transform_workers/mod.rs:149,153`) uses fixed 100 ms and 50 ms sleeps. Under load this risks a false pass (the output is empty before the stale adds arrive) rather than a flake. Waiting for a completion counter of the 200 transforms before checking for emptiness would make it deterministic.\n\n**Re-review: resolved.** New tests:\n- `workers_exit_after_disposal` covers the cache, transform-many and list workers with never-completing futures.\n- `a_list_concurrency_of_zero_runs_one_future_at_a_time` covers list `Some(0)`.\n- The slow-subscriber test now waits on a settle counter instead of fixed sleeps.\n\n`async_transform_workers` (11 tests) passed 3 of 3 runs."
+    },
+    {
+      "id": "S10-F7",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Safe variants silently skip a panic when `E` cannot carry it.** `panic_as_error::<E>` (`crates/src/collections/transform_error.rs`) reports the panic through `on_error` only for `E` = `TransformPanic`, `String`, `Box<dyn Error + Send + Sync>`, `Arc<dyn Error + Send + Sync>`, or a `panic_any` payload of type `E`. For any other user error type the item is skipped with no signal at all.\n\nWithin the rule that public APIs stay additive, this is an acceptable reading of ASY-1.3: a general report would need `E: From<TransformPanic>` on existing methods, which would be breaking. It is documented in rustdoc, docs/09 and the CHANGELOG.\n\nSuggestion (non-blocking): add a short sentence in the safe-variant rustdoc pointing users to `TransformPanic` / `Box<dyn Error>` when they need panic reports.\n\n**Re-review: accepted as documented, no change (acceptable under the additive-API constraint).** Closed."
+    },
+    {
+      "id": "S10-F8",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.3"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**Residual slow path in cache async transforms once any key is unprojected.** `output_position_at` (`crates/src/collections/operators/cache_async_safe_job.rs`) is O(1) only while `order.len() == projected.len()`. A single skipped item breaks that equality for as long as the key stays in the source: a panicking future, a safe-variant `Err` (an expected path), or a cancelled `Add` before its superseding change lands. From then on, every indexed change counts hash lookups over the prefix.\n\nProbe `skip`: in release mode, key 0 panics and the rest are pass-through `transform_async`. Bulk adds take **507 ms for 10k and 5.18 s for 30k**, against 13 ms and 41 ms when every key is projected. HEAD cannot be compared directly, because there a panic killed the worker and a safe failure emitted source indexes that broke the index contract.\n\nThe cost of a single change is unchanged at about 0.6 ms at 30k. Only large batches after a failure are affected, so this is minor and non-blocking.\n\nSuggested fix: count unprojected keys before a position, for example with a Fenwick tree over `order` or a sorted index set of unprojected positions, or compute the prefix counts once per batch.\n\n**Re-review (snapshot 03e0a001, revision 103): resolved.** `output_position_at` now returns `projected.len() - 1` in O(1) when the key is the last one in `order`. Callers only pass projected keys, so every other projected key lies before it, which makes this correct. Re-measured with probe `skip` in release mode: key 0 panics, the rest are appended. Bulk add takes **12.9 ms for 10k and 39.8 ms for 30k**, down from 507 ms and 5.18 s, the same as the all-projected case (41 ms at 30k) and faster than HEAD (131 ms). Mid-order positions with unprojected keys still count the prefix in O(n); a single change costs about the same as HEAD's O(n) scan, so I accept this. The bounded fuzz (40 seeds with panics and 40 without) still finds 0 failures. Regression test `cache_async_transforms_load_linearly_after_a_skipped_item` passes."
+    },
+    {
+      "id": "S10-F9",
+      "boundaryId": "s10-async",
+      "criterionIds": [
+        "ASY-1.2"
+      ],
+      "severity": "minor",
+      "status": "resolved",
+      "descriptionMarkdown": "**The S10-F3 regression tests do not exercise the defective interleaving.** The original defect needs the *first* job of a key to finish (calling the old `finish(id, sequence)`, which also removed the second job's handle) while the second job is still pending.\n\nIn `a_later_update_cancels_both_jobs_of_a_key_from_one_batch` both jobs stay pending until the later update. In the cache case of `workers_exit_after_disposal` both futures are `pending()`. In both, `finish` never runs before the abort, so the old code would also have kept both handles and passed. By analysis, neither test would have failed at the previous snapshot.\n\nThe fix itself is verified by probe `dup`, where job 1 completes and job 2 stays pending. Suggested test: in one `edit`, add `(1, 10)` and update to `(1, 11)`; complete job 10 first; then update to `(1, 12)` (or dispose) and assert that job 11's future is dropped. Non-blocking.\n\n**Re-review (snapshot 03e0a001, revision 103): resolved.** `a_later_update_cancels_both_jobs_of_a_key_from_one_batch` now completes job 10 first, which runs `finish`, and then updates the key. To check that the test catches the defect, I ran it against a scratch copy of the tree (outside the repository) with the old sequence-keyed `finish` restored. It **failed 3 of 3 runs** with \"timed out waiting for the second job to be dropped\". On the real tree it passes, so it now catches the original defect. One nit, no action needed: the test treats job 10's drop flag as the signal that `finish` has run, but `finish` runs just after the drop, so in theory a very fast update could slip between the two. In practice the test discriminated 3 of 3 times."
     }
   ],
-  "handoffMarkdown": "ReactiveValueStreamExt gains debounce/debounce_with_scheduler, throttle/throttle_with_scheduler (leading edge via scheduler.now(), no timer), sample/sample_with_scheduler (lazy tick on the subscription's grid, armed only while a value waits); zero duration = pass-through. debounce/sample share timed_value_stream (TimedValue state, OperatorTimer, TimedOutput delivering through an Arc<DeliveryQueue>, close on disposal). OperatorTimer/schedule_timer moved from collections/timer.rs to primitives/timer.rs (pub(crate)) since scalar and collections both use it (layering rule). Group scalar_tests::timed_value_stream_operators (6 tests on ManualScheduler: debounce bursts, throttle windows, sample ticks/grid/no idle timer, disposal cancels timers for debounce and sample, self-disposal inside delivery, zero durations). Docs: ch4 operator table + scheduler paragraph + debounce ManualScheduler example; ch16 tables/wasm list. CHANGELOG Time section.",
+  "handoffMarkdown": "lifecycle/cache.rs: start_async_dispose_worker wraps each block_on(finalizer) in catch_unwind, so later finalizers run and completion.complete() always runs after the channel closes; enqueue_async_disposals wraps the finalizer factory call in catch_unwind (a panicking factory skips its item only, on the source thread and in teardown). Group collections::tests::async_dispose_hardening (factory panic for key 3, future panics for keys 2 and 5, removal batch then teardown; finalized [1,4,6] and completion fires). Docs ch12 async disposal; CHANGELOG Async operators.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",

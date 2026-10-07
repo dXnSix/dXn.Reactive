@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections/operators
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-08T12:00:00+02:00
+  updated: 2026-10-08T18:00:00+02:00
   topics:
     - operators
     - incremental
@@ -32,13 +32,15 @@ agentx:
 - `update_index` style operators should maintain the full ordered cache state and update all live item indexes before forwarding the source batch; updating only changed rows leaves stale indexes after inserts, removes, moves, and comparer resorting.
 - Keyed cache page/virtual operators should diff ordered keyed snapshots with `diff_cache_snapshots` instead of list diffs so keys, indexes, moves, and update payloads survive windowing.
 - Dispose-many style operators must forward the original changeset before invoking finalizers for removed/replaced items, and must also finalize all remaining tracked items when the downstream subscription is disposed.
-- Async-dispose-many cache operators must enqueue future finalizers only after forwarding the original source batch, and must close their per-subscription completion stream only after the worker drains removal/update and teardown finalizers.
+- Async-dispose-many cache operators must enqueue future finalizers only after forwarding the original source batch, and must close their per-subscription completion stream only after the worker drains removal/update and teardown finalizers; a panicking finalizer (factory or future) is caught and skipped.
 - Invoke-evaluate style cache operators must evaluate refresh-aware items before forwarding the unchanged refresh batch, and must ignore add/update/remove/move changes.
 - Worker-backed async collection operators must queue source batches and emit after batch completion; do not block source delivery or emit partial async projections for a single source batch.
+- Async operators run on one worker thread per subscription (`operators/async_jobs.rs`: `spawn_async_worker`, `run_async_jobs`), never a thread per item or parent. Every future goes through `run_async_job`: `catch_unwind` around creating and polling it, and `Abortable` registered in the subscription's `AsyncCancellation` so the source callback can supersede the jobs of keys (or list item ids) that a later batch removes or replaces, and disposal (`close`) aborts everything. `maximum_concurrency: Some(0)` means 1 (`async_concurrency`). Output goes through `OrderedEmitter`.
+- A panicking async transform skips its item; safe variants report it through `on_error` only via `panic_as_error::<E>` (payload, `TransformPanic`, `String`, boxed/`Arc` errors). Cache async transforms emit positions in their own output (counting only projected keys, `apply_cache_async_results`); list async transforms keep skipped items as absent slots and translate indexes when replaying the batch.
 - Cache query streams triggered by per-item observables must replace child subscriptions on cache update and dispose them on remove/clear/unsubscribe so stale item triggers cannot emit snapshots.
 - Value-change lifecycle operators should remain thin wrappers over `merge_many` / `merge_many_items` plus `ValueStream::map` / `start_with`; do not introduce a second per-item subscription state machine for DynamicData `WhenValueChanged`-style APIs unless measured behavior requires it.
 - For list transform-many or other list-flattening operators, keep per-parent ordered child state and emit indexed child range changes instead of resetting the flattened list on parent replace, refresh, move, or range edits.
-- For cache async transform-many operators, assign each parent materialization a generation, dispose the previous child subscription on parent update/remove/clear, ignore stale generations, and track ordered child keys separately from `HashMap` storage so remove/update output remains deterministic.
+- For cache async transform-many operators, assign each parent materialization a generation (with an `AbortOnDrop` handle that cancels its pending transform when the generation ends), dispose the previous child subscription on parent update/remove/clear, ignore stale generations, and track ordered child keys separately from `HashMap` storage so remove/update output remains deterministic.
 - For cache safe async transform-many operators, map failed parent materializations to an empty child stream and let the existing generation/subscription state remove previous children and suppress stale child output.
 - Immutable grouping operators should emit replacement snapshots for touched non-empty groups instead of live child streams; preserve group creation order across source/regrouper turns and remove a group only when it is empty after the complete source batch.
 - Source-mutating operators that subscribe to the same source, such as expiration managers and source size limiters, must not call `SourceList::edit` or `SourceCache::edit` while holding operator-owned state locks because source edits synchronously deliver changes back to the operator subscription.
