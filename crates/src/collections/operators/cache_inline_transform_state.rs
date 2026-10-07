@@ -526,7 +526,7 @@ where
 
 struct CacheInlineTransformState<K, T, U> {
     source_items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     projected: HashMap<K, U>,
     version: u64,
 }

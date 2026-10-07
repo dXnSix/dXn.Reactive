@@ -32,7 +32,6 @@ where
         let comparer = self.comparer.clone();
         if comparer.is_none() {
             apply_cache_changes_to_ordered_state(&mut self.items, &mut self.order, &batch.changes);
-            self.rebuild_source_positions();
             self.version = self.version.max(batch.version);
             return None;
         }
@@ -48,7 +47,6 @@ where
         let comparer = self.comparer.clone();
         if comparer.is_none() {
             apply_cache_changes_to_ordered_state(&mut self.items, &mut self.order, &batch.changes);
-            self.rebuild_source_positions();
             self.version = self.version.max(batch.version);
             return None;
         }
@@ -60,16 +58,15 @@ where
     fn resort(&mut self, source_version: Option<u64>) -> Option<ChangeSet<ListChange<T>>> {
         let comparer = self.comparer.clone()?;
         let mut next = self.ordered_items();
-        self.rebuild_source_positions();
-        next.sort_by(|left, right| {
-            compare_cache_entries(left, right, &comparer, &self.source_positions)
+        next.sort_by(|left, right| compare_cache_entries(left, right, &comparer, &self.order));
+        let changes = self.list_resort_moves(&next).unwrap_or_else(|| {
+            let previous = self.sorted_values();
+            let next_values = next
+                .iter()
+                .map(|(_, item)| item.clone())
+                .collect::<Vec<_>>();
+            diff_list(&previous, &next_values)
         });
-        let previous = self.sorted_values();
-        let next_values = next
-            .iter()
-            .map(|(_, item)| item.clone())
-            .collect::<Vec<_>>();
-        let changes = diff_list(&previous, &next_values);
         if changes.is_empty() {
             return None;
         }
@@ -84,10 +81,7 @@ where
     ) -> Option<ChangeSet<CacheChange<K, T>>> {
         let comparer = self.comparer.clone()?;
         let mut next = self.ordered_items();
-        self.rebuild_source_positions();
-        next.sort_by(|left, right| {
-            compare_cache_entries(left, right, &comparer, &self.source_positions)
-        });
+        next.sort_by(|left, right| compare_cache_entries(left, right, &comparer, &self.order));
         let changes = self.keyed_resort_changes(&next);
         if changes.is_empty() {
             return None;
@@ -133,10 +127,8 @@ where
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         self.insert_order_key(key.clone(), Some(*index));
-                    } else if !self.source_positions.contains_key(key) {
-                        self.order.push(key.clone());
-                        self.source_positions
-                            .insert(key.clone(), self.order.len().saturating_sub(1));
+                    } else if !self.order.contains_key(key) {
+                        let _ = self.order.push(key.clone());
                     }
                     let current_index = self.insert_position(key, current, comparer);
                     self.insert_sorted_entry(current_index, key.clone(), current.clone());
@@ -318,10 +310,8 @@ where
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         self.insert_order_key(key.clone(), Some(*index));
-                    } else if !self.source_positions.contains_key(key) {
-                        self.order.push(key.clone());
-                        self.source_positions
-                            .insert(key.clone(), self.order.len().saturating_sub(1));
+                    } else if !self.order.contains_key(key) {
+                        let _ = self.order.push(key.clone());
                     }
                     let next_index = self.insert_position(key, current, comparer);
                     self.insert_sorted_entry(next_index, key.clone(), current.clone());
@@ -482,21 +472,11 @@ where
             insert_cache_key(&mut self.order, key.clone(), *current_index);
         }
 
-        self.rebuild_source_positions();
         let mut next = self.ordered_items();
         next.sort_by(|left, right| {
             comparer(&left.1, &right.1).then_with(|| {
-                self.source_positions
-                    .get(&left.0)
-                    .copied()
-                    .unwrap_or(usize::MAX)
-                    .cmp(
-                        &self
-                            .source_positions
-                            .get(&right.0)
-                            .copied()
-                            .unwrap_or(usize::MAX),
-                    )
+                self.source_position(&left.0)
+                    .cmp(&self.source_position(&right.0))
             })
         });
         self.sorted = next.clone();
@@ -505,37 +485,30 @@ where
     }
 
     fn insert_order_key(&mut self, key: K, index: Option<usize>) {
-        let existing = self.source_positions.remove(&key);
-        if let Some(existing_index) = existing {
-            let _ = self.order.remove(existing_index);
+        // Without an index an existing key moves to the end (as a fresh insertion would).
+        let index = index.unwrap_or(usize::MAX);
+        match self.order.index_of(&key) {
+            Some(existing) => {
+                let _ = self.order.move_to(existing, index);
+            }
+            None => {
+                let _ = self.order.insert(index, key);
+            }
         }
-        let index = index.unwrap_or(self.order.len()).min(self.order.len());
-        self.order.insert(index, key);
-        // Removing the old entry shifted every key after it, so refresh from the earlier
-        // of the two positions.
-        self.refresh_source_positions_from(existing.map_or(index, |existing| existing.min(index)));
     }
 
     fn move_order_key(&mut self, key: &K, index: usize) {
-        let Some(previous_index) = self.source_positions.get(key).copied() else {
-            return;
-        };
-        let key = self.order.remove(previous_index);
-        let index = index.min(self.order.len());
-        self.order.insert(index, key);
-        self.refresh_source_positions_from(previous_index.min(index));
+        if let Some(previous_index) = self.order.index_of(key) {
+            let _ = self.order.move_to(previous_index, index);
+        }
     }
 
     fn remove_order_key(&mut self, key: &K) -> Option<usize> {
-        let index = self.source_positions.remove(key)?;
-        let _ = self.order.remove(index);
-        self.refresh_source_positions_from(index);
-        Some(index)
+        self.order.remove(key)
     }
 
     fn clear_order(&mut self) {
         self.order.clear();
-        self.source_positions.clear();
     }
 
     fn insert_sorted_entry(&mut self, index: usize, key: K, item: T) {
@@ -546,16 +519,6 @@ where
     fn clear_sorted(&mut self) {
         self.sorted.clear();
         self.sorted_positions.clear();
-    }
-
-    fn rebuild_source_positions(&mut self) {
-        self.source_positions = source_order_positions(&self.order);
-    }
-
-    fn refresh_source_positions_from(&mut self, start: usize) {
-        for (index, key) in self.order.iter().enumerate().skip(start) {
-            self.source_positions.insert(key.clone(), index);
-        }
     }
 
     fn rebuild_sorted_positions(&mut self) {
@@ -625,17 +588,8 @@ where
             })
     }
 
-    /// Debug builds check that the position maps match the vectors they index.
+    /// Debug builds check that the sorted position map matches the sorted output.
     fn debug_assert_positions(&self) {
-        debug_assert!(
-            self.source_positions.len() == self.order.len()
-                && self
-                    .order
-                    .iter()
-                    .enumerate()
-                    .all(|(index, key)| self.source_positions.get(key) == Some(&index)),
-            "keyed sort: source positions out of sync with the source order"
-        );
         debug_assert!(
             self.sorted_positions.len() == self.sorted.len()
                 && self
@@ -656,10 +610,40 @@ where
     }
 
     fn source_position(&self, key: &K) -> usize {
-        self.source_positions
-            .get(key)
-            .copied()
-            .unwrap_or(usize::MAX)
+        self.order.index_of(key).unwrap_or(usize::MAX)
+    }
+
+    /// The moves that reorder the sorted output into `next` (the same entries resorted), by
+    /// key; `None` when `next` holds other keys or values, or past `RESORT_MOVE_BUDGET`.
+    fn list_resort_moves(&self, next: &[(K, T)]) -> Option<Vec<ListChange<T>>> {
+        if next.len() != self.sorted.len()
+            || next.iter().any(|(key, item)| {
+                self.sorted_positions
+                    .get(key)
+                    .is_none_or(|index| self.sorted[*index].1 != *item)
+            })
+        {
+            return None;
+        }
+        let mut working = self
+            .sorted
+            .iter()
+            .map(|(key, _)| key.clone())
+            .collect::<Vec<_>>();
+        let target = next.iter().map(|(key, _)| key.clone()).collect::<Vec<_>>();
+        Some(
+            minimal_moves_within(&mut working, &target, RESORT_MOVE_BUDGET)?
+                .into_iter()
+                .filter_map(|(key, from, to)| {
+                    let item = self.sorted.get(*self.sorted_positions.get(&key)?)?;
+                    Some(ListChange::Move {
+                        from,
+                        to,
+                        item: item.1.clone(),
+                    })
+                })
+                .collect(),
+        )
     }
 
     fn keyed_resort_changes(&self, next: &[(K, T)]) -> Vec<CacheChange<K, T>> {

@@ -53,7 +53,7 @@ where
 
 struct KeyedCachePageState<K, T> {
     all: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     page: HashMap<K, T>,
     page_order: Vec<K>,
     request: Option<PageRequest>,
@@ -66,7 +66,7 @@ impl<K, T> Default for KeyedCachePageState<K, T> {
     fn default() -> Self {
         Self {
             all: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             page: HashMap::new(),
             page_order: Vec::new(),
             request: None,
@@ -141,7 +141,7 @@ where
 
 struct KeyedCacheVirtualState<K, T> {
     all: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     window: HashMap<K, T>,
     window_order: Vec<K>,
     request: Option<VirtualRequest>,
@@ -154,7 +154,7 @@ impl<K, T> Default for KeyedCacheVirtualState<K, T> {
     fn default() -> Self {
         Self {
             all: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             window: HashMap::new(),
             window_order: Vec::new(),
             request: None,

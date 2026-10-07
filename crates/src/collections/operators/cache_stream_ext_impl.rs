@@ -1076,7 +1076,7 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let update_index = Arc::new(update_index);
         ChangeStream::new(move |subscriber| {
-            let state = Arc::new(Mutex::new((HashMap::<K, T>::new(), Vec::<K>::new())));
+            let state = Arc::new(Mutex::new((HashMap::<K, T>::new(), KeyOrder::<K>::new())));
             let update_index = Arc::clone(&update_index);
             source.subscribe(move |batch| {
                 let indexed_items = {
@@ -1197,7 +1197,7 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let group_key = Arc::new(group_key);
         ChangeStream::new(move |subscriber| {
             // Members keep source order: the items are mirrored with their order.
-            let items = Arc::new(Mutex::new((HashMap::<K, T>::new(), Vec::<K>::new())));
+            let items = Arc::new(Mutex::new((HashMap::<K, T>::new(), KeyOrder::<K>::new())));
             let grouped = Arc::new(Mutex::new(Vec::<RayGroup<G, T>>::new()));
             let group_key = Arc::clone(&group_key);
             source.subscribe(move |batch| {
@@ -2470,7 +2470,7 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         ChangeStream::new(move |subscriber| {
             let items = Arc::new(Mutex::new(HashMap::<K, T>::new()));
-            let order = Arc::new(Mutex::new(Vec::<K>::new()));
+            let order = Arc::new(Mutex::new(KeyOrder::<K>::new()));
             source.subscribe(move |batch| {
                 let Ok(mut items) = items.lock() else {
                     return;

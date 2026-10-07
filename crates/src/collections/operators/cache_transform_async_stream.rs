@@ -229,7 +229,7 @@ struct CacheAsyncTransformResult<K, T, U> {
 
 struct CacheAsyncTransformState<K, T, U> {
     source_items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     projected: HashMap<K, U>,
     version: u64,
 }
@@ -238,7 +238,7 @@ impl<K, T, U> Default for CacheAsyncTransformState<K, T, U> {
     fn default() -> Self {
         Self {
             source_items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             projected: HashMap::new(),
             version: 0,
         }

@@ -410,9 +410,9 @@ struct LiveCacheGroupEntry<T, G> {
 
 struct LiveCacheGroupState<K, T, G> {
     entries: HashMap<K, LiveCacheGroupEntry<T, G>>,
-    source_order: Vec<K>,
+    source_order: KeyOrder<K>,
     groups: HashMap<G, RayCacheGroup<G, K, T>>,
-    group_order: Vec<G>,
+    group_order: KeyOrder<G>,
     empty_groups: HashSet<G>,
     version: u64,
 }
@@ -421,9 +421,9 @@ impl<K, T, G> Default for LiveCacheGroupState<K, T, G> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            source_order: Vec::new(),
+            source_order: KeyOrder::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             empty_groups: HashSet::new(),
             version: 0,
         }

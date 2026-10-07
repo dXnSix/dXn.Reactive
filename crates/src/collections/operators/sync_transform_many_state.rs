@@ -4,7 +4,7 @@
 /// order in which the batch first touches each child key (the parent changes in batch order,
 /// each parent's children in its transform order).
 struct SyncTransformManyState<K, ChildKey, Child> {
-    parent_order: Vec<K>,
+    parent_order: KeyOrder<K>,
     children: HashMap<K, Vec<(ChildKey, Child)>>,
     /// The parents producing each child key.
     holders: HashMap<ChildKey, Vec<K>>,
@@ -14,7 +14,7 @@ struct SyncTransformManyState<K, ChildKey, Child> {
 impl<K, ChildKey, Child> Default for SyncTransformManyState<K, ChildKey, Child> {
     fn default() -> Self {
         Self {
-            parent_order: Vec::new(),
+            parent_order: KeyOrder::new(),
             children: HashMap::new(),
             holders: HashMap::new(),
             result: HashMap::new(),

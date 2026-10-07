@@ -1,5 +1,6 @@
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
+use crate::collections::key_order::KeyOrder;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -1358,9 +1359,9 @@ struct MergeManyCacheCacheChild<ChildKey, Child> {
 
 struct MergeManyCacheCacheChangeSetsState<K, ChildKey, Child> {
     children: HashMap<K, MergeManyCacheCacheChild<ChildKey, Child>>,
-    parent_order: Vec<K>,
+    parent_order: KeyOrder<K>,
     result: HashMap<ChildKey, Child>,
-    result_order: Vec<ChildKey>,
+    result_order: KeyOrder<ChildKey>,
     comparer: Option<Comparer<Child>>,
     version: u64,
     /// The batch being started: deferred results and the child keys to recompute.
@@ -1374,9 +1375,9 @@ impl<K, ChildKey, Child> MergeManyCacheCacheChangeSetsState<K, ChildKey, Child> 
     fn new(comparer: Option<Comparer<Child>>) -> Self {
         Self {
             children: HashMap::new(),
-            parent_order: Vec::new(),
+            parent_order: KeyOrder::new(),
             result: HashMap::new(),
-            result_order: Vec::new(),
+            result_order: KeyOrder::new(),
             comparer,
             phase: StartPhase::default(),
             deferred: Vec::new(),
@@ -1628,7 +1629,7 @@ where
             match (previous, next) {
                 (None, Some(current)) => {
                     if !self.result.contains_key(&key) {
-                        self.result_order.push(key.clone());
+                        let _ = self.result_order.push(key.clone());
                     }
                     self.result.insert(key.clone(), current.clone());
                     changes.push(CacheChange::Add {
@@ -1663,9 +1664,7 @@ where
                 }
                 (Some(previous), None) => {
                     let _ = self.result.remove(&key);
-                    if let Some(index) = previous_index {
-                        let _ = self.result_order.remove(index);
-                    }
+                    let _ = self.result_order.remove(&key);
                     changes.push(CacheChange::Remove {
                         key,
                         previous,
@@ -1728,9 +1727,7 @@ where
     }
 
     fn result_index(&self, key: &ChildKey) -> Option<usize> {
-        self.result_order
-            .iter()
-            .position(|existing| existing == key)
+        self.result_order.index_of(key)
     }
 
     fn ordered_result_items(&self) -> Vec<(ChildKey, Child)> {
@@ -1792,7 +1789,7 @@ struct MergeManyCacheListChild<U> {
 
 struct MergeManyCacheListChangeSetsState<K, U> {
     children: HashMap<K, MergeManyCacheListChild<U>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     merged: Vec<U>,
     version: u64,
     /// The batch being started, and the restarted parents' previous items (still merged).
@@ -1804,7 +1801,7 @@ impl<K, U> Default for MergeManyCacheListChangeSetsState<K, U> {
     fn default() -> Self {
         Self {
             children: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             merged: Vec::new(),
             phase: StartPhase::default(),
             retiring: Vec::new(),
@@ -2180,7 +2177,7 @@ struct TransformOnObservableCacheEntry<U> {
 
 struct TransformOnObservableCacheState<K, U> {
     entries: HashMap<K, TransformOnObservableCacheEntry<U>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     version: u64,
     next_token: u64,
 }
@@ -2189,7 +2186,7 @@ impl<K, U> Default for TransformOnObservableCacheState<K, U> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             version: 0,
             next_token: 0,
         }
@@ -2519,9 +2516,9 @@ struct GroupOnObservableCacheEntry<T, G> {
 
 struct GroupOnObservableCacheState<K, T, G> {
     entries: HashMap<K, GroupOnObservableCacheEntry<T, G>>,
-    source_order: Vec<K>,
+    source_order: KeyOrder<K>,
     groups: HashMap<G, RayCacheGroup<G, K, T>>,
-    group_order: Vec<G>,
+    group_order: KeyOrder<G>,
     empty_groups: HashSet<G>,
     version: u64,
     next_token: u64,
@@ -2531,9 +2528,9 @@ impl<K, T, G> Default for GroupOnObservableCacheState<K, T, G> {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
-            source_order: Vec::new(),
+            source_order: KeyOrder::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             empty_groups: HashSet::new(),
             version: 0,
             next_token: 0,
@@ -2742,7 +2739,7 @@ where
                 continue;
             }
 
-            let previous_index = self.group_order.iter().position(|key| key == &group_key);
+            let previous_index = self.group_order.index_of(&group_key);
             let _ = self.groups.remove(&group_key);
             remove_cache_order_key(&mut self.group_order, &group_key);
             let _ = self.empty_groups.remove(&group_key);
@@ -3092,7 +3089,7 @@ impl<T: Clone> FilterOnObservableCacheEntry<T> {
 
 struct FilterOnObservableCacheState<K, T> {
     items: HashMap<K, FilterOnObservableCacheEntry<T>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     version: u64,
     phase: StartPhase<CacheChange<K, T>>,
 }
@@ -3101,7 +3098,7 @@ impl<K, T> Default for FilterOnObservableCacheState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             version: 0,
             phase: StartPhase::default(),
         }
@@ -3148,14 +3145,13 @@ where
                     ..
                 } => {
                     let previous_index = self.visible_index_of(key);
-                    let previous_position = self.order.iter().position(|existing| existing == key);
+                    let previous_position = self.order.index_of(key);
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
                     } else if !self.items.contains_key(key) {
-                        self.order.push(key.clone());
+                        let _ = self.order.push(key.clone());
                     }
-                    let moved =
-                        previous_position != self.order.iter().position(|existing| existing == key);
+                    let moved = previous_position != self.order.index_of(key);
                     let mut entry = FilterOnObservableCacheEntry::new(current.clone());
                     if let Some(previous) = self.items.remove(key) {
                         if moved {
@@ -3477,7 +3473,7 @@ struct AutoRefreshCacheEntry<T> {
 
 struct AutoRefreshCacheState<K, T> {
     items: HashMap<K, AutoRefreshCacheEntry<T>>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     pending_refresh_keys: Vec<K>,
     pending_refresh_seen: HashSet<K>,
     timer: OperatorTimer,
@@ -3488,7 +3484,7 @@ impl<K, T> Default for AutoRefreshCacheState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             pending_refresh_keys: Vec::new(),
             pending_refresh_seen: HashSet::new(),
             timer: OperatorTimer::default(),
@@ -3543,7 +3539,7 @@ where
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
                     } else if !self.items.contains_key(key) {
-                        self.order.push(key.clone());
+                        let _ = self.order.push(key.clone());
                     }
                     if let Some(previous) = self.items.insert(
                         key.clone(),
@@ -3610,7 +3606,7 @@ where
 
     fn refresh_for(&mut self, key: &K) -> Option<ChangeSet<CacheChange<K, T>>> {
         let current = self.items.get(key)?.item.clone();
-        let current_index = self.order.iter().position(|existing| existing == key);
+        let current_index = self.order.index_of(key);
         self.version = self.version.saturating_add(1);
         Some(ChangeSet::new(
             vec![CacheChange::Refresh {
@@ -3644,7 +3640,7 @@ where
             let Some(entry) = self.items.get(&key) else {
                 continue;
             };
-            let current_index = self.order.iter().position(|existing| existing == &key);
+            let current_index = self.order.index_of(&key);
             changes.push(CacheChange::Refresh {
                 key,
                 current: entry.item.clone(),
@@ -3820,24 +3816,23 @@ where
     }
 }
 
-fn insert_cache_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
-    }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
+fn insert_cache_order_key<K: Clone + Eq + Hash>(
+    order: &mut KeyOrder<K>,
+    key: K,
+    index: Option<usize>,
+) {
+    // Without an index an existing key moves to the end (as a fresh insertion would).
+    let _ = order.insert(index.unwrap_or(usize::MAX), key);
 }
 
-fn move_cache_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
+fn move_cache_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K, index: usize) {
+    if let Some(previous_index) = order.index_of(key) {
+        let _ = order.move_to(previous_index, index);
     }
 }
 
-fn remove_cache_order_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
+fn remove_cache_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K) {
+    let _ = order.remove(key);
 }
 
 #[derive(Default)]
@@ -3937,14 +3932,14 @@ fn enqueue_async_disposals<K, T, Fut>(
 
 struct TrackedCache<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
 
 impl<K, T> Default for TrackedCache<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
         }
     }
 }
@@ -3990,7 +3985,7 @@ where
                     }
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
-                    } else if !self.order.iter().any(|existing| existing == key) {
+                    } else if !self.order.contains_key(key) {
                         self.order.push(key.clone());
                     }
                 }
@@ -4002,7 +3997,7 @@ where
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         move_cache_order_key(&mut self.order, key, *index);
-                    } else if !self.order.iter().any(|existing| existing == key) {
+                    } else if !self.order.contains_key(key) {
                         self.order.push(key.clone());
                     }
                 }
@@ -4113,9 +4108,7 @@ where
     }
 
     fn remove_order_key(&mut self, key: &K) {
-        if let Some(index) = self.order.iter().position(|existing| existing == key) {
-            let _ = self.order.remove(index);
-        }
+        let _ = self.order.remove(key);
     }
 }
 

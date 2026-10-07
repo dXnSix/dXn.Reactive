@@ -337,15 +337,60 @@ where
 /// replays against the previous order: removals, moves of existing keys into the upstream
 /// order (as few as possible; an updated key moves with its new value as one `Update`),
 /// additions at their final positions, then in-place updates and refreshes.
+/// The common load: a batch of new keys appended at the end (no key twice) is applied and
+/// forwarded as is, without replaying against the previous order. `None` for any other batch
+/// (nothing applied).
+fn append_new_cache_keys<K, T>(
+    state: &mut HashMap<K, T>,
+    order: &mut KeyOrder<K>,
+    changes: &[CacheChange<K, T>],
+) -> Option<Vec<CacheChange<K, T>>>
+where
+    K: Clone + Eq + Hash,
+    T: Clone,
+{
+    let mut seen = HashSet::with_capacity(changes.len());
+    for (end, change) in (order.len()..).zip(changes) {
+        let CacheChange::Add {
+            key, current_index, ..
+        } = change
+        else {
+            return None;
+        };
+        if state.contains_key(key)
+            || !seen.insert(key)
+            || current_index.is_some_and(|index| index < end)
+        {
+            return None;
+        }
+    }
+    let mut added = Vec::with_capacity(changes.len());
+    for change in changes {
+        if let CacheChange::Add { key, current, .. } = change {
+            state.insert(key.clone(), current.clone());
+            let index = order.push(key.clone());
+            added.push(CacheChange::Add {
+                key: key.clone(),
+                current: current.clone(),
+                current_index: Some(index),
+            });
+        }
+    }
+    Some(added)
+}
+
 fn ensure_unique_cache_changes<K, T>(
     state: &mut HashMap<K, T>,
-    order: &mut Vec<K>,
+    order: &mut KeyOrder<K>,
     changes: &[CacheChange<K, T>],
 ) -> Vec<CacheChange<K, T>>
 where
     K: Clone + Eq + Hash,
     T: Clone + PartialEq,
 {
+    if let Some(added) = append_new_cache_keys(state, order, changes) {
+        return added;
+    }
     let mut touched = Vec::<K>::new();
     let mut previous = HashMap::<K, Option<T>>::new();
     let mut refreshed = HashSet::<K>::new();
@@ -356,10 +401,10 @@ where
         }
     };
     let mut replayed = HashMap::<K, T>::new();
-    let mut replayed_order = Vec::<K>::new();
+    let mut replayed_order = KeyOrder::<K>::new();
     std::mem::swap(&mut replayed, state);
     std::mem::swap(&mut replayed_order, order);
-    let previous_order = replayed_order.clone();
+    let previous_order = replayed_order.to_vec();
     for change in changes {
         match change {
             CacheChange::Add { key, .. }
@@ -371,8 +416,8 @@ where
                 refreshed.insert(key.clone());
             }
             CacheChange::Clear { previous: cleared } if cleared.is_empty() => {
-                for key in replayed_order.clone() {
-                    touch(&key, &replayed, &mut touched);
+                for key in replayed_order.iter() {
+                    touch(key, &replayed, &mut touched);
                 }
             }
             CacheChange::Clear { previous: cleared } => {

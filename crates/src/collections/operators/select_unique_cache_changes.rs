@@ -1,14 +1,14 @@
 /// Places `key` at `index`; without an index an existing key keeps its position (the index
 /// contract's "update in place") and a new key is appended.
-fn insert_cache_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    let existing = order.iter().position(|existing| existing == &key);
-    match (existing, index) {
+fn insert_cache_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: K, index: Option<usize>) {
+    match (order.index_of(&key), index) {
         (Some(_), None) => {}
         (Some(existing_index), Some(index)) => {
-            let _ = order.remove(existing_index);
-            order.insert(index.min(order.len()), key);
+            let _ = order.move_to(existing_index, index);
         }
-        (None, index) => order.insert(index.unwrap_or(order.len()).min(order.len()), key),
+        (None, index) => {
+            let _ = order.insert(index.unwrap_or(usize::MAX), key);
+        }
     }
 }
 
@@ -21,17 +21,14 @@ where
     }
 }
 
-fn move_cache_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
+fn move_cache_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K, index: usize) {
+    if let Some(previous_index) = order.index_of(key) {
+        let _ = order.move_to(previous_index, index);
     }
 }
 
-fn remove_cache_key<K: Eq>(order: &mut Vec<K>, key: &K) -> Option<usize> {
-    let index = order.iter().position(|existing| existing == key)?;
-    let _ = order.remove(index);
-    Some(index)
+fn remove_cache_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K) -> Option<usize> {
+    order.remove(key)
 }
 
 pub(crate) fn diff_list<T: Clone + PartialEq>(old: &[T], new: &[T]) -> Vec<ListChange<T>> {
@@ -259,7 +256,7 @@ struct LiveListGroupEntry<T, G> {
 struct LiveListGroupState<T, G> {
     entries: Vec<LiveListGroupEntry<T, G>>,
     groups: HashMap<G, RayListGroup<G, T>>,
-    group_order: Vec<G>,
+    group_order: KeyOrder<G>,
     empty_groups: HashSet<G>,
     version: u64,
 }
@@ -269,7 +266,7 @@ impl<T, G> Default for LiveListGroupState<T, G> {
         Self {
             entries: Vec::new(),
             groups: HashMap::new(),
-            group_order: Vec::new(),
+            group_order: KeyOrder::new(),
             empty_groups: HashSet::new(),
             version: 0,
         }

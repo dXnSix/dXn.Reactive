@@ -4,7 +4,7 @@ where
     T: Clone,
 {
     fn insert(&mut self, index: usize, key: &K, item: &T, changes: &mut Vec<ListChange<T>>) {
-        self.order.insert(index, key.clone());
+        let _ = self.order.insert(index, key.clone());
         self.items.insert(key.clone(), item.clone());
         changes.push(ListChange::Add {
             index,
@@ -27,8 +27,7 @@ where
         if to == existing {
             return existing;
         }
-        let moved = self.order.remove(existing);
-        self.order.insert(to, moved);
+        let _ = self.order.move_to(existing, to);
         if let Some(item) = self.items.get(key) {
             changes.push(ListChange::Move {
                 from: existing,
@@ -63,8 +62,7 @@ where
                 current_index,
                 ..
             } => {
-                if let Some(existing) = self.index_for(key) {
-                    let _ = self.order.remove(existing);
+                if let Some(existing) = self.order.remove(key) {
                     if let Some(old) = self.items.remove(key) {
                         changes.push(ListChange::Remove {
                             index: existing,
@@ -81,14 +79,13 @@ where
                 }
             }
             CacheChange::Remove { key, .. } => {
-                if let Some(existing) = self.index_for(key) {
-                    let _ = self.order.remove(existing);
-                    if let Some(old) = self.items.remove(key) {
-                        changes.push(ListChange::Remove {
-                            index: existing,
-                            old,
-                        });
-                    }
+                if let Some(existing) = self.order.remove(key)
+                    && let Some(old) = self.items.remove(key)
+                {
+                    changes.push(ListChange::Remove {
+                        index: existing,
+                        old,
+                    });
                 }
             }
             CacheChange::Refresh {
@@ -161,7 +158,7 @@ where
     }
 
     fn index_for(&self, key: &K) -> Option<usize> {
-        self.order.iter().position(|existing| existing == key)
+        self.order.index_of(key)
     }
 }
 

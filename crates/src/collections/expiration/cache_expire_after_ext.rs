@@ -7,6 +7,7 @@ use crate::collections::cache::SourceCache;
 use crate::collections::change::{CacheChange, ChangeSet, ListChange};
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
+use crate::collections::key_order::KeyOrder;
 use crate::collections::list::SourceList;
 use crate::collections::stream::ChangeStream;
 use crate::collections::stream::ValueStream;

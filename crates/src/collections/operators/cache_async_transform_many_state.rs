@@ -242,7 +242,7 @@ where
             CacheAsyncTransformManyChild {
                 generation,
                 items: HashMap::new(),
-                order: Vec::new(),
+                order: KeyOrder::new(),
                 subscription: None,
                 _transform: AbortOnDrop(handle),
             },

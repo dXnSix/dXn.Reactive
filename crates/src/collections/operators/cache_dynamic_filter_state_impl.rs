@@ -23,24 +23,6 @@ where
         self.emit(changes, Some(batch.version))
     }
 
-    fn filtered_snapshot(
-        &self,
-        state: &S,
-        predicate: &dyn Fn(&S, &T) -> bool,
-    ) -> (HashMap<K, T>, Vec<K>) {
-        let mut next = HashMap::new();
-        let mut next_order = Vec::new();
-        for key in &self.order {
-            if let Some(item) = self.items.get(key)
-                && predicate(state, item)
-            {
-                next.insert(key.clone(), item.clone());
-                next_order.push(key.clone());
-            }
-        }
-        (next, next_order)
-    }
-
     fn apply_source_change(
         &mut self,
         change: &CacheChange<K, T>,
@@ -59,14 +41,13 @@ where
                 let appended =
                     is_new && current_index.is_none_or(|index| index >= self.order.len());
                 if appended {
-                    self.order.push(key.clone());
+                    let _ = self.order.push(key.clone());
                 } else {
                     insert_cache_key(&mut self.order, key.clone(), *current_index);
                 }
                 if predicate(state, current) {
                     let current_index = if appended && !self.filtered.contains_key(key) {
-                        self.filtered_order.push(key.clone());
-                        Some(self.filtered_order.len() - 1)
+                        Some(self.filtered_order.push(key.clone()))
                     } else {
                         let index = self.visible_index_for_key(key);
                         insert_cache_key(&mut self.filtered_order, key.clone(), index);
@@ -92,8 +73,8 @@ where
                 self.items.insert(key.clone(), current.clone());
                 if let Some(index) = current_index {
                     insert_cache_key(&mut self.order, key.clone(), Some(*index));
-                } else if !self.order.iter().any(|existing| existing == key) {
-                    self.order.push(key.clone());
+                } else if !self.order.contains_key(key) {
+                    let _ = self.order.push(key.clone());
                 }
 
                 let is_included = predicate(state, current);
@@ -303,13 +284,15 @@ where
     }
 
     fn filtered_index(&self, key: &K) -> Option<usize> {
-        self.filtered_order
-            .iter()
-            .position(|existing| existing == key)
+        self.filtered_order.index_of(key)
     }
 
     fn visible_index_for_key(&self, key: &K) -> Option<usize> {
-        let source_index = self.order.iter().position(|existing| existing == key)?;
+        let source_index = self.order.index_of(key)?;
+        // Every key is visible (the common case): the source position is the output one.
+        if self.filtered.len() == self.order.len() {
+            return Some(source_index);
+        }
         Some(
             self.order
                 .iter()
@@ -358,16 +341,65 @@ where
         self.refilter(predicate)
     }
 
+    /// Re-evaluates every item and emits only the inclusion flips, in source order: items
+    /// that stay included keep their place, so shifting a window by one item is one `Remove`
+    /// and one `Add`.
     fn refilter(
         &mut self,
         predicate: &dyn Fn(&S, &T) -> bool,
     ) -> Option<ChangeSet<CacheChange<K, T>>> {
         let state = self.state.as_ref()?;
-        let (next, next_order) = self.filtered_snapshot(state, predicate);
-        let changes =
-            diff_cache_snapshots(&self.filtered, &self.filtered_order, &next, &next_order);
-        self.filtered = next;
-        self.filtered_order = next_order;
+        let mut changes = Vec::new();
+        let mut index = 0;
+        for key in self.order.iter() {
+            let Some(item) = self.items.get(key) else {
+                continue;
+            };
+            let included = predicate(state, item);
+            match (self.filtered.get(key), included) {
+                (Some(shown), true) => {
+                    if shown != item {
+                        changes.push(CacheChange::Update {
+                            key: key.clone(),
+                            current: item.clone(),
+                            previous: shown.clone(),
+                            current_index: Some(index),
+                            previous_index: Some(index),
+                        });
+                        self.filtered.insert(key.clone(), item.clone());
+                    }
+                    index += 1;
+                }
+                (Some(_), false) => {
+                    if let Some(previous) = self.filtered.remove(key) {
+                        changes.push(CacheChange::Remove {
+                            key: key.clone(),
+                            previous,
+                            previous_index: Some(index),
+                        });
+                    }
+                }
+                (None, true) => {
+                    self.filtered.insert(key.clone(), item.clone());
+                    changes.push(CacheChange::Add {
+                        key: key.clone(),
+                        current: item.clone(),
+                        current_index: Some(index),
+                    });
+                    index += 1;
+                }
+                (None, false) => {}
+            }
+        }
+        if !changes.is_empty() {
+            let filtered = &self.filtered;
+            self.filtered_order.reset(
+                self.order
+                    .iter()
+                    .filter(|key| filtered.contains_key(*key))
+                    .cloned(),
+            );
+        }
         if changes.is_empty() {
             None
         } else {

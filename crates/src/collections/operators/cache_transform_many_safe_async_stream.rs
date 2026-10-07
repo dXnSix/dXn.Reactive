@@ -244,7 +244,7 @@ struct CacheAsyncTransformManyStart<K, T> {
 struct CacheAsyncTransformManyChild<ChildKey, Child> {
     generation: u64,
     items: HashMap<ChildKey, Child>,
-    order: Vec<ChildKey>,
+    order: KeyOrder<ChildKey>,
     subscription: Option<Subscription>,
     /// Aborts the running transform when this generation is replaced or removed.
     _transform: AbortOnDrop,
@@ -252,7 +252,7 @@ struct CacheAsyncTransformManyChild<ChildKey, Child> {
 
 struct CacheAsyncTransformManyState<K, ChildKey, Child> {
     children: HashMap<K, CacheAsyncTransformManyChild<ChildKey, Child>>,
-    parent_order: Vec<K>,
+    parent_order: KeyOrder<K>,
     result: HashMap<ChildKey, Child>,
     result_order: Vec<ChildKey>,
     comparer: Option<Comparer<Child>>,
@@ -269,7 +269,7 @@ impl<K, ChildKey, Child> CacheAsyncTransformManyState<K, ChildKey, Child> {
     fn new(comparer: Option<Comparer<Child>>) -> Self {
         Self {
             children: HashMap::new(),
-            parent_order: Vec::new(),
+            parent_order: KeyOrder::new(),
             result: HashMap::new(),
             result_order: Vec::new(),
             comparer,

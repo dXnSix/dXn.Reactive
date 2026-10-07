@@ -239,28 +239,27 @@ where
     true
 }
 
-fn insert_group_order_key<K: Eq>(order: &mut Vec<K>, key: K, index: Option<usize>) {
-    if let Some(existing_index) = order.iter().position(|existing| existing == &key) {
-        let _ = order.remove(existing_index);
-    }
-    order.insert(index.unwrap_or(order.len()).min(order.len()), key);
+fn insert_group_order_key<K: Clone + Eq + Hash>(
+    order: &mut KeyOrder<K>,
+    key: K,
+    index: Option<usize>,
+) {
+    // Without an index an existing key moves to the end (as a fresh insertion would).
+    let _ = order.insert(index.unwrap_or(usize::MAX), key);
 }
 
 fn group_position<K: Eq>(order: &[K], key: &K) -> Option<usize> {
     order.iter().position(|existing| existing == key)
 }
 
-fn move_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K, index: usize) {
-    if let Some(previous_index) = order.iter().position(|existing| existing == key) {
-        let key = order.remove(previous_index);
-        order.insert(index.min(order.len()), key);
+fn move_group_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K, index: usize) {
+    if let Some(previous_index) = order.index_of(key) {
+        let _ = order.move_to(previous_index, index);
     }
 }
 
-fn remove_group_order_key<K: Eq>(order: &mut Vec<K>, key: &K) {
-    if let Some(index) = order.iter().position(|existing| existing == key) {
-        let _ = order.remove(index);
-    }
+fn remove_group_order_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K) {
+    let _ = order.remove(key);
 }
 
 fn total_pages(total_count: usize, page_size: usize) -> usize {

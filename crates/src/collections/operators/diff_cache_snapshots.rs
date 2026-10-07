@@ -75,32 +75,18 @@ where
     changes
 }
 
-fn source_order_positions<K>(order: &[K]) -> HashMap<K, usize>
-where
-    K: Clone + Eq + Hash,
-{
-    order
-        .iter()
-        .enumerate()
-        .map(|(index, key)| (key.clone(), index))
-        .collect()
-}
-
 fn compare_cache_entries<K, T>(
     left: &(K, T),
     right: &(K, T),
     comparer: &Comparer<T>,
-    source_positions: &HashMap<K, usize>,
+    source_order: &KeyOrder<K>,
 ) -> Ordering
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
 {
     comparer(&left.1, &right.1).then_with(|| {
-        let left_index = source_positions.get(&left.0).copied().unwrap_or(usize::MAX);
-        let right_index = source_positions
-            .get(&right.0)
-            .copied()
-            .unwrap_or(usize::MAX);
+        let left_index = source_order.index_of(&left.0).unwrap_or(usize::MAX);
+        let right_index = source_order.index_of(&right.0).unwrap_or(usize::MAX);
         left_index.cmp(&right_index)
     })
 }
@@ -177,7 +163,7 @@ where
 
 fn apply_cache_changes_to_ordered_state<K, T>(
     items: &mut HashMap<K, T>,
-    order: &mut Vec<K>,
+    order: &mut KeyOrder<K>,
     changes: &[CacheChange<K, T>],
 ) where
     K: Clone + Eq + Hash,
@@ -193,7 +179,7 @@ fn apply_cache_changes_to_ordered_state<K, T>(
                 let is_new = items.insert(key.clone(), current.clone()).is_none();
                 // A new key at the end (the common load) is appended without scanning.
                 if is_new && current_index.is_none_or(|index| index >= order.len()) {
-                    order.push(key.clone());
+                    let _ = order.push(key.clone());
                 } else {
                     insert_cache_key(order, key.clone(), *current_index);
                 }
@@ -211,13 +197,9 @@ fn apply_cache_changes_to_ordered_state<K, T>(
             } => {
                 items.insert(key.clone(), current.clone());
                 if let Some(index) = current_index {
-                    if order.iter().any(|existing| existing == key) {
-                        move_cache_key(order, key, *index);
-                    } else {
-                        insert_cache_key(order, key.clone(), Some(*index));
-                    }
-                } else if !order.iter().any(|existing| existing == key) {
-                    order.push(key.clone());
+                    insert_cache_key(order, key.clone(), Some(*index));
+                } else if !order.contains_key(key) {
+                    let _ = order.push(key.clone());
                 }
             }
             CacheChange::Move {
@@ -231,20 +213,20 @@ fn apply_cache_changes_to_ordered_state<K, T>(
             }
             CacheChange::Remove { key, .. } => {
                 let _ = items.remove(key);
-                if let Some(index) = order.iter().position(|existing| existing == key) {
-                    let _ = order.remove(index);
-                }
+                let _ = order.remove(key);
             }
             CacheChange::Clear { previous } => {
-                if previous.is_empty() {
+                // Clearing every key (the usual `Clear`) empties the state at once.
+                let everything = previous.is_empty()
+                    || (previous.len() == items.len()
+                        && previous.iter().all(|(key, _)| items.contains_key(key)));
+                if everything {
                     items.clear();
                     order.clear();
                 } else {
                     for (key, _) in previous {
                         let _ = items.remove(key);
-                        if let Some(index) = order.iter().position(|existing| existing == key) {
-                            let _ = order.remove(index);
-                        }
+                        let _ = order.remove(key);
                     }
                 }
             }
@@ -347,14 +329,14 @@ where
 
 struct CacheRemoveKeyState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
 
 impl<K, T> Default for CacheRemoveKeyState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
         }
     }
 }
@@ -408,9 +390,22 @@ pub(crate) fn minimal_moves<K>(working: &mut Vec<K>, target: &[K]) -> Vec<(K, us
 where
     K: Clone + Eq + Hash,
 {
+    minimal_moves_within(working, target, usize::MAX).unwrap_or_default()
+}
+
+/// [`minimal_moves`], or `None` (leaving `working` alone) when the moves would shift more than
+/// `budget` positions in all (moves times length): a reorder of most of a large collection.
+pub(crate) fn minimal_moves_within<K>(
+    working: &mut Vec<K>,
+    target: &[K],
+    budget: usize,
+) -> Option<Vec<(K, usize, usize)>>
+where
+    K: Clone + Eq + Hash,
+{
     // Most batches leave the order alone: one comparison, no bookkeeping.
     if working.as_slice() == target {
-        return Vec::new();
+        return Some(Vec::new());
     }
     let ranks = target
         .iter()
@@ -442,32 +437,40 @@ where
         cursor = previous[cursor];
     }
 
-    let present = working.iter().cloned().collect::<HashSet<_>>();
+    let mut positions = working.iter().cloned().collect::<KeyOrder<K>>();
     let ordered = target
         .iter()
-        .filter(|key| present.contains(*key))
+        .filter(|key| positions.contains_key(key))
         .collect::<Vec<_>>();
+    let moving = ordered.len().saturating_sub(kept.len());
+    if moving.saturating_mul(working.len()) > budget {
+        return None;
+    }
     let mut moves = Vec::new();
     for (index, key) in ordered.iter().enumerate() {
         if kept.contains(*key) {
             continue;
         }
-        let Some(from) = working.iter().position(|existing| existing == *key) else {
+        let Some(from) = positions.index_of(key) else {
             continue;
         };
-        let moved = working.remove(from);
-        // Right after its predecessor in target order, which is already in place.
+        // Right after its predecessor in target order (already in place), counted without
+        // the moving key.
         let to = match index.checked_sub(1) {
-            Some(before) => working
-                .iter()
-                .position(|existing| existing == ordered[before])
-                .map_or(0, |position| position + 1),
+            Some(before) => positions.index_of(ordered[before]).map_or(0, |position| {
+                if position > from {
+                    position
+                } else {
+                    position + 1
+                }
+            }),
             None => 0,
         };
-        working.insert(to, moved);
+        let _ = positions.move_to(from, to);
         if from != to {
             moves.push(((*key).clone(), from, to));
         }
     }
-    moves
+    *working = positions.into_iter().collect();
+    Some(moves)
 }

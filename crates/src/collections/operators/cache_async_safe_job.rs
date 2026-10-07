@@ -242,7 +242,7 @@ struct CacheAsyncSafeTransformResult<K, T, U, E> {
 
 struct CacheAsyncSafeTransformState<K, T, U> {
     source_items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
     projected: HashMap<K, U>,
     version: u64,
 }
@@ -251,7 +251,7 @@ impl<K, T, U> Default for CacheAsyncSafeTransformState<K, T, U> {
     fn default() -> Self {
         Self {
             source_items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
             projected: HashMap::new(),
             version: 0,
         }
@@ -267,7 +267,7 @@ impl<K, T, U> Default for CacheAsyncSafeTransformState<K, T, U> {
 /// the key moved).
 fn apply_cache_async_results<K, T, U, E>(
     source_items: &mut HashMap<K, T>,
-    order: &mut Vec<K>,
+    order: &mut KeyOrder<K>,
     projected: &mut HashMap<K, U>,
     results: Vec<(CacheChange<K, T>, CacheAsyncSafeTransformOutcome<U, E>)>,
     on_error: &dyn Fn(TransformError<K, T, E>),
@@ -480,11 +480,13 @@ where
     changes
 }
 
-/// Inserts a key known to be absent from `order` (no scan); returns its index.
-fn insert_new_key<K>(order: &mut Vec<K>, key: K, index: Option<usize>) -> usize {
-    let index = index.unwrap_or(order.len()).min(order.len());
-    order.insert(index, key);
-    index
+/// Inserts a key known to be absent from `order`; returns its index.
+fn insert_new_key<K: Clone + Eq + Hash>(
+    order: &mut KeyOrder<K>,
+    key: K,
+    index: Option<usize>,
+) -> usize {
+    order.insert(index.unwrap_or(usize::MAX), key)
 }
 
 /// The output position of the projected key at `order[index]`: O(1) while every key in
@@ -506,13 +508,13 @@ where
 }
 
 /// The output position of `key`, if it has a projection.
-fn output_position<K, U>(order: &[K], projected: &HashMap<K, U>, key: &K) -> Option<usize>
+fn output_position<K, U>(order: &KeyOrder<K>, projected: &HashMap<K, U>, key: &K) -> Option<usize>
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
 {
     if !projected.contains_key(key) {
         return None;
     }
-    let index = order.iter().position(|existing| existing == key)?;
+    let index = order.index_of(key)?;
     Some(output_position_at(order, projected, index))
 }

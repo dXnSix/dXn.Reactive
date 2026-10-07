@@ -10,7 +10,7 @@ where
         group_selector: &dyn Fn(&T, &K) -> G,
     ) -> Option<ChangeSet<ImmutableCacheGroupChange<K, T, G>>> {
         self.version = self.version.max(batch.version);
-        let previous_order = self.group_order.clone();
+        let previous_order = self.group_order.to_vec();
         let mut initial = HashMap::<G, Option<ImmutableCacheGroup<G, K, T>>>::new();
         let mut touched_order = Vec::<G>::new();
         let mut touched_seen = HashSet::<G>::new();
@@ -202,11 +202,11 @@ where
         &mut self,
         group_selector: &dyn Fn(&T, &K) -> G,
     ) -> Option<ChangeSet<ImmutableCacheGroupChange<K, T, G>>> {
-        let previous_order = self.group_order.clone();
+        let previous_order = self.group_order.to_vec();
         let mut initial = HashMap::<G, Option<ImmutableCacheGroup<G, K, T>>>::new();
         let mut touched_order = Vec::<G>::new();
         let mut touched_seen = HashSet::<G>::new();
-        let keys = self.source_order.clone();
+        let keys = self.source_order.to_vec();
 
         for key in keys {
             let Some((item, previous_group_key)) = self
@@ -266,12 +266,8 @@ where
     }
 
     fn ensure_group_order(&mut self, group_key: &G) {
-        if !self
-            .group_order
-            .iter()
-            .any(|candidate| candidate == group_key)
-        {
-            self.group_order.push(group_key.clone());
+        if !self.group_order.contains_key(group_key) {
+            let _ = self.group_order.push(group_key.clone());
         }
     }
 
@@ -374,14 +370,14 @@ where
 
 struct UngroupedCacheState<K, T> {
     items: HashMap<K, T>,
-    order: Vec<K>,
+    order: KeyOrder<K>,
 }
 
 impl<K, T> Default for UngroupedCacheState<K, T> {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
-            order: Vec::new(),
+            order: KeyOrder::new(),
         }
     }
 }

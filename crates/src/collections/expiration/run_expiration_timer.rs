@@ -199,8 +199,8 @@ trait StreamExpiration: Default + Send + 'static {
 /// later source changes are normalized: an `Update` of an expired key becomes an `Add`, and
 /// its `Refresh`, `Move` and `Remove` are dropped. Indexes are positions among unexpired keys.
 struct CacheExpirationState<K, T> {
-    /// The source's keys in source order, each with whether it expired from the output.
-    order: Vec<(K, bool)>,
+    /// The source's keys in source order (expired ones included, see `expired`).
+    order: KeyOrder<K>,
     /// The number of unexpired keys in `order`.
     live: usize,
     /// Keys in the source that expired from the output.
@@ -217,7 +217,7 @@ struct CacheExpirationState<K, T> {
 impl<K, T> Default for CacheExpirationState<K, T> {
     fn default() -> Self {
         Self {
-            order: Vec::new(),
+            order: KeyOrder::new(),
             live: 0,
             expired: HashSet::new(),
             items: HashMap::new(),
@@ -241,7 +241,7 @@ where
         if !self.known(key) {
             return None;
         }
-        self.order.iter().position(|(existing, _)| existing == key)
+        self.order.index_of(key)
     }
 
     /// The number of unexpired keys before source index `index` (O(1) at the end, or when
@@ -254,7 +254,7 @@ where
         } else {
             self.order[..index]
                 .iter()
-                .filter(|(_, expired)| !expired)
+                .filter(|key| !self.expired.contains(*key))
                 .count()
         }
     }
@@ -265,7 +265,7 @@ where
         if !self.indexed {
             return None;
         }
-        let last = index + 1 == self.order.len() && !self.order[index].1;
+        let last = index + 1 == self.order.len() && !self.expired.contains(&self.order[index]);
         Some(if last {
             self.live - 1
         } else {
@@ -280,38 +280,28 @@ where
         match (index, existing) {
             (None, Some(at)) => at,
             (None, None) => {
-                self.order.push((key.clone(), false));
                 self.live += 1;
-                self.order.len() - 1
+                self.order.push(key.clone())
             }
-            (Some(index), existing) => {
-                let expired = match existing {
-                    Some(at) => self.order.remove(at).1,
-                    None => {
-                        self.live += 1;
-                        false
-                    }
-                };
-                let index = index.min(self.order.len());
-                self.order.insert(index, (key.clone(), expired));
-                index
+            (Some(index), Some(at)) => self.order.move_to(at, index),
+            (Some(index), None) => {
+                self.live += 1;
+                self.order.insert(index, key.clone())
             }
         }
     }
 
-    /// Clears the expired flag of the key at source index `index`.
-    fn revive(&mut self, key: &K, index: usize) {
+    /// Clears the expired flag of `key`.
+    fn revive(&mut self, key: &K) {
         if self.expired.remove(key) {
-            self.order[index].1 = false;
             self.live += 1;
         }
     }
 
     /// Drops `key` from the mirror; returns its source index.
     fn forget(&mut self, key: &K) -> Option<usize> {
-        let index = self.index_of(key)?;
-        let (_, expired) = self.order.remove(index);
-        if !expired {
+        let index = self.order.remove(key)?;
+        if !self.expired.contains(key) {
             self.live -= 1;
         }
         self.queue.remove(key);
@@ -344,7 +334,7 @@ where
                 } => {
                     self.indexed |= current_index.is_some();
                     let index = self.place(key, *current_index);
-                    self.revive(key, index);
+                    self.revive(key);
                     self.items.insert(key.clone(), current.clone());
                     self.queue
                         .set(key.clone(), due_at(current, now, time_selector));
@@ -368,7 +358,7 @@ where
                         _ => None,
                     };
                     let index = self.place(key, *current_index);
-                    self.revive(key, index);
+                    self.revive(key);
                     self.queue
                         .set(key.clone(), due_at(current, now, time_selector));
                     let shown = self.items.insert(key.clone(), current.clone());
@@ -470,7 +460,7 @@ where
                     let mut items = std::mem::take(&mut self.items);
                     let shown = std::mem::take(&mut self.order)
                         .into_iter()
-                        .filter_map(|(key, _)| {
+                        .filter_map(|key| {
                             let item = items.remove(&key)?;
                             Some((key, item))
                         })
@@ -512,7 +502,6 @@ where
             };
             let position = self.output_at(index);
             if let Some(previous) = self.items.remove(&key) {
-                self.order[index].1 = true;
                 self.live -= 1;
                 self.expired.insert(key.clone());
                 changes.push(CacheChange::Remove {

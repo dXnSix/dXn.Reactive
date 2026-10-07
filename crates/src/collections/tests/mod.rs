@@ -24,6 +24,7 @@ mod limit_size_rework;
 mod limits_expiration_streams;
 mod list_async_transform_options;
 mod materialization_reliability;
+mod operator_bookkeeping_costs;
 mod operator_input_interop;
 mod ordered_emission_core;
 mod ordered_emission_relations;
