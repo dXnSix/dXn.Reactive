@@ -1,7 +1,7 @@
 {
   "schemaVersion": 6,
   "epicId": "reactive-audit-remediation",
-  "revision": 120,
+  "revision": 130,
   "planRevision": 1,
   "specHashes": {
     "requirements": "887b1a30927a40de4a199f1d9b5c7994eab7733ca3473a8b85eebe182d3bbe26",
@@ -250,19 +250,34 @@
       ]
     },
     "t41-api-hygiene": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t42-rustdoc-coverage": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t43-ci-workflows": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t44-consumer-scenarios": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     },
     "t45-docs-and-changelog": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "claude-ddc02f35"
+      ]
     }
   },
   "validationBatches": {
@@ -373,6 +388,24 @@
         }
       },
       "recordedAt": "2026-10-07T06:53:42Z"
+    },
+    "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "0656d52383edc4ae8face647dc20a315905f9e23fb669822eb71a10103dbdc01"
+        }
+      },
+      "recordedAt": "2026-10-07T08:12:38Z"
+    },
+    "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca": {
+      "snapshot": {
+        "specHash": "f4fd2ffa86e3fae4ef9601453c6419859816f904c2247305f245d2393d770c6c",
+        "repositories": {
+          "reactive": "252e6303191f1cc60da6ca18ca7976f4d81577e478aa3a644a9ad3e37a97b839"
+        }
+      },
+      "recordedAt": "2026-10-07T08:15:31Z"
     }
   },
   "checkResults": {
@@ -1089,6 +1122,125 @@
       "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s12-performance-final-694f1efbb732.log",
       "logSha256": "66647873556c4920e5ce241432ea7c365645e66be6e1d22d04457377775ac8dd",
       "inputsHash": "4dc30676a9bb6d713b924d6bd9258bf2581dc1563a44f5cc46802a07b57a222c"
+    },
+    "s13-release-readiness/c-t41/final": {
+      "checkId": "c-t41",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d",
+      "definitionHash": "0fcdfe8dc5f1c51850994ba590457b5b1bafa0affcd18cec42036ed61ebdc905",
+      "basisHash": "9ff0c40706cc30068b432d82b33436ff6af2a6a305776c4568f1209f6e79d899",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 7,
+      "durationSeconds": 0.1835,
+      "recordedAt": "2026-10-07T08:12:35Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-3eb508dd5f7d.log",
+      "logSha256": "799542daf4eb162ffae567dc6e17d02d688951c29868f59111b93b99244e15b1",
+      "inputsHash": "289133be1ef70ddc3e2b11ce82fb492364b0c6e9ea133f4e51284533635b5a6e"
+    },
+    "s13-release-readiness/c-t41-clippy/final": {
+      "checkId": "c-t41-clippy",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d",
+      "definitionHash": "91bcb70b24125551386e7fa2f70322e210cdebef478ecbf88a0193a89ee1f182",
+      "basisHash": "508d5127e6185d648dc18dff0ce0e9e7b6b98bfb1bdd5af8bed30fc591de0ccd",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.2752,
+      "recordedAt": "2026-10-07T08:12:35Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-830c2298cbc9.log",
+      "logSha256": "f0788aa36d1c86b6ccdfb7f4042a5574102d82061c046422a2d42e008a1e4710",
+      "inputsHash": "a80f329bbee23c0f99fa10a0622bcb211df577479f1f9bd28c3ddecabba2ab00"
+    },
+    "s13-release-readiness/c-t42/final": {
+      "checkId": "c-t42",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d",
+      "definitionHash": "3e12ce35b53d3cb1b1c5d9fb9d4038b22133ea51160472c44ad29666b3aa9b21",
+      "basisHash": "e7a067d6eb78400b0bd450d85f3fcb1bccda034b045baa64ea06d67f5ba647e7",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.2164,
+      "recordedAt": "2026-10-07T08:12:35Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-1e1e7d89a638.log",
+      "logSha256": "9472053ee06c0f70827ae75179de9b4b865d8e35e83bcbd9cf7e784aa6218b8e",
+      "inputsHash": "dfdbe807ace778f1334585be384e6450f7ba53e58a1d7eddb45f10675e81f0fb"
+    },
+    "s13-release-readiness/c-t43-msrv/final": {
+      "checkId": "c-t43-msrv",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "definitionHash": "9a6598c4fe020a575c70de46785e1f36ea448d3d2ca08a9ac3ad6e2430879f10",
+      "basisHash": "5947122e57dcc82ffebc3d82479f367d1af22598424b2dda9b9ce5153131977b",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.1912,
+      "recordedAt": "2026-10-07T08:15:31Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-027b9fb846b8.log",
+      "logSha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9",
+      "inputsHash": "3e6c4b5e6e703276210789b77d4ef0c0f85047b4ec0e65fc1044df4fbe08fe0a"
+    },
+    "s13-release-readiness/c-t44/final": {
+      "checkId": "c-t44",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d",
+      "definitionHash": "d15dd8976ef5e135100efe85933a5319fade666214e7bd2376ff72b6ef5de010",
+      "basisHash": "5e4cfbec81cb8d99e31dc2480a627b5d800f06bce634c23628da5eefc1589df5",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 6,
+      "durationSeconds": 0.3258,
+      "recordedAt": "2026-10-07T08:12:37Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-e91ba8dff9b2.log",
+      "logSha256": "d642a5dd1e7a9e128723b11911196c026618ca9b3484b3aec80577c7c68604a5",
+      "inputsHash": "289133be1ef70ddc3e2b11ce82fb492364b0c6e9ea133f4e51284533635b5a6e"
+    },
+    "s13-release-readiness/c-t44-api/final": {
+      "checkId": "c-t44-api",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d",
+      "definitionHash": "a3a27156acdefcea77f298ccdbb593630b21908e186d43c1ff16d9096da418d7",
+      "basisHash": "8aafe64f3d770a5e8d97d2504e820e38020e4a0d58f80b37e8d98fd3b545b452",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 18,
+      "durationSeconds": 0.171,
+      "recordedAt": "2026-10-07T08:12:37Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-46223c2f4273.log",
+      "logSha256": "36fa54d12e481e126e2545110fc35fbe9c002de745a9123ac6c3b10b04713e04",
+      "inputsHash": "289133be1ef70ddc3e2b11ce82fb492364b0c6e9ea133f4e51284533635b5a6e"
+    },
+    "s13-release-readiness/c-t45/final": {
+      "checkId": "c-t45",
+      "boundaryId": "s13-release-readiness",
+      "phase": "final",
+      "batchId": "bacbe900c369ae68f8c86cd02c0a7c26e50e8b3a256bf088280c60fc4ddc5c5d",
+      "definitionHash": "e96caec773ece113ea3f963f9ec80715c808aa9fd6ef8cc6c9561f864beb6d76",
+      "basisHash": "57bbc32f0b7ad63d070dc23a4ac3d2f372218f54a0de5c7fe1c026743a336cd8",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 135,
+      "durationSeconds": 0.1893,
+      "recordedAt": "2026-10-07T08:12:37Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-audit-remediation/s13-release-readiness-final-49ad822573e4.log",
+      "logSha256": "e74f7b6bd92abf51ca33d5212befc9051c6284ddfc32882252f985c6688c3fc6",
+      "inputsHash": "d7a34e4ae4399c315ee47f5428b11c0f42df6f77fb929ec8aca43800cc3a1b9d"
     }
   },
   "reviews": {
@@ -4060,6 +4212,406 @@
       "summaryMarkdown": "**Verdict: passed.** Re-review at revision 118. All three findings from the previous review (S12-F1, S12-F2, S12-F3) are fixed, and no finding remains open.\n\n**S12-F1 (tree disposal cleared ordinary roots):** fixed.\n- `parent_cycle_keys` now reports a cycle only when a walk revisits a key it marked earlier in the same walk.\n- A probe with rows (0,0),(1,0),(2,0),(3,1) plus a 10<->11 cycle with 12 hanging off it, and a self-root 20, confirms it. After disposal, the root keeps [1, 2] and node 1 keeps [3]. With the roots held, the probe's strong count is 6; it returns to 1 once they are dropped, so the cycle was freed.\n\n**S12-F2 (bulk removals about 10x slower than HEAD):** fixed.\n- I reviewed the lazy-removal `KeyOrder`: a stale position table, a Fenwick tree of removed table positions, a head offset and `settle` before an insert or move. The invariant holds: when no removal is pending, the head offset is 0 and the table is exact.\n- `apply_cache_changes_to_ordered_state` now clears at once when a `Clear { previous }` covers every key.\n- Release timings at 80k rows:\n\n| Scenario | HEAD | Revision 118 |\n|---|---|---|\n| `remove_keys(0..n/2)`, source only | 128 ms | 4 ms |\n| `remove_keys(0..n/2)`, with a transform | 246 ms | 10 ms |\n| `clear()`, with a transform | 54 ms | 9 ms |\n| 2,000 x (remove a middle key + append), with a transform | 3.7 s | 0.21 s |\n\n**S12-F3 (unbounded resort cost):** fixed.\n- `resort_moves` charges its tie-run equality scans to `RESORT_MOVE_BUDGET`, and `minimal_moves_within` uses `KeyOrder` positions plus a moves x length budget. Both fall back to the positional diff.\n- I checked the `to` computation against the previous algorithm.\n- A boundary probe at n = 1,990, 2,048, 2,100 and 3,000 (reverse, then mod-3 with a descending tie-break) gives the correct output in both regimes. Below the budget it emits only moves; above it, the positional diff.\n- The behaviour is documented in docs chapters 10 and 17 and in the CHANGELOG.\n\n**Bounded probes (public API, deleted afterwards):** all passed.\n- A removal-heavy differential fuzz: 30 seeds x 300 steps of front, middle and reversed bulk removals, mixed single-edit batches, `edit_diff`, clear, and filter-state changes. It checked `transform`, `ensure_unique_keys`, `remove_key`, `filter_with_state`, `sort_by` to list and the `watch` snapshot positions against the source.\n- Fuzzes against the source for live `group` member order, `expire_after`, `transform_to_tree` children order, `left_join_many` keys and membership, and cache `filter_with_state` flips.\n\n**Checks:** all green.\n- `cargo fmt --check`, clippy with `--all-targets --all-features -D warnings`, the wasm32 check, `cargo bench --no-run` and the doc examples (135 passed).\n- 22 test groups, run one at a time with `RUST_TEST_THREADS=4 timeout 600`. They include the three new groups (7, 9 and 9 tests), plus sources, source_lock_policy, transforms_filters, sorting_windowing, keyed_sort_positions, index_contract_harness, subset_operator_indexes, snapshot_diff_indexes, expiration_rework, limits_expiration_streams, lifecycle_observables, lifecycle_semantics, grouping_tree_switching, joins, group_and_combiner_indexes, ordered_emission_relations, async_transform_workers, key_bridge_indexes and keyed_state_operators.\n\n**Hygiene:** crates/src/collections/tests/mod.rs is back to CRLF, so its diff is only the three added lines.\n\n**Not a regression:** a right-side `Update` that carries a new `current_index` does not move the item inside its join-many group. HEAD behaves the same.",
       "findingIds": [],
       "recordedAt": "2026-10-07T07:16:26Z"
+    },
+    "s13-release-readiness": {
+      "reviewerId": "reviewer-s13-7f3a9c",
+      "snapshotId": "f4e338fe9bc720b7cfec17415cc3a8ec7ea222ff82ae7a14c5c55c7eec3e0cca",
+      "criterionIds": [
+        "HYG-1.1",
+        "HYG-1.2",
+        "HYG-1.3",
+        "DOC-1.1",
+        "CI-1.1",
+        "CI-1.2",
+        "SCN-1.1",
+        "SCN-1.2",
+        "SCN-1.3",
+        "SCN-1.4",
+        "SCN-1.5",
+        "REL-1.1",
+        "REL-1.2"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-fmt.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.1"
+          ],
+          "sha256": "0819f3787c6ace14f68aac1f3437f10d593611ca94318bf1ce40e754889b509b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-clippy.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.1",
+            "DOC-1.1"
+          ],
+          "sha256": "4aa71d2bff93a5ab3eeee849929c2c25836d40eb7ea060c5710259db39c22472"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-rustdoc.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "397308c32f147098e56e5f17a5bc6147396057779671d59a3a4774ab16f55e1b"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-doctests.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1.1",
+            "REL-1.1"
+          ],
+          "sha256": "ba84399cf2fced5f75871fd2e231ef4fe1c42961ddc3e5a93bc04c84af71909e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-doc-examples.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "a3ac3e6ed9720e41489a0e2b938311b8a2ccc59d155bed178fa3cb8d64969e2c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-msrv.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CI-1.1"
+          ],
+          "sha256": "be79a7dc2fb9ae704c229e47e5120c945bb41b8bd572088d439d850c66020590"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-wasm.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "CI-1.1"
+          ],
+          "sha256": "75361a3b89d1d3e9d6c00070fa6f9b607c8a31c7729e4ec205902efb1e3d70c8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-api_hygiene-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.1",
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "78d80455338c1e02afc2c9504676d9879e7a16ef4d9992cea94909b5495c038a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-api_hygiene-2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "78d80455338c1e02afc2c9504676d9879e7a16ef4d9992cea94909b5495c038a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-disposal-reentry.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "2ac148dbb5999be699fdfb550954a71425d343f792d7123f7317eab614f1c842"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-lib-scalar.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "103a1698307381998f353c0d7afcaccba6948b3ca43a71a0fd6c246060bdcd89"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-sources.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2"
+          ],
+          "sha256": "85ac6b7c98806423ae3aff218e280d9c7531406737d01909048a4b53613e6adc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-source-lock-policy.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "HYG-1.2"
+          ],
+          "sha256": "cc0cb4ada7dea9c03bfb693c5c880abb30275e0dcf18080c75015466892809a5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr-probe.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "1912190ea192fdbea98ee59b48a4d42d356611c5788eed3fb4a2591a09cf089a"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-consumer_scenarios-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "52d7f30145447a387d5a189c80dc2df4067a10974aa79987893315878dd9feb6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-consumer_scenarios-2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "52d7f30145447a387d5a189c80dc2df4067a10974aa79987893315878dd9feb6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-collections_public_api-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "94019ec0a074fe951cd57f033779d91854f458d6cf4a3fe4fc79f3f5dad1fd65"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-it-collections_public_api-2.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "94019ec0a074fe951cd57f033779d91854f458d6cf4a3fe4fc79f3f5dad1fd65"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-join-many.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "3ee78453369432afab00cf4d86d86be9352d289b9af5155b23b251fc0957c789"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "artifacts-temp/agentx/reactive-audit-remediation/s13-rr2-lib-collections-nongroup.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "3b8056d3cf230fd0cf8f5eeda22d99e0c2ca0d5b1932cb8a3e67a27f72e28afc"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/api_hygiene.rs",
+          "kind": "test",
+          "criterionIds": [
+            "HYG-1.1",
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "ddbbea244461bd0226a2fed4a49c5070c6cec11ae567e46f11c49c52c4ff31fd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/scalar_tests/disposal_reentry.rs",
+          "kind": "test",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "69c6956c1520e4702f92ea6af5867cce7237575b9fb642a1a343fcf1f67ef04c"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/consumer_scenarios.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "00e76177fb48f6f65c651edadbee67f08d569e076a73039ef80f5bcba42d00f6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/collections_public_api.rs",
+          "kind": "test",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "898582a3d9a7bfad986506f7cd493a260ee892dee400fa70c3a08d6e8f224237"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/tests/join_many_right_moves/mod.rs",
+          "kind": "test",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "3e5337dd89c69b47874ba407efbb1dcffa216729ae99ef59eb030fd9ec22c455"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/disposal.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.2",
+            "HYG-1.3"
+          ],
+          "sha256": "75fc0af6498349a17491fc89c49aaf76b366526ccb9be26e4e135c66f40fedd7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/cache/source_cache_impl.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.2"
+          ],
+          "sha256": "22ccc36eee4cc434ea33abe2e2fed497209b6773aff0d63ddab753dea9fb4dcd"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/collections/list/list_state.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.2"
+          ],
+          "sha256": "929e776b5adf2c7555a7c7d40e7309792006e0280de7d34ac95df4f5c638873e"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/command.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "64abd84f62ad1b96c7d97d128aa3015f7c6d3f816f973b8bf2694f198f09fa63"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/lib.rs",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "1320d18c0c5f3b346694d0dc15883aaf35d6fdde8d1b695731eaa538b1a74621"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/Cargo.toml",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1.1"
+          ],
+          "sha256": "5fb6159a5417b108cdb7c93f7ee50ce4cf8219bb43bd3921bb1a122093f7b942"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".github/workflows/ci.yml",
+          "kind": "source",
+          "criterionIds": [
+            "CI-1.1",
+            "CI-1.2"
+          ],
+          "sha256": "1d7b19fecf08a5405abeb1d92f3efb869ae182ebaaa057b6a426e43ebf844c48"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "docs/06-commands-and-events.md",
+          "kind": "source",
+          "criterionIds": [
+            "REL-1.1"
+          ],
+          "sha256": "dd20876149181e39338978034540c5835fafab70c35720046530e588588dead0"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "REL-1.2"
+          ],
+          "sha256": "fbe793b1824ec5b009d43d6de8286aaca2776b677b941f9e5a72483d678d79f3"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": ".claude/skills/rayx-reactive/references/reactive-state-commands-events.md",
+          "kind": "source",
+          "criterionIds": [
+            "REL-1.2"
+          ],
+          "sha256": "6fbca13d2c3be9be6c63a06953aaa932103c33528cba3ef06fce14abae15b3d8"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/primitives/subscription.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.1"
+          ],
+          "sha256": "d9944c59f9f85b9d7c0f9207d6b0b538d55bae4c254c655303d25f0bebbe97e7"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/src/effect.rs",
+          "kind": "source",
+          "criterionIds": [
+            "HYG-1.1"
+          ],
+          "sha256": "d4bae955d4b3bc847de43dae1d05537126cfaa90ad659c7fe408346534d216b5"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/consumer_scenarios.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SCN-1.1",
+            "SCN-1.2",
+            "SCN-1.3",
+            "SCN-1.4"
+          ],
+          "sha256": "00e76177fb48f6f65c651edadbee67f08d569e076a73039ef80f5bcba42d00f6"
+        },
+        {
+          "repositoryId": "reactive",
+          "path": "crates/tests/collections_public_api.rs",
+          "kind": "source",
+          "criterionIds": [
+            "SCN-1.5"
+          ],
+          "sha256": "898582a3d9a7bfad986506f7cd493a260ee892dee400fa70c3a08d6e8f224237"
+        }
+      ],
+      "summaryMarkdown": "Delta re-review at snapshot `f4e338fe…`. **S13-F4 is repaired.** `.claude/skills/rayx-reactive/references/reactive-state-commands-events.md:39` now says:\n- only an execution that starts while none is running publishes `Running`;\n- the most recently started execution publishes its terminal state;\n- sequential runs show `Running` then their outcome, while overlapping `Concurrent` runs show one `Running` and the latest outcome.\n\nThis matches `Execution::begin`/`end`, the `CommandState` rustdoc and `docs/06-commands-and-events.md`. A grep over `docs/`, `README.md`, `.claude/skills/`, `crates/src/` and `CHANGELOG.md` finds no other copy of the old \"each execution publishes `Running`\" or \"sees every run\" wording. The skill files' diff stat is unchanged in size (one line replaced), and the code/docs diff stat is unchanged, so no source or test changed. The unchanged checks were not rerun, as requested. The anchors' `s13-rr2-*` logs from snapshot `bacbe900…` still apply, because the only change since then is a skill reference line: fmt/clippy/rustdoc/MSRV/wasm pass, doctests 24, doc examples 135, `api_hygiene` 7, `consumer_scenarios` 6, `collections_public_api` 18, `disposal_reentry` 3, scalar 120, `sources` 58, `source_lock_policy` 16, `join_many_right_moves` 2.\n\nS13-F1 to S13-F4 are all repaired, and all criteria (HYG-1.1 to 1.3, DOC-1.1, CI-1.1, SCN-1.1 to 1.5, REL-1.1, REL-1.2) are met. **CI-1.2** (a green CI run) is manual and still pending a push; it is not held against the sprint. No findings are open. The working tree was left unchanged (110 status entries); this delta review made no edits outside `artifacts-temp/`.",
+      "findingIds": [],
+      "recordedAt": "2026-10-07T08:16:27Z"
     }
   },
   "checkpoints": {
@@ -5471,7 +6023,7 @@
       "descriptionMarkdown": "**An updated test is not named in the CHANGELOG.** The repository constraint requires that existing tests pinning a defective behavior be updated *with a note in the changelog*. `CHANGELOG.md:239-242` names only `aggregation_diagnostics_diff::list_aggregations_track_snapshots_counts_sum_and_average`. The same file also changes the pinned `is_not_empty` sequence of `cache_aggregations_track_query_counts_sum_and_average` (`aggregation_diagnostics_diff/list_aggregations_track_snapshots_counts_sum_and_average.rs:342`, `[false, true, true, false]` -> `[false, true, false]`), and that test is not mentioned. Fix: name both updated tests in the `### Aggregates` entry.\n\n**Re-review: resolved.** `CHANGELOG.md` `### Aggregates` now names both `list_aggregations_track_snapshots_counts_sum_and_average` and `cache_aggregations_track_query_counts_sum_and_average`, and documents the overflow behavior."
     }
   ],
-  "handoffMarkdown": "PRF-3.1: tree (tree/stream_ext.rs) order/visible_order/pivot_groups use KeyOrder; children placed by place_child (sibling_position binary search over the parent's children by source rank, one edit: Add at index, or Update + one Move) instead of align_parent_children_order realigning all siblings; diff_tree_snapshots works on KeyOrder. CacheView holds &KeyOrder (pub(crate) index_of). Joins: OrderedCache.order/right_order/group_order are KeyOrder; insert_key/move_or_insert_key/remove_key O(1); full-join desired order filters right keys by left.items (no any() scan); reorder_result early-returns when in order; AffectedKeys (map-deduped) replaces linear upsert; group index via RayCacheGroup::rank_position. RayCacheGroup state order is KeyOrder; new pub(crate) rank_position (O(1) append, binary search otherwise); live cache grouping (LiveCacheGroupState, UngroupedCacheState, ImmutableCacheGroupState, LiveListGroupState group_order) on KeyOrder, group_index_for_key uses rank_position; KeyOrder::retain added. PRF-3.2: join-many apply_left frees empty groups of removed left keys (cleanup_group_if_unused); TreeState Drop clears children caches of nodes on parent cycles (parent_cycle_keys). cfg(test) thread-local live cache group counter in group.rs (live_cache_groups_for_test). PRF-3.3: benches joins.rs, tree.rs, sort_and_page.rs registered in crates/Cargo.toml; cargo bench --no-run builds. Pre-existing default-feature test compile failure fixed: tests/support.rs ungates CacheAggregationExt and the diff ext imports (ListAggregationExt stays diagnostics-only). Group collections::tests::relation_operator_costs (8 tests). Existing tree/join/group groups green.",
+  "handoffMarkdown": "REL-1.1: README and docs chapters reviewed against final code (README platform table, Computed constructors, scheduler/commit-order notes; ch01 module map and non_exhaustive; ch03 from_stream/Default/Debug; ch04 CompositeSubscription methods, must_use, ConnectionStatus; ch05 DisposeBag clear/len, Contended; ch06 emit ordering, non-Clone events; ch08 contention wording; ch09 ignore/include_update_when take (current, previous); ch10 signals plug in directly; ch11 group_by and join-many member order, tree node replaced on item Update (also TreeNode rustdoc); ch12 true_for no flicker; ch14 limit_size_to_with_errors; ch16 panic/poison semantics, CI platforms; ch17 delivery snapshot, derive_distinct; ch18 contention, ManualScheduler, wasm CI; ch19 DynamicData mappings; ch20 test layout and CI jobs). doc-examples 135 pass. REL-1.2: CHANGELOG audited against all 58 epic commits: generic stream error parameters relabelled Breaking with migration note, scheduler API completed, ChangeSetAdapterOptions and list dispose_many migration notes, new breaking note for unsealed extension traits, API hygiene section (Debug wording corrected), connection test note, join-many moving-update fix. .claude/skills/rayx-reactive SKILL.md and all references updated for the new APIs and semantics.",
   "protectedPaths": {
     "reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "2ae4b6a8a0d06e23b203ffc227daadd80e13a8a777149fb7a6b38ced9619f7b0",
