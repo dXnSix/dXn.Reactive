@@ -4,7 +4,7 @@ agentx:
   scope: decisions
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-05T23:30:00+02:00
+  updated: 2026-10-11T12:00:00+02:00
   topics:
     - decisions
     - rayx_reactive
@@ -22,7 +22,8 @@ Durable architecture choices for `rayx_reactive`. Current source remains the fir
   - [AD-008 Observable collections replace DynamicData semantics](collections/2026-06-24-collections-observable-collections.md)
   - sources
     - [History-free targeted collection delivery](collections/sources/2026-07-27-collections-sources-history-free-targeted-delivery.md)
-    - [Non-blocking WASM cache observers](collections/sources/2026-07-24-collections-sources-nonblocking-wasm-cache-observers.md)
+    - [Owner-tracked source lock](collections/sources/2026-10-11-collections-sources-owner-tracked-source-lock.md)
+    - [Non-blocking WASM cache observers](collections/sources/2026-07-24-collections-sources-nonblocking-wasm-cache-observers.md) (superseded)
     - [Direct keyed SourceCache watch](collections/sources/2026-07-24-collections-sources-keyed-source-cache-watch.md) (superseded)
   - operators
     - [Indexed keyed-sort batches](collections/operators/2026-07-24-collections-operators-keyed-sort-indexes-and-batches.md)

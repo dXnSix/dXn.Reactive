@@ -2,15 +2,16 @@
 agentx:
   kind: decision
   scope: decisions/collections/sources
-  status: current
+  status: superseded
   created: 2026-07-24T05:00:00+02:00
-  updated: 2026-07-24T05:00:00+02:00
+  updated: 2026-10-11T12:00:00+02:00
   topics:
     - wasm
     - source-cache
     - concurrency
   supersedes: []
-  superseded_by: []
+  superseded_by:
+    - 2026-10-11-collections-sources-owner-tracked-source-lock.md
 ---
 
 ## Decision: Return non-reentrant cache contention to threaded WASM foreground observers
