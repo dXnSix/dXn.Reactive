@@ -10,8 +10,11 @@ where
         transform: &dyn Fn(T, Option<T>, K) -> Fut,
         on_error: &dyn Fn(TransformError<K, T, E>),
         options: TransformAsyncOptions,
+        sequence: u64,
+        cancellation: &Mutex<AsyncCancellation<K>>,
     ) -> Option<ChangeSet<CacheChange<K, U>>>
     where
+        E: 'static,
         Fut: Future<Output = std::result::Result<U, E>>,
     {
         let mut results = Vec::new();
@@ -65,8 +68,16 @@ where
             }
         }
 
-        results
-            .extend(run_cache_async_safe_jobs(jobs, transform, options.maximum_concurrency).await);
+        results.extend(
+            run_cache_async_safe_jobs(
+                jobs,
+                transform,
+                options.maximum_concurrency,
+                sequence,
+                cancellation,
+            )
+            .await,
+        );
         self.process_results(results, on_error, Some(batch.version))
     }
 
@@ -76,8 +87,11 @@ where
         transform: &dyn Fn(T, Option<T>, K) -> Fut,
         on_error: &dyn Fn(TransformError<K, T, E>),
         options: TransformAsyncOptions,
+        sequence: u64,
+        cancellation: &Mutex<AsyncCancellation<K>>,
     ) -> Option<ChangeSet<CacheChange<K, U>>>
     where
+        E: 'static,
         Fut: Future<Output = std::result::Result<U, E>>,
     {
         let jobs = self
@@ -106,7 +120,14 @@ where
             })
             .collect::<Vec<_>>();
 
-        let results = run_cache_async_safe_jobs(jobs, transform, options.maximum_concurrency).await;
+        let results = run_cache_async_safe_jobs(
+            jobs,
+            transform,
+            options.maximum_concurrency,
+            sequence,
+            cancellation,
+        )
+        .await;
         self.process_results(results, on_error, None)
     }
 
@@ -117,175 +138,17 @@ where
         source_version: Option<u64>,
     ) -> Option<ChangeSet<CacheChange<K, U>>> {
         results.sort_by_key(|result| result.ordinal);
-
-        let mut changes = Vec::new();
-        for result in results {
-            match result.change {
-                CacheChange::Add {
-                    key,
-                    current,
-                    current_index,
-                } => {
-                    self.source_items.insert(key.clone(), current.clone());
-                    insert_cache_key(&mut self.order, key.clone(), current_index);
-                    match result.outcome {
-                        CacheAsyncSafeTransformOutcome::Projected(projected) => {
-                            self.projected.insert(key.clone(), projected.clone());
-                            changes.push(CacheChange::Add {
-                                key,
-                                current: projected,
-                                current_index,
-                            });
-                        }
-                        CacheAsyncSafeTransformOutcome::Failed(error) => {
-                            on_error(TransformError::new(error, key, current));
-                        }
-                        CacheAsyncSafeTransformOutcome::Unchanged => {}
-                    }
-                }
-                CacheChange::Update {
-                    key,
-                    current,
-                    current_index,
-                    previous_index,
-                    ..
-                } => {
-                    self.source_items.insert(key.clone(), current.clone());
-                    insert_cache_key(&mut self.order, key.clone(), current_index);
-                    match result.outcome {
-                        CacheAsyncSafeTransformOutcome::Projected(projected) => {
-                            if let Some(previous_projected) =
-                                self.projected.insert(key.clone(), projected.clone())
-                            {
-                                changes.push(CacheChange::Update {
-                                    key,
-                                    current: projected,
-                                    previous: previous_projected,
-                                    current_index,
-                                    previous_index,
-                                });
-                            } else {
-                                changes.push(CacheChange::Add {
-                                    key,
-                                    current: projected,
-                                    current_index,
-                                });
-                            }
-                        }
-                        CacheAsyncSafeTransformOutcome::Failed(error) => {
-                            on_error(TransformError::new(error, key, current));
-                        }
-                        CacheAsyncSafeTransformOutcome::Unchanged => {}
-                    }
-                }
-                CacheChange::Remove {
-                    key,
-                    previous_index,
-                    ..
-                } => {
-                    self.source_items.remove(&key);
-                    let _ = remove_cache_key(&mut self.order, &key);
-                    if let Some(previous) = self.projected.remove(&key) {
-                        changes.push(CacheChange::Remove {
-                            key,
-                            previous,
-                            previous_index,
-                        });
-                    }
-                }
-                CacheChange::Refresh {
-                    key,
-                    current,
-                    current_index,
-                } => {
-                    self.source_items.insert(key.clone(), current.clone());
-                    if let Some(index) = current_index {
-                        move_cache_key(&mut self.order, &key, index);
-                    }
-
-                    match result.outcome {
-                        CacheAsyncSafeTransformOutcome::Projected(projected) => {
-                            if let Some(previous_projected) =
-                                self.projected.insert(key.clone(), projected.clone())
-                            {
-                                changes.push(CacheChange::Update {
-                                    key,
-                                    current: projected,
-                                    previous: previous_projected,
-                                    current_index,
-                                    previous_index: current_index,
-                                });
-                            } else {
-                                changes.push(CacheChange::Add {
-                                    key,
-                                    current: projected,
-                                    current_index,
-                                });
-                            }
-                        }
-                        CacheAsyncSafeTransformOutcome::Failed(error) => {
-                            on_error(TransformError::new(error, key, current));
-                        }
-                        CacheAsyncSafeTransformOutcome::Unchanged => {
-                            if let Some(projected) = self.projected.get(&key).cloned() {
-                                changes.push(CacheChange::Refresh {
-                                    key,
-                                    current: projected,
-                                    current_index,
-                                });
-                            }
-                        }
-                    }
-                }
-                CacheChange::Move {
-                    key,
-                    current,
-                    current_index,
-                    previous_index,
-                } => {
-                    self.source_items.insert(key.clone(), current);
-                    move_cache_key(&mut self.order, &key, current_index);
-                    if let Some(projected) = self.projected.get(&key).cloned() {
-                        changes.push(CacheChange::Move {
-                            key,
-                            current: projected,
-                            current_index,
-                            previous_index,
-                        });
-                    }
-                }
-                CacheChange::Clear { previous } if previous.is_empty() => {
-                    let previous = self
-                        .order
-                        .iter()
-                        .filter_map(|key| {
-                            self.projected.remove(key).map(|item| (key.clone(), item))
-                        })
-                        .collect::<Vec<_>>();
-                    self.source_items.clear();
-                    self.order.clear();
-                    if !previous.is_empty() {
-                        changes.push(CacheChange::Clear { previous });
-                    }
-                }
-                CacheChange::Clear { previous } => {
-                    let previous_projected = previous
-                        .iter()
-                        .filter_map(|(key, _)| {
-                            self.source_items.remove(key);
-                            let _ = remove_cache_key(&mut self.order, key);
-                            self.projected.remove(key).map(|item| (key.clone(), item))
-                        })
-                        .collect::<Vec<_>>();
-                    if !previous_projected.is_empty() {
-                        changes.push(CacheChange::Clear {
-                            previous: previous_projected,
-                        });
-                    }
-                }
-            }
-        }
-
+        let results = results
+            .into_iter()
+            .map(|result| (result.change, result.outcome))
+            .collect();
+        let changes = apply_cache_async_results(
+            &mut self.source_items,
+            &mut self.order,
+            &mut self.projected,
+            results,
+            on_error,
+        );
         self.emit(changes, source_version)
     }
 
@@ -311,35 +174,54 @@ async fn run_cache_async_safe_jobs<K, T, U, E, Fut>(
     jobs: Vec<CacheAsyncSafeJob<K, T>>,
     transform: &dyn Fn(T, Option<T>, K) -> Fut,
     maximum_concurrency: Option<usize>,
+    sequence: u64,
+    cancellation: &Mutex<AsyncCancellation<K>>,
 ) -> Vec<CacheAsyncSafeTransformResult<K, T, U, E>>
 where
+    K: Clone + Eq + Hash,
+    E: 'static,
     Fut: Future<Output = std::result::Result<U, E>>,
 {
-    if jobs.is_empty() {
-        return Vec::new();
+    let mut slots = Vec::with_capacity(jobs.len());
+    let mut entries = Vec::with_capacity(jobs.len());
+    for (slot, job) in jobs.into_iter().enumerate() {
+        let CacheAsyncSafeJob {
+            ordinal,
+            change,
+            current,
+            previous,
+            key,
+        } = job;
+        slots.push(Some((ordinal, change)));
+        let id = key.clone();
+        let start: Box<dyn FnOnce() -> Fut + '_> =
+            Box::new(move || transform(current, previous, key));
+        entries.push((slot, id, start));
     }
-
-    let maximum_concurrency = maximum_concurrency
-        .filter(|count| *count > 0)
-        .unwrap_or(jobs.len());
-
-    stream::iter(jobs.into_iter().map(|job| {
-        let projected = transform(job.current, job.previous, job.key);
-        async move {
-            let outcome = match projected.await {
-                Ok(projected) => CacheAsyncSafeTransformOutcome::Projected(projected),
-                Err(error) => CacheAsyncSafeTransformOutcome::Failed(error),
+    run_async_jobs(entries, sequence, cancellation, maximum_concurrency)
+        .await
+        .into_iter()
+        .filter_map(|(slot, outcome)| {
+            let (ordinal, change) = slots.get_mut(slot)?.take()?;
+            let outcome = match outcome {
+                AsyncJobOutcome::Done(Ok(projected)) => {
+                    CacheAsyncSafeTransformOutcome::Projected(projected)
+                }
+                AsyncJobOutcome::Done(Err(error)) => CacheAsyncSafeTransformOutcome::Failed(error),
+                // A panic is reported when the error type can carry it, else skipped.
+                AsyncJobOutcome::Panicked(payload) => panic_as_error::<E>(payload)
+                    .map_or(CacheAsyncSafeTransformOutcome::Unchanged, |error| {
+                        CacheAsyncSafeTransformOutcome::Failed(error)
+                    }),
+                AsyncJobOutcome::Cancelled => CacheAsyncSafeTransformOutcome::Unchanged,
             };
-            CacheAsyncSafeTransformResult {
-                ordinal: job.ordinal,
-                change: job.change,
+            Some(CacheAsyncSafeTransformResult {
+                ordinal,
+                change,
                 outcome,
-            }
-        }
-    }))
-    .buffer_unordered(maximum_concurrency)
-    .collect::<Vec<_>>()
-    .await
+            })
+        })
+        .collect()
 }
 
 fn cache_transform_many_async_iterable_stream<K, T, ChildKey, Child, Children, Fut>(
@@ -347,6 +229,7 @@ fn cache_transform_many_async_iterable_stream<K, T, ChildKey, Child, Children, F
     child_key: Arc<dyn Fn(&Child) -> ChildKey + Send + Sync>,
     transform: Arc<dyn Fn(T, K) -> Fut + Send + Sync>,
     comparer: Option<Comparer<Child>>,
+    options: TransformAsyncOptions,
 ) -> ChangeStream<CacheChange<ChildKey, Child>>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -377,7 +260,7 @@ where
             })
         }
     });
-    cache_transform_many_async_stream(source, stream_transform, comparer)
+    cache_transform_many_async_stream(source, stream_transform, comparer, options)
 }
 
 fn cache_transform_many_safe_async_iterable_stream<K, T, ChildKey, Child, Children, E, Fut>(
@@ -386,6 +269,7 @@ fn cache_transform_many_safe_async_iterable_stream<K, T, ChildKey, Child, Childr
     transform: Arc<dyn Fn(T, K) -> Fut + Send + Sync>,
     on_error: CacheSafeErrorHandler<K, T, E>,
     comparer: Option<Comparer<Child>>,
+    options: TransformAsyncOptions,
 ) -> ChangeStream<CacheChange<ChildKey, Child>>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -403,8 +287,14 @@ where
         async move {
             let error_key = key.clone();
             let error_item = item.clone();
-            match transform(item, key).await {
-                Ok(children) => {
+            match catch_transform(move || transform(item, key)).await {
+                Err(payload) => {
+                    if let Some(error) = panic_as_error::<E>(payload) {
+                        on_error(TransformError::new(error, error_key, error_item));
+                    }
+                    empty_cache_change_stream()
+                }
+                Ok(Ok(children)) => {
                     let changes = children
                         .into_iter()
                         .map(|child| CacheChange::Add {
@@ -420,13 +310,12 @@ where
                         Ok(Subscription::empty())
                     })
                 }
-                Err(error) => {
+                Ok(Err(error)) => {
                     on_error(TransformError::new(error, error_key, error_item));
                     empty_cache_change_stream()
                 }
             }
         }
     });
-    cache_transform_many_async_stream(source, stream_transform, comparer)
+    cache_transform_many_async_stream(source, stream_transform, comparer, options)
 }
-

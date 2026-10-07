@@ -40,9 +40,9 @@ fn cache_transform_many_async_ignores_stale_materialization_after_parent_removed
         let mut pending = lock_vec(&pending)?;
         pending.remove(0)
     };
-    if sender.send(vec![Row { id: 10, value: 10 }]).is_err() {
-        return Err(std::io::Error::other("receiver dropped").into());
-    }
+    // Removing the parent drops its pending transform, so the receiver may already be gone;
+    // either way nothing may be published for the removed parent.
+    let _ = sender.send(vec![Row { id: 10, value: 10 }]);
     std::thread::sleep(Duration::from_millis(60));
 
     assert!(lock_vec(&received)?.is_empty());

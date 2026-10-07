@@ -117,7 +117,7 @@ pub mod prelude {
     pub use crate::collections::switch::{
         CacheSwitchExt, ListSwitchExt, SourceCacheSwitchExt, SourceListSwitchExt,
     };
-    pub use crate::collections::transform_error::TransformError;
+    pub use crate::collections::transform_error::{TransformError, TransformPanic};
     pub use crate::collections::tree::{CacheTreeExt, TreeNode, TreePredicate};
     pub use crate::collections::true_for::{CacheTrueForExt, SourceCacheTrueForExt};
     pub use crate::collections::type_filter::{AnyItem, CacheTypeFilterExt};

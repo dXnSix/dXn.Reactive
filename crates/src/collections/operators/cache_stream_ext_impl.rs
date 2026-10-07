@@ -1040,16 +1040,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let resort_state = Arc::clone(&state);
             let resort_emitter = emitter.clone();
             let resort_subscription = resort.subscribe(move |_| {
-                resort_emitter.update(&resort_state, |state| {
-                    state.resort_keyed(None)
-                });
+                resort_emitter.update(&resort_state, |state| state.resort_keyed(None));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source_keyed(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source_keyed(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -1171,16 +1167,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let resort_state = Arc::clone(&state);
             let resort_emitter = emitter.clone();
             let resort_subscription = resort.subscribe(move |_| {
-                resort_emitter.update(&resort_state, |state| {
-                    state.resort(None)
-                });
+                resort_emitter.update(&resort_state, |state| state.resort(None));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -1434,7 +1426,9 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let regroup_state = Arc::clone(&state);
             let regroup_selector = Arc::clone(&group_key);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                emitter.update(&regroup_state, |state| state.regroup_all(&*regroup_selector));
+                emitter.update(&regroup_state, |state| {
+                    state.regroup_all(&*regroup_selector)
+                });
             })?;
 
             Ok(Subscription::many(vec![
@@ -1458,7 +1452,10 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
     {
         let group_selectors = group_selectors.err_into::<CollectionError>();
         let never = ValueStream::new(|_| Ok(Subscription::empty()));
-        self.group_dynamic_with_regrouper::<_, CollectionError, CollectionError>(group_selectors, never)
+        self.group_dynamic_with_regrouper::<_, CollectionError, CollectionError>(
+            group_selectors,
+            never,
+        )
     }
 
     fn group_dynamic_with_regrouper<G, E, E2>(
@@ -1592,8 +1589,9 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
     {
         let comparers = comparers.err_into::<CollectionError>();
         let requests = requests.err_into::<CollectionError>();
-        let updates =
-            self.sort_and_page_dynamic_with_response::<CollectionError, CollectionError>(comparers, requests);
+        let updates = self.sort_and_page_dynamic_with_response::<CollectionError, CollectionError>(
+            comparers, requests,
+        );
         ChangeStream::new(move |subscriber| {
             updates.subscribe(move |update| {
                 if !update.changes.is_empty() {
@@ -1620,7 +1618,9 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             subscriber(&comparer);
             Ok(Subscription::empty())
         });
-        self.sort_and_page_dynamic_with_response::<CollectionError, CollectionError>(comparers, requests)
+        self.sort_and_page_dynamic_with_response::<CollectionError, CollectionError>(
+            comparers, requests,
+        )
     }
 
     fn sort_and_page_dynamic_with_response<E, E2>(
@@ -1656,16 +1656,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                request_emitter.update(&request_state, |state| {
-                    state.set_request(*request)
-                });
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -1728,8 +1724,10 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
     {
         let comparers = comparers.err_into::<CollectionError>();
         let requests = requests.err_into::<CollectionError>();
-        let updates =
-            self.sort_and_virtualize_dynamic_with_response::<CollectionError, CollectionError>(comparers, requests);
+        let updates = self
+            .sort_and_virtualize_dynamic_with_response::<CollectionError, CollectionError>(
+                comparers, requests,
+            );
         ChangeStream::new(move |subscriber| {
             updates.subscribe(move |update| {
                 if !update.changes.is_empty() {
@@ -1756,7 +1754,9 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             subscriber(&comparer);
             Ok(Subscription::empty())
         });
-        self.sort_and_virtualize_dynamic_with_response::<CollectionError, CollectionError>(comparers, requests)
+        self.sort_and_virtualize_dynamic_with_response::<CollectionError, CollectionError>(
+            comparers, requests,
+        )
     }
 
     fn sort_and_virtualize_dynamic_with_response<E, E2>(
@@ -1792,16 +1792,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                request_emitter.update(&request_state, |state| {
-                    state.set_request(*request)
-                });
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -1883,16 +1879,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                request_emitter.update(&request_state, |state| {
-                    state.set_request(*request)
-                });
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -1985,16 +1977,12 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                request_emitter.update(&request_state, |state| {
-                    state.set_request(*request)
-                });
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -2057,11 +2045,29 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         Children: IntoIterator<Item = Child> + 'static,
         Fut: Future<Output = Children> + Send + 'static,
     {
+        self.transform_many_async_with_options(child_key, transform, TransformAsyncOptions::DEFAULT)
+    }
+
+    fn transform_many_async_with_options<ChildKey, Child, Children, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        Fut: Future<Output = Children> + Send + 'static,
+    {
         cache_transform_many_async_iterable_stream(
             self,
             Arc::new(child_key),
             Arc::new(transform),
             None,
+            options,
         )
     }
 
@@ -2079,11 +2085,35 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         Children: IntoIterator<Item = Child> + 'static,
         Fut: Future<Output = Children> + Send + 'static,
     {
+        self.transform_many_async_by_with_options(
+            child_key,
+            transform,
+            compare,
+            TransformAsyncOptions::DEFAULT,
+        )
+    }
+
+    fn transform_many_async_by_with_options<ChildKey, Child, Children, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        Fut: Future<Output = Children> + Send + 'static,
+    {
         cache_transform_many_async_iterable_stream(
             self,
             Arc::new(child_key),
             Arc::new(transform),
             Some(Arc::new(compare)),
+            options,
         )
     }
 
@@ -2102,12 +2132,37 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         E: Send + Sync + 'static,
         Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static,
     {
+        self.transform_many_safe_async_with_options(
+            child_key,
+            transform,
+            on_error,
+            TransformAsyncOptions::DEFAULT,
+        )
+    }
+
+    fn transform_many_safe_async_with_options<ChildKey, Child, Children, E, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static,
+    {
         cache_transform_many_safe_async_iterable_stream(
             self,
             Arc::new(child_key),
             Arc::new(transform),
             Arc::new(on_error),
             None,
+            options,
         )
     }
 
@@ -2127,12 +2182,39 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         E: Send + Sync + 'static,
         Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static,
     {
+        self.transform_many_safe_async_by_with_options(
+            child_key,
+            transform,
+            on_error,
+            compare,
+            TransformAsyncOptions::DEFAULT,
+        )
+    }
+
+    fn transform_many_safe_async_by_with_options<ChildKey, Child, Children, E, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static,
+    {
         cache_transform_many_safe_async_iterable_stream(
             self,
             Arc::new(child_key),
             Arc::new(transform),
             Arc::new(on_error),
             Some(Arc::new(compare)),
+            options,
         )
     }
 
@@ -2147,7 +2229,22 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         Child: Clone + PartialEq + Send + Sync + 'static,
         Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static,
     {
-        cache_transform_many_async_stream(self, Arc::new(transform), None)
+        self.transform_many_async_stream_with_options(transform, TransformAsyncOptions::DEFAULT)
+    }
+
+    fn transform_many_async_stream_with_options<ChildKey, Child, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static,
+    {
+        cache_transform_many_async_stream(self, Arc::new(transform), None, options)
     }
 
     fn transform_many_async_stream_by<ChildKey, Child, Fut>(
@@ -2162,7 +2259,32 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
         Child: Clone + PartialEq + Send + Sync + 'static,
         Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static,
     {
-        cache_transform_many_async_stream(self, Arc::new(transform), Some(Arc::new(compare)))
+        self.transform_many_async_stream_by_with_options(
+            transform,
+            compare,
+            TransformAsyncOptions::DEFAULT,
+        )
+    }
+
+    fn transform_many_async_stream_by_with_options<ChildKey, Child, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static,
+    {
+        cache_transform_many_async_stream(
+            self,
+            Arc::new(transform),
+            Some(Arc::new(compare)),
+            options,
+        )
     }
 
     fn transform_many_safe_async_stream<ChildKey, Child, E, Fut>(
@@ -2180,7 +2302,36 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             + Send
             + 'static,
     {
-        cache_transform_many_safe_async_stream(self, Arc::new(transform), Arc::new(on_error), None)
+        self.transform_many_safe_async_stream_with_options(
+            transform,
+            on_error,
+            TransformAsyncOptions::DEFAULT,
+        )
+    }
+
+    fn transform_many_safe_async_stream_with_options<ChildKey, Child, E, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<ChangeStream<CacheChange<ChildKey, Child>>, E>>
+            + Send
+            + 'static,
+    {
+        cache_transform_many_safe_async_stream(
+            self,
+            Arc::new(transform),
+            Arc::new(on_error),
+            None,
+            options,
+        )
     }
 
     fn transform_many_safe_async_stream_by<ChildKey, Child, E, Fut>(
@@ -2199,11 +2350,37 @@ impl<K, T> CacheStreamExt<K, T> for ChangeStream<CacheChange<K, T>> {
             + Send
             + 'static,
     {
+        self.transform_many_safe_async_stream_by_with_options(
+            transform,
+            on_error,
+            compare,
+            TransformAsyncOptions::DEFAULT,
+        )
+    }
+
+    fn transform_many_safe_async_stream_by_with_options<ChildKey, Child, E, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<ChangeStream<CacheChange<ChildKey, Child>>, E>>
+            + Send
+            + 'static,
+    {
         cache_transform_many_safe_async_stream(
             self,
             Arc::new(transform),
             Arc::new(on_error),
             Some(Arc::new(compare)),
+            options,
         )
     }
 

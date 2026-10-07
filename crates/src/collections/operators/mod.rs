@@ -4,6 +4,7 @@ include!("cache_stream_ext.rs");
 include!("cache_arc_stream_ext.rs");
 include!("cache_stream_ext_impl.rs");
 include!("list_transform_stream.rs");
+include!("async_jobs.rs");
 include!("cache_transform_async_stream.rs");
 include!("cache_async_safe_job.rs");
 include!("cache_transform_many_async_iterable_stream.rs");

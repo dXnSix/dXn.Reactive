@@ -5,6 +5,7 @@ mod support;
 
 #[cfg(feature = "diagnostics")]
 mod aggregation_diagnostics_diff;
+mod async_transform_workers;
 mod combination_materialization_population;
 mod connect_late_delivery;
 mod expiration_rework;
@@ -18,6 +19,7 @@ mod keyed_state_operators;
 mod lifecycle_observables;
 mod limit_size_rework;
 mod limits_expiration_streams;
+mod list_async_transform_options;
 mod materialization_reliability;
 mod operator_input_interop;
 mod ordered_emission_core;

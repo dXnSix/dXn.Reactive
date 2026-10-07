@@ -889,6 +889,22 @@ pub trait CacheStreamExt<K, T> {
         Child: Clone + PartialEq + Send + Sync + 'static,
         Children: IntoIterator<Item = Child> + 'static,
         Fut: Future<Output = Children> + Send + 'static;
+    /// [`transform_many_async`](Self::transform_many_async) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_async_with_options<ChildKey, Child, Children, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        Fut: Future<Output = Children> + Send + 'static;
 
     fn transform_many_async_by<ChildKey, Child, Children, Fut>(
         &self,
@@ -903,12 +919,47 @@ pub trait CacheStreamExt<K, T> {
         Child: Clone + PartialEq + Send + Sync + 'static,
         Children: IntoIterator<Item = Child> + 'static,
         Fut: Future<Output = Children> + Send + 'static;
+    /// [`transform_many_async_by`](Self::transform_many_async_by) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_async_by_with_options<ChildKey, Child, Children, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        Fut: Future<Output = Children> + Send + 'static;
 
     fn transform_many_safe_async<ChildKey, Child, Children, E, Fut>(
         &self,
         child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
         transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
         on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static;
+    /// [`transform_many_safe_async`](Self::transform_many_safe_async) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_safe_async_with_options<ChildKey, Child, Children, E, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        options: TransformAsyncOptions,
     ) -> ChangeStream<CacheChange<ChildKey, Child>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -934,10 +985,43 @@ pub trait CacheStreamExt<K, T> {
         Children: IntoIterator<Item = Child> + 'static,
         E: Send + Sync + 'static,
         Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static;
+    /// [`transform_many_safe_async_by`](Self::transform_many_safe_async_by) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_safe_async_by_with_options<ChildKey, Child, Children, E, Fut>(
+        &self,
+        child_key: impl Fn(&Child) -> ChildKey + Send + Sync + 'static,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Children: IntoIterator<Item = Child> + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<Children, E>> + Send + 'static;
 
     fn transform_many_async_stream<ChildKey, Child, Fut>(
         &self,
         transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static;
+    /// [`transform_many_async_stream`](Self::transform_many_async_stream) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_async_stream_with_options<ChildKey, Child, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
     ) -> ChangeStream<CacheChange<ChildKey, Child>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -950,6 +1034,21 @@ pub trait CacheStreamExt<K, T> {
         &self,
         transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
         compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static;
+    /// [`transform_many_async_stream_by`](Self::transform_many_async_stream_by) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_async_stream_by_with_options<ChildKey, Child, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
     ) -> ChangeStream<CacheChange<ChildKey, Child>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -972,12 +1071,49 @@ pub trait CacheStreamExt<K, T> {
         Fut: Future<Output = std::result::Result<ChangeStream<CacheChange<ChildKey, Child>>, E>>
             + Send
             + 'static;
+    /// [`transform_many_safe_async_stream`](Self::transform_many_safe_async_stream) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_safe_async_stream_with_options<ChildKey, Child, E, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<ChangeStream<CacheChange<ChildKey, Child>>, E>>
+            + Send
+            + 'static;
 
     fn transform_many_safe_async_stream_by<ChildKey, Child, E, Fut>(
         &self,
         transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
         on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
         compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+    ) -> ChangeStream<CacheChange<ChildKey, Child>>
+    where
+        K: Clone + Eq + Hash + Send + Sync + 'static,
+        T: Clone + Send + Sync + 'static,
+        ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
+        Child: Clone + PartialEq + Send + Sync + 'static,
+        E: Send + Sync + 'static,
+        Fut: Future<Output = std::result::Result<ChangeStream<CacheChange<ChildKey, Child>>, E>>
+            + Send
+            + 'static;
+    /// [`transform_many_safe_async_stream_by`](Self::transform_many_safe_async_stream_by) with `options`: at most `maximum_concurrency` parent
+    /// transforms run at once (`Some(0)` counts as 1); every parent is re-transformed on
+    /// refresh regardless of `transform_on_refresh`.
+    fn transform_many_safe_async_stream_by_with_options<ChildKey, Child, E, Fut>(
+        &self,
+        transform: impl Fn(T, K) -> Fut + Send + Sync + 'static,
+        on_error: impl Fn(TransformError<K, T, E>) + Send + Sync + 'static,
+        compare: impl Fn(&Child, &Child) -> Ordering + Send + Sync + 'static,
+        options: TransformAsyncOptions,
     ) -> ChangeStream<CacheChange<ChildKey, Child>>
     where
         K: Clone + Eq + Hash + Send + Sync + 'static,

@@ -81,7 +81,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static,
     {
         self.transform_async_with_previous(move |current, _, _| transform(current), false)
@@ -93,7 +93,7 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static,
     {
         self.transform_async_with_previous(move |current, _, _| transform(current), true)
@@ -106,10 +106,31 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static,
     {
-        list_transform_async_stream(self, Arc::new(transform), transform_on_refresh)
+        list_transform_async_stream(
+            self,
+            Arc::new(transform),
+            TransformAsyncOptions::new(None, transform_on_refresh),
+        )
+    }
+
+    fn transform_async_with_options<U, Fut>(
+        &self,
+        transform: impl Fn(T) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<ListChange<U>>
+    where
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        Fut: Future<Output = U> + Send + 'static,
+    {
+        list_transform_async_stream(
+            self,
+            Arc::new(move |current, _, _| transform(current)),
+            options,
+        )
     }
 
     fn transform_many<Child, Children>(
@@ -332,16 +353,12 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
             let resort_state = Arc::clone(&state);
             let resort_emitter = emitter.clone();
             let resort_subscription = resort.subscribe(move |_| {
-                resort_emitter.update(&resort_state, |state| {
-                    state.resort(None)
-                });
+                resort_emitter.update(&resort_state, |state| state.resort(None));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -413,16 +430,12 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                request_emitter.update(&request_state, |state| {
-                    state.set_request(*request)
-                });
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -519,16 +532,12 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
             let request_state = Arc::clone(&state);
             let request_emitter = emitter.clone();
             let request_subscription = requests.subscribe(move |request| {
-                request_emitter.update(&request_state, |state| {
-                    state.set_request(*request)
-                });
+                request_emitter.update(&request_state, |state| state.set_request(*request));
             })?;
 
             let source_state = Arc::clone(&state);
             let source_subscription = source.subscribe(move |batch| {
-                emitter.update(&source_state, |state| {
-                    state.apply_source(batch)
-                });
+                emitter.update(&source_state, |state| state.apply_source(batch));
             })?;
 
             Ok(Subscription::many(vec![
@@ -726,7 +735,9 @@ impl<T> ListStreamExt<T> for ChangeStream<ListChange<T>> {
             let regroup_state = Arc::clone(&state);
             let regroup_selector = Arc::clone(&group_key);
             let regroup_subscription = regrouper.subscribe(move |_| {
-                emitter.update(&regroup_state, |state| state.regroup_all(&*regroup_selector));
+                emitter.update(&regroup_state, |state| {
+                    state.regroup_all(&*regroup_selector)
+                });
             })?;
 
             Ok(Subscription::many(vec![

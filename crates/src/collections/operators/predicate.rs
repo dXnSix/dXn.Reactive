@@ -3,12 +3,10 @@ use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::future::Future;
 use std::hash::Hash;
-use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use futures::future::join_all;
 use futures::stream::{self, StreamExt};
 
 use crate::collections::change::{
@@ -22,7 +20,7 @@ use crate::collections::list_group::{ImmutableListGroup, RayListGroup};
 use crate::collections::projection::RayGroup;
 use crate::collections::stream::{ChangeStream, ValueStream};
 use crate::collections::subscription::Subscription;
-use crate::collections::transform_error::TransformError;
+use crate::collections::transform_error::{TransformError, panic_as_error};
 
 pub type Predicate<T> = Arc<dyn Fn(&T) -> bool + Send + Sync>;
 pub type Comparer<T> = Arc<dyn Fn(&T, &T) -> Ordering + Send + Sync>;
@@ -44,7 +42,13 @@ where
 
 type CacheGroupChange<K, T, G> = CacheChange<G, RayCacheGroup<G, K, T>>;
 type ImmutableCacheGroupChange<K, T, G> = CacheChange<G, ImmutableCacheGroup<G, K, T>>;
-type CacheGroupPending<K, T, G> = HashMap<G, (RayCacheGroup<G, K, T>, crate::collections::connection::PendingChanges<CacheChange<K, T>>)>;
+type CacheGroupPending<K, T, G> = HashMap<
+    G,
+    (
+        RayCacheGroup<G, K, T>,
+        crate::collections::connection::PendingChanges<CacheChange<K, T>>,
+    ),
+>;
 type CacheGroupApplyResult<K, T, G> = (Vec<CacheGroupChange<K, T, G>>, CacheGroupPending<K, T, G>);
 type CacheGroupRegroupResult<K, T, G> = (
     Vec<CacheGroupChange<K, T, G>>,
@@ -59,7 +63,13 @@ type CacheSafeErrorHandler<K, T, E> = Arc<dyn Fn(TransformError<K, T, E>) + Send
 type CacheInlineUpdate<T, U> = Arc<dyn Fn(&mut U, &T) + Send + Sync>;
 type ListGroupChange<T, G> = ListChange<RayListGroup<G, T>>;
 type ImmutableListGroupChange<T, G> = ListChange<ImmutableListGroup<G, T>>;
-type ListGroupPending<T, G> = HashMap<G, (RayListGroup<G, T>, crate::collections::connection::PendingChanges<ListChange<T>>)>;
+type ListGroupPending<T, G> = HashMap<
+    G,
+    (
+        RayListGroup<G, T>,
+        crate::collections::connection::PendingChanges<ListChange<T>>,
+    ),
+>;
 type ListGroupApplyResult<T, G> = (Vec<ListGroupChange<T, G>>, ListGroupPending<T, G>);
 type ListGroupRegroupResult<T, G> = (Vec<ListGroupChange<T, G>>, ListGroupPending<T, G>, u64);
 type ListTransformFactory<T, U> = Arc<dyn Fn(&T, Option<&U>, usize) -> U + Send + Sync>;
@@ -150,7 +160,7 @@ pub trait ListStreamExt<T> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static;
 
     fn transform_async_on_refresh<U, Fut>(
@@ -159,7 +169,7 @@ pub trait ListStreamExt<T> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static;
 
     fn transform_async_with_previous<U, Fut>(
@@ -169,7 +179,21 @@ pub trait ListStreamExt<T> {
     ) -> ChangeStream<ListChange<U>>
     where
         T: Clone + Send + Sync + 'static,
-        U: Clone + PartialEq + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
+        Fut: Future<Output = U> + Send + 'static;
+
+    /// Like [`transform_async`](Self::transform_async) with `options`: a batch's futures run
+    /// concurrently, at most `maximum_concurrency` at once (`None` is unbounded, `Some(0)`
+    /// counts as 1), and their results are applied in index order; `transform_on_refresh`
+    /// re-runs the future for refreshed items.
+    fn transform_async_with_options<U, Fut>(
+        &self,
+        transform: impl Fn(T) -> Fut + Send + Sync + 'static,
+        options: TransformAsyncOptions,
+    ) -> ChangeStream<ListChange<U>>
+    where
+        T: Clone + Send + Sync + 'static,
+        U: Clone + Send + Sync + 'static,
         Fut: Future<Output = U> + Send + 'static;
 
     fn transform_many<Child, Children>(

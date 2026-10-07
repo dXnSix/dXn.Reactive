@@ -1,60 +1,3 @@
-fn start_cache_async_transform_many_child<K, T, ChildKey, Child, Fut>(
-    state: Arc<Mutex<CacheAsyncTransformManyState<K, ChildKey, Child>>>,
-    subscriber: crate::collections::stream::StreamSubscriber<CacheChange<ChildKey, Child>>,
-    transform: Arc<dyn Fn(T, K) -> Fut + Send + Sync>,
-    active: Arc<AtomicBool>,
-    start: CacheAsyncTransformManyStart<K, T>,
-) where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
-    T: Clone + Send + Sync + 'static,
-    ChildKey: Clone + Eq + Hash + Send + Sync + 'static,
-    Child: Clone + PartialEq + Send + Sync + 'static,
-    Fut: Future<Output = ChangeStream<CacheChange<ChildKey, Child>>> + Send + 'static,
-{
-    thread::spawn(move || {
-        let key = start.key;
-        let generation = start.generation;
-        let stream = futures::executor::block_on(transform(start.item, key.clone()));
-        if !active.load(AtomicOrdering::Acquire) {
-            return;
-        }
-
-        let state_for_child = Arc::clone(&state);
-        let subscriber_for_child = Arc::clone(&subscriber);
-        let active_for_child = Arc::clone(&active);
-        let key_for_child = key.clone();
-        let subscription = stream.subscribe(move |batch| {
-            if !active_for_child.load(AtomicOrdering::Acquire) {
-                return;
-            }
-            let output = {
-                let Ok(mut state) = state_for_child.lock() else {
-                    return;
-                };
-                state.apply_child_changes(&key_for_child, generation, batch)
-            };
-            if let Some(output) = output
-                && active_for_child.load(AtomicOrdering::Acquire)
-            {
-                subscriber_for_child(&output);
-            }
-        });
-
-        let Ok(subscription) = subscription else {
-            return;
-        };
-
-        let mut maybe_subscription = Some(subscription);
-        if let Ok(mut state) = state.lock()
-            && state.is_live_generation(&key, generation)
-            && let Some(subscription) = maybe_subscription.take()
-        {
-            let _ = state.set_subscription(&key, generation, subscription);
-        }
-        drop(maybe_subscription);
-    });
-}
-
 fn filter_immutable_cache_changes<K, T>(
     changes: &[CacheChange<K, T>],
     predicate: &dyn Fn(&T) -> bool,
@@ -346,4 +289,3 @@ impl<K, T, U> Default for CacheTransformState<K, T, U> {
         }
     }
 }
-
