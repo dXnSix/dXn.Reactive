@@ -1,0 +1,69 @@
+name: Release-plz
+
+# Runs on pushes to `main` next to `ci.yml`. It runs no tests: `ci.yml` covers the release pull
+# request and every push. `release` tags `vX.Y.Z` and creates the GitHub Release (release-plz, with
+# the CHANGELOG.md section as notes) when the version in Cargo.toml has no tag yet: the merged
+# release pull request, or the initial 1.0.0. `release-pr` then keeps the next release pull request
+# up to date; it waits for `release` so it never reads an untagged history.
+#
+# RELEASE_PLZ_TOKEN is a fine-grained personal access token (see docs/releasing.md). Events made with
+# the default GITHUB_TOKEN start no workflows, so with it the release pull request would get no CI.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: release
+    if: github.repository == 'rayx-ui/RayX.Reactive'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: release-plz-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+          rustflags: ""
+
+      - uses: release-plz/action@v0.5
+        with:
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+  release-pr:
+    name: release-pr
+    needs: release
+    if: github.repository == 'rayx-ui/RayX.Reactive'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-plz-pr-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+          rustflags: ""
+
+      - uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
