@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 7,
+  "epicId": "reactive-releases",
+  "decisions": [
+    {
+      "id": "d-release-plz-git-tags",
+      "requirementIds": [
+        "REL"
+      ],
+      "descriptionMarkdown": "release-plz is the only release tool, in git-only mode (`git_only = true`, `publish = false`: versions come from tags, nothing reaches a registry). On every push to `main` `.github/workflows/release-plz.yml` runs `release-pr` (keeps a release PR with the next `[workspace.package] version`, `Cargo.lock` and the new `CHANGELOG.md` section) and `release` (tags `v{{ version }}` and creates the GitHub Release when the version in `Cargo.toml` has no tag: a merged release PR or the initial `1.0.0`). The workflow is the CLI's, guarded by `github.repository == 'rayx-ui/RayX.Reactive'` and authenticated with `RELEASE_PLZ_TOKEN`, so the release PR starts `ci.yml`.\n\nOne released package: `rayx_reactive` (in `crates/`) owns the tag, the Release and the root changelog (`changelog_path = \"./CHANGELOG.md\"`); `rayx_reactive_doc_examples` has `release = false`; no `version_group`/`changelog_include`. `release_commits` and `semver_check` follow `d-one-x-policy`. `[changelog]` is the CLI's git-cliff configuration naming `rayx_reactive` (plus the migration line of `d-changelog-from-commits`).",
+      "invariantsMarkdown": "- Tags have the form `v<semver>`, come only from release-plz or the documented by-hand fallback, and are never moved or deleted (the \"Release tags\" ruleset enforces it).\n- `RELEASE_PLZ_TOKEN` is the only release secret; it lives in GitHub Actions only.\n- `release-plz.yml` runs no tests.\n- Nothing is published to crates.io; the manifests stay crates.io-ready (`cargo package --workspace` passes).\n- One released package, one `v*` tag per release, one root `CHANGELOG.md`; `doc-examples` is never versioned or released.",
+      "rationaleMarkdown": "Owner decisions of 2026-10-18 (git tags, start at 1.0.0, one shared PAT, the CLI as model, release-plz creating the GitHub Release for libraries). `changelog_path` is needed because release-plz otherwise writes `crates/CHANGELOG.md` next to the package manifest. Evidence that git-only first releases need no PR: RayX.CLI's first Release-plz run (2026-10-14) logged \"No release tag found ... treated as initial release\", \"next version is 1.0.0\", \"already up-to-date\" in `release-pr`, and \"released rayx-cli 1.0.0 (git-only)\" in `release`. The single-crate decision's goal of a library \"publishable on its own\" stays true: the package keeps passing `cargo package`; it is released through tags instead of a registry.",
+      "sourceRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "release-plz.toml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/release-plz.yml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "Cargo.toml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "crates/Cargo.toml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "doc-examples/Cargo.toml"
+        },
+        {
+          "repositoryId": "rayx-cli",
+          "path": "release-plz.toml"
+        },
+        {
+          "repositoryId": "rayx-cli",
+          "path": ".github/workflows/release-plz.yml"
+        }
+      ],
+      "memoryDecisionRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".agentx/memory/decisions/repository/2026-10-05-repository-single-reactive-crate.md"
+        },
+        {
+          "repositoryId": "rayx-cli",
+          "path": ".agentx/memory/decisions/distribution/2026-10-14-distribution-release-plz-tags-dist-releases.md"
+        }
+      ]
+    },
+    {
+      "id": "d-one-x-policy",
+      "requirementIds": [
+        "REL",
+        "DOC"
+      ],
+      "descriptionMarkdown": "The crate stays on 1.x.x while the owner is its only consumer (owner, amendment 1, 2026-10-18). release-plz cannot cap a major bump: it bumps the major for a `!` commit, a `BREAKING CHANGE:` footer, or an API break cargo-semver-checks reports. So: `release_commits = \"^(feat|fix|perf)\"`; `semver_check = false`; commits are never marked breaking; a breaking change is committed as `feat` (minor), or `fix` when it is a fix, with the break stated in the body and the consumer note in a `Migration:` footer. Before a release PR is merged, its proposed version must still be 1.x; a `2.0.0` proposal means a stray `!`/`BREAKING CHANGE:`, and that commit is reworded (force push allowed) instead of merging. `docs/releasing.md` and `CLAUDE.md`/`AGENTS.md` state the policy and that it ends when a second consumer appears; then `!`, major bumps and the semver check return.",
+      "invariantsMarkdown": "- Every proposed or released version is 1.x.\n- No commit after `v1.0.0` carries `!` or a `BREAKING CHANGE:` footer.\n- `semver_check = false` and `release_commits = \"^(feat|fix|perf)\"`, each commented with the policy.",
+      "rationaleMarkdown": "Replaces the original plan's broadened `release_commits` (any breaking type) and its experiment on `semver_check` in git-only mode; both only mattered for major bumps, which the policy rules out (release-plz.dev/docs/semver-check: \"When release-plz detects API breaking changes, it updates the version of the package with a major semver bump\"). The pre-1.0 history keeps its `!` commits; preview A proves they do not affect the initial release.",
+      "sourceRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "release-plz.toml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/releasing.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CLAUDE.md"
+        }
+      ]
+    },
+    {
+      "id": "d-changelog-from-commits",
+      "requirementIds": [
+        "VER",
+        "REL"
+      ],
+      "descriptionMarkdown": "From 1.0.0 on, commits are the changelog. `CHANGELOG.md` starts with exactly the configured `[changelog] header` (git-cliff strips that string from the old file and writes header + new section + rest), followed by release sections `## [X.Y.Z] - YYYY-MM-DD`, newest first. The existing hand-written `Unreleased` notes become the `## [1.0.0]` section unchanged, with the old \"unpublished (0.1)\" sentence reworded into its lead line; release-plz reads that section as the body of the `v1.0.0` GitHub Release.\n\nThe repository's *Migration:* convention survives under the 1.x policy: the commit carries a `Migration: <note>` footer, and one additive line in the CLI's body template renders `*Migration:* {{ footer.value }}` under the entry for each footer in `commit.footers` whose token is `Migration`. Between releases nobody edits `CHANGELOG.md`; wording fixes happen in the release PR before it is merged. `[workspace.package] version` becomes `1.0.0` (inherited by `rayx_reactive`), `Cargo.lock` follows, `doc-examples` keeps `0.0.0`.",
+      "invariantsMarkdown": "- `CHANGELOG.md` begins with the configured header byte for byte; there is never an `Unreleased` section.\n- Every breaking change carries a migration note in its `Migration:` footer.\n- At promotion: the CHANGELOG clause of `knowledge/repository/rules.md` changes from \"record every change in CHANGELOG.md\" to \"commits are the changelog; a breaking change is a `feat`/`fix` with a `Migration:` footer, never `!`\"; `knowledge/repository/state.md` drops \"version 0.1.0 ... published to crates.io\" for \"1.0.0, released as git tags by release-plz under the 1.x policy\".",
+      "rationaleMarkdown": "The 1.0.0 section is the most valuable release note the crate has (eleven migration notes for RayX), so it is kept verbatim instead of regenerated. A header mismatch would duplicate the header on the first release PR; preview B proves the prepend on this exact file. The template line keeps the repository rule without a manual edit per release PR; it is the only deviation from the CLI's template, and preview C proves it renders.",
+      "sourceRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CHANGELOG.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "release-plz.toml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "Cargo.toml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "Cargo.lock"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/SKILL.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".agentx/memory/knowledge/repository/rules.md"
+        }
+      ]
+    },
+    {
+      "id": "d-ci-light",
+      "requirementIds": [
+        "CI"
+      ],
+      "descriptionMarkdown": "`ci.yml` keeps running on `pull_request` and on pushes to `main` (amendment 1 B); its job set stays. A release PR runs that light set once on exactly the content that will be tagged, and each push to `main` (direct pushes and release-PR merges) runs it next to `release-plz.yml`, which runs no tests and does not wait for it.",
+      "invariantsMarkdown": "- `ci.yml` keeps its `push` trigger to `main`; `release-plz.yml` runs no tests.\n- `ci.yml` runs no benchmarks, e2e or device lanes; no path filter.",
+      "rationaleMarkdown": "The brief asks to narrow release-PR CI only if it would start heavy suites (e2e, perf, platform matrices). `ci.yml` is a small library's standard set: six hosted jobs, no benchmarks run (Criterion benches are only compiled by Clippy), no browser, GPU or device work; its OS spread backs the README's platform table. Amendment 1 B overrides the original plan, which dropped the push trigger to make `release-plz.yml` the only push workflow.",
+      "sourceRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "README.md"
+        }
+      ]
+    },
+    {
+      "id": "d-consume-by-tag",
+      "requirementIds": [
+        "DOC"
+      ],
+      "descriptionMarkdown": "The crate is consumed only by release tag: `rayx_reactive = { git = \"https://github.com/rayx-ui/RayX.Reactive\", tag = \"vX.Y.Z\" }`, latest tag from the Releases page, `Cargo.lock` recording the commit. README `Installation` and `docs/02-getting-started.md` say so and drop the crates.io promise and the path co-development snippet. `docs/releasing.md` is the maintainer document (flow, 1.x policy, token, fallback, ruleset, push policy), linked from the README and `docs/20-contributing.md`; it holds no Rust blocks. `CLAUDE.md`/`AGENTS.md` get a short identical `## Releases` section, and the `rayx-reactive` skill's changelog guidance follows `d-changelog-from-commits`.",
+      "invariantsMarkdown": "- Every documented dependency form names a release tag.\n- `CLAUDE.md` and `AGENTS.md` stay identical.\n- Rust blocks in README and `docs/*.md` keep compiling in `doc-examples`.",
+      "rationaleMarkdown": "Owner decisions 1, 2 and 6: tags not crates.io, consumers pin tags, no local-override mechanism. `docs/02-getting-started.md` repeats the README's install section (found during planning), so both change. The README's tag line will name an older tag after later releases; the text says to use the latest tag instead of being rewritten per release.",
+      "sourceRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "README.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/02-getting-started.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/releasing.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/20-contributing.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CLAUDE.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "AGENTS.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/SKILL.md"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/references/reactive-state-performance.md"
+        },
+        {
+          "repositoryId": "rayx-cli",
+          "path": "docs/releasing.md"
+        }
+      ]
+    },
+    {
+      "id": "d-first-release",
+      "requirementIds": [
+        "FIRST"
+      ],
+      "descriptionMarkdown": "The first release is a push, not a PR: when the push that brings `1.0.0` and `release-plz.yml` lands on `main` and no `v*` tag exists, the `release` job tags `v1.0.0` and creates the GitHub Release. The owner already created the secret and the rulesets and pre-approved the push (amendment 1 C, D), so the sprint verifies the settings, pushes all epic commits in one force-with-lease push (changelog dated that day), checks the Release-plz run, the Release, the absence of a release PR, the tag commit and `ci.yml`'s green push run, and finally lets a scratch consumer outside the repository resolve `tag = \"v1.0.0\"` and run a test against it. A checkout/push failure of the run means the shared PAT lacks this repository: report it to the owner and re-run only after the fix. A release-plz failure to cut the first tag uses the by-hand fallback with the owner's go-ahead.",
+      "invariantsMarkdown": "- Nothing of this epic reaches `origin/main` before task t08.\n- No tag is created, moved or deleted by hand unless the owner approves the fallback; settings are verified, never created.",
+      "rationaleMarkdown": "An earlier push of the workflow without the version would tag `v0.1.0`. The PAT was created for \"only RayX.CLI\"; whether its access was extended is unknown until the first run. The consumer check proves what RayX's switch epic will rely on, without touching RayX.",
+      "sourceRefs": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/release-plz.yml"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CHANGELOG.md"
+        }
+      ]
+    }
+  ],
+  "memoryDecisionsConsidered": [
+    {
+      "repositoryId": "rayx-reactive",
+      "path": ".agentx/memory/decisions/repository/2026-10-05-repository-agentx-memory-taxonomy-transplant.md"
+    },
+    {
+      "repositoryId": "rayx-cli",
+      "path": ".agentx/memory/decisions/distribution/2026-10-08-distribution-cargo-dist-and-axoupdater.md"
+    }
+  ]
+}

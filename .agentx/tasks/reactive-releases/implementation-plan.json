@@ -1,0 +1,563 @@
+{
+  "schemaVersion": 7,
+  "epicId": "reactive-releases",
+  "revision": 3,
+  "title": "rayx_reactive releases: release-plz git tags from v1.0.0 under the 1.x policy, one root changelog, consumption by tag",
+  "validationMode": "sprint",
+  "repositories": [
+    {
+      "id": "rayx-reactive",
+      "path": ".",
+      "role": "execution"
+    },
+    {
+      "id": "rayx-cli",
+      "path": "../RayX.CLI",
+      "role": "reference"
+    }
+  ],
+  "boundaries": {
+    "repositoryIds": [
+      "rayx-reactive"
+    ],
+    "forbiddenPaths": [
+      ".agentx/tasks/rayx-reactive-complexity-optimization/**",
+      ".agentx/tasks/reactive-audit-remediation/**",
+      "crates/src/**",
+      "crates/tests/**",
+      "crates/benches/**",
+      "doc-examples/src/**",
+      "doc-examples/tests/**",
+      "doc-examples/build.rs",
+      "rust-toolchain.toml",
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  "checks": [
+    {
+      "id": "check-workflows",
+      "repositoryId": "rayx-reactive",
+      "kind": "static",
+      "criterionIds": [
+        "REL-2",
+        "CI-1"
+      ],
+      "descriptionMarkdown": "Ruby stdlib YAML (`on` parses as `true`): REL-2 structure (including `release-pr` `needs: release`), CI-1 triggers (push to `main` kept)/jobs/no benchmarks, only these two workflow files.",
+      "argv": [
+        "ruby",
+        "-e",
+        "require \"yaml\"\nfiles = Dir.glob(\".github/workflows/*.{yml,yaml}\").sort\nabort \"workflow files: #{files}\" unless files == [\".github/workflows/ci.yml\", \".github/workflows/release-plz.yml\"]\ntext = File.read(\".github/workflows/release-plz.yml\")\nw = YAML.safe_load(text)\non = w.key?(\"on\") ? w[\"on\"] : w[true]\nabort \"release-plz.yml triggers: #{on.inspect}\" unless on.keys.sort == [\"push\", \"workflow_dispatch\"] && on[\"push\"] == { \"branches\" => [\"main\"] }\njobs = w[\"jobs\"]\nabort \"release-plz.yml jobs: #{jobs.keys}\" unless jobs.keys.sort == [\"release\", \"release-pr\"]\nabort \"release-pr must have needs: release\" unless [jobs[\"release-pr\"][\"needs\"]].flatten == [\"release\"]\nabort \"release must not wait for another job\" if jobs[\"release\"].key?(\"needs\")\ntoken = \"${{ secrets.RELEASE_PLZ_TOKEN }}\"\njobs.each do |name, job|\n  abort \"#{name}: repository guard\" unless job[\"if\"] == \"github.repository == 'rayx-ui/RayX.Reactive'\"\n  steps = job[\"steps\"]\n  checkout = steps.find { |s| s[\"uses\"].to_s.start_with?(\"actions/checkout@\") }\n  abort \"#{name}: checkout needs fetch-depth 0 and RELEASE_PLZ_TOKEN\" unless checkout && checkout.dig(\"with\", \"fetch-depth\") == 0 && checkout.dig(\"with\", \"token\") == token\n  action = steps.find { |s| s[\"uses\"] == \"release-plz/action@v0.5\" }\n  abort \"#{name}: needs release-plz/action@v0.5 with command #{name} and GITHUB_TOKEN = RELEASE_PLZ_TOKEN\" unless action && action.dig(\"with\", \"command\") == name && action.dig(\"env\", \"GITHUB_TOKEN\") == token\n  abort \"#{name}: the release workflow runs no shell steps or tests\" if steps.any? { |s| s.key?(\"run\") }\nend\nsecrets = text.scan(/secrets\\.([A-Za-z0-9_]+)/).flatten.uniq\nabort \"release-plz.yml secrets: #{secrets}\" unless secrets == [\"RELEASE_PLZ_TOKEN\"]\nci_text = File.read(\".github/workflows/ci.yml\")\nci = YAML.safe_load(ci_text)\nci_on = ci.key?(\"on\") ? ci[\"on\"] : ci[true]\nabort \"ci.yml triggers: #{ci_on.inspect}\" unless (ci_on.keys - [\"workflow_dispatch\"]).sort == [\"pull_request\", \"push\"] && ci_on[\"push\"] == { \"branches\" => [\"main\"] }\nabort \"ci.yml jobs: #{ci[\"jobs\"].keys}\" unless ci[\"jobs\"].keys.sort == [\"docs\", \"macos\", \"msrv\", \"rust\", \"wasm-tests\"]\nabort \"ci.yml runs benchmarks\" if ci_text.match?(/cargo\\s+(\\+\\S+\\s+)?bench/)\nputs \"workflows ok\"\n"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "stdoutPattern": "workflows ok"
+      },
+      "inputs": [
+        ".github/workflows/**"
+      ]
+    },
+    {
+      "id": "check-workflow-yaml",
+      "repositoryId": "rayx-reactive",
+      "kind": "static",
+      "criterionIds": [
+        "REL-2",
+        "CI-1"
+      ],
+      "descriptionMarkdown": "AgentX's workflow YAML checker (syntax, duplicate keys GitHub rejects); adjust the path to the local AgentX install if it moved.",
+      "argv": [
+        "ruby",
+        "/Users/dinko/.claude/skills/agentx/scripts/check_workflow_yaml.rb",
+        ".github/workflows/release-plz.yml",
+        ".github/workflows/ci.yml"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "stdoutPattern": "workflow yaml ok"
+      },
+      "inputs": [
+        ".github/workflows/**"
+      ]
+    },
+    {
+      "id": "check-version-changelog",
+      "repositoryId": "rayx-reactive",
+      "kind": "static",
+      "criterionIds": [
+        "VER-1",
+        "VER-2"
+      ],
+      "descriptionMarkdown": "Ruby: `cargo metadata --locked` succeeds and reports `rayx_reactive 1.0.0` and `rayx_reactive_doc_examples 0.0.0`; `CHANGELOG.md` starts with the `[changelog] header` text of `release-plz.toml`, has no `Unreleased` section or \"unpublished (0.1)\", has exactly one release section `## [1.0.0] - YYYY-MM-DD`, keeps the eleven *Migration:* notes and the topic subsections.",
+      "argv": [
+        "ruby",
+        "-e",
+        "require \"json\"\nrequire \"open3\"\nout, status = Open3.capture2(\"cargo\", \"metadata\", \"--locked\", \"--format-version\", \"1\")\nabort \"cargo metadata --locked failed: Cargo.lock is not in step with the manifests\" unless status.success?\nmeta = JSON.parse(out)\nmembers = meta[\"packages\"].select { |p| meta[\"workspace_members\"].include?(p[\"id\"]) }\nversions = members.map { |p| [p[\"name\"], p[\"version\"]] }.to_h\nabort \"workspace versions: #{versions}\" unless versions == { \"rayx_reactive\" => \"1.0.0\", \"rayx_reactive_doc_examples\" => \"0.0.0\" }\nconfig = File.read(\"release-plz.toml\")\nheader = config[/^header = \"\"\"\\n?(.*?)\"\"\"/m, 1] or abort \"release-plz.toml has no [changelog] header\"\nlog = File.read(\"CHANGELOG.md\")\nabort \"CHANGELOG.md does not start with the configured [changelog] header\" unless log.start_with?(header)\nabort \"CHANGELOG.md still calls the crate unpublished (0.1) or keeps an Unreleased section\" if log.match?(/unpublished \\(0\\.1\\)|^## \\[?Unreleased/i)\nsections = log.scan(/^## \\[([^\\]]+)\\] - (\\d{4}-\\d{2}-\\d{2})$/)\nabort \"release sections: #{sections}\" unless sections.map(&:first) == [\"1.0.0\"]\nabort \"the 1.0.0 section lost migration notes\" unless log.scan(\"*Migration:*\").size >= 11\n%w[Delivery Errors Collection Time Signals Commands].each { |t| abort \"the 1.0.0 section lost ### #{t}\" unless log.match?(/^### #{t}/) }\nputs \"version and changelog ok\"\n"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "stdoutPattern": "version and changelog ok"
+      },
+      "inputs": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "crates/Cargo.toml",
+        "doc-examples/Cargo.toml",
+        "CHANGELOG.md",
+        "release-plz.toml"
+      ]
+    },
+    {
+      "id": "check-release-dry-run",
+      "repositoryId": "rayx-reactive",
+      "kind": "static",
+      "criterionIds": [
+        "REL-1",
+        "REL-3"
+      ],
+      "descriptionMarkdown": "Asserts the 1.x policy lines of `release-plz.toml`, then previews A-D of REL-3 with the pinned local release-plz (another version is refused, so a reused result stays honest) in rsync copies of the working tree under ignored `artifacts-temp/agentx/reactive-releases/dry-run/`; each copy drops its tags, disables its push URL and commits the working tree first. Logs stay there.",
+      "argv": [
+        "bash",
+        "-c",
+        "set -euo pipefail\nrelease-plz --version | grep -qx 'release-plz 0.3.172' || { echo 'need release-plz 0.3.172 (the version release-plz/action@v0.5 installs)'; exit 2; }\nfail() { echo \"FAIL: $*\"; exit 1; }\ngrep -qxF 'release_commits = \"^(feat|fix|perf)\"' release-plz.toml || fail 'release_commits must be \"^(feat|fix|perf)\" (1.x policy)'\ngrep -qE '^semver_check *= *false' release-plz.toml || fail 'semver_check must be false (1.x policy)'\nroot=$PWD\nbase=$root/artifacts-temp/agentx/reactive-releases/dry-run\nrm -rf \"$base\"; mkdir -p \"$base\"\nexport CARGO_TARGET_DIR=$base/target\nG() { git -c user.name=dry-run -c user.email=dry-run@invalid -c commit.gpgsign=false -c tag.gpgsign=false \"$@\"; }\ncopy() {\n  cd \"$root\"\n  rsync -a --exclude /target --exclude /artifacts-temp ./ \"$base/$1/\"\n  cd \"$base/$1\"\n  for t in $(git tag -l); do git tag -d \"$t\" >/dev/null; done\n  git remote set-url --push origin no-push://disabled\n  git add -A\n  G commit -qm 'chore: working tree snapshot' --allow-empty\n}\nver() { sed -n 's/^version = \"\\(.*\\)\"$/\\1/p' Cargo.toml | head -n 1; }\nupdate() { release-plz update >\"$base/$1.log\" 2>&1 || { tail -n 40 \"$base/$1.log\"; fail \"release-plz update ($1)\"; }; }\nmark() { printf '\\n// release dry run: %s\\n' \"$1\" >> crates/src/lib.rs; }\nnewest() { awk '/^## \\[1\\.0\\.0\\]/{exit} {print}' CHANGELOG.md; }\n\n# A: no v* tag yet (history still holds pre-1.0 `!` commits and BREAKING CHANGE footers) -> initial release: 1.0.0 stays, nothing changes\ncopy a; update a\n[ \"$(ver)\" = 1.0.0 ] || fail \"A: version $(ver)\"\ngit diff --quiet || fail \"A: release-plz changed files without a tag\"\n\n# B: fix after v1.0.0 -> 1.0.1, new section in the root CHANGELOG.md under the one header\ncopy b; G tag v1.0.0; mark b; G commit -qam 'fix(signal): dry-run patch'; update b\n[ \"$(ver)\" = 1.0.1 ] || fail \"B: version $(ver)\"\ngrep -A1 '^name = \"rayx_reactive\"$' Cargo.lock | grep -q 'version = \"1.0.1\"' || fail \"B: Cargo.lock not bumped\"\ngrep -q '^version = \"0.0.0\"$' doc-examples/Cargo.toml || fail \"B: doc-examples version changed\"\n[ ! -e crates/CHANGELOG.md ] || fail \"B: release-plz wrote crates/CHANGELOG.md\"\n[ \"$(grep -c '^# Changelog$' CHANGELOG.md)\" = 1 ] || fail \"B: changelog header duplicated\"\n[ \"$(grep -c '^All notable changes' CHANGELOG.md)\" = 1 ] || fail \"B: changelog header text duplicated\"\ngrep -m1 '^## \\[' CHANGELOG.md | grep -qE '^## \\[1\\.0\\.1\\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$' || fail \"B: first section is not 1.0.1\"\ngrep -q '^## \\[1\\.0\\.0\\] - ' CHANGELOG.md || fail \"B: lost the 1.0.0 section\"\nnewest | grep -q '^### Fixes$' || fail \"B: no Fixes group\"\nnewest | grep -qF -- '*(signal)* dry-run patch' || fail \"B: no entry for the fix\"\n\n# C: a feat that describes a break, with a Migration: footer -> 1.1.0 (minor, 1.x policy) and the rendered note\ncopy c; G tag v1.0.0; mark c\nG commit -qam 'feat(collections): dry-run break' -m 'This dry-run change breaks the public API on purpose.' -m 'Migration: dry-run migration note'\nupdate c\n[ \"$(ver)\" = 1.1.0 ] || fail \"C: version $(ver)\"\nnewest | grep -q '^### Features$' || fail \"C: no Features group\"\nnewest | grep -qF -- '*(collections)* dry-run break' || fail \"C: no entry for the feat\"\nnewest | grep -qF '*Migration:* dry-run migration note' || fail \"C: Migration footer not rendered\"\nif newest | grep -qF '[**breaking**]'; then fail \"C: entry marked breaking\"; fi\n\n# D: only docs, chore(agentx) and refactor commits -> no release\ncopy d; G tag v1.0.0\nprintf '\\n<!-- release dry run -->\\n' >> README.md; G commit -qam 'docs(readme): dry-run docs change'\nprintf '\\n' >> .agentx/memory/decisions/INDEX.md; G commit -qam 'chore(agentx): dry-run metadata'\nmark d; G commit -qam 'refactor(signal): dry-run refactor'\nupdate d\n[ \"$(ver)\" = 1.0.0 ] || fail \"D: version $(ver)\"\ngit diff --quiet || fail \"D: release-plz changed files without a release commit\"\necho 'release dry run ok'\n"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "stdoutPattern": "release dry run ok"
+      },
+      "timeoutSeconds": 3600,
+      "inputs": [
+        "release-plz.toml",
+        "Cargo.toml",
+        "Cargo.lock",
+        "CHANGELOG.md",
+        "crates/Cargo.toml",
+        "doc-examples/Cargo.toml"
+      ]
+    },
+    {
+      "id": "check-install-docs",
+      "repositoryId": "rayx-reactive",
+      "kind": "static",
+      "criterionIds": [
+        "DOC-1"
+      ],
+      "descriptionMarkdown": "Ruby: README and getting started show the tag form, have no untagged git, path or crates.io `0.1` form, getting started's diagnostics example carries the tag, and the README links `docs/releasing.md`.",
+      "argv": [
+        "ruby",
+        "-e",
+        "tag = 'rayx_reactive = { git = \"https://github.com/rayx-ui/RayX.Reactive\", tag = \"v1.0.0\" }'\ndocs = { \"README.md\" => File.read(\"README.md\"), \"docs/02-getting-started.md\" => File.read(\"docs/02-getting-started.md\") }\ndocs.each do |name, text|\n  abort \"#{name}: missing #{tag}\" unless text.include?(tag)\n  abort \"#{name}: still promises a crates.io 0.1 release\" if text.match?(/Once (it|the crate) is published|\"0\\.1\"/)\n  abort \"#{name}: a git dependency without a release tag\" if text.match?(%r{git = \"https://github\\.com/rayx-ui/RayX\\.Reactive\"(?!, tag = \"v)})\n  abort \"#{name}: a path dependency on a checkout\" if text.include?('path = \"../RayX.Reactive')\nend\nabort \"getting started: the diagnostics example lacks the tag\" unless docs[\"docs/02-getting-started.md\"].include?('tag = \"v1.0.0\", features = [\"diagnostics\"]')\nabort \"README.md does not link docs/releasing.md\" unless docs[\"README.md\"].include?(\"docs/releasing.md\")\nputs \"install docs ok\"\n"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "stdoutPattern": "install docs ok"
+      },
+      "inputs": [
+        "README.md",
+        "docs/02-getting-started.md"
+      ]
+    },
+    {
+      "id": "check-doc-examples",
+      "repositoryId": "rayx-reactive",
+      "kind": "test",
+      "criterionIds": [
+        "DOC-1"
+      ],
+      "descriptionMarkdown": "The existing test that exercises the touched documents: `doc-examples` compiles and runs every checked Rust block of README and `docs/*.md` (about 134 tests; `docs/releasing.md` must add none). This is the command CLAUDE.md names after documentation edits; it is not a whole-workspace run.",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "rayx_reactive_doc_examples"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 100
+      },
+      "timeoutSeconds": 1800,
+      "inputs": [
+        "README.md",
+        "docs/**",
+        "doc-examples/**",
+        "Cargo.toml",
+        "Cargo.lock",
+        "crates/**"
+      ]
+    },
+    {
+      "id": "check-guidance",
+      "repositoryId": "rayx-reactive",
+      "kind": "static",
+      "criterionIds": [
+        "DOC-3",
+        "DOC-2"
+      ],
+      "descriptionMarkdown": "Ruby: `CLAUDE.md` equals `AGENTS.md` and has a `## Releases` section naming `docs/releasing.md`, `Migration:`, `1.x` and `--force-with-lease`; the skill no longer mentions `Unreleased` and names the `Migration:` footer; `docs/releasing.md` has no Rust block and names `RELEASE_PLZ_TOKEN`, `force-with-lease`, `ruleset`, `semver_check`, `1.x`, `Migration:` and the by-hand `git tag`; the contributing chapter links it. DOC-2's content quality is a review item.",
+      "argv": [
+        "ruby",
+        "-e",
+        "claude = File.read(\"CLAUDE.md\")\nabort \"CLAUDE.md and AGENTS.md differ\" unless claude == File.read(\"AGENTS.md\")\nreleases = claude[/^## Releases\\n(.*?)(?=^## |^<!-- agentx:begin)/m, 1] or abort \"CLAUDE.md has no Releases section\"\n[\"docs/releasing.md\", \"Migration:\", \"1.x\", \"force-with-lease\"].each { |s| abort \"Releases section lacks #{s}\" unless releases.include?(s) }\nskill = File.read(\".claude/skills/rayx-reactive/SKILL.md\")\nabort \"the rayx-reactive skill still sends changes to an Unreleased CHANGELOG section\" if skill.include?(\"Unreleased\")\nabort \"the rayx-reactive skill does not name the Migration: footer\" unless skill.include?(\"Migration:\")\nrel = File.read(\"docs/releasing.md\")\nabort \"docs/releasing.md has a rust block (doc-examples would compile it)\" if rel.match?(/^```rust/)\n%w[RELEASE_PLZ_TOKEN force-with-lease ruleset semver_check 1.x Migration:].each { |s| abort \"docs/releasing.md lacks #{s}\" unless rel.include?(s) }\nabort \"docs/releasing.md lacks the by-hand git tag fallback\" unless rel.match?(/git tag v(X\\.Y\\.Z|\\d)/)\nabort \"docs/20-contributing.md does not link releasing.md\" unless File.read(\"docs/20-contributing.md\").include?(\"releasing.md\")\nputs \"guidance ok\"\n"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "stdoutPattern": "guidance ok"
+      },
+      "inputs": [
+        "CLAUDE.md",
+        "AGENTS.md",
+        ".claude/skills/rayx-reactive/**",
+        "docs/releasing.md",
+        "docs/20-contributing.md"
+      ]
+    },
+    {
+      "id": "check-consumer-tag",
+      "repositoryId": "rayx-reactive",
+      "kind": "runtime",
+      "criterionIds": [
+        "FIRST-2"
+      ],
+      "descriptionMarkdown": "After v1.0.0 exists on GitHub: a `cargo new` consumer in `mktemp -d` (outside the repository, so not part of its workspace) depends on the tag, runs one test with toolchain 1.99.0, and its `Cargo.lock` commit must equal the commit `git ls-remote` reports for `v1.0.0` (peeled if annotated). Depends on GitHub, so never reused.",
+      "argv": [
+        "bash",
+        "-c",
+        "set -euo pipefail\ndir=$(mktemp -d)\ntrap 'rm -rf \"$dir\"' EXIT\ncd \"$dir\"\ncargo +1.99.0 new -q --lib --vcs none consumer\ncd consumer\nprintf 'rayx_reactive = { git = \"https://github.com/rayx-ui/RayX.Reactive\", tag = \"v1.0.0\" }\\n' >> Cargo.toml\ncat > src/lib.rs <<'EOF'\n#[cfg(test)]\nmod tests {\n    use rayx_reactive::prelude::Signal;\n\n    #[test]\n    fn uses_the_tagged_release() -> Result<(), Box<dyn std::error::Error>> {\n        let count = Signal::new(1);\n        count.set(2)?;\n        assert_eq!(count.get()?, 2);\n        Ok(())\n    }\n}\nEOF\ncargo +1.99.0 test\ntag=$(git ls-remote --tags https://github.com/rayx-ui/RayX.Reactive | awk '$2 == \"refs/tags/v1.0.0^{}\" { p = $1 } $2 == \"refs/tags/v1.0.0\" { t = $1 } END { print (p != \"\" ? p : t) }')\nlock=$(sed -n 's|^source = \"git+https://github.com/rayx-ui/RayX.Reactive?tag=v1.0.0#\\([0-9a-f]\\{40\\}\\)\"$|\\1|p' Cargo.lock | head -n 1)\n[ -n \"$tag\" ] && [ \"$lock\" = \"$tag\" ] || { echo \"Cargo.lock commit '$lock' is not the v1.0.0 commit '$tag'\"; exit 1; }\necho \"consumer resolved v1.0.0 at $lock\"\n"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "minimumTests": 1,
+        "stdoutPattern": "consumer resolved v1\\.0\\.0 at [0-9a-f]{40}"
+      },
+      "timeoutSeconds": 1800,
+      "reuse": false
+    },
+    {
+      "id": "final-package",
+      "repositoryId": "rayx-reactive",
+      "kind": "build",
+      "criterionIds": [
+        "VER-1"
+      ],
+      "descriptionMarkdown": "`cargo package --workspace` after the manifest change (packaging and the verify build of `rayx_reactive 1.0.0`; `doc-examples` is `publish = false`). No Rust source changes in this epic, so no fmt or Clippy final check.",
+      "argv": [
+        "cargo",
+        "package",
+        "--workspace"
+      ],
+      "expected": {
+        "exitCode": 0
+      },
+      "timeoutSeconds": 1800
+    }
+  ],
+  "finalCheckIds": [
+    "final-package"
+  ],
+  "sprints": [
+    {
+      "id": "s1-release-config",
+      "title": "release-plz configuration under the 1.x policy, release workflow, version 1.0.0 and changelog, previewed with local release-plz runs",
+      "dependsOn": [],
+      "memoryScopes": [
+        "repository"
+      ],
+      "checkIds": [
+        "check-workflows",
+        "check-workflow-yaml",
+        "check-version-changelog",
+        "check-release-dry-run"
+      ],
+      "tasks": [
+        {
+          "id": "t01-release-plz-config",
+          "title": "release-plz.toml and release-plz.yml (ci.yml stays as it is)",
+          "descriptionMarkdown": "Start from RayX.CLI's `release-plz.toml` and `.github/workflows/release-plz.yml`. Write `release-plz.toml` per REL-1: `git_release_enable = true`, `release_commits = \"^(feat|fix|perf)\"` and `semver_check = false` with comments citing the 1.x policy, `[[package]]` entries for `rayx_reactive` (`changelog_path = \"./CHANGELOG.md\"`) and `rayx_reactive_doc_examples` (`release = false`), the CLI's `[changelog]` with the header naming `rayx_reactive` and the `*Migration:*` line for `Migration` footers (`commit.footers`, token `Migration`). Comments describe this repository (no dist). Write `release-plz.yml` per REL-2 (the CLI's file, guard `rayx-ui/RayX.Reactive`, `release-pr` with `needs: release`, comments adapted). Leave `ci.yml` untouched (CI-1; its push trigger stays). Commit as `ci(release): ...`/`build(release): ...` without `!`; nothing is pushed in this sprint.",
+          "criterionIds": [
+            "REL-1",
+            "REL-2",
+            "CI-1"
+          ],
+          "designIds": [
+            "d-release-plz-git-tags",
+            "d-one-x-policy",
+            "d-ci-light",
+            "d-changelog-from-commits"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "check-workflows",
+            "check-workflow-yaml"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "release-plz.toml"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": ".github/workflows/release-plz.yml"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": ".github/workflows/ci.yml"
+            },
+            {
+              "repositoryId": "rayx-cli",
+              "path": "release-plz.toml"
+            },
+            {
+              "repositoryId": "rayx-cli",
+              "path": ".github/workflows/release-plz.yml"
+            }
+          ]
+        },
+        {
+          "id": "t02-version-changelog",
+          "title": "Version 1.0.0, Cargo.lock and the 1.0.0 changelog section",
+          "descriptionMarkdown": "Set `[workspace.package] version = \"1.0.0\"` and refresh `Cargo.lock` (`cargo update -p rayx_reactive --offline`, or any cargo command without `--locked`); leave `doc-examples` at `0.0.0`. In `CHANGELOG.md` replace the first paragraph with exactly the `[changelog] header` of `release-plz.toml`, rename `## Unreleased` to `## [1.0.0] - <today>` and open the section with a reworded lead line replacing \"The crate is unpublished (0.1) ...\" (first tagged release; breaking changes are relative to the untagged 0.1 sources consumers used, each with a *Migration:* note). Keep every subsection and note verbatim (VER-1, VER-2).",
+          "criterionIds": [
+            "VER-1",
+            "VER-2"
+          ],
+          "designIds": [
+            "d-changelog-from-commits"
+          ],
+          "dependsOn": [
+            "t01-release-plz-config"
+          ],
+          "checkIds": [
+            "check-version-changelog"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "Cargo.toml"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "Cargo.lock"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "CHANGELOG.md"
+            }
+          ]
+        },
+        {
+          "id": "t03-release-proof",
+          "title": "Preview the release behaviour with local release-plz runs",
+          "descriptionMarkdown": "Install release-plz at the version `release-plz/action@v0.5` currently installs (read the action's `action.yml` at v0.5 or the latest RayX.CLI Release-plz run log; 0.3.172 on 2026-10-14) into the user's cargo bin; if it moved, amend the pin in `check-release-dry-run` first. cargo-semver-checks is not needed. The sprint checks run `check-release-dry-run` (REL-3) against the final config: a failing preview is a configuration finding (for example a header mismatch, a wrong `changelog_path`, the version written into `crates/Cargo.toml`, or the `Migration:` footer template), fixed in `release-plz.toml`/`CHANGELOG.md`, never by weakening the preview.",
+          "criterionIds": [
+            "REL-3"
+          ],
+          "designIds": [
+            "d-release-plz-git-tags",
+            "d-one-x-policy",
+            "d-changelog-from-commits"
+          ],
+          "dependsOn": [
+            "t01-release-plz-config",
+            "t02-version-changelog"
+          ],
+          "checkIds": [
+            "check-release-dry-run"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "release-plz.toml"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s2-release-docs",
+      "title": "Consumption by tag, docs/releasing.md and contributor guidance with the 1.x policy",
+      "dependsOn": [
+        "s1-release-config"
+      ],
+      "memoryScopes": [
+        "repository"
+      ],
+      "checkIds": [
+        "check-install-docs",
+        "check-doc-examples",
+        "check-guidance"
+      ],
+      "tasks": [
+        {
+          "id": "t04-install-docs",
+          "title": "README and getting started: depend on a release tag",
+          "descriptionMarkdown": "Rewrite README `Installation` and `docs/02-getting-started.md` \"Adding the dependency\" per DOC-1 (tag form, latest tag from Releases, `Cargo.lock` records the commit, tag only, no crates.io; remove the `0.1` promise and the path snippet; the diagnostics example gets the tag). The README links `docs/releasing.md` and `CHANGELOG.md`. Keep TOML blocks as ```` ```toml ````; do not touch any Rust block.",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "designIds": [
+            "d-consume-by-tag"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "check-install-docs",
+            "check-doc-examples"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "README.md"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "docs/02-getting-started.md"
+            }
+          ]
+        },
+        {
+          "id": "t05-releasing-doc",
+          "title": "docs/releasing.md and the contributing link",
+          "descriptionMarkdown": "Write `docs/releasing.md` per DOC-2, adapting RayX.CLI's `docs/releasing.md` (no dist; release-plz creates the GitHub Release; the 1.x policy and the pre-merge version check; the shared PAT and its access list; the \"Release tags\" ruleset; the push policy). Only `bash`/`toml` code blocks. Add a short Releases paragraph with the link to `docs/20-contributing.md` (its Commits section mentions the `Migration:` footer and that `!` is not used under the 1.x policy).",
+          "criterionIds": [
+            "DOC-2"
+          ],
+          "designIds": [
+            "d-consume-by-tag",
+            "d-release-plz-git-tags",
+            "d-one-x-policy"
+          ],
+          "dependsOn": [],
+          "checkIds": [
+            "check-guidance",
+            "check-doc-examples"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "docs/releasing.md"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "docs/20-contributing.md"
+            },
+            {
+              "repositoryId": "rayx-cli",
+              "path": "docs/releasing.md"
+            }
+          ]
+        },
+        {
+          "id": "t06-guidance",
+          "title": "Releases section in CLAUDE.md/AGENTS.md and the skill's changelog guidance",
+          "descriptionMarkdown": "Add the identical `## Releases` section of DOC-3 to `CLAUDE.md` and `AGENTS.md` (after `## Commits`, before the AgentX block; keep both files byte-identical). In `.claude/skills/rayx-reactive/SKILL.md` replace \"Record every behavior change ... in `CHANGELOG.md` (`Unreleased`) ...\" with the commit-driven rule (a breaking change is a `feat`/`fix` stating the break, with a `Migration:` footer; never `!` or `BREAKING CHANGE:` under the 1.x policy), and align `references/reactive-state-performance.md`. Memory `rules.md` is synced at promotion, not here.",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "designIds": [
+            "d-consume-by-tag",
+            "d-changelog-from-commits",
+            "d-one-x-policy"
+          ],
+          "dependsOn": [
+            "t05-releasing-doc"
+          ],
+          "checkIds": [
+            "check-guidance"
+          ],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "CLAUDE.md"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "AGENTS.md"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": ".claude/skills/rayx-reactive/SKILL.md"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": ".claude/skills/rayx-reactive/references/reactive-state-performance.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s3-first-release",
+      "title": "On GitHub: verify the secret and rulesets, push to release v1.0.0, check the run, Release and CI, consume by tag",
+      "dependsOn": [
+        "s1-release-config",
+        "s2-release-docs"
+      ],
+      "memoryScopes": [
+        "repository"
+      ],
+      "checkIds": [
+        "check-consumer-tag"
+      ],
+      "tasks": [
+        {
+          "id": "t07-owner-prerequisites",
+          "title": "Verify RELEASE_PLZ_TOKEN and the rulesets (already created by the owner)",
+          "descriptionMarkdown": "Verify OWN-1 with `gh secret list --repo rayx-ui/RayX.Reactive` (names only), `gh api repos/rayx-ui/RayX.Reactive/rulesets` and each ruleset's detail (\"Release tags\" on `refs/tags/v*` with `update`, `deletion`, `non_fast_forward`, no bypass; the `main` branch ruleset with the `dXnSix` bypass). Record the output. Create nothing; report any difference to the owner.",
+          "criterionIds": [
+            "OWN-1"
+          ],
+          "designIds": [
+            "d-first-release"
+          ],
+          "dependsOn": [],
+          "checkIds": []
+        },
+        {
+          "id": "t08-release-push",
+          "title": "Push (pre-approved) and confirm the v1.0.0 release and CI",
+          "descriptionMarkdown": "If the push day differs from the `## [1.0.0]` date, fix it (`docs(changelog): ...`) and re-run `check-version-changelog`. Then, pre-approved by the owner: `git fetch origin && git rebase origin/main && git push --force-with-lease origin main`. Watch the Release-plz run and `ci.yml`'s push run (`gh run list/watch --repo rayx-ui/RayX.Reactive`) and confirm FIRST-1: the `release` log line, `git ls-remote origin refs/tags/v1.0.0` against the pushed head, `gh release view v1.0.0 --repo rayx-ui/RayX.Reactive --json tagName,isDraft,isPrerelease,author,body`, `gh pr list --repo rayx-ui/RayX.Reactive` (no release PR), and a green `ci.yml` run. On a checkout/push failure of Release-plz, report the PAT access gap to the owner and re-run only after the fix; never retry blindly. An unexpected release PR is left unmerged and reported (a `2.0.0` proposal means a stray `!`).",
+          "criterionIds": [
+            "FIRST-1"
+          ],
+          "designIds": [
+            "d-first-release",
+            "d-release-plz-git-tags",
+            "d-ci-light",
+            "d-one-x-policy"
+          ],
+          "dependsOn": [
+            "t07-owner-prerequisites"
+          ],
+          "checkIds": [],
+          "sourceRefs": [
+            {
+              "repositoryId": "rayx-reactive",
+              "path": ".github/workflows/release-plz.yml"
+            },
+            {
+              "repositoryId": "rayx-reactive",
+              "path": "CHANGELOG.md"
+            }
+          ]
+        },
+        {
+          "id": "t09-consumer-by-tag",
+          "title": "A scratch consumer outside the repository resolves tag v1.0.0",
+          "descriptionMarkdown": "Run `check-consumer-tag` (FIRST-2) once `v1.0.0` exists on GitHub. RayX is not touched; its switch is the `rayx-released-libraries` epic.",
+          "criterionIds": [
+            "FIRST-2"
+          ],
+          "designIds": [
+            "d-first-release",
+            "d-consume-by-tag"
+          ],
+          "dependsOn": [
+            "t08-release-push"
+          ],
+          "checkIds": [
+            "check-consumer-tag"
+          ]
+        }
+      ]
+    }
+  ]
+}

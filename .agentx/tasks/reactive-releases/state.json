@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 7,
+  "epicId": "reactive-releases",
+  "revision": 2,
+  "planRevision": 3,
+  "specHashes": {
+    "requirements": "a667075139c3b25c2685a6cf15ab46dc1133fc38183cf23e4c0f43ccf52b1096",
+    "design": "eb49082c15d6aa52fdcdb6d5e0a93f71fa9bdc2c1cc69268e29b3e761cdf3e65",
+    "plan": "55b4883cd6e2bfa41b382e32f685ef38c5eb9727ffddc4c52076a2471eea5da3"
+  },
+  "tasks": {
+    "t01-release-plz-config": {
+      "status": "pending"
+    },
+    "t02-version-changelog": {
+      "status": "pending"
+    },
+    "t03-release-proof": {
+      "status": "pending"
+    },
+    "t04-install-docs": {
+      "status": "pending"
+    },
+    "t05-releasing-doc": {
+      "status": "pending"
+    },
+    "t06-guidance": {
+      "status": "pending"
+    },
+    "t07-owner-prerequisites": {
+      "status": "pending"
+    },
+    "t08-release-push": {
+      "status": "pending"
+    },
+    "t09-consumer-by-tag": {
+      "status": "pending"
+    }
+  },
+  "validationBatches": {},
+  "checkResults": {},
+  "reviews": {},
+  "checkpoints": {},
+  "findings": [],
+  "handoffMarkdown": "",
+  "protectedPaths": {
+    "rayx-reactive": {
+      ".agentx/tasks/rayx-reactive-complexity-optimization/**": "e8cf2d167149d9b86c3e0c6b7a4a8d17c0cc9724fc9b3a4411f5e5d4cd72961f",
+      ".agentx/tasks/reactive-audit-remediation/**": "33b5542f4724974859f0620a73a86070fd64adbd20d82e751f8bfa80ce4c8aff",
+      "crates/src/**": "951831f7b20e1c63d6a7d41216563a7ae11296c6d43649171f4e41523e4c8f28",
+      "crates/tests/**": "e48d574dd17fe6e031eeb4cb60053afdd888114934f371a30b74a77c254be134",
+      "crates/benches/**": "bb02deceae7329d4ef6c5941d0f2fedfab9072ea0a9c59b1c835d18833945417",
+      "doc-examples/src/**": "63259419b91e5a32a6093cce3628a1c1a027d312d82ddfceee877be2e66d20c5",
+      "doc-examples/tests/**": "e66e271b6afe09b600845a2aea7b91d186d051794d83d30a50d529ea2aaf61ea",
+      "doc-examples/build.rs": "417462d2b9e66b7aca844d30d86649c2bdcafa33eec93b3c7cb712581f20f197",
+      "rust-toolchain.toml": "a203d7182f316258763e5eb0f81455729a7da60db4ecbce4aedeef59057ed333",
+      "LICENSE-APACHE": "1d39282f42adc0ef965c88cac88e9b39aa332f31fecfd8615eb0e359f84fa663",
+      "LICENSE-MIT": "c294d59965f77468ec952e70be797cad02f00bc160125f47aede58a2b9291af5"
+    }
+  }
+}
