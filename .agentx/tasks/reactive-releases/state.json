@@ -1,7 +1,7 @@
 {
   "schemaVersion": 7,
   "epicId": "reactive-releases",
-  "revision": 9,
+  "revision": 18,
   "planRevision": 3,
   "specHashes": {
     "requirements": "a667075139c3b25c2685a6cf15ab46dc1133fc38183cf23e4c0f43ccf52b1096",
@@ -28,13 +28,22 @@
       ]
     },
     "t04-install-docs": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "local_reactive_releases_coord"
+      ]
     },
     "t05-releasing-doc": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "local_reactive_releases_coord"
+      ]
     },
     "t06-guidance": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "local_reactive_releases_coord"
+      ]
     },
     "t07-owner-prerequisites": {
       "status": "pending"
@@ -55,6 +64,24 @@
         }
       },
       "recordedAt": "2026-10-18T22:01:10Z"
+    },
+    "b78f1011e09e3291152338db39b5fd17ae591a80dca6afdc7aa8533c10db789a": {
+      "snapshot": {
+        "specHash": "269f0238be88b5833c4fd81072aee4efaebda0272001e27c7bac3b8892811840",
+        "repositories": {
+          "rayx-reactive": "ffa3db900200ebf69e450e28d9592c1b8de8488d1ee28862dcfb05e7c0d8bf35"
+        }
+      },
+      "recordedAt": "2026-10-18T22:05:04Z"
+    },
+    "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e": {
+      "snapshot": {
+        "specHash": "269f0238be88b5833c4fd81072aee4efaebda0272001e27c7bac3b8892811840",
+        "repositories": {
+          "rayx-reactive": "8ca278d9096d3f58497151d1f3933f3b970b90fbec553177c4c883c3195463c7"
+        }
+      },
+      "recordedAt": "2026-10-18T22:07:06Z"
     }
   },
   "checkResults": {
@@ -125,6 +152,57 @@
       "logPath": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-5de21d49eafb.log",
       "logSha256": "1b356cd3073d66da1f86a51d57d3f0a5f7f3d071c64f63324f6a47fffbfff795",
       "inputsHash": "2494fa91d180c7b933791ed7280e413f30251aadcadcd8e2b0308c5a9efcaee9"
+    },
+    "s2-release-docs/check-install-docs/final": {
+      "checkId": "check-install-docs",
+      "boundaryId": "s2-release-docs",
+      "phase": "final",
+      "batchId": "b78f1011e09e3291152338db39b5fd17ae591a80dca6afdc7aa8533c10db789a",
+      "definitionHash": "7277d6331ce0a57bd89a4059c8a49984570d7c08c232350245444ab0fa11e489",
+      "basisHash": "0cf1858c7cf75f2dc28257fb2f34b6d543eebadc550da42f5aa385a45989fd4f",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.0393,
+      "recordedAt": "2026-10-18T22:04:48Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-a70082662841.log",
+      "logSha256": "842ccbdb6af35f67b63bf113690d36263cdea9d2223d82e3af9eca6949888bf2",
+      "inputsHash": "61c210bf00573963b6fcb23bd6180be37593e65e807d03726051b713abbd6d2e"
+    },
+    "s2-release-docs/check-doc-examples/final": {
+      "checkId": "check-doc-examples",
+      "boundaryId": "s2-release-docs",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "b2bb64ef4fe4db7d4cbde73ecefa938be0a61ee1f2229435cc6ec8014f0ce4ff",
+      "basisHash": "9cb5e60435a3f950eaaf530ee019d5fd8d45af57cc47888fae20e682e26b1ed9",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 135,
+      "durationSeconds": 2.4935,
+      "recordedAt": "2026-10-18T22:07:05Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-2819f641e8ea.log",
+      "logSha256": "14a77cfd464acb3a2aadad32e84a1e59ef5fcb7bedc73cf1e704e7f7f5a2619d",
+      "inputsHash": "2eecc2e994890a36c55b99d909684557a6ad4ff1a5099c57f352dddbe2f03fa0"
+    },
+    "s2-release-docs/check-guidance/final": {
+      "checkId": "check-guidance",
+      "boundaryId": "s2-release-docs",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "c29c629e668e0250ddc1a930e925d8860ad0706e4015288142a92d4ad50fef1e",
+      "basisHash": "744f56e90817adb2d6303665aca550df26ba081cfa8b2f5e38797c32b6ee54db",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.0403,
+      "recordedAt": "2026-10-18T22:07:06Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-4bfa96b70319.log",
+      "logSha256": "dafc1a391d8f8db7b6a468a118ffec96a96f7f155542a517191f91c3b6d5dac8",
+      "inputsHash": "d26b446104b94b9d01f2fc275e68d38349bee242eaa748b3a4711a2bb25f6d59"
     }
   },
   "reviews": {
@@ -273,6 +351,150 @@
       "summaryMarkdown": "Passed. `release-plz.toml` carries every REL-1 key: git-only, tag `v{{ version }}`, `git_release_enable = true`, `release_commits = \"^(feat|fix|perf)\"` and `semver_check = false`, both commented with the 1.x policy. The `rayx_reactive` package has root `changelog_path` and `doc-examples` has `release = false`, with no `version_group`/`changelog_include` and no dist references. `[changelog]` matches the CLI's apart from the header naming `rayx_reactive` and one `commit.footers` loop that renders `  *Migration:*`, which continues the list item in the same style as the hand-written notes. `release-plz.yml` matches the CLI's except for the `rayx-ui/RayX.Reactive` guard, `release-pr` `needs: release`, and an adapted header comment covering the PAT reason, release-plz creating the Release and tests living in ci.yml. `ci.yml` is unchanged from HEAD, and it and `release-plz.yml` are the only workflow files. Version is 1.0.0 in `[workspace.package]` and Cargo.lock, with doc-examples at 0.0.0. CHANGELOG.md starts byte-for-byte with the configured header, followed by `## [1.0.0] - 2026-10-19` and the reworded lead line. Everything from `### Delivery` on is identical to HEAD, including all 17 subsections and 11 *Migration:* notes. Dry-run copies confirm A: 1.0.0 with no changes; B: 1.0.1 with the root changelog prepended under a single header; C: 1.1.0 with Features, the rendered Migration line and no breaking marker; D: no release. Minor observation, not a defect: generated sections are dated from UTC commit time, so the previews show 2026-10-18 above the locally dated 2026-10-19 1.0.0 section.",
       "findingIds": [],
       "recordedAt": "2026-10-18T22:03:07Z"
+    },
+    "s2-release-docs": {
+      "reviewerId": "reviewer-s2-reactive-releases",
+      "snapshotId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "criterionIds": [
+        "DOC-1",
+        "DOC-2",
+        "DOC-3"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "README.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "sha256": "9e802821b455ecea23255ef4b8ecf2ba38e278f97278d8c5b0178c494b43a948"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/02-getting-started.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "sha256": "32ee6708d0a056d455bdaa54686ad37f2e7c156534ae711af7346d6821716721"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "doc-examples/build.rs",
+          "kind": "test",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "sha256": "80d8323e7792ae10c32081c8c9c5caa7da5a66acadc491790846d66a6491c28b"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-a70082662841.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "sha256": "842ccbdb6af35f67b63bf113690d36263cdea9d2223d82e3af9eca6949888bf2"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-1800a85d3d8e.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "sha256": "7c6db4e5bcecc78129684ed8c44f98ef228caea831e23490ffecf148a98eea60"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/releasing.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-2"
+          ],
+          "sha256": "f348556f1ecd711d3279860e6ac4a64e79de7bed355081dbfc8d8187e5ef3b62"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/20-contributing.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-2"
+          ],
+          "sha256": "1f8cf6507a29b0b53c26d2ef01c4dbfe6a27635dc8021f46594baae138cf0a9c"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "release-plz.toml",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-2"
+          ],
+          "sha256": "789990a409ae1ab5667a3065468abfb65e4f41d9568c480f38567b43940f47c1"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/release-plz.yml",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-2"
+          ],
+          "sha256": "0a4d4985294fd883fcdcbf3c5d5574711ef2bac9d9b67425cdabf7d54ad7e576"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CLAUDE.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "24cf6a7fae80f0d72d98e495ea3b4e88124be5bac4b6b0ecb70f3bc20b9edc74"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "AGENTS.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "24cf6a7fae80f0d72d98e495ea3b4e88124be5bac4b6b0ecb70f3bc20b9edc74"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/SKILL.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "6b1023df8407ed35d2c762d00ba6a1f306507d9c29495e5e8c22ca2dcf309e8d"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/references/reactive-state-performance.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "ad862c1d48b0dc69d767fe6fb344709fcb6e4efde65a1ebffb752a893441be3a"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-29a7349926ad.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-3",
+            "DOC-2"
+          ],
+          "sha256": "dafc1a391d8f8db7b6a468a118ffec96a96f7f155542a517191f91c3b6d5dac8"
+        }
+      ],
+      "deltaSummaryMarkdown": "Inspected the by-hand fallback in `docs/releasing.md`: the only change is the added `awk '/^## \\[X\\.Y\\.Z\\]/ { found = 1; next } /^## \\[/ && found { exit } found' CHANGELOG.md > notes.md` line before `gh release create ... --notes-file notes.md`, inside the existing bash block (no Rust block added). Ran it with `1.0.0` substituted against the current `CHANGELOG.md`: it prints the 1.0.0 section body (lead paragraph through the last entry) without the heading and stops at the next section, so the earlier non-blocking note about the undefined `notes.md` is addressed. The rest of the reviewed content is unchanged; the s2 checks are recorded as passing on the new snapshot.",
+      "reattestedFrom": "b78f1011e09e3291152338db39b5fd17ae591a80dca6afdc7aa8533c10db789a",
+      "summaryMarkdown": "DOC-1: README and getting started show only the `tag = \"v1.0.0\"` form (diagnostics example included), point at the Releases page, state that `Cargo.lock` records the commit, that releases are Git tags only and that branch/`rev`/path dependencies are not used; the 0.1 promise and the path snippet are gone, and the README links `CHANGELOG.md` and `docs/releasing.md`. `doc-examples` passed with 135 tests (no new Rust blocks). DOC-2 (manual): `docs/releasing.md` covers every criterion bullet (release-PR flow with in-PR wording edits and the no-PR initial `v1.0.0`; 1.x policy incl. `Migration:` footer example, never `!`/`BREAKING CHANGE:`, `semver_check = false` and why, the three-point pre-merge check, `2.0.0` handling by rewording, and the policy end; `RELEASE_PLZ_TOKEN` owner/permissions/access list, why `GITHUB_TOKEN` is insufficient, silent expiry, missing-access failure and rotation; by-hand fallback through `gh release create`; immutable `v*` tags and fix-forward; push policy and `ci.yml` triggers; consumer pinning and bumping) with only toml/text/bash blocks, and is linked from `docs/20-contributing.md` and `docs/README.md`. Statements match `release-plz.toml` (git_only, publish=false, git_release_enable, release_commits, skipped chore scopes, `release = false` for doc-examples), `release-plz.yml` (release before release-pr, PAT at checkout) and `ci.yml` (pull_request + push to main); `cargo update -p rayx_reactive --offline` was dry-run verified. Nit (non-blocking): the fallback's `notes.md` is not said to be extracted from the new CHANGELOG section beyond the step comment. DOC-3: identical `## Releases` section in CLAUDE.md/AGENTS.md before the AgentX block with all required items; the skill and its performance reference are commit-driven with the `Migration:` footer. The memory CHANGELOG rule is contradicted only as declared for promotion by `d-changelog-from-commits`.",
+      "findingIds": [],
+      "recordedAt": "2026-10-18T22:07:27Z"
     }
   },
   "checkpoints": {
@@ -283,6 +505,14 @@
       },
       "reviewHash": "3428b400882f28116419104719bbdbdc52758d916a6c9fd1b76a8b27ffafe20f",
       "recordedAt": "2026-10-18T22:03:33Z"
+    },
+    "s2-release-docs": {
+      "snapshotId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "commits": {
+        "rayx-reactive": "e845b1f72f6ff2135eeed85786a38ae42a0e210d"
+      },
+      "reviewHash": "75416f7a8bb6cb37d10c241bd19bc0c4e42b6c0a3f54d0d49615730a345792fa",
+      "recordedAt": "2026-10-18T22:17:30Z"
     }
   },
   "findings": [],
