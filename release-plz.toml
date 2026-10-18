@@ -1,0 +1,79 @@
+# release-plz: keeps a release pull request with the version bump and the CHANGELOG.md section
+# open on `main`; merging it makes the `release` job tag `vX.Y.Z` and create the GitHub Release
+# with that section as notes. Nothing is published to crates.io. See docs/releasing.md.
+
+[workspace]
+# Versions come from git tags; nothing goes to a registry. The manifests stay crates.io-ready
+# (`cargo package --workspace` passes), but consumers depend on a release tag.
+git_only = true
+publish = false
+git_tag_enable = true
+git_tag_name = "v{{ version }}"
+# release-plz creates the GitHub Release for the tag, with the changelog section as its body.
+git_release_enable = true
+changelog_update = true
+# 1.x policy (docs/releasing.md): the crate stays on 1.x.x while the owner is its only consumer.
+# release-plz bumps the major for an API break cargo-semver-checks reports and has no way to cap
+# it, so the semver check stays off until a second consumer appears.
+semver_check = false
+# 1.x policy: only changes that reach users start a release (`fix`/`perf` patch, `feat` minor);
+# docs, tests, CI and agentx commits ride along in the next one. A breaking change is a `feat`
+# (or `fix`) whose body states the break and whose `Migration:` footer holds the consumer note.
+# Never `!` or a `BREAKING CHANGE:` footer: release-plz would propose 2.0.0.
+release_commits = "^(feat|fix|perf)"
+
+[[package]]
+name = "rayx_reactive"
+# The package lives in `crates/`; the repository keeps one root changelog.
+changelog_path = "./CHANGELOG.md"
+
+[[package]]
+# Runs the README and docs/*.md examples as tests; never versioned or released.
+name = "rayx_reactive_doc_examples"
+release = false
+
+[changelog]
+header = """# Changelog
+
+All notable changes to `rayx_reactive` are documented in this file. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html). It is generated from
+Conventional Commits by release-plz.
+
+"""
+# One `## [X.Y.Z] - YYYY-MM-DD` section per release; release-plz uses it as the Release body.
+# Each `Migration:` commit footer is rendered as an indented *Migration:* line under its entry.
+body = """
+## [{{ version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+{%- if commit.scope -%}
+- *({{ commit.scope }})* {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}
+{% else -%}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}
+{% endif -%}
+{% for footer in commit.footers | filter(attribute="token", value="Migration") -%}
+{{ "  " }}*Migration:* {{ footer.value }}
+{% endfor -%}
+{% endfor -%}
+{% endfor %}
+"""
+trim = true
+protect_breaking_commits = true
+tag_pattern = "v[0-9].*"
+sort_commits = "oldest"
+commit_parsers = [
+  # Housekeeping that is not a change to rayx_reactive.
+  { message = "^chore\\(agentx\\)", skip = true },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^chore\\(deps\\)", skip = true },
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Fixes" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Refactoring" },
+  { message = "^docs", group = "Documentation" },
+  { message = "^(ci|build)", group = "Build and CI" },
+  { message = "^test", group = "Tests" },
+  { message = "^chore", group = "Maintenance" },
+]
