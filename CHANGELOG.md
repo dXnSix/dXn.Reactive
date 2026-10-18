@@ -1,9 +1,14 @@
 # Changelog
 
-All notable changes to `rayx_reactive` are documented here. The crate is unpublished (0.1); the
-breaking changes below are listed with migration notes for consumers.
+All notable changes to `rayx_reactive` are documented in this file. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html). It is generated from
+Conventional Commits by release-plz.
 
-## Unreleased
+## [1.0.0] - 2026-10-19
+
+The first tagged release. Before it, consumers built the untagged 0.1 sources; the breaking changes
+below are relative to those sources, each with a *Migration:* note.
 
 ### Delivery
 

@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "rayx_reactive"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "criterion",
  "futures",
