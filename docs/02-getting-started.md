@@ -13,22 +13,18 @@ No async runtime, UI framework, or platform SDK is required.
 
 ## Adding the dependency
 
-The crate is not yet published on crates.io. Depend on the Git repository:
+The crate is released as Git tags, not on crates.io, and is consumed only by release tag:
 
 ```toml
 [dependencies]
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive" }
+rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.0" }
 ```
 
-For local co-development, point at a checkout (the crate lives in the `crates/` directory of the
-workspace):
-
-```toml
-[dependencies]
-rayx_reactive = { path = "../RayX.Reactive/crates" }
-```
-
-Once the crate is published, use `rayx_reactive = "0.1"`.
+Use the latest tag from the repository's [Releases](https://github.com/rayx-ui/RayX.Reactive/releases)
+page. `Cargo.lock` records the commit the tag points to, and tags are never moved, so a build is
+reproducible. Do not depend on a branch, a `rev` or a path to a checkout; to pick up a newer
+release, change the tag. The [changelog](../CHANGELOG.md) lists what each release changed, with a
+*Migration:* note for every breaking change.
 
 ### Feature flags
 
@@ -37,7 +33,7 @@ Once the crate is published, use `rayx_reactive = "0.1"`.
 | `diagnostics` | off | Adds `ListDiagnosticsExt` / `CacheDiagnosticsExt` (`collect_update_stats`), `ChangeSummary`, `ChangeStatistics`, and `retained_implicit_batch_count()`. Startup delivery also maintains a global gauge of buffered batches. See [chapter 13](13-stream-control-and-aggregation.md#diagnostics). |
 
 ```toml
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", features = ["diagnostics"] }
+rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.0", features = ["diagnostics"] }
 ```
 
 ### Optional companions

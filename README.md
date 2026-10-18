@@ -62,14 +62,17 @@ a service, or a test.
 
 ## Installation
 
-The crate is not yet published on crates.io. Depend on it from Git:
+The crate is released as Git tags, not on crates.io. Depend on a release tag:
 
 ```toml
 [dependencies]
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive" }
+rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.0" }
 ```
 
-Once it is published, the dependency becomes `rayx_reactive = "0.1"`.
+Use the latest tag from the repository's [Releases](https://github.com/rayx-ui/RayX.Reactive/releases)
+page; `Cargo.lock` records the tag's commit. Depend on a release tag only, never on a branch, a
+`rev` or a path to a checkout. Each release's notes are in [`CHANGELOG.md`](CHANGELOG.md), and
+[`docs/releasing.md`](docs/releasing.md) describes how releases are made.
 
 | Feature | Default | Effect |
 |---|---|---|
