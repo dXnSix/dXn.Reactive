@@ -1,7 +1,7 @@
 {
   "schemaVersion": 7,
   "epicId": "reactive-releases",
-  "revision": 21,
+  "revision": 29,
   "planRevision": 3,
   "specHashes": {
     "requirements": "a667075139c3b25c2685a6cf15ab46dc1133fc38183cf23e4c0f43ccf52b1096",
@@ -46,20 +46,22 @@
       ]
     },
     "t07-owner-prerequisites": {
-      "status": "implemented",
+      "status": "done",
       "workerIds": [
         "local_reactive_releases_coord"
       ]
     },
     "t08-release-push": {
-      "status": "blocked",
+      "status": "done",
       "workerIds": [
         "local_reactive_releases_coord"
-      ],
-      "blockerMarkdown": "Release-plz run 39171622602 on pushed main 9f4a80e: release job failed creating tag v1.0.0 with HTTP 403 'Resource not accessible by personal access token' (POST /repos/rayx-ui/RayX.Reactive/git/tags). The shared RELEASE_PLZ_TOKEN PAT lacks write access to RayX.Reactive. Owner must add the repository to the PAT (Contents + Pull requests read/write). No tag, Release or PR exists; ci.yml push run 39171622640 is green."
+      ]
     },
     "t09-consumer-by-tag": {
-      "status": "pending"
+      "status": "done",
+      "workerIds": [
+        "local_reactive_releases_coord"
+      ]
     }
   },
   "validationBatches": {
@@ -88,7 +90,7 @@
           "rayx-reactive": "8ca278d9096d3f58497151d1f3933f3b970b90fbec553177c4c883c3195463c7"
         }
       },
-      "recordedAt": "2026-10-18T22:07:06Z"
+      "recordedAt": "2026-10-18T23:07:05Z"
     }
   },
   "checkResults": {
@@ -210,6 +212,173 @@
       "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-4bfa96b70319.log",
       "logSha256": "dafc1a391d8f8db7b6a468a118ffec96a96f7f155542a517191f91c3b6d5dac8",
       "inputsHash": "d26b446104b94b9d01f2fc275e68d38349bee242eaa748b3a4711a2bb25f6d59"
+    },
+    "s3-first-release/check-consumer-tag/final": {
+      "checkId": "check-consumer-tag",
+      "boundaryId": "s3-first-release",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "6a5de8bd706e9b6a185f155c379cba2f2435b064d065cdb57f021f1879f2abc3",
+      "basisHash": "0398e1d4c7687bbc8eeff1c5583d7a666a8f0a98f8c787a40ddef47ef9c86bfb",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 1,
+      "durationSeconds": 11.1603,
+      "recordedAt": "2026-10-18T23:04:58Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s3-first-release-final-104d3a8bcc76.log",
+      "logSha256": "ad34ab3517948e3a3038d32f44479f348fd3c0fe0dfcbb3a74c5de9ca3da6b08"
+    },
+    "final/check-workflows/final": {
+      "checkId": "check-workflows",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "8d60b233dc7a12178aa31daa8ad5f3fefb5154a27835b278a5073dd2b14e6df7",
+      "definitionHash": "bd5d8e624529e57ba263efe29e255202348919f654ba7e63901c77c580696e80",
+      "basisHash": "6b95f298c5c0bd0b80d7b004fd5d4553d4953eb9294d6e9cce4e0ab2bcf0ab7e",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.1392,
+      "recordedAt": "2026-10-18T22:00:40Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-27628bd248cd.log",
+      "logSha256": "eda5fd36635d217ef275dd9f4486d4c7fa7adaa571f0f02e966c5f0519ffdb34",
+      "inputsHash": "b60bc7c6b7329c855dc94bdeada585aae3c21996261589fe6ae4a7365084ce78"
+    },
+    "final/check-workflow-yaml/final": {
+      "checkId": "check-workflow-yaml",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "8d60b233dc7a12178aa31daa8ad5f3fefb5154a27835b278a5073dd2b14e6df7",
+      "definitionHash": "18867b549b7928af63675d871eaa17d4e70611500e4ec711f295387fe3964fb8",
+      "basisHash": "890f3875dde81c13f9261a5f2f3a2061efd694e7db5885402817a0e49d1a3339",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.1922,
+      "recordedAt": "2026-10-18T22:00:40Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-6120db0fefdf.log",
+      "logSha256": "b5ef34948d119b8c9a2a83ea3fa7be28686336c326ed4fa8cbd531bc51a84a27",
+      "inputsHash": "b60bc7c6b7329c855dc94bdeada585aae3c21996261589fe6ae4a7365084ce78"
+    },
+    "final/check-version-changelog/final": {
+      "checkId": "check-version-changelog",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "8d60b233dc7a12178aa31daa8ad5f3fefb5154a27835b278a5073dd2b14e6df7",
+      "definitionHash": "23c20dabdbab5706508aadb83d9826fb3d8a679ab661db23685b7b330e1d0a77",
+      "basisHash": "c91baab3d6035ca8b75234c5e47c0face636d0cd7f269137e28e1c5d994b8092",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.9961,
+      "recordedAt": "2026-10-18T22:00:41Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-5c60f6db8612.log",
+      "logSha256": "00b023eb2231741e0e215c37d515033961369f50da129ba0574d42c620949b27",
+      "inputsHash": "2494fa91d180c7b933791ed7280e413f30251aadcadcd8e2b0308c5a9efcaee9"
+    },
+    "final/check-release-dry-run/final": {
+      "checkId": "check-release-dry-run",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "8d60b233dc7a12178aa31daa8ad5f3fefb5154a27835b278a5073dd2b14e6df7",
+      "definitionHash": "04f58c2e4387ec6c86e5a1da68dc88f718949aac3047cebcfff6ea3080368ed8",
+      "basisHash": "03b0140f71e1128415a28ceabb5698cdd124707dd32b9ee20f1024ce9b7bcd65",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 29.0588,
+      "recordedAt": "2026-10-18T22:01:10Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-5de21d49eafb.log",
+      "logSha256": "1b356cd3073d66da1f86a51d57d3f0a5f7f3d071c64f63324f6a47fffbfff795",
+      "inputsHash": "2494fa91d180c7b933791ed7280e413f30251aadcadcd8e2b0308c5a9efcaee9"
+    },
+    "final/check-install-docs/final": {
+      "checkId": "check-install-docs",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "b78f1011e09e3291152338db39b5fd17ae591a80dca6afdc7aa8533c10db789a",
+      "definitionHash": "7277d6331ce0a57bd89a4059c8a49984570d7c08c232350245444ab0fa11e489",
+      "basisHash": "0cf1858c7cf75f2dc28257fb2f34b6d543eebadc550da42f5aa385a45989fd4f",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.0393,
+      "recordedAt": "2026-10-18T22:04:48Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-a70082662841.log",
+      "logSha256": "842ccbdb6af35f67b63bf113690d36263cdea9d2223d82e3af9eca6949888bf2",
+      "inputsHash": "61c210bf00573963b6fcb23bd6180be37593e65e807d03726051b713abbd6d2e"
+    },
+    "final/check-doc-examples/final": {
+      "checkId": "check-doc-examples",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "b2bb64ef4fe4db7d4cbde73ecefa938be0a61ee1f2229435cc6ec8014f0ce4ff",
+      "basisHash": "9cb5e60435a3f950eaaf530ee019d5fd8d45af57cc47888fae20e682e26b1ed9",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 135,
+      "durationSeconds": 2.4935,
+      "recordedAt": "2026-10-18T22:07:05Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-2819f641e8ea.log",
+      "logSha256": "14a77cfd464acb3a2aadad32e84a1e59ef5fcb7bedc73cf1e704e7f7f5a2619d",
+      "inputsHash": "2eecc2e994890a36c55b99d909684557a6ad4ff1a5099c57f352dddbe2f03fa0"
+    },
+    "final/check-guidance/final": {
+      "checkId": "check-guidance",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "c29c629e668e0250ddc1a930e925d8860ad0706e4015288142a92d4ad50fef1e",
+      "basisHash": "744f56e90817adb2d6303665aca550df26ba081cfa8b2f5e38797c32b6ee54db",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 0.0403,
+      "recordedAt": "2026-10-18T22:07:06Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-4bfa96b70319.log",
+      "logSha256": "dafc1a391d8f8db7b6a468a118ffec96a96f7f155542a517191f91c3b6d5dac8",
+      "inputsHash": "d26b446104b94b9d01f2fc275e68d38349bee242eaa748b3a4711a2bb25f6d59"
+    },
+    "final/check-consumer-tag/final": {
+      "checkId": "check-consumer-tag",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "6a5de8bd706e9b6a185f155c379cba2f2435b064d065cdb57f021f1879f2abc3",
+      "basisHash": "0398e1d4c7687bbc8eeff1c5583d7a666a8f0a98f8c787a40ddef47ef9c86bfb",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 1,
+      "durationSeconds": 13.0986,
+      "recordedAt": "2026-10-18T23:07:03Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/final-final-2c56a7ff697d.log",
+      "logSha256": "3f11114fcae54d30b70c1d0163b3ca0aa2c0696121642a1b067a86e0c0718215"
+    },
+    "final/final-package/final": {
+      "checkId": "final-package",
+      "boundaryId": "final",
+      "phase": "final",
+      "batchId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "definitionHash": "098b4e346d78da52ae90b29a8c6d9064fa90ca1804140197b1c7bd3de51790e1",
+      "basisHash": "6b86d6f2679893f593a0dce4dfbbcd5726e81386e3d2d67b37bdeabc449067cc",
+      "status": "passed",
+      "exitCode": 0,
+      "testCount": 0,
+      "durationSeconds": 2.2486,
+      "recordedAt": "2026-10-18T23:07:05Z",
+      "messageMarkdown": "Expectation matched",
+      "logPath": "artifacts-temp/agentx/reactive-releases/final-final-c76aec29350d.log",
+      "logSha256": "5f0313d16d08ab13691d85d4c2f220e220366208b74ce59106fb7e8fe1554c43"
     }
   },
   "reviews": {
@@ -502,6 +671,336 @@
       "summaryMarkdown": "DOC-1: README and getting started show only the `tag = \"v1.0.0\"` form (diagnostics example included), point at the Releases page, state that `Cargo.lock` records the commit, that releases are Git tags only and that branch/`rev`/path dependencies are not used; the 0.1 promise and the path snippet are gone, and the README links `CHANGELOG.md` and `docs/releasing.md`. `doc-examples` passed with 135 tests (no new Rust blocks). DOC-2 (manual): `docs/releasing.md` covers every criterion bullet (release-PR flow with in-PR wording edits and the no-PR initial `v1.0.0`; 1.x policy incl. `Migration:` footer example, never `!`/`BREAKING CHANGE:`, `semver_check = false` and why, the three-point pre-merge check, `2.0.0` handling by rewording, and the policy end; `RELEASE_PLZ_TOKEN` owner/permissions/access list, why `GITHUB_TOKEN` is insufficient, silent expiry, missing-access failure and rotation; by-hand fallback through `gh release create`; immutable `v*` tags and fix-forward; push policy and `ci.yml` triggers; consumer pinning and bumping) with only toml/text/bash blocks, and is linked from `docs/20-contributing.md` and `docs/README.md`. Statements match `release-plz.toml` (git_only, publish=false, git_release_enable, release_commits, skipped chore scopes, `release = false` for doc-examples), `release-plz.yml` (release before release-pr, PAT at checkout) and `ci.yml` (pull_request + push to main); `cargo update -p rayx_reactive --offline` was dry-run verified. Nit (non-blocking): the fallback's `notes.md` is not said to be extracted from the new CHANGELOG section beyond the step comment. DOC-3: identical `## Releases` section in CLAUDE.md/AGENTS.md before the AgentX block with all required items; the skill and its performance reference are commit-driven with the `Migration:` footer. The memory CHANGELOG rule is contradicted only as declared for promotion by `d-changelog-from-commits`.",
       "findingIds": [],
       "recordedAt": "2026-10-18T22:07:27Z"
+    },
+    "s3-first-release": {
+      "reviewerId": "reviewer-s3-reactive-releases",
+      "snapshotId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "criterionIds": [
+        "OWN-1",
+        "FIRST-1",
+        "FIRST-2"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/release-plz.yml",
+          "kind": "source",
+          "criterionIds": [
+            "OWN-1",
+            "FIRST-1",
+            "FIRST-2"
+          ],
+          "sha256": "0a4d4985294fd883fcdcbf3c5d5574711ef2bac9d9b67425cdabf7d54ad7e576"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "release-plz.toml",
+          "kind": "source",
+          "criterionIds": [
+            "FIRST-1",
+            "FIRST-2"
+          ],
+          "sha256": "789990a409ae1ab5667a3065468abfb65e4f41d9568c480f38567b43940f47c1"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "FIRST-1"
+          ],
+          "sha256": "0cb739aa26a7e4ecf1ef9d0146c416f3d4237a9e463451a46f029fb4cb67b768"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "Cargo.toml",
+          "kind": "source",
+          "criterionIds": [
+            "FIRST-1",
+            "FIRST-2"
+          ],
+          "sha256": "8474ae7ef2181fcaacc50065e3e66734d19f5acbe736833baaf4973ba77b1a28"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/own-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "OWN-1"
+          ],
+          "sha256": "cb13403c8737201f85bf486431bdbafaa1f0565dad57d295c067edbd95a2824b"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/first-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "FIRST-1",
+            "FIRST-2"
+          ],
+          "sha256": "bafde7ba0c326be509b13fb7def8e593a08414f18f47b3fcbaa15d6df93b0997"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s3-first-release-final-104d3a8bcc76.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "FIRST-2"
+          ],
+          "sha256": "ad34ab3517948e3a3038d32f44479f348fd3c0fe0dfcbb3a74c5de9ca3da6b08"
+        }
+      ],
+      "summaryMarkdown": "Independently re-verified on GitHub. OWN-1: `RELEASE_PLZ_TOKEN` listed (name only; updated 2026-10-18T23:01Z after the owner's PAT swap); ruleset 25358678 \"Release tags\" active, target tag, include `refs/tags/v*`, rules update/deletion/non_fast_forward, no bypass actors, creation unrestricted; ruleset 25351556 \"DefaultRules\" on `~DEFAULT_BRANCH` blocks deletion/non_fast_forward with an always-bypass for user 226146274 (dXnSix). FIRST-1: Release-plz run 39171622602 attempt 1 failed in `release` (failed to release package, the PAT access gap; release-pr skipped, no tag created), attempt 2 on push of 9f4a80e is green, logging `released rayx_reactive 1.0.0 (git-only)` and `rayx_reactive: already up to date`; `git ls-remote` shows annotated tag v1.0.0 (f4c401d) peeling to 9f4a80e = `refs/heads/main`, whose Cargo.toml has `version = \"1.0.0\"`; Release v1.0.0 is the only release, not draft/prerelease, created by the release job, body identical to the CHANGELOG `## [1.0.0]` section minus its heading (1 `### Delivery`, 12 *Migration:* notes); no open PRs and no release-plz branch ever; ci.yml push run 39171622640 on 9f4a80e succeeded. The 2026-10-19 date matches the owner's local (CEST) day of the 00:18 CEST push and today's date, so \"dated that day\" holds. FIRST-2: check-consumer-tag passed at this snapshot (1 test, Cargo.lock commit 9f4a80e equals the peeled v1.0.0); not rerun. The repository rule on hand-written CHANGELOG entries is declared superseded scope for closure memory promotion, not a violation.",
+      "findingIds": [],
+      "recordedAt": "2026-10-18T23:06:31Z"
+    },
+    "final": {
+      "reviewerId": "reviewer-final-reactive-releases",
+      "snapshotId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "criterionIds": [
+        "REL-1",
+        "REL-2",
+        "REL-3",
+        "CI-1",
+        "VER-1",
+        "VER-2",
+        "DOC-1",
+        "DOC-2",
+        "DOC-3",
+        "OWN-1",
+        "FIRST-1",
+        "FIRST-2"
+      ],
+      "verdict": "passed",
+      "anchors": [
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "release-plz.toml",
+          "kind": "source",
+          "criterionIds": [
+            "REL-1",
+            "REL-3",
+            "VER-2"
+          ],
+          "sha256": "789990a409ae1ab5667a3065468abfb65e4f41d9568c480f38567b43940f47c1"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-5de21d49eafb.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-1",
+            "REL-3"
+          ],
+          "sha256": "1b356cd3073d66da1f86a51d57d3f0a5f7f3d071c64f63324f6a47fffbfff795"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/release-plz.yml",
+          "kind": "source",
+          "criterionIds": [
+            "REL-2",
+            "CI-1",
+            "FIRST-1",
+            "OWN-1",
+            "FIRST-2"
+          ],
+          "sha256": "0a4d4985294fd883fcdcbf3c5d5574711ef2bac9d9b67425cdabf7d54ad7e576"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".github/workflows/ci.yml",
+          "kind": "source",
+          "criterionIds": [
+            "CI-1"
+          ],
+          "sha256": "1d7b19fecf08a5405abeb1d92f3efb869ae182ebaaa057b6a426e43ebf844c48"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-27628bd248cd.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "REL-2",
+            "CI-1"
+          ],
+          "sha256": "eda5fd36635d217ef275dd9f4486d4c7fa7adaa571f0f02e966c5f0519ffdb34"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "Cargo.toml",
+          "kind": "source",
+          "criterionIds": [
+            "VER-1",
+            "FIRST-1",
+            "FIRST-2"
+          ],
+          "sha256": "8474ae7ef2181fcaacc50065e3e66734d19f5acbe736833baaf4973ba77b1a28"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "Cargo.lock",
+          "kind": "source",
+          "criterionIds": [
+            "VER-1"
+          ],
+          "sha256": "5ecd527bc58f0e9145ff6d5d218d5fcbdd3afd40879bafe9efcf64063f55999b"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CHANGELOG.md",
+          "kind": "source",
+          "criterionIds": [
+            "VER-2",
+            "FIRST-1"
+          ],
+          "sha256": "0cb739aa26a7e4ecf1ef9d0146c416f3d4237a9e463451a46f029fb4cb67b768"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/package.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "VER-1"
+          ],
+          "sha256": "179a60bdda01c5e8b0e18dfdcc39158a18fe54e1c97dfe05ba9f61e48a64e066"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s1-release-config-final-5c60f6db8612.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "VER-2"
+          ],
+          "sha256": "00b023eb2231741e0e215c37d515033961369f50da129ba0574d42c620949b27"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "README.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1",
+            "FIRST-2"
+          ],
+          "sha256": "9e802821b455ecea23255ef4b8ecf2ba38e278f97278d8c5b0178c494b43a948"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/02-getting-started.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-1"
+          ],
+          "sha256": "32ee6708d0a056d455bdaa54686ad37f2e7c156534ae711af7346d6821716721"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "doc-examples/Cargo.toml",
+          "kind": "test",
+          "criterionIds": [
+            "DOC-1",
+            "VER-1"
+          ],
+          "sha256": "40395d6479bf794dff8ee315a0775f6e9ce79c5a3c2a0302e5256762cc020e67"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/releasing.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-2",
+            "OWN-1"
+          ],
+          "sha256": "f348556f1ecd711d3279860e6ac4a64e79de7bed355081dbfc8d8187e5ef3b62"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "docs/20-contributing.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-2"
+          ],
+          "sha256": "1f8cf6507a29b0b53c26d2ef01c4dbfe6a27635dc8021f46594baae138cf0a9c"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "CLAUDE.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "24cf6a7fae80f0d72d98e495ea3b4e88124be5bac4b6b0ecb70f3bc20b9edc74"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "AGENTS.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "24cf6a7fae80f0d72d98e495ea3b4e88124be5bac4b6b0ecb70f3bc20b9edc74"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/SKILL.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "6b1023df8407ed35d2c762d00ba6a1f306507d9c29495e5e8c22ca2dcf309e8d"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": ".claude/skills/rayx-reactive/references/reactive-state-performance.md",
+          "kind": "source",
+          "criterionIds": [
+            "DOC-3"
+          ],
+          "sha256": "ad862c1d48b0dc69d767fe6fb344709fcb6e4efde65a1ebffb752a893441be3a"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s2-release-docs-final-1800a85d3d8e.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "DOC-3",
+            "DOC-1"
+          ],
+          "sha256": "7c6db4e5bcecc78129684ed8c44f98ef228caea831e23490ffecf148a98eea60"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/own-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "OWN-1"
+          ],
+          "sha256": "cb13403c8737201f85bf486431bdbafaa1f0565dad57d295c067edbd95a2824b"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/first-1.txt",
+          "kind": "runtime",
+          "criterionIds": [
+            "FIRST-1",
+            "FIRST-2"
+          ],
+          "sha256": "bafde7ba0c326be509b13fb7def8e593a08414f18f47b3fcbaa15d6df93b0997"
+        },
+        {
+          "repositoryId": "rayx-reactive",
+          "path": "artifacts-temp/agentx/reactive-releases/s3-first-release-final-104d3a8bcc76.log",
+          "kind": "runtime",
+          "criterionIds": [
+            "FIRST-2"
+          ],
+          "sha256": "ad34ab3517948e3a3038d32f44479f348fd3c0fe0dfcbb3a74c5de9ca3da6b08"
+        }
+      ],
+      "summaryMarkdown": "Integrated epic 9e5b3b9..HEAD is consistent and complete. `release-plz.toml` (git-only, `git_release_enable = true`, policy-commented `release_commits = \"^(feat|fix|perf)\"`/`semver_check = false`, root `changelog_path`, doc-examples `release = false`, CLI git-cliff config with the `Migration` footer line) and `release-plz.yml` (CLI workflow, `release-pr` `needs: release`, repo guard, PAT only, no run steps) match REL-1/REL-2; `ci.yml` is untouched. Version 1.0.0 with lock in step; CHANGELOG starts with the configured header and holds only `## [1.0.0] - 2026-10-19` (push was 00:18 CEST on 2026-10-19). README/getting-started/releasing.md/contributing/CLAUDE.md=AGENTS.md/skill all state the same tag-only, commit-driven 1.x policy; releasing.md covers flow, policy, PAT failure modes and rotation, ruleset, by-hand fallback and push policy with no Rust blocks. No forbidden path touched; commits are Conventional, without `!`, BREAKING CHANGE footers or co-author lines. Spot-verified on GitHub: Release v1.0.0 not draft/prerelease with `### Delivery` and *Migration:* notes, annotated tag peels to 9f4a80e = remote main, no open PRs, Release-plz rerun and ci.yml push run green; consumer-by-tag check passed. The CHANGELOG clause of memory rules.md and state.md's 0.1.0/crates.io statement are stale but explicitly scheduled for promotion by d-changelog-from-commits.",
+      "findingIds": [],
+      "recordedAt": "2026-10-18T23:09:03Z"
     }
   },
   "checkpoints": {
@@ -520,6 +1019,14 @@
       },
       "reviewHash": "75416f7a8bb6cb37d10c241bd19bc0c4e42b6c0a3f54d0d49615730a345792fa",
       "recordedAt": "2026-10-18T22:17:30Z"
+    },
+    "s3-first-release": {
+      "snapshotId": "ad522606e90a498d5be13496f37f560c69b0e9d4be6461dac1613323b2bc133e",
+      "commits": {
+        "rayx-reactive": "4530fd53cc03d6d473c59758dec8ec2a70e54482"
+      },
+      "reviewHash": "4f4c8c03f278870f8ff1bac980c3d6f743ff065afbccebcf218ed42baccdb425",
+      "recordedAt": "2026-10-18T23:06:49Z"
     }
   },
   "findings": [],

@@ -4,7 +4,7 @@ agentx:
   scope: decisions
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-11T12:00:00+02:00
+  updated: 2026-10-19T01:30:00+02:00
   topics:
     - decisions
     - rayx_reactive
@@ -29,6 +29,7 @@ Durable architecture choices for `rayx_reactive`. Current source remains the fir
     - [Indexed keyed-sort batches](collections/operators/2026-07-24-collections-operators-keyed-sort-indexes-and-batches.md)
     - [Sparse live group batches](collections/operators/2026-07-24-collections-operators-sparse-live-group-batches.md)
 - repository
+  - [release-plz git-tag releases under the 1.x policy](repository/2026-10-19-repository-release-plz-git-tags-one-x.md)
   - [One gpux-free rayx_reactive crate](repository/2026-10-05-repository-single-reactive-crate.md)
   - [Taxonomy transplanted from RayX](repository/2026-10-05-repository-agentx-memory-taxonomy-transplant.md)
   - [Reactive crate split](repository/2026-06-28-repository-reactive-crate-split.md) (superseded)
