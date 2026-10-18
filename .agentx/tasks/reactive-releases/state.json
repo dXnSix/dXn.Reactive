@@ -1,7 +1,7 @@
 {
   "schemaVersion": 7,
   "epicId": "reactive-releases",
-  "revision": 18,
+  "revision": 21,
   "planRevision": 3,
   "specHashes": {
     "requirements": "a667075139c3b25c2685a6cf15ab46dc1133fc38183cf23e4c0f43ccf52b1096",
@@ -46,10 +46,17 @@
       ]
     },
     "t07-owner-prerequisites": {
-      "status": "pending"
+      "status": "implemented",
+      "workerIds": [
+        "local_reactive_releases_coord"
+      ]
     },
     "t08-release-push": {
-      "status": "pending"
+      "status": "blocked",
+      "workerIds": [
+        "local_reactive_releases_coord"
+      ],
+      "blockerMarkdown": "Release-plz run 39171622602 on pushed main 9f4a80e: release job failed creating tag v1.0.0 with HTTP 403 'Resource not accessible by personal access token' (POST /repos/rayx-ui/RayX.Reactive/git/tags). The shared RELEASE_PLZ_TOKEN PAT lacks write access to RayX.Reactive. Owner must add the repository to the PAT (Contents + Pull requests read/write). No tag, Release or PR exists; ci.yml push run 39171622640 is green."
     },
     "t09-consumer-by-tag": {
       "status": "pending"
@@ -516,7 +523,7 @@
     }
   },
   "findings": [],
-  "handoffMarkdown": "",
+  "handoffMarkdown": "After the owner confirms the PAT fix: gh run rerun 39171622602 --repo rayx-ui/RayX.Reactive (same commit 9f4a80e), then verify FIRST-1 (release log line, tag at 9f4a80e, gh release view v1.0.0, no release PR), run t09 check-consumer-tag, check --epic, final review, promotion. Local main holds unpushed chore(agentx) state commits; push them after the release.",
   "protectedPaths": {
     "rayx-reactive": {
       ".agentx/tasks/rayx-reactive-complexity-optimization/**": "e8cf2d167149d9b86c3e0c6b7a4a8d17c0cc9724fc9b3a4411f5e5d4cd72961f",
