@@ -163,6 +163,19 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) with meaningful
 `fix(collections): drop pre-snapshot batches that arrive after connect goes live` or
 `docs(readme): describe platform support`.
 
+Commits are the changelog: release-plz generates each `CHANGELOG.md` section from them, so do not
+edit `CHANGELOG.md` by hand. Under the 1.x policy a breaking change is a `feat` (or `fix`) whose
+body states the break and whose `Migration:` footer holds the note for consumers; never write `!`
+or a `BREAKING CHANGE:` footer.
+
+## Releases
+
+`rayx_reactive` is released as Git tags `vX.Y.Z` by release-plz: merging its release pull request
+tags the version and creates the GitHub Release. Changes are pushed straight to `main` after
+`git fetch origin && git rebase origin/main`, with `git push --force-with-lease origin main`; pull
+requests exist only for releases. [Releasing](releasing.md) describes the flow, the 1.x policy, the
+release token and the by-hand fallback.
+
 ---
 
 ← [Coming from DynamicData and ReactiveUI](19-coming-from-dynamicdata.md) · [Back to the table of contents](README.md)

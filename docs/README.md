@@ -57,7 +57,8 @@ patterns that make the library effective in real applications.
 19. [Coming from DynamicData and ReactiveUI](19-coming-from-dynamicdata.md): concept and API
     mapping for .NET developers.
 20. [Contributing](20-contributing.md): repository layout, validation, test organization, and
-    working with consumers such as RayX.
+    working with consumers such as RayX. [Releasing](releasing.md) explains how release tags are
+    cut and the 1.x versioning policy.
 
 ## Reading paths
 
