@@ -34,7 +34,7 @@ The crate (`crates/`) has three layers: scalar state at the crate root, shared s
 
 - Preserve the public surface; do not delete or rename public items because they lack current call sites.
 - Prefer structured, incremental `ChangeSet` output over resets; preserve keys and indexes. Every index is a position in the emitting operator's own output (or `None`); see the index contract on `CacheChange`/`ListChange` in `crates/src/collections/change.rs`.
-- `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`: match them with a wildcard arm. Record every behavior change, breaking change and new API in `CHANGELOG.md` (`Unreleased`), with a *Migration:* note for breaking ones.
+- `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`: match them with a wildcard arm. Commits are the changelog (release-plz generates `CHANGELOG.md`; never edit it by hand): describe every behavior change, breaking change and new API in a Conventional Commit. Under the 1.x policy a breaking change is a `feat` (or `fix`) whose body states the break and whose `Migration:` footer holds the consumer note; never `!` or a `BREAKING CHANGE:` footer.
 - Subscriptions, guards, `Effect`, `Computed`, `ActivationToken` and the stream types are `#[must_use]`: bind them (`let _subscription = ...`) for as long as they should stay active.
 - Keep `.references/DynamicData` (in `../RayX`) as behavioral context only; do not copy .NET overload shapes.
 - HARD RULE: test only what you change. Add a new test group per feature (`crates/src/collections/tests/<group>/`, or a named scalar test module) and run it alone; run the full validation list in `AGENTS.md` once before committing.

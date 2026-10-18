@@ -35,6 +35,17 @@ changes for consumers instead of pairing commits with them.
 
 Use Conventional Commits with meaningful scopes. Never add Claude co-author lines.
 
+## Releases
+
+Conventional Commits drive the version: release-plz tags `vX.Y.Z` (Git tags only, no crates.io)
+and generates `CHANGELOG.md`, which is never hand-edited between releases. Under the 1.x policy
+the crate stays on 1.x: a breaking change is a `feat` (or `fix` for a fix) whose body states the
+break and whose `Migration:` footer holds the migration note; never write `!` or a
+`BREAKING CHANGE:` footer. The policy ends when a second consumer appears. A release is merging
+the release PR after checking its version is still 1.x. Push straight to `main` with
+`git fetch origin && git rebase origin/main`, then `git push --force-with-lease origin main`; pull
+requests exist only for releases. See `docs/releasing.md`.
+
 <!-- agentx:begin -->
 ## AgentX
 

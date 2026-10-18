@@ -63,7 +63,7 @@ cargo test -p rayx_reactive --all-features collections::tests::<group>
 cargo clippy -p rayx_reactive --all-targets --all-features -- -D warnings
 ```
 
-Never build or validate RayX (or another consumer) to test a change here; mimic the consumer scenario in this repository's tests and document breaking public-API changes in `CHANGELOG.md` with a *Migration:* note.
+Never build or validate RayX (or another consumer) to test a change here; mimic the consumer scenario in this repository's tests and document breaking public-API changes in the commit: a `feat` (or `fix`) that states the break, with a `Migration:` footer (never `!` or `BREAKING CHANGE:` under the 1.x policy); release-plz renders it into `CHANGELOG.md`.
 
 ## DO
 
