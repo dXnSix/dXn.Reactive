@@ -1,6 +1,6 @@
-# RayX.Reactive documentation
+# dXn.Reactive documentation
 
-This is the technical documentation for `rayx_reactive`, a UI-framework-neutral reactive state
+This is the technical documentation for `dxn_reactive`, a UI-framework-neutral reactive state
 library for Rust. The [repository README](../README.md) gives a short overview. These chapters
 explain the concepts, the complete API surface, the delivery and threading semantics, and the
 patterns that make the library effective in real applications.

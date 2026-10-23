@@ -75,7 +75,7 @@ pub enum SortReason {
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 ///
 /// let batch = ChangeSet::new(
 ///     vec![
@@ -147,7 +147,7 @@ pub struct RangeChange<T> {
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 /// use std::sync::{Arc, Mutex};
 ///
 /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -397,7 +397,7 @@ impl<K, T> CacheChange<K, T> {
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 ///
 /// assert_eq!(PageRequest::new(2, 10).range(), 20..30);
 /// assert_eq!(PageRequest::default(), PageRequest::new(0, PageRequest::DEFAULT_SIZE));

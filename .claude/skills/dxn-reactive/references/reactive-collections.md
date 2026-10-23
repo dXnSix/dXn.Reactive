@@ -1,13 +1,13 @@
-# RayX Reactive Collections
+# dXn Reactive Collections
 
-Use this reference when building or modifying observable collection code in `rayx_reactive::collections` (re-exported by RayX as `rayx::collections`).
+Use this reference when building or modifying observable collection code in `dxn_reactive::collections` (re-exported by RayX as `rayx::collections`).
 
 Current source is the source of truth:
 
 - Crate root: `crates/src/collections/mod.rs`
-- Public prelude: `rayx_reactive::collections::prelude::*`
-- Module import: `rayx_reactive::collections::*`
-- DynamicData reference material: `../RayX/.references/DynamicData` is behavioral context only; do not copy .NET overload shapes when the Rust crate exposes a cleaner API.
+- Public prelude: `dxn_reactive::collections::prelude::*`
+- Module import: `dxn_reactive::collections::*`
+- DynamicData reference material: `../../RayX/RayX.Old/.references/DynamicData` is behavioral context only; do not copy .NET overload shapes when the Rust crate exposes a cleaner API.
 
 ## Route By Task
 
@@ -23,7 +23,7 @@ Current source is the source of truth:
 
 ## Mental Model
 
-RayX collections are DynamicData-style, Rust-native, typed change-set streams. Sources own mutable state, operators derive incremental views, and subscribers receive structured `ChangeSet` batches instead of full reset snapshots.
+dXn.Reactive collections are DynamicData-style, Rust-native, typed change-set streams. Sources own mutable state, operators derive incremental views, and subscribers receive structured `ChangeSet` batches instead of full reset snapshots.
 
 Use a `SourceList<T>` when order and duplicate entries matter. Use a `SourceCache<K, T>` when stable identity is keyed and downstream views should preserve key semantics across filter, sort, group, join, watch, and materialization.
 
@@ -41,7 +41,7 @@ Contracts every operator follows:
 - `SourceCache<K, T>` and `CacheUpdater<K, T>`: keyed source mutation, ordered key mirrors, watch streams, and cache change streams.
 - `ChangeStream<C>`: cold stream of `ChangeSet<C>` batches.
 - `ValueStream<T>`: scalar/value stream used for dynamic predicates, comparers, requests, child observables, and metrics.
-- `Signal<T>` / `Computed<T>` from `rayx_reactive`: scalar current-value state that can feed collection operators through `values()`.
+- `Signal<T>` / `Computed<T>` from `dxn_reactive`: scalar current-value state that can feed collection operators through `values()`.
 - `ListStreamExt<T>` and `CacheStreamExt<K, T>`: derived views, filters, transforms, sort/window operators, materialization, reason filters, and bridge operators.
 - `ListLifecycleExt<T>` and `CacheLifecycleExt<K, T>`: per-item observables, auto-refresh, merge-many, callbacks, subscription/disposal/evaluation.
 - `ListAggregationExt<T>` and `CacheAggregationExt<K, T>`: query snapshots, scalar aggregates, extrema, sorted collection snapshots.
@@ -62,12 +62,12 @@ Contracts every operator follows:
 
 ## Virtualized UI Bindings
 
-RayX binds ordered observable lists into `ListViewState`/`TreeViewState`; its DO/DON'T recipe lives in RayX's [reactive consumer guide](../../../../../RayX/.claude/skills/rayx/references/reactive-state.md). The crate-side contract: expose read-only `ChangeStream`/`ObservableList` surfaces and materialize keyed caches with `as_observable_list()` after ordering operators.
+RayX binds ordered observable lists into `ListViewState`/`TreeViewState`; its DO/DON'T recipe lives in RayX's [reactive consumer guide](../../../../../../RayX/RayX.Old/.claude/skills/rayx/references/reactive-state.md). The crate-side contract: expose read-only `ChangeStream`/`ObservableList` surfaces and materialize keyed caches with `as_observable_list()` after ordering operators.
 
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 #[derive(Clone, PartialEq)]
 struct Row {
@@ -93,7 +93,7 @@ rows.edit(|cache| {
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 

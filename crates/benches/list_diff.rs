@@ -3,7 +3,7 @@
 use criterion::{
     BatchSize, BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main,
 };
-use rayx_reactive::collections::prelude::SourceList;
+use dxn_reactive::collections::prelude::SourceList;
 
 fn fixed_sparse_list_diff(criterion: &mut Criterion) {
     let mut group = criterion.benchmark_group("list-diff-fixed-u");

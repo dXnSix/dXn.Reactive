@@ -1,7 +1,7 @@
 //! UI-neutral reactive state: scalar signals and commands, shared stream primitives, and
 //! DynamicData-style observable collections.
 //!
-//! `rayx_reactive` is the state layer of a Model-View-ViewModel application. It has no UI
+//! `dxn_reactive` is the state layer of a Model-View-ViewModel application. It has no UI
 //! dependency: subscribers run synchronously on the thread that published a change, and
 //! scheduling onto a UI thread is the consumer's job. The crate is organized in three layers.
 //!
@@ -26,8 +26,8 @@
 //! commit order. Fallible operations return [`Result`]; streams have no error or completion
 //! channel.
 //!
-//! The [README](https://github.com/rayx-ui/RayX.Reactive/blob/main/README.md) gives a short
-//! overview, and the [guide](https://github.com/rayx-ui/RayX.Reactive/tree/main/docs)
+//! The [README](https://github.com/dXnSix/dXn.Reactive/blob/main/README.md) gives a short
+//! overview, and the [guide](https://github.com/dXnSix/dXn.Reactive/tree/main/docs)
 //! explains the concepts, the full API surface, the delivery and threading semantics, and
 //! application patterns chapter by chapter.
 
@@ -57,7 +57,7 @@ pub mod signal;
 /// Operators on [`ValueStream`]: [`ReactiveValueStreamExt`].
 pub mod stream_ext;
 
-/// The scalar API and the primitives, re-exported for `use rayx_reactive::prelude::*;`.
+/// The scalar API and the primitives, re-exported for `use dxn_reactive::prelude::*;`.
 pub mod prelude {
     pub use crate::activation::{ActivatableViewModel, ActivationToken, ViewModelActivator};
     pub use crate::command::{

@@ -24,7 +24,7 @@ group's own stream.
 `lookup(&key)` and `connect()`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -84,7 +84,7 @@ Behavior worth knowing:
 touching the outer stream.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let words = SourceList::new(vec!["apple", "avocado", "banana"]);
 let by_letter = words
@@ -106,7 +106,7 @@ assert_eq!(groups[0].items()?, ["apple", "avocado"]);
 creation order. A group is removed only if it is empty after the whole source batch.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let scores = SourceCache::new(|entry: &(&'static str, u32)| entry.0);
 scores.add_or_update_range([("ann", 90), ("bob", 72), ("cid", 95)])?;
@@ -143,7 +143,7 @@ The output is a cache stream keyed by `K`. When either side changes, only the af
 re-selected. The output type needs `U: Clone + PartialEq`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, PartialEq)]
 struct User {
@@ -194,7 +194,7 @@ members keep the right source's order (a right `Update` that moves its item move
 group too). A left key's group is dropped when the key leaves and no right item belongs to it.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, PartialEq)]
 struct Order {
@@ -249,7 +249,7 @@ Static combiners take the other sources up front: `a.and([b, c])`, `a.or(…)`, 
 (`CacheCombineExt`, by key) and lists (`ListCombineExt`, by item equality).
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let admins = SourceCache::new(|name: &&'static str| *name);
 let active = SourceCache::new(|name: &&'static str| *name);
@@ -273,7 +273,7 @@ re-evaluates membership incrementally. Typical uses are "union of all selected f
 "intersection of all active tag filters".
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let inbox = SourceCache::new(|id: &u32| *id);
 let archive = SourceCache::new(|id: &u32| *id);
@@ -319,7 +319,7 @@ parents form a cycle that never reaches a root; disposing the tree subscription 
 `children()` of the nodes on such a cycle so that they are freed.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, PartialEq)]
 struct Folder {
@@ -378,7 +378,7 @@ across all items, and emits list changes only when a value **first appears or la
 It is the efficient way to build filter facets, tag clouds and category pickers.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let products = SourceCache::new(|product: &(u32, &'static str)| product.0);
 products.add_or_update_range([(1, "tools"), (2, "garden"), (3, "tools")])?;

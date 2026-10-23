@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use rayx_reactive::{Computed, ReactiveValueStreamExt, Signal};
+use dxn_reactive::{Computed, ReactiveValueStreamExt, Signal};
 
 const FANOUTS: [usize; 3] = [1, 32, 256];
 

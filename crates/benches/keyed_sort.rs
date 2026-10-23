@@ -1,7 +1,7 @@
 #![allow(clippy::expect_used)]
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Eq, PartialEq)]

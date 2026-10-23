@@ -1,6 +1,6 @@
-# RayX Reactive State With Observable Collections
+# dXn Reactive State With Observable Collections
 
-Read this when combining `rayx_reactive` signals/ViewModels with `rayx_reactive::collections` sources, value streams, dynamic predicates, paging, sorting, grouping, lifecycle observables, or materialized collection views.
+Read this when combining `dxn_reactive` signals/ViewModels with `dxn_reactive::collections` sources, value streams, dynamic predicates, paging, sorting, grouping, lifecycle observables, or materialized collection views.
 
 Primary source files:
 
@@ -21,16 +21,16 @@ Also read:
 
 ## Boundary
 
-`rayx_reactive` and `rayx_reactive::collections` meet through `rayx_reactive::primitives::ValueStream`. Every collection operator that takes a stream (dynamic predicates, comparers, resort triggers, page/virtual requests, pause flags, regroupers, per-item selectors) accepts `ValueStream<_, E>` with `CollectionError: From<E>`, so `Signal<T>::values()` and `Computed<T>::values()` (error `ReactiveError`) plug in directly; no adapter is needed. Two-stream operators take an independent error type per stream.
+`dxn_reactive` and `dxn_reactive::collections` meet through `dxn_reactive::primitives::ValueStream`. Every collection operator that takes a stream (dynamic predicates, comparers, resort triggers, page/virtual requests, pause flags, regroupers, per-item selectors) accepts `ValueStream<_, E>` with `CollectionError: From<E>`, so `Signal<T>::values()` and `Computed<T>::values()` (error `ReactiveError`) plug in directly; no adapter is needed. Two-stream operators take an independent error type per stream.
 
 Going the other way, `ValueStream::map_err`/`err_into` convert stream errors, `?` converts `CollectionError` into `ReactiveError::External` (and back), and `Effect::watch` accepts any stream error type.
 
 Do not make scalar state depend on collection APIs. ViewModels can own both scalar signals and collection sources, but the crate dependency boundary stays:
 
 ```text
-rayx_reactive::primitives
-  <- rayx_reactive
-  <- rayx_reactive::collections
+dxn_reactive::primitives
+  <- dxn_reactive
+  <- dxn_reactive::collections
 ```
 
 ## Choosing State Shape
@@ -96,8 +96,8 @@ Collection pipelines are subscription-driven. Keep the returned `Subscription` i
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
-use rayx_reactive::prelude::*;
+use dxn_reactive::collections::*;
+use dxn_reactive::prelude::*;
 use std::sync::Arc;
 
 #[derive(Clone, PartialEq)]
@@ -114,7 +114,7 @@ struct RowsViewModel {
 }
 
 impl RowsViewModel {
-    fn new() -> rayx_reactive::collections::Result<Self> {
+    fn new() -> dxn_reactive::collections::Result<Self> {
         let rows = SourceCache::new(|row: &Row| row.id);
         let query = Signal::new(String::new());
         let page = Signal::new(PageRequest::new(0, 50));
@@ -144,8 +144,8 @@ impl RowsViewModel {
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
 struct BadRowsViewModel {
     // DON'T store large changing rows as one scalar signal.
@@ -153,7 +153,7 @@ struct BadRowsViewModel {
     query: Signal<String>,
 }
 
-fn bind_bad(vm: &BadRowsViewModel) -> rayx_reactive::Result<Subscription> {
+fn bind_bad(vm: &BadRowsViewModel) -> dxn_reactive::Result<Subscription> {
     vm.rows.values().subscribe(|rows| {
         // Full scan, full sort, full redraw on every edit.
         let mut visible = rows.clone();

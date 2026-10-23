@@ -7,8 +7,8 @@ version = "1.0.0"
 edition = "2024"
 rust-version = "1.95"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/rayx-ui/RayX.Reactive"
-homepage = "https://github.com/rayx-ui/RayX.Reactive"
+repository = "https://github.com/dXnSix/dXn.Reactive"
+homepage = "https://github.com/dXnSix/dXn.Reactive"
 
 [workspace.dependencies]
 futures = "0.3.31"

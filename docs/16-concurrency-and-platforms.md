@@ -1,6 +1,6 @@
 # 16. Concurrency and platforms
 
-`rayx_reactive` is thread-safe: every public handle is `Send + Sync`, and all shared state sits
+`dxn_reactive` is thread-safe: every public handle is `Send + Sync`, and all shared state sits
 behind `std::sync` locks. Thread safety is not the same as "no thread-related behavior to
 understand", though. This chapter explains where code runs, what ordering you can rely on, how the
 library behaves under contention and failure, and what each platform supports.
@@ -105,7 +105,7 @@ Every source and live group guards its state with one lock that records which th
   and subscribers all succeed:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::thread;
 
 let list = SourceList::<u32>::default();
@@ -140,7 +140,7 @@ A single writer per source is still a good design: one owning thread or task rec
 and readers and subscribers stay on any thread:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::mpsc;
 use std::thread;
 
@@ -224,7 +224,7 @@ is typical): every window is a timer task, and every flush is a delivery.
 
 ### Schedulers
 
-Time-based operators tell time and wait through a `rayx_reactive::primitives::Scheduler`:
+Time-based operators tell time and wait through a `dxn_reactive::primitives::Scheduler`:
 `now()` returns monotonic time since the scheduler's origin, and `schedule(delay, task)` runs
 `task` once `delay` has elapsed, returning a `ScheduledTask` handle that cancels the task when
 dropped. Each timed operator has a `*_with_scheduler` variant; the plain methods use
@@ -241,8 +241,8 @@ timed operators usable where those are unavailable, such as the browser. This on
 the application's frame loop:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::primitives::{ScheduledTask, ScheduledWork, Scheduler};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::primitives::{ScheduledTask, ScheduledWork, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 

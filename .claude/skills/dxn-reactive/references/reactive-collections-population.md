@@ -200,7 +200,7 @@ These provide conversion, fallback, side-effect, value-selection, result-on-none
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 use std::time::Duration;
 
 let feed: ValueStream<Row> = incoming_rows();
@@ -217,7 +217,7 @@ let changes = feed.to_cache_change_set_with_options(
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceCache::new(|row: &Row| row.id);
 

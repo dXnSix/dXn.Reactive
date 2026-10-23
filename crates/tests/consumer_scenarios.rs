@@ -14,8 +14,8 @@ use std::sync::mpsc;
 use std::sync::{Arc, Barrier, Mutex, Weak};
 use std::thread;
 
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{Command, CommandError, Computed, EventBus, Signal};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{Command, CommandError, Computed, EventBus, Signal};
 
 /// A small deterministic xorshift64 generator, so scenarios need no external crates.
 struct Prng(u64);
@@ -911,7 +911,7 @@ fn scn_1_4_bounded_live_feed_keeps_the_newest_lines_first() -> Result<()> {
     // A producer thread keeps logging; the feed stays bounded and ends on its last lines.
     let producer = {
         let log_lines = log_lines.clone();
-        thread::spawn(move || -> rayx_reactive::Result<()> {
+        thread::spawn(move || -> dxn_reactive::Result<()> {
             for n in 41..=240 {
                 log_lines.emit(format!("line {n}"))?;
             }

@@ -193,7 +193,7 @@ The repository includes [Criterion](https://github.com/bheisler/criterion.rs) be
 Run one with:
 
 ```bash
-cargo bench -p rayx_reactive --bench keyed_sort
+cargo bench -p dxn_reactive --bench keyed_sort
 ```
 
 Benchmarks are not available on `wasm32`. When changing an operator's algorithm, compare against

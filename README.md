@@ -1,9 +1,9 @@
-# RayX.Reactive
+# dXn.Reactive
 
-[![CI](https://github.com/rayx-ui/RayX.Reactive/actions/workflows/ci.yml/badge.svg)](https://github.com/rayx-ui/RayX.Reactive/actions/workflows/ci.yml)
+[![CI](https://github.com/dXnSix/dXn.Reactive/actions/workflows/ci.yml/badge.svg)](https://github.com/dXnSix/dXn.Reactive/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-**Reactive state for Rust applications, independent of any UI framework.** `rayx_reactive` gives
+**Reactive state for Rust applications, independent of any UI framework.** `dxn_reactive` gives
 you the state layer of an MVVM application: observable values, derived values, commands, transient
 events, ViewModel lifetimes, and observable collections whose changes travel as structured,
 incremental change sets rather than whole-collection snapshots.
@@ -46,7 +46,7 @@ a service, or a test.
 
 ## Platform support
 
-`rayx_reactive` is pure Rust built on `std`, with no platform-specific code.
+`dxn_reactive` is pure Rust built on `std`, with no platform-specific code.
 
 | Target | Status |
 |---|---|
@@ -66,13 +66,17 @@ The crate is released as Git tags, not on crates.io. Depend on a release tag:
 
 ```toml
 [dependencies]
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.0" }
+dxn_reactive = { git = "https://github.com/dXnSix/dXn.Reactive", tag = "v1.1.0" }
 ```
 
-Use the latest tag from the repository's [Releases](https://github.com/rayx-ui/RayX.Reactive/releases)
+Use the latest tag from the repository's [Releases](https://github.com/dXnSix/dXn.Reactive/releases)
 page; `Cargo.lock` records the tag's commit. Depend on a release tag only, never on a branch, a
 `rev` or a path to a checkout. Each release's notes are in [`CHANGELOG.md`](CHANGELOG.md), and
 [`docs/releasing.md`](docs/releasing.md) describes how releases are made.
+
+Releases up to `v1.0.0` were published as `rayx_reactive` from `rayx-ui/RayX.Reactive`. From
+`v1.1.0` the crate is `dxn_reactive` in `dXnSix/dXn.Reactive`: rename the dependency and replace
+`rayx_reactive::` paths with `dxn_reactive::`; the API is otherwise unchanged.
 
 | Feature | Default | Effect |
 |---|---|---|
@@ -82,8 +86,8 @@ Import everything through the two preludes:
 
 <!-- skip-check -->
 ```rust
-use rayx_reactive::prelude::*;              // signals, commands, events, lifetimes
-use rayx_reactive::collections::prelude::*; // sources, change sets, operators
+use dxn_reactive::prelude::*;              // signals, commands, events, lifetimes
+use dxn_reactive::collections::prelude::*; // sources, change sets, operators
 ```
 
 ## A quick tour
@@ -94,7 +98,7 @@ that returns `Result<(), Box<dyn std::error::Error>>`.
 ### Signals and computed values
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let first = Signal::new("Ada".to_string());
@@ -119,7 +123,7 @@ assert_eq!(*seen.lock().unwrap(), ["Ada Lovelace", "Augusta Lovelace"]);
 ### Commands with enablement
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let draft = Signal::new(String::new());
 let can_send = Computed::derive(draft.read_only(), |text| !text.trim().is_empty())?;
@@ -147,7 +151,7 @@ assert_eq!(send.state().get()?, CommandState::Succeeded);
 ### Activation-scoped subscriptions
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let status = Signal::new("idle");
@@ -179,7 +183,7 @@ assert_eq!(*log.lock().unwrap(), ["idle", "busy"]);
 ### An observable list with a live, sorted, filtered view
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let scores = SourceList::new(vec![42, 7, 99]);
 
@@ -203,8 +207,8 @@ assert_eq!(passing.items()?, [99, 65]);
 ### A keyed grid: search, sort and page driven by signals
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Contact {
@@ -244,7 +248,7 @@ assert_eq!(names(&first_page), ["Barbara"]);
 ### Live aggregates
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, PartialEq)]
@@ -299,7 +303,7 @@ The [`docs/`](docs/README.md) directory holds the full technical documentation:
 
 RayX uses this crate as `rayx::reactive` and `rayx::collections`, and adds the GPUI glue
 (`ReactiveContextExt`, `GpuiBinding`) that schedules stream updates onto GPUI's foreground
-executor. Those bindings belong to RayX, not to this crate, which keeps `rayx_reactive` usable with
+executor. Those bindings belong to RayX, not to this crate, which keeps `dxn_reactive` usable with
 any UI technology.
 
 ## Contributing

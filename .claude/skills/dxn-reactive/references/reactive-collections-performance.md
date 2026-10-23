@@ -1,6 +1,6 @@
 # Reactive Collections Performance Recipes
 
-Read this when choosing the most efficient `rayx_reactive::collections` API for a workflow or when reviewing collection code for reset-heavy, snapshot-heavy, or subscription-heavy designs.
+Read this when choosing the most efficient `dxn_reactive::collections` API for a workflow or when reviewing collection code for reset-heavy, snapshot-heavy, or subscription-heavy designs.
 
 Primary source anchors:
 
@@ -302,7 +302,7 @@ let shared = source.connect().filter(|row| row.visible).ref_count();
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 use std::time::Duration;
 
 let shared_visible = rows

@@ -1,7 +1,7 @@
 #![allow(clippy::expect_used)]
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 /// `(key, parent)`: a node whose parent is itself is a root.
 type Node = (u32, u32);

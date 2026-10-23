@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use rayx_reactive::primitives::DeliveryQueue;
+use dxn_reactive::primitives::DeliveryQueue;
 
 const FANOUTS: [usize; 3] = [1, 32, 256];
 

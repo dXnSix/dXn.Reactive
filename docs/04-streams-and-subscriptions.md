@@ -33,8 +33,8 @@ Key properties:
 
 | Type | Error | Produced by |
 |---|---|---|
-| `rayx_reactive::ValueStream<T>` | `ReactiveError` | signals, computed values, event streams |
-| `rayx_reactive::collections::ValueStream<T>` | `CollectionError` | collection aggregates, watchers, page and virtual responses, `merge_many`, and other collection operators |
+| `dxn_reactive::ValueStream<T>` | `ReactiveError` | signals, computed values, event streams |
+| `dxn_reactive::collections::ValueStream<T>` | `CollectionError` | collection aggregates, watchers, page and virtual responses, `merge_many`, and other collection operators |
 
 Both are the same struct, and every operator works on both: the scalar operators of
 `ReactiveValueStreamExt` are implemented for any error type, and collection operators accept any
@@ -45,7 +45,7 @@ stream whose error converts into `CollectionError`, so `signal.values()` plugs i
 ## Subscribing
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let temperature = Signal::new(20);
@@ -96,7 +96,7 @@ keeps that error type.
 | `sample(period)` | At every `period` tick (counted from subscription), emits the latest value if one arrived since the previous tick. |
 
 Bring the operators other than `map`, `start_with`, `map_err` and `err_into` into scope with
-`rayx_reactive::prelude::*` or `rayx_reactive::ReactiveValueStreamExt`. Disposing a subscription
+`dxn_reactive::prelude::*` or `dxn_reactive::ReactiveValueStreamExt`. Disposing a subscription
 disposes everything the operator subscribed to, including inner streams. Values are usually
 delivered on the thread that produced them; `combine_latest` and `share_replay`, which order
 values from several sources, may deliver a value on the thread that is already delivering to that
@@ -110,7 +110,7 @@ The time-based operators (`debounce`, `throttle`, `sample`) run on a
 Disposing the subscription cancels a pending timer, and a zero duration forwards every value.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let input = Signal::new(String::new());
@@ -135,7 +135,7 @@ assert_eq!(*commands.lock().unwrap(), ["help", "quit"]);
 Combining streams:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let query = Signal::new(String::from("rust"));
@@ -186,8 +186,8 @@ assert_eq!(*shown.lock().unwrap(), ["Draft", "Notes", "Notes v2"]);
 Search-as-you-type with `debounce`, here on a `ManualScheduler` that stands in for the clock:
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use dxn_reactive::prelude::*;
+use dxn_reactive::primitives::{ManualScheduler, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -218,7 +218,7 @@ Because streams are cold, operator closures and operator state (such as the "las
 `map` closure twice per value:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -254,7 +254,7 @@ has returned. A write that the subscriber makes while handling the initial value
 delivered, not lost; on the same thread it arrives *nested* inside the initial callback:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let signal = Signal::new(1);
@@ -282,7 +282,7 @@ assert_eq!(*seen.lock().unwrap(), [0, 5]);
 subscription that undoes the setup.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 // A stream that emits a fixed sequence synchronously and then has nothing to clean up.
@@ -313,7 +313,7 @@ Return a subscription whose disposal detaches from the external source. `Subscri
 any `FnOnce() + Send + Sync` into a subscription:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -351,7 +351,7 @@ runs **exactly once**: on `dispose()` or on drop, whichever comes first.
 [`ViewModelActivator`](05-lifetimes-effects-activation.md#viewmodelactivator).
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let a = Signal::new(0);
@@ -410,7 +410,7 @@ Delivery semantics:
 7. **Items need not be `Clone`.** Each item is moved into the drain loop and lent to subscribers.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 /// A minimal observable progress reporter built on DeliveryQueue.
@@ -420,7 +420,7 @@ struct Progress {
 }
 
 impl Progress {
-    fn report(&self, percent: u8) -> rayx_reactive::Result<()> {
+    fn report(&self, percent: u8) -> dxn_reactive::Result<()> {
         self.updates.enqueue(percent)
     }
 
@@ -450,7 +450,7 @@ When your type keeps its own state behind a lock, push while you still hold it a
 releasing it. Concurrent writers are then delivered in commit order:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Default)]
@@ -460,7 +460,7 @@ struct Counter {
 }
 
 impl Counter {
-    fn increment(&self) -> rayx_reactive::Result<()> {
+    fn increment(&self) -> dxn_reactive::Result<()> {
         {
             let mut value = self.value.lock().unwrap();
             *value += 1;

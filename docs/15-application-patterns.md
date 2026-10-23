@@ -45,8 +45,8 @@ Scalar state and collections use different error types for their streams (see
 
 | Stream | Type |
 |---|---|
-| `signal.values()`, `computed.values()`, `event_stream.values()` | `rayx_reactive::ValueStream<T>` (error `ReactiveError`) |
-| collection operator outputs | `rayx_reactive::collections::ValueStream<T>` (error `CollectionError`) |
+| `signal.values()`, `computed.values()`, `event_stream.values()` | `dxn_reactive::ValueStream<T>` (error `ReactiveError`) |
+| collection operator outputs | `dxn_reactive::collections::ValueStream<T>` (error `CollectionError`) |
 
 Every collection operator that takes a stream (comparers, resort triggers, page and virtual
 requests, pause streams, regroupers, group selectors, forced-transform triggers, tree predicates,
@@ -57,8 +57,8 @@ selector that returns one (`filter_on_observable`, `auto_refresh*`, `transform_o
 `CollectionError: From<E>`. Pass `signal.values()` directly:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 let rows = SourceList::new((1..=100).collect::<Vec<u32>>());
 let page = Signal::new(PageRequest::new(0, 10));
@@ -74,8 +74,8 @@ streams of any error type, so collection outputs plug into them unchanged. To ch
 error type explicitly, use `map_err` or `err_into`:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{Effect, ReactiveError, ReactiveValueStreamExt};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{Effect, ReactiveError, ReactiveValueStreamExt};
 use std::sync::{Arc, Mutex};
 
 let inbox = SourceList::<&str>::default();
@@ -90,7 +90,7 @@ inbox.clear()?;
 assert_eq!(*unread_badges.lock().unwrap(), [2]); // 0 was filtered out
 
 // Converting the error type keeps the original error.
-let scalar_flavor: rayx_reactive::ValueStream<usize, ReactiveError> =
+let scalar_flavor: dxn_reactive::ValueStream<usize, ReactiveError> =
     inbox.connect().count().err_into();
 let _subscription = scalar_flavor.subscribe(|_| {})?;
 ```
@@ -102,8 +102,8 @@ command is enabled when the cart has items"), hold the stream's latest value wit
 `Computed::from_stream`. The `Computed` owns the subscription:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{Command, Computed};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{Command, Computed};
 
 struct Cart {
     lines: SourceCache<u32, (u32, u32)>, // (sku, quantity)
@@ -129,7 +129,7 @@ assert!(cart.has_items.get()?);
 
 ## Binding to a UI
 
-`rayx_reactive` does not know about UI threads. A binding has three responsibilities:
+`dxn_reactive` does not know about UI threads. A binding has three responsibilities:
 
 1. **Own the subscription** for as long as the view exists, ideally inside
    `ViewModelActivator::when_activated`, so a hidden view stops receiving updates.
@@ -144,7 +144,7 @@ virtualized list and tree views. For any other toolkit, a channel works as the m
 boundary:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::mpsc;
 
 // Producer side: the subscriber may run on any thread, so it only sends.
@@ -189,8 +189,8 @@ Further guidance:
 ## Recipe: a searchable, sortable, paged grid
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -274,8 +274,8 @@ Keep the selection as a key in a signal, and derive the detail from the master c
 detail updates when either the selection or the selected item changes:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Note {
@@ -311,8 +311,8 @@ filter-based approach also reacts to the selection changing.
 ## Recipe: a bounded live feed
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::EventBus;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::EventBus;
 
 let log_lines = EventBus::<String>::new();
 
@@ -333,8 +333,8 @@ assert_eq!(feed.items()?, ["line 5", "line 4", "line 3"]);
 Each field owns a `valid` signal. The form is submittable when all fields are valid:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{Command, Computed, Signal, Subscription};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{Command, Computed, Signal, Subscription};
 use std::sync::Arc;
 
 struct Field {
@@ -388,8 +388,8 @@ An `AsyncCommand` fetches a full snapshot and applies it with `edit_diff`, so un
 their identity in every bound view:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{AsyncCommand, CommandError};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{AsyncCommand, CommandError};
 
 #[derive(Clone, Debug, PartialEq)]
 struct Repo {

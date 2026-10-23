@@ -1,5 +1,5 @@
+use dxn_reactive::prelude::*;
 use futures::executor::block_on;
-use rayx_reactive::prelude::*;
 
 struct TestViewModel {
     activator: ViewModelActivator,
@@ -32,7 +32,7 @@ fn direct_public_api_remains_available() -> Result<()> {
         .filter(|value| *value > 0)
         .filter_map(|value| Some(value + 1));
     let _ = read.values().distinct_until_changed().skip(1);
-    let _ = rayx_reactive::stream_ext::empty_subscription();
+    let _ = dxn_reactive::stream_ext::empty_subscription();
 
     let derived = Computed::derive(read.clone(), |value| value + 1)?;
     let combined = Computed::combine2(read.clone(), read, |left, right| left + right)?;

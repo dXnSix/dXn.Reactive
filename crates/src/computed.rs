@@ -412,7 +412,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::prelude::*;
+    /// use dxn_reactive::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let items = Signal::new(vec![1, 2, 3]);

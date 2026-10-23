@@ -9,7 +9,7 @@ correct downstream batch.
 `filter(predicate)` exists on both list and cache streams.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let numbers = SourceList::new(vec![1, 2, 3, 4, 5, 6]);
 let evens = numbers.connect().filter(|n| n % 2 == 0).as_observable_list()?;
@@ -31,7 +31,7 @@ When items have interior mutability, a `Refresh` asks the filter to re-test them
 therefore become an `Add`, a `Remove`, or a `Refresh` downstream:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -91,8 +91,8 @@ Semantics:
   `[1001, 2001)` emits one `Remove` and one `Add`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Book {
@@ -124,8 +124,8 @@ assert_eq!(results.keys()?, [2]);
 from a mode signal:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::Arc;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -165,7 +165,7 @@ Noisy feeds often send updates that do not matter downstream. These operators in
 | `ignore_same_reference_update()` | `Arc::ptr_eq(previous, current)`, for `Arc<T>` items (`CacheArcStreamExt`) |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, PartialEq)]
@@ -199,7 +199,7 @@ concrete type with `of_type::<U>()`. It downcasts without cloning the inner valu
 `of_type_with_options::<U>(suppress_empty_change_sets)` controls empty-batch forwarding.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::any::Any;
 use std::sync::Arc;
 
@@ -240,7 +240,7 @@ reuse it instead of recomputing everything.
 | `transform_many(f)` | `Fn(&T) -> impl IntoIterator<Item = Child>` | flattens children, see [one-to-many](#one-to-many-transforms) |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let celsius = SourceList::new(vec![0.0_f64, 100.0]);
 let labels = celsius
@@ -257,7 +257,7 @@ assert_eq!(labels.items()?, ["99°F", "212°F"]);
 ViewModel's UI state when the underlying record is replaced:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 struct RowVm {
@@ -300,7 +300,7 @@ the **cache** `transform_with_previous` passes the previous *source item*. The c
 "what changed?" logic; for "reuse my previous ViewModel", use `transform_inline`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, PartialEq)]
 struct Price {
@@ -331,7 +331,7 @@ in place and emits a `Refresh`. Use it when a projection's identity must survive
 row ViewModel that owns signals or a UI handle:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, PartialEq)]
@@ -379,7 +379,7 @@ for that key untouched (absent, if it never succeeded). A later successful updat
 incrementally. One bad item never resets the view.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let raw = SourceCache::new(|entry: &(u32, &'static str)| entry.0);
@@ -425,8 +425,8 @@ event bus's stream is passed directly
 ([Application patterns](15-application-patterns.md#feeding-signals-into-collection-operators)):
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, RwLock};
 
 let rate = Arc::new(RwLock::new(1.0_f64)); // external state the projection reads
@@ -488,7 +488,7 @@ How they execute:
   runtime-agnostic I/O.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::time::{Duration, Instant};
 
 let ids = SourceCache::new(|id: &u32| *id);
@@ -526,7 +526,7 @@ Async transforms need OS threads, so they are not available on `wasm32-unknown-u
   when it leaves), and changes are emitted in a deterministic order without indexes.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, PartialEq)]
 struct Order {
@@ -573,7 +573,7 @@ children of parents that were already removed.
 | `start_with_item(key, item)` | cache → cache | emit a synthetic add for one item at subscription |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let lines = SourceList::new(vec!["b=2", "a=1"]);
 let by_name = lines

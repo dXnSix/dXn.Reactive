@@ -18,8 +18,8 @@ var subscription = _people.Connect()
 ```
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Person {
@@ -44,7 +44,7 @@ assert_eq!(visible_people.len()?, 1);
 
 ## Key differences
 
-| Topic | DynamicData / Rx.NET | `rayx_reactive` |
+| Topic | DynamicData / Rx.NET | `dxn_reactive` |
 |---|---|---|
 | Stream type | `IObservable<IChangeSet<…>>` with `OnError`/`OnCompleted` | `ChangeStream<C>` and `ValueStream<T>`: values only, no terminal events |
 | Errors | exceptions, `OnError` | `Result` from setup and edits; `transform_safe*` callbacks; `CommandState::Failed` |
@@ -63,7 +63,7 @@ assert_eq!(visible_people.len()?, 1);
 
 ### Sources
 
-| DynamicData | `rayx_reactive` |
+| DynamicData | `dxn_reactive` |
 |---|---|
 | `new SourceList<T>()` | `SourceList::<T>::default()` / `SourceList::new(vec)` |
 | `new SourceCache<T, TKey>(keySelector)` | `SourceCache::new(key_selector)` |
@@ -82,7 +82,7 @@ assert_eq!(visible_people.len()?, 1);
 
 ### Operators
 
-| DynamicData | `rayx_reactive` |
+| DynamicData | `dxn_reactive` |
 |---|---|
 | `Filter(predicate)` | `filter` (and `filter_immutable` for immutable caches) |
 | `Filter(IObservable<Func<T, bool>>)` | `filter_dynamic` |
@@ -124,7 +124,7 @@ assert_eq!(visible_people.len()?, 1);
 
 ## ReactiveUI map
 
-| ReactiveUI | `rayx_reactive` |
+| ReactiveUI | `dxn_reactive` |
 |---|---|
 | `[Reactive]` property / `RaiseAndSetIfChanged` | `Signal<T>` with `set` |
 | `WhenAnyValue(x => x.A)` | `signal.values()` |

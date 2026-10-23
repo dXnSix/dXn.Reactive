@@ -1,4 +1,4 @@
-# RayX Reactive State: Effects, Disposal, And Activation
+# dXn Reactive State: Effects, Disposal, And Activation
 
 Read this when implementing side effects, subscription lifetimes, `DisposeBag`, `Effect`, `ViewModelActivator`, or activation-scoped ViewModel behavior.
 
@@ -63,7 +63,7 @@ Evidence: `crates/src/activation.rs` and the activation tests in `crates/src/tes
 ## DO
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 struct ProfileViewModel {
     display_name: Signal<String>,
@@ -71,7 +71,7 @@ struct ProfileViewModel {
 }
 
 impl ProfileViewModel {
-    fn new() -> rayx_reactive::Result<Self> {
+    fn new() -> dxn_reactive::Result<Self> {
         let vm = Self {
             display_name: Signal::new(String::new()),
             activator: ViewModelActivator::default(),
@@ -103,9 +103,9 @@ let _activation = vm.activator().activate()?;
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
-fn leak_subscription(vm: &ProfileViewModel) -> rayx_reactive::Result<()> {
+fn leak_subscription(vm: &ProfileViewModel) -> dxn_reactive::Result<()> {
     // DON'T create an activation-time subscription without owning it.
     vm.display_name.values().subscribe(|name| log_display_name(name))?;
     Ok(())

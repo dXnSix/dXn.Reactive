@@ -11,14 +11,14 @@ Collect emissions into a shared vector and keep the subscription alive for the d
 test. Two small helpers cover nearly every case:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
 /// Records every value a scalar stream emits.
 fn record<T: Clone + Send + Sync + 'static>(
-    stream: &rayx_reactive::ValueStream<T>,
-) -> rayx_reactive::Result<(Arc<Mutex<Vec<T>>>, Subscription)> {
+    stream: &dxn_reactive::ValueStream<T>,
+) -> dxn_reactive::Result<(Arc<Mutex<Vec<T>>>, Subscription)> {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let sink = Arc::clone(&seen);
     let subscription = stream.subscribe(move |value| sink.lock().unwrap().push(value.clone()))?;
@@ -28,7 +28,7 @@ fn record<T: Clone + Send + Sync + 'static>(
 /// Records every change set a collection stream emits.
 fn record_batches<C: Clone + Send + Sync + 'static>(
     stream: &ChangeStream<C>,
-) -> rayx_reactive::collections::Result<(Arc<Mutex<Vec<ChangeSet<C>>>>, Subscription)> {
+) -> dxn_reactive::collections::Result<(Arc<Mutex<Vec<ChangeSet<C>>>>, Subscription)> {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let sink = Arc::clone(&seen);
     let subscription = stream.subscribe(move |batch| sink.lock().unwrap().push(batch.clone()))?;
@@ -61,7 +61,7 @@ Construct it, activate it the way a view would, drive inputs, and assert outputs
 `Computed`, filters and commands update synchronously, assertions can follow writes directly:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 struct LoginViewModel {
     user: Signal<String>,
@@ -111,7 +111,7 @@ while a token is alive, and that it stops after the last token is dropped.
 Drive `AsyncCommand::execute` with a simple executor in unit tests:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let fetched = Signal::new(None::<u32>);
 let fetch = {
@@ -139,7 +139,7 @@ and the timed operators (`batch`, `buffer_initial`, `*_with_timeout`, `auto_refr
 deadline instead of sleeping for a fixed time:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::time::{Duration, Instant};
 
 /// Polls `condition` until it holds or the timeout elapses.
@@ -173,8 +173,8 @@ their `*_with_scheduler` variant and move time with `advance_by`, which runs the
 test thread:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::primitives::{ManualScheduler, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 

@@ -1,4 +1,4 @@
-# RayX Reactive State: Streams And Primitives
+# dXn Reactive State: Streams And Primitives
 
 Read this when implementing or consuming `ValueStream`, stream operators, `Subscription`, `CompositeSubscription`, `DeliveryQueue`, or shared reactive primitives.
 
@@ -40,7 +40,7 @@ Primitive `ValueStream` supports:
 - `start_with` (subscribes upstream first, then emits the initial value)
 - `map_err(|e| ...)` and `err_into::<F>()` to convert the setup error
 
-`rayx_reactive::ReactiveValueStreamExt<T, E>` works for any error type and adds:
+`dxn_reactive::ReactiveValueStreamExt<T, E>` works for any error type and adds:
 
 - `filter`, `filter_map`, `skip`, `take(n)`, `first()`
 - `distinct_until_changed()`, `distinct_until_changed_by(|a, b| ...)`
@@ -65,7 +65,7 @@ Every timed operator runs on a `Scheduler` (`now()`, `schedule(delay, task) -> S
 Scalar timed operators: `debounce(quiet)`, `throttle(window)`, `sample(period)`, each with `*_with_scheduler(.., scheduler)`. `Duration::ZERO` forwards every value; disposal cancels pending timers. The collection timed operators (`batch`, `buffer_initial`, `batch_if_with_timeout`, `auto_refresh_buffered`, `expire_after*`) have the same `*_with_scheduler` variants.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -77,8 +77,8 @@ let _subscription = query
     .subscribe(|change| search(&change.current))?;
 
 query.set("ra".into())?;
-query.set("rayx".into())?;
-scheduler.advance_by(Duration::from_millis(250)); // emits "rayx" once
+query.set("dxn".into())?;
+scheduler.advance_by(Duration::from_millis(250)); // emits "dxn" once
 ```
 
 ## Subscriptions
@@ -90,7 +90,7 @@ Use:
 - `Subscription::empty()` for no-op streams.
 - `Subscription::many(vec)` to own multiple subscriptions as one.
 - `CompositeSubscription::new(vec)` (or `default()`) for grouped RAII disposal; `add`, `len`, `is_empty`, and `dispose()` (in insertion order).
-- `DisposeBag` from `rayx_reactive` when subscriptions should attach to a ViewModel activation or object lifetime.
+- `DisposeBag` from `dxn_reactive` when subscriptions should attach to a ViewModel activation or object lifetime.
 
 Keep subscriptions alive for as long as updates are needed. If the returned subscription is dropped immediately, the stream disconnects immediately. `Subscription`, `CompositeSubscription`, `ValueStream` and `ChangeStream` are `#[must_use]`, so an unbound result is a compiler warning (an error under `-D warnings`).
 
@@ -117,10 +117,10 @@ Do not simulate stream completion/error channels unless the primitive API grows 
 ## DO
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
-fn positive_count(count: &Signal<i32>) -> rayx_reactive::Result<Subscription> {
+fn positive_count(count: &Signal<i32>) -> dxn_reactive::Result<Subscription> {
     count
         .values()
         .filter(|count| *count > 0)
@@ -134,10 +134,10 @@ fn positive_count(count: &Signal<i32>) -> rayx_reactive::Result<Subscription> {
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
-fn bad(count: &Signal<i32>) -> rayx_reactive::Result<()> {
+fn bad(count: &Signal<i32>) -> dxn_reactive::Result<()> {
     // DON'T drop the subscription immediately: `let _ =` silences `#[must_use]`
     // but still disposes it at once (`let _subscription =` would keep it).
     let _ = count.values().subscribe(|count| render_count(*count))?;
@@ -159,7 +159,7 @@ struct CounterBinding {
 }
 
 impl CounterBinding {
-    fn new(count: &Signal<i32>) -> rayx_reactive::Result<Self> {
+    fn new(count: &Signal<i32>) -> dxn_reactive::Result<Self> {
         Ok(Self {
             _subscription: count.values().subscribe(|count| render_count(*count))?,
         })

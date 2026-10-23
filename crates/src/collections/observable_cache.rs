@@ -23,7 +23,7 @@ use crate::collections::subscription::Subscription;
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 ///
 /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 /// #[derive(Clone, Debug, PartialEq)]

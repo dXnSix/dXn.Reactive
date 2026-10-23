@@ -74,7 +74,7 @@ pub trait CacheStreamExt<K, T> {
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let numbers = SourceCache::new(|n: &u32| *n);
@@ -160,7 +160,7 @@ pub trait CacheStreamExt<K, T> {
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let users = SourceCache::new(|user: &(u32, &'static str)| user.0);
@@ -598,7 +598,7 @@ pub trait CacheStreamExt<K, T> {
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let prices = SourceCache::new(|item: &(&'static str, u32)| item.0);

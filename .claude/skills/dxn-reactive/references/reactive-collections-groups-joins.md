@@ -182,7 +182,7 @@ Use true-for streams for aggregate validation state, "all rows saved", "any row 
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let orders = SourceCache::new(|order: &Order| order.id);
 let lines = SourceCache::new(|line: &Line| line.id);
@@ -199,7 +199,7 @@ This keeps each right-side group live instead of flattening child snapshots.
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 // DON'T recompute all grouped rows from a full snapshot after every line change.
 let rows = orders.connect().query_when_changed_with(|orders| {

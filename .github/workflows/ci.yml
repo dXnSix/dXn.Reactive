@@ -1,4 +1,4 @@
-name: RayX.Reactive
+name: dXn.Reactive
 
 on:
   pull_request:
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.99.0
-      - run: cargo rustdoc -p rayx_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
+      - run: cargo rustdoc -p dxn_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
 
   msrv:
     name: MSRV (Rust 1.95)
@@ -39,8 +39,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95
       # `rust-toolchain.toml` pins the development toolchain; the explicit `+1.95` overrides it.
-      - run: cargo +1.95 check -p rayx_reactive --all-features
-      - run: cargo +1.95 test -p rayx_reactive --all-features
+      - run: cargo +1.95 check -p dxn_reactive --all-features
+      - run: cargo +1.95 test -p dxn_reactive --all-features
 
   wasm-tests:
     name: wasm32 tests (wasm-bindgen-test)
@@ -60,7 +60,7 @@ jobs:
           version=$(cargo pkgid -p wasm-bindgen | sed 's/.*@//')
           cargo install wasm-bindgen-cli --version "$version" --locked
       # Runs the `#[wasm_bindgen_test]` tests (Node); native-only tests are skipped there.
-      - run: cargo test -p rayx_reactive --target wasm32-unknown-unknown --all-features --lib --tests
+      - run: cargo test -p dxn_reactive --target wasm32-unknown-unknown --all-features --lib --tests
 
   macos:
     name: test (macOS)

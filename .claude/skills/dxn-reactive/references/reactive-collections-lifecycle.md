@@ -168,7 +168,7 @@ Use this for refresh-aware view models or validation items that need an explicit
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &RowVm| row.id);
 
@@ -184,7 +184,7 @@ This coalesces child validation signals into refresh batches and evaluates rows 
 
 ```rust
 use std::collections::HashMap;
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let mut child_subscriptions = HashMap::new();
 

@@ -1,11 +1,11 @@
-# Releasing `rayx_reactive`
+# Releasing `dxn_reactive`
 
 A release is a version tag `vX.Y.Z` on `main` with a GitHub Release of the same name. Nothing is
 published to crates.io: consumers depend on the tag,
 
 ```toml
 [dependencies]
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "vX.Y.Z" }
+dxn_reactive = { git = "https://github.com/dXnSix/dXn.Reactive", tag = "vX.Y.Z" }
 ```
 
 and `Cargo.lock` records the commit it points to. The manifests stay crates.io-ready
@@ -19,7 +19,7 @@ and on every push to `main` it
 - when `Cargo.toml` holds a version that has no tag yet, tags `vX.Y.Z` and creates the GitHub
   Release with that version's `CHANGELOG.md` section as its notes.
 
-Only `rayx_reactive` is released. The `doc-examples` test crate is never versioned
+Only `dxn_reactive` is released. The `doc-examples` test crate is never versioned
 (`release = false`).
 
 ## How a release happens
@@ -51,6 +51,11 @@ The first release, `v1.0.0`, needed no pull request: `Cargo.toml` already said `
 `v*` tag existed, so release-plz treated it as the initial release and the `release` job tagged it
 on the first push that contained the workflow. Its changelog section holds the hand-written notes
 for the changes since the untagged 0.1 sources.
+
+`v1.1.0`, which renamed the crate from `rayx_reactive` to `dxn_reactive`, was cut with the
+[by-hand fallback](#by-hand-fallback): in git-only mode release-plz looks the package up by its
+new name inside `v1.0.0`, finds nothing and cannot compute a next version. From `v1.1.0` on it
+finds the package again.
 
 ## The 1.x policy
 
@@ -87,9 +92,9 @@ Events made with the workflow's default `GITHUB_TOKEN` start no other workflows,
 release pull request would get no CI. release-plz therefore uses a fine-grained personal access
 token stored as the repository secret `RELEASE_PLZ_TOKEN`; it exists only in GitHub Actions.
 
-It is one token shared by the `rayx-ui` library repositories:
+It is one token shared by the `dXnSix` library repositories:
 
-- resource owner `rayx-ui`; repository access: the library repositories (this one included);
+- resource owner `dXnSix` (the account that owns the repositories); repository access: the library repositories (this one included);
 - repository permissions: **Contents** read and write, **Pull requests** read and write (Metadata
   read is added automatically);
 - an expiry of at most one year.
@@ -119,14 +124,14 @@ release by hand on an up-to-date `main`, with the owner's go-ahead:
 
 ```bash
 # 1. Set [workspace.package] version in Cargo.toml and refresh the lockfile
-cargo update -p rayx_reactive --offline
+cargo update -p dxn_reactive --offline
 # 2. Add a `## [X.Y.Z] - YYYY-MM-DD` section under the header of CHANGELOG.md
 # 3. Commit and push it (see Pushing), then tag that commit and push the tag
 git tag vX.Y.Z
 git push origin vX.Y.Z
 # 4. Create the GitHub Release with the section as its notes (release-plz normally does this)
 awk '/^## \[X\.Y\.Z\]/ { found = 1; next } /^## \[/ && found { exit } found' CHANGELOG.md > notes.md
-gh release create vX.Y.Z --repo rayx-ui/RayX.Reactive --title vX.Y.Z --notes-file notes.md
+gh release create vX.Y.Z --repo dXnSix/dXn.Reactive --title vX.Y.Z --notes-file notes.md
 ```
 
 Tags always have the form `vX.Y.Z`. release-plz continues from the by-hand tag on its next run.
@@ -151,15 +156,15 @@ on pushes and runs no tests.
 ## Checking a release
 
 ```bash
-gh release view vX.Y.Z --repo rayx-ui/RayX.Reactive
+gh release view vX.Y.Z --repo dXnSix/dXn.Reactive
 ```
 
 ```bash
-git ls-remote --tags https://github.com/rayx-ui/RayX.Reactive 'v*'
+git ls-remote --tags https://github.com/dXnSix/dXn.Reactive 'v*'
 ```
 
 Consumers pick up a release by changing `tag = "vX.Y.Z"` in their `Cargo.toml`; `cargo update -p
-rayx_reactive` then records the new commit in `Cargo.lock`. Read the release's changelog section
+dxn_reactive` then records the new commit in `Cargo.lock`. Read the release's changelog section
 first: every breaking change has a *Migration:* note.
 
 ---

@@ -63,7 +63,7 @@ struct CacheState<K, T> {
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 /// use std::sync::{Arc, Mutex};
 ///
 /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {

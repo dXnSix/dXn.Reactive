@@ -1,4 +1,4 @@
-# RayX Reactive State: Signals And Computed Values
+# dXn Reactive State: Signals And Computed Values
 
 Read this when implementing `Signal<T>`, `ReadSignal<T>`, `SignalChange<T>`, `Computed<T>`, or ViewModel scalar properties.
 
@@ -51,7 +51,7 @@ Use `values()` when a subscriber needs the current value immediately and then fu
 
 Use `changes()` when a subscriber needs only future deltas with `previous`, `current`, and `version`. It does not replay the current value.
 
-Both return `ValueStream` from `rayx_reactive::primitives`, so stream operators can be chained and subscriptions are RAII-owned.
+Both return `ValueStream` from `dxn_reactive::primitives`, so stream operators can be chained and subscriptions are RAII-owned.
 
 Important subscription behavior:
 
@@ -97,7 +97,7 @@ Guarantees:
 ## DO
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 struct LoginViewModel {
     user_name: Signal<String>,
@@ -106,7 +106,7 @@ struct LoginViewModel {
 }
 
 impl LoginViewModel {
-    fn new() -> rayx_reactive::Result<Self> {
+    fn new() -> dxn_reactive::Result<Self> {
         let user_name = Signal::new(String::new());
         let password = Signal::new(String::new());
         let can_submit = Computed::combine2(
@@ -122,7 +122,7 @@ impl LoginViewModel {
         })
     }
 
-    fn set_user_name(&self, value: String) -> rayx_reactive::Result<()> {
+    fn set_user_name(&self, value: String) -> dxn_reactive::Result<()> {
         let _ = self.user_name.set(value)?;
         Ok(())
     }
@@ -132,10 +132,10 @@ impl LoginViewModel {
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
-fn bind_title(title: &Signal<String>) -> rayx_reactive::Result<Subscription> {
+fn bind_title(title: &Signal<String>) -> dxn_reactive::Result<Subscription> {
     // DON'T use replace for ordinary UI text input; it emits even for equal values.
     title.replace(title.get()?)?;
 

@@ -1,6 +1,6 @@
-# RayX.Reactive contributor guidance
+# dXn.Reactive contributor guidance
 
-UI-neutral reactive state (the `rayx_reactive` crate in `crates/`): scalar signals/commands at the crate root,
+UI-neutral reactive state (the `dxn_reactive` crate in `crates/`): scalar signals/commands at the crate root,
 stream primitives in `primitives`, observable collections in `collections`. The crate must not
 depend on RayX, gpux or any UI framework; GPUI bindings belong to RayX (`rayx::reactive`).
 
@@ -16,10 +16,10 @@ cargo package --workspace
 ```
 
 Tests are grouped by feature: collection groups live in `crates/src/collections/tests/<group>/`
-(select one with `cargo test -p rayx_reactive --all-features collections::tests::<group>`), scalar
+(select one with `cargo test -p dxn_reactive --all-features collections::tests::<group>`), scalar
 state in `crates/src/tests.rs`, and public-surface tests in `crates/tests/`. Every Rust example in
 `README.md` and `docs/*.md` runs as a test of the unpublished `doc-examples` workspace member (select
-it with `cargo test -p rayx_reactive_doc_examples`; mark deliberate fragments with a preceding
+it with `cargo test -p dxn_reactive_doc_examples`; mark deliberate fragments with a preceding
 `<!-- skip-check -->`). Test only what you changed: run the touched group while iterating, and the
 full list above once before committing.
 

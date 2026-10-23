@@ -12,7 +12,7 @@ task.
 An ordered list that allows duplicates.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let empty = SourceList::<String>::default();
 let seeded = SourceList::new(vec![3, 1, 2]);
@@ -40,7 +40,7 @@ Every mutation goes through `edit`. The closure receives a `ListUpdater`, and ev
 becomes **one** change set:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let list = SourceList::new(vec!["a", "b", "c"]);
 let batch = list.edit(|list| {
@@ -91,7 +91,7 @@ Updaters can read what the edit sees, including the changes it already made: `Li
 atomic, even with several writer threads:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let counters = SourceList::new(vec![0_u64]);
 let workers = (0..4)
@@ -120,7 +120,7 @@ assert_eq!(counters.get(0)?, Some(400)); // no lost updates
 Both replace the contents with a new snapshot. They differ in what downstream observers see:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let list = SourceList::new(vec!["a", "b", "c"]);
 
@@ -164,7 +164,7 @@ cache also remembers an **order** for its keys (insertion order by default), whi
 through the change indexes.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Product {
@@ -231,7 +231,7 @@ every time, which re-runs every downstream operator. The equality-aware variants
 updates at the source:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Quote {
@@ -261,7 +261,7 @@ assert_eq!(quotes.lookup(&"ABC")?.map(|q| q.price), Some(10));
 order. If a snapshot contains a key twice, the last occurrence wins.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let cache = SourceCache::new(|pair: &(u32, &str)| pair.0);
 cache.add_or_update_range([(1, "one"), (2, "two"), (3, "three")])?;
@@ -297,7 +297,7 @@ positions.
 | `changes_rx()` | ✓ | ✓ | an rxRust `SharedSubject` of change sets |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let settings = SourceCache::new(|entry: &(&'static str, u32)| entry.0);
@@ -327,7 +327,7 @@ are created on that first call, so a source never read through rxRust does no rx
 `rxrust = "=1.0.0-rc.5"` to your dependencies to use rxRust operators on it:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use rxrust::prelude::*;
 use std::sync::{Arc, Mutex};
 
@@ -353,7 +353,7 @@ immediately and versions advance, but their change sets are held. Dropping the l
 **one** combined batch:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let cache = SourceCache::new(|n: &u32| *n);
@@ -390,7 +390,7 @@ Two situations look alike but behave differently:
    batch is queued and delivered after the current one reaches every subscriber.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let list = SourceList::<u32>::default();
 let inner = list.clone();

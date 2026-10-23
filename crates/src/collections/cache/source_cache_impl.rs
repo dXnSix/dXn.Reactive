@@ -11,7 +11,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// #[derive(Clone, Debug, PartialEq)]
@@ -197,7 +197,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let stock = SourceCache::new(|entry: &(&'static str, u32)| entry.0);
@@ -471,7 +471,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     /// use std::sync::{Arc, Mutex};
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -580,7 +580,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     /// use std::sync::{Arc, Mutex};
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -732,7 +732,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     /// use std::sync::{Arc, Mutex};
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {

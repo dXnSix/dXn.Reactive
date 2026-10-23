@@ -11,7 +11,7 @@ use crate::primitives::{DeliveryQueue, Result, Subscription, ValueStream};
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::prelude::*;
+/// use dxn_reactive::prelude::*;
 /// use std::sync::{Arc, Mutex};
 ///
 /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {

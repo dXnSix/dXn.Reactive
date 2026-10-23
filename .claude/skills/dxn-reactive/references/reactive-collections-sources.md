@@ -182,7 +182,7 @@ Sources (and live groups) use an owner-tracking lock:
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceList::default();
 let view = source.connect().filter(|value: &i32| *value >= 0);
@@ -203,7 +203,7 @@ source.edit(|list| {
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceList::default();
 
@@ -226,7 +226,7 @@ source.edit(|list| {
 ## Source Cache DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 

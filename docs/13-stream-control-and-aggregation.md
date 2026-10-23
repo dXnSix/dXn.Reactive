@@ -54,8 +54,8 @@ Timing notes:
 import as one UI update":
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
 let rows = SourceList::<u32>::default();
@@ -84,8 +84,8 @@ assert_eq!(*batches.lock().unwrap(), [3]);
 into at most one delivery per window. Here a `ManualScheduler` stands in for the clock:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::primitives::{ManualScheduler, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -123,7 +123,7 @@ the batches committed after the snapshot point, whereas `changes()` forwards wha
 delivery queue after subscription, which can include a batch committed just before.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let list = SourceList::new(vec![1, 2, 3]);
@@ -145,7 +145,7 @@ batch arrives. An empty source never sends a batch, so combine it with `start_wi
 "loaded, but empty" must be distinguishable from "still loading":
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let results = SourceList::<String>::default();
@@ -192,7 +192,7 @@ on the order in which items arrive.
 `items()`, `contains_key(&k)` and `lookup(&k)`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, PartialEq)]
@@ -242,7 +242,7 @@ For "how many distinct values" or facet lists, use
 | `treat_moves_as_remove_add()` | rewrite each `Move` as a removal followed by an insertion |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let cache = SourceCache::new(|n: &u32| *n);
@@ -290,7 +290,7 @@ Flattening into value streams:
 | `flatten_buffer_result()` | turns a `ValueStream<Vec<ChangeSet<C>>>` of buffered batches back into a `ChangeStream<C>` |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let list = SourceList::<&str>::default();
@@ -323,7 +323,7 @@ records), `index` and `last_updated`. For lists, range changes count their items
 item.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let list = SourceList::<u32>::default();

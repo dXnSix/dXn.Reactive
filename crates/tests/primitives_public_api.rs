@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rayx_reactive::primitives::prelude::*;
+use dxn_reactive::primitives::prelude::*;
 
 #[test]
 fn direct_public_api_remains_available() -> Result<()> {

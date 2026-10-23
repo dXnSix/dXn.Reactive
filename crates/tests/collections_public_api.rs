@@ -1,5 +1,5 @@
 //! SCN-1.5: every extension trait and observable wrapper exported by
-//! `rayx_reactive::collections::prelude`, exercised with at least one representative method
+//! `dxn_reactive::collections::prelude`, exercised with at least one representative method
 //! through the public API only.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -9,9 +9,9 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{EventBus, Signal};
-use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{EventBus, Signal};
+use dxn_reactive::primitives::{ManualScheduler, Scheduler};
 
 /// Collects every value a stream emits.
 fn record<T: Clone + Send + 'static>() -> (Arc<Mutex<Vec<T>>>, impl Fn(&T) + Send + Sync + 'static)

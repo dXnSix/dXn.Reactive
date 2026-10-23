@@ -27,7 +27,7 @@ ViewModels expose two kinds of outward-facing behavior besides state:
 | `.with_execution_policy(policy)` | chooses what happens to overlapping executions ([below](#concurrency-policy)) |
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let items = Signal::new(vec!["a", "b"]);
 let has_items = Computed::derive(items.read_only(), |items| !items.is_empty())?;
@@ -67,7 +67,7 @@ disabled returns `CommandError::Disabled` and publishes nothing. A panicking act
 the future).
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let attempts = Arc::new(Mutex::new(0));
@@ -121,7 +121,7 @@ The crate does not spawn anything: you drive the future on whatever executor you
 uses.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let status = Signal::new(String::from("not loaded"));
 let load = {
@@ -155,7 +155,7 @@ latest run ends. `is_executing()` stays `true` while any run is in flight.
 `CommandError::Disabled` without starting the action or changing any state.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use futures::FutureExt;
 
 let save = AsyncCommand::new(futures::future::pending::<CommandResult>)
@@ -177,7 +177,7 @@ To disable the button itself while a command runs, derive `can_execute` from `is
 another command, or keep a `busy` signal:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let busy = Signal::new(false);
 let has_input = Signal::new(true);
@@ -235,7 +235,7 @@ Events need not be `Clone`: `emit` moves the event into the queue and lends it t
 [stream operators](04-streams-and-subscriptions.md#operators).
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -279,7 +279,7 @@ A common combination is a command that reports its outcome as an event for the v
 while the command's `state()` drives a progress indicator:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let notifications = EventBus::<String>::new();

@@ -1,6 +1,6 @@
 # 20. Contributing
 
-This chapter is for people changing `rayx_reactive` itself: the repository layout, the rules the
+This chapter is for people changing `dxn_reactive` itself: the repository layout, the rules the
 crate follows, and how to validate changes.
 
 ## Repository layout
@@ -9,7 +9,7 @@ crate follows, and how to validate changes.
 |---|---|
 | `Cargo.toml` | workspace manifest: shared package metadata, dependency versions and lints |
 | `rust-toolchain.toml` | pinned toolchain (1.99.0) with `clippy`, `rustfmt` and the `wasm32-unknown-unknown` target |
-| `crates/` | the `rayx_reactive` crate |
+| `crates/` | the `dxn_reactive` crate |
 | `crates/src/lib.rs` | crate root and scalar prelude |
 | `crates/src/{signal,computed,effect,disposal,activation,command,event,stream_ext}.rs` | scalar state |
 | `crates/src/primitives/` | `ValueStream`, `Subscription`, `DeliveryQueue`, schedulers, `ReactiveError` |
@@ -22,7 +22,7 @@ crate follows, and how to validate changes.
 | `docs/` | this documentation |
 | `doc-examples/` | unpublished test crate that compiles and runs every Rust example in `README.md` and `docs/` |
 | `.agentx/` | maintainers' design records and task history |
-| `.claude/skills/rayx-reactive/` | the agent skill describing how to work on this crate |
+| `.claude/skills/dxn-reactive/` | the agent skill describing how to work on this crate |
 
 ## Rules the crate follows
 
@@ -68,17 +68,17 @@ CI also builds the rustdoc with `missing_docs` denied, checks and tests the MSRV
 runs the `#[wasm_bindgen_test]` tests on `wasm32-unknown-unknown`:
 
 ```bash
-cargo rustdoc -p rayx_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
+cargo rustdoc -p dxn_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
 ```
 
 While iterating, run only the tests for the area you changed:
 
 ```bash
-cargo test -p rayx_reactive --all-features collections::tests::sorting_windowing
+cargo test -p dxn_reactive --all-features collections::tests::sorting_windowing
 ```
 
 ```bash
-cargo test -p rayx_reactive --all-features --lib -- --skip collections::
+cargo test -p dxn_reactive --all-features --lib -- --skip collections::
 ```
 
 Run the full set once before committing.
@@ -141,14 +141,14 @@ Criterion baseline before the change and compare after it.
   holding. After editing documentation, run only those tests:
 
 ```bash
-cargo test -p rayx_reactive_doc_examples
+cargo test -p dxn_reactive_doc_examples
 ```
 - When you change behavior, update the chapter that documents it, and the
   [DynamicData map](19-coming-from-dynamicdata.md) if the change affects parity.
 
 ## Consumers
 
-`rayx_reactive` is a standalone library. Applications such as RayX consume it, but changes here are
+`dxn_reactive` is a standalone library. Applications such as RayX consume it, but changes here are
 validated only by this repository's own tests. Never build or test a consumer repository to prove a
 change. When a consumer's usage pattern matters (binding a virtualized list or tree, a worker thread
 writing while a UI thread observes, marshalling updates to a UI thread), reproduce that situation in
@@ -170,7 +170,7 @@ or a `BREAKING CHANGE:` footer.
 
 ## Releases
 
-`rayx_reactive` is released as Git tags `vX.Y.Z` by release-plz: merging its release pull request
+`dxn_reactive` is released as Git tags `vX.Y.Z` by release-plz: merging its release pull request
 tags the version and creates the GitHub Release. Changes are pushed straight to `main` after
 `git fetch origin && git rebase origin/main`, with `git push --force-with-lease origin main`; pull
 requests exist only for releases. [Releasing](releasing.md) describes the flow, the 1.x policy, the

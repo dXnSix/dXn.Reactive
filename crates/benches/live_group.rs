@@ -1,7 +1,7 @@
 #![allow(clippy::expect_used)]
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone)]
 struct Row {

@@ -30,7 +30,7 @@ VirtualRequest::new(0, 25)
 VirtualRequest::default() // start 0, size 25
 ```
 
-Do not import DynamicData's one-based page-number assumption. RayX page and virtual contracts are zero-based.
+Do not import DynamicData's one-based page-number assumption. This crate's page and virtual contracts are zero-based.
 
 ## List Sorting
 
@@ -173,7 +173,7 @@ Response semantics (list, keyed and `sort_and_*`): a response is emitted wheneve
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 
@@ -188,7 +188,7 @@ This preserves row keys and emits page metadata.
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 
@@ -211,7 +211,7 @@ let page = rows
 ## Dynamic Sort DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let comparer_stream: ValueStream<Comparer<Row>> = selected_column_comparer();
 let resort = row_sort_key_changed();

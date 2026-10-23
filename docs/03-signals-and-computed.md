@@ -5,7 +5,7 @@ selected key, a sort mode, a page request, a loading flag: any one value that ch
 that other code needs to react to.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let query = Signal::new(String::from("rust"));
 assert_eq!(query.get()?, "rust");
@@ -22,7 +22,7 @@ signal is cheap (one `Arc` increment) and produces **another handle to the same 
 copy of the value:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let original = Signal::new(1);
 let handle = original.clone();
@@ -44,7 +44,7 @@ value, or `<locked>` instead of waiting when another thread holds the lock).
 | `try_get()` / `try_read(\|value\| …)` | `Result<Option<_>>` | Like `get`/`read`, but return `Ok(None)` instead of waiting when another thread holds the signal's lock. Use them on a browser main thread, which must not block ([chapter 16](16-concurrency-and-platforms.md#webassembly)). On a `Computed`'s read signal they return the last published value without recomputing. |
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let document = Signal::new(vec!["line one".to_string(); 10_000]);
 // Project without cloning ten thousand strings.
@@ -68,7 +68,7 @@ They differ in when they publish.
 | `update(\|value\| …)` | always; mutates in place | `Result<SignalChange<T>>` |
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let count = Signal::new(0);
 
@@ -113,7 +113,7 @@ detect missed or stale updates, for example by caching the last version it rende
 | `changes()` | `SignalChange<T>` (`previous`, `current`, `version`) | No | Reacting to transitions; late subscribers miss the current state |
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let mode = Signal::new("light");
@@ -154,7 +154,7 @@ as long as you want updates: dropping it unsubscribes.
   during its own initial callback is delivered after the baseline, not lost:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let signal = Signal::new(1);
@@ -181,7 +181,7 @@ For the cross-thread rules, see [Concurrency and platforms](16-concurrency-and-p
 can observe without mutating:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 struct Session {
     user: Signal<Option<String>>,
@@ -224,7 +224,7 @@ and owns those subscriptions for as long as it lives.
 | `values()` / `changes()` | observe the derived value, exactly like a signal |
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let price = Signal::new(12.5_f64);
 let quantity = Signal::new(4_u32);
@@ -244,7 +244,7 @@ combines an old value of one input with a new value of another. When one write r
 `Computed` through several paths (a *diamond*), it publishes once:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let a = Signal::new(1);
@@ -276,7 +276,7 @@ keeps working and recomputes on the next input change.
 pass. Use `combine3` for three inputs; for more, compose computed values:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let width = Signal::new(2.0_f64);
 let height = Signal::new(3.0_f64);
@@ -300,7 +300,7 @@ result is equal to the previous one. Use `derive_distinct` to publish only real 
 [`distinct_until_changed`](04-streams-and-subscriptions.md#operators) to one subscriber:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let number = Signal::new(2);
@@ -336,7 +336,7 @@ assert_eq!(parity.read_signal().version()?, parity_version);
 `ReadSignal` taken from it stays readable but no longer updates:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 let source = Signal::new(1);
 let doubled = Computed::derive(source.read_only(), |value| value * 2)?;

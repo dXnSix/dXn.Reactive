@@ -1,6 +1,6 @@
 # 1. Introduction and architecture
 
-`rayx_reactive` is the state layer of a Model-View-ViewModel (MVVM) application, packaged as a
+`dxn_reactive` is the state layer of a Model-View-ViewModel (MVVM) application, packaged as a
 library with no UI dependency. It answers one question: *when application state changes, how does
 everything that depends on it find out, cheaply and in the right order?*
 
@@ -33,21 +33,21 @@ The library follows a small set of rules, and they explain most of its API decis
 
 ```mermaid
 flowchart BT
-    P["rayx_reactive::primitives<br/>ValueStream · Subscription · DeliveryQueue · ReactiveError"]
-    S["rayx_reactive (crate root)<br/>Signal · Computed · Effect · Command · EventBus · DisposeBag · ViewModelActivator"]
-    C["rayx_reactive::collections<br/>SourceList · SourceCache · ChangeSet · ChangeStream · operators"]
+    P["dxn_reactive::primitives<br/>ValueStream · Subscription · DeliveryQueue · ReactiveError"]
+    S["dxn_reactive (crate root)<br/>Signal · Computed · Effect · Command · EventBus · DisposeBag · ViewModelActivator"]
+    C["dxn_reactive::collections<br/>SourceList · SourceCache · ChangeSet · ChangeStream · operators"]
     S --> P
     C --> P
     C -. "accepts ValueStream inputs from" .-> S
 ```
 
-1. **Primitives** (`rayx_reactive::primitives`). The neutral stream and disposal machinery that
+1. **Primitives** (`dxn_reactive::primitives`). The neutral stream and disposal machinery that
    both other layers share: the cold `ValueStream<T, E>`, the RAII `Subscription`, the re-entrancy
    safe fan-out `DeliveryQueue<T>`, and `ReactiveError`.
-2. **Scalar state** (the crate root, also exported as `rayx_reactive::prelude`). Signals, computed
+2. **Scalar state** (the crate root, also exported as `dxn_reactive::prelude`). Signals, computed
    values, effects, commands, events, and lifetime management. This layer never depends on
    collections.
-3. **Collections** (`rayx_reactive::collections`). Sources, change sets, change streams, and the
+3. **Collections** (`dxn_reactive::collections`). Sources, change sets, change streams, and the
    operator library. Collection operators accept `ValueStream`s for dynamic inputs (a predicate,
    a page request, a sort comparer), and a `Signal`'s `values()` stream is the usual way to supply
    them.
@@ -72,7 +72,7 @@ sources; the library itself never couples them.
 | `event` | `EventBus<T>`, `EventStream<T>` |
 | `primitives` | `ValueStream`, `ValueSubscriber`, `Subscription`, `CompositeSubscription`, `DeliveryQueue`, `ConnectionStatus`, `ReactiveError`, `Result`, `Scheduler`, `ThreadScheduler`, `ManualScheduler`, `default_scheduler` |
 
-### `rayx_reactive::collections`
+### `dxn_reactive::collections`
 
 | Area | Modules | Key items |
 |---|---|---|
@@ -97,20 +97,20 @@ Each layer has a prelude:
 
 <!-- skip-check -->
 ```rust
-use rayx_reactive::prelude::*;              // also re-exported at the crate root
-use rayx_reactive::collections::prelude::*; // also re-exported at rayx_reactive::collections
+use dxn_reactive::prelude::*;              // also re-exported at the crate root
+use dxn_reactive::collections::prelude::*; // also re-exported at dxn_reactive::collections
 ```
 
 Both preludes can be glob-imported together, with two names to watch:
 
-| Name | `rayx_reactive::prelude` | `rayx_reactive::collections::prelude` |
+| Name | `dxn_reactive::prelude` | `dxn_reactive::collections::prelude` |
 |---|---|---|
 | `ValueStream` | `ValueStream<T, E = ReactiveError>` (the struct) | `ValueStream<T>`, an alias for `ValueStream<T, CollectionError>` |
 | `Result` | `Result<T, ReactiveError>` | `Result<T, CollectionError>` |
 
 The two `ValueStream` names refer to the same struct with different error parameters. Rust only
 reports an ambiguity when you *use* an ambiguous name, so code that imports both preludes should
-spell these two out (`rayx_reactive::ValueStream`, `rayx_reactive::collections::Result`) or
+spell these two out (`dxn_reactive::ValueStream`, `dxn_reactive::collections::Result`) or
 import specific items. `Subscription` and `ConnectionStatus` are the same items in both
 preludes and never conflict.
 
@@ -118,7 +118,7 @@ A glob import of either prelude also **shadows `std::result::Result`**, because 
 `Result` is a one-parameter alias. Write `std::result::Result<T, E>` when you need the
 two-parameter form in such a module. Within collection code, the alias is often what you want:
 `CollectionError` converts from `ReactiveError`, so a function returning
-`rayx_reactive::collections::Result<T>` can use `?` on both layers.
+`dxn_reactive::collections::Result<T>` can use `?` on both layers.
 
 The error parameter rarely matters in practice: every collection operator accepts streams of any
 error type convertible into `CollectionError`, and every scalar stream operator works with any

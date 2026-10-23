@@ -1,14 +1,14 @@
-# RayX Reactive State
+# dXn Reactive State
 
-Use this reference when building or changing scalar reactive state in `rayx_reactive`.
+Use this reference when building or changing scalar reactive state in `dxn_reactive`.
 
 Current source is the source of truth:
 
 - Crate root: `crates/src/lib.rs`
 - Shared primitives: `crates/src/primitives/mod.rs`
-- Crate prelude: `rayx_reactive::prelude::*` (re-exported at the crate root)
-- Collection integration: `rayx_reactive::collections::*`
-- RayX consumers import the same API as `rayx::reactive`, `rayx::collections`, and `rayx::prelude::*`; see RayX's [reactive consumer guide](../../../../../RayX/.claude/skills/rayx/references/reactive-state.md).
+- Crate prelude: `dxn_reactive::prelude::*` (re-exported at the crate root)
+- Collection integration: `dxn_reactive::collections::*`
+- RayX consumers import the same API as `rayx::reactive`, `rayx::collections`, and `rayx::prelude::*`; see RayX's [reactive consumer guide](../../../../../../RayX/RayX.Old/.claude/skills/rayx/references/reactive-state.md).
 
 ## Route By Task
 
@@ -16,25 +16,25 @@ Current source is the source of truth:
 - `ValueStream`, `Subscription`, `DeliveryQueue`, stream operators, and custom stream creation: read [reactive-state-streams.md](reactive-state-streams.md).
 - Effects, `DisposeBag`, `ViewModelActivator`, `ActivationToken`, and activation-scoped subscriptions: read [reactive-state-lifecycle.md](reactive-state-lifecycle.md).
 - `Command`, `AsyncCommand`, command state, `can_execute`, `EventBus`, and transient event streams: read [reactive-state-commands-events.md](reactive-state-commands-events.md).
-- Binding streams into GPUI entities (RayX-owned, not in this crate): read RayX's [GPUI bindings guide](../../../../../RayX/.claude/skills/rayx/references/reactive-state-gpui-bindings.md).
+- Binding streams into GPUI entities (RayX-owned, not in this crate): read RayX's [GPUI bindings guide](../../../../../../RayX/RayX.Old/.claude/skills/rayx/references/reactive-state-gpui-bindings.md).
 - Combining `Signal<T>`/`ValueStream<T>` with `SourceList`, `SourceCache`, and collection operators: read [reactive-state-collections.md](reactive-state-collections.md), then the relevant [reactive collections](reactive-collections.md) reference.
 - Performance, correctness, and test guidance: read [reactive-state-performance.md](reactive-state-performance.md).
 
 ## Mental Model
 
-The crate root is the scalar ViewModel state layer. It handles current values, computed values, commands, transient events, and activation lifetimes; it is UI-neutral. UI bindings belong to consumers: RayX's GPUI glue (`GpuiBinding`, `ReactiveContextExt`) lives in `../RayX/crates/rayx/src/reactive_gpui.rs` and is exported with this crate as `rayx::reactive`.
+The crate root is the scalar ViewModel state layer. It handles current values, computed values, commands, transient events, and activation lifetimes; it is UI-neutral. UI bindings belong to consumers: RayX's GPUI glue (`GpuiBinding`, `ReactiveContextExt`) lives in `../../RayX/RayX.Old/crates/rayx/src/reactive_gpui.rs` and is exported with this crate as `rayx::reactive`.
 
-`rayx_reactive::primitives` is the neutral stream/disposal layer shared by scalar state and collections. It owns `ValueStream<T, E>`, `Subscription`, `CompositeSubscription`, `DeliveryQueue<T>`, `ConnectionStatus`, `ReactiveError`, `Result<T>`, and the schedulers (`Scheduler`, `ScheduledTask`, `ThreadScheduler`, `ManualScheduler`, `default_scheduler()`) that every timed operator runs on.
+`dxn_reactive::primitives` is the neutral stream/disposal layer shared by scalar state and collections. It owns `ValueStream<T, E>`, `Subscription`, `CompositeSubscription`, `DeliveryQueue<T>`, `ConnectionStatus`, `ReactiveError`, `Result<T>`, and the schedulers (`Scheduler`, `ScheduledTask`, `ThreadScheduler`, `ManualScheduler`, `default_scheduler()`) that every timed operator runs on.
 
-`rayx_reactive::collections` is the DynamicData-style collection layer. It owns `SourceList`, `SourceCache`, `ChangeStream`, `ChangeSet`, collection operators, observable collection materialization, grouping, sorting, paging, and lifecycle operators.
+`dxn_reactive::collections` is the DynamicData-style collection layer. It owns `SourceList`, `SourceCache`, `ChangeStream`, `ChangeSet`, collection operators, observable collection materialization, grouping, sorting, paging, and lifecycle operators.
 
 Use `Signal<T>` for one current value. Use `Computed<T>` for one derived current value. Use `EventBus<T>` for transient events that should not replay current state. Use `SourceList` or `SourceCache` when you need many items, stable identity, incremental deltas, filtering, sorting, virtual windows, grouping, or joins.
 
 ## Crate Boundary Rules
 
-- Crate-root scalar modules must not depend on `rayx_reactive::collections`, and the crate must not depend on RayX, gpux, or any UI framework.
-- Shared scalar stream machinery belongs in `rayx_reactive::primitives`.
-- Collection-specific `ChangeStream`, `ChangeSet`, `SourceList`, `SourceCache`, and collection operators stay in `rayx_reactive::collections`.
+- Crate-root scalar modules must not depend on `dxn_reactive::collections`, and the crate must not depend on RayX, gpux, or any UI framework.
+- Shared scalar stream machinery belongs in `dxn_reactive::primitives`.
+- Collection-specific `ChangeStream`, `ChangeSet`, `SourceList`, `SourceCache`, and collection operators stay in `dxn_reactive::collections`.
 - UI consumers bind streams through foreground-task scheduling (RayX: `ReactiveContextExt`); never call UI entity APIs from arbitrary stream subscribers.
 
 ## Public Surface Map
@@ -65,7 +65,7 @@ Use `Signal<T>` for one current value. Use `Computed<T>` for one derived current
 ## DO
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 // `Computed` is not `Clone`; share the ViewModel through `Arc` when needed.
 struct SearchViewModel {
@@ -76,7 +76,7 @@ struct SearchViewModel {
 }
 
 impl SearchViewModel {
-    fn new() -> rayx_reactive::Result<Self> {
+    fn new() -> dxn_reactive::Result<Self> {
         let query = Signal::new(String::new());
         let can_clear = Computed::derive(query.read_only(), |query| !query.is_empty())?;
         let clear_query = query.clone();
@@ -104,15 +104,15 @@ impl ActivatableViewModel for SearchViewModel {
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
 struct GridViewModel {
     // DON'T put a large, frequently sorted/filterable row set in one signal.
     rows: Signal<Vec<Row>>,
 }
 
-fn bind_bad(vm: &GridViewModel) -> rayx_reactive::Result<Subscription> {
+fn bind_bad(vm: &GridViewModel) -> dxn_reactive::Result<Subscription> {
     // This clones the whole Vec and forces full-view invalidation per change.
     vm.rows.values().subscribe(|rows| {
         rebuild_every_row(rows);
@@ -123,7 +123,7 @@ fn bind_bad(vm: &GridViewModel) -> rayx_reactive::Result<Subscription> {
 Prefer `SourceCache` or `SourceList` plus collection operators:
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 let visible = rows

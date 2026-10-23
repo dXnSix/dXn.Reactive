@@ -20,7 +20,7 @@ use crate::collections::subscription::Subscription;
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 ///
 /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 /// let scores = SourceList::new(vec![30, 10, 20]);
@@ -197,7 +197,7 @@ where
     /// ordered `ObservableList<T>`.
     ///
     /// ```
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// #[derive(Clone, Eq, PartialEq)]
     /// struct Row {

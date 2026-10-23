@@ -35,7 +35,7 @@ The wrappers are the recommended **public surface** of a service or ViewModel: e
 read-only collections and keep the mutable source private.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Contact {
@@ -72,7 +72,7 @@ position are handled as moves. It is handy for tests and small utilities; prefer
 wrappers for anything shared.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let source = SourceList::new(vec![3, 1, 2]);
@@ -99,7 +99,7 @@ dropped, so a dead destination never accumulates batches.
 `populate_into_with_errors(&destination, |error| …)` also reports each failed attempt:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let source = SourceList::new(vec![1, 2]);
@@ -160,8 +160,8 @@ on subscription (like `Signal::values()`) is never lost. If you build such a bri
 the same order.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::EventBus;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::EventBus;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Trade {
@@ -197,8 +197,8 @@ DynamicData's `ObservableChangeSet.Create`. For each subscriber they create a pr
 is connected before the driver runs, so synchronous seeding is delivered.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Subscription;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Subscription;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -234,8 +234,8 @@ turned into incremental streams. Each new snapshot is diffed against the previou
 | `edit_diff_optional(key)` / `edit_diff_optional_by(key, eq)` | `ValueStream<Option<T>>` | a zero-or-one item cache |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
 // Each poll of a remote endpoint produces a full snapshot.
@@ -279,7 +279,7 @@ The source variants return a **cold** `ValueStream`. The limit is enforced only 
 subscribed, and subscribing trims the source immediately:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let recent = SourceList::new(vec!["a", "b", "c"]);
@@ -336,8 +336,8 @@ it waits for those batches. If the edit fails because the source is busy, it ret
 source is released. It reports exactly the items its edit removed.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::primitives::{ManualScheduler, Scheduler};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::primitives::{ManualScheduler, Scheduler};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -383,8 +383,8 @@ project", "the messages of the active channel", or any view whose backing collec
 runtime.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 let general = SourceList::new(vec!["hi", "hello"]);
 let random = SourceList::new(vec!["lol"]);
@@ -415,7 +415,7 @@ the same expensive pipeline, `ref_count()` (lists and caches) shares one upstrea
   released upstream is ignored, so the next subscriber starts from the source's actual state.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -454,7 +454,7 @@ according to `compare`. For a changing set of streams, use the
 
 ## `Option` helpers
 
-`rayx_reactive::collections` also ships small helpers for Rust `Option`s, used by the operators and
+`dxn_reactive::collections` also ships small helpers for Rust `Option`s, used by the operators and
 available to applications:
 
 | Trait | For | Highlights |

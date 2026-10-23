@@ -27,8 +27,8 @@ it, groupers move it, and `transform_on_refresh` recomputes its projection. The 
 are not replaced.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 #[derive(Clone)]
 struct Download {
@@ -84,8 +84,8 @@ one `Update`/`Replace`; otherwise it is removed (or added). A cache update that 
 hides it until the new stream emits `true`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 
 #[derive(Clone)]
 struct Layer {
@@ -146,8 +146,8 @@ Use the item or keyed forms whenever the consumer must know **which** item produ
 for example to update one row:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -211,8 +211,8 @@ item lifetime: logging, metrics, starting or stopping work.
 | `subscribe_many(\|item, key\| Subscription)` | creates one subscription per live item; disposes it on removal, replacement, update or unsubscribe |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Subscription;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Subscription;
 use std::sync::{Arc, Mutex};
 
 let sessions = SourceCache::new(|id: &u32| *id);
@@ -258,7 +258,7 @@ finalized, so downstream observers never see a disposed item. On unsubscribe, ev
 is finalized.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let closed = Arc::new(Mutex::new(Vec::new()));
@@ -321,8 +321,8 @@ adding a passing item to a passing collection emits nothing. An item whose strea
 yet counts as `false`:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]

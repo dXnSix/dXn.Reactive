@@ -2,7 +2,7 @@
 
 Read this when using `ChangeStream`, `ValueStream`, stream controls, binding, aggregation, diagnostics, side effects, or observable wrappers.
 
-For scalar `Signal<T>`, `Computed<T>`, ViewModel activation, commands, events, or GPUI `ValueStream` bindings, start with [reactive-state.md](reactive-state.md). For collection operators driven by scalar RayX state, read [reactive-state-collections.md](reactive-state-collections.md).
+For scalar `Signal<T>`, `Computed<T>`, ViewModel activation, commands, events, or GPUI `ValueStream` bindings, start with [reactive-state.md](reactive-state.md). For collection operators driven by scalar reactive state, read [reactive-state-collections.md](reactive-state-collections.md).
 
 Primary source files:
 
@@ -24,15 +24,15 @@ Primary source files:
 
 `ChangeStream<C>` is a cold subscription wrapper around callbacks that receive `ChangeSet<C>`. Each subscription activates the stream pipeline and returns a `Subscription`.
 
-`ValueStream<T>` is a scalar stream for values such as dynamic predicates, sort comparers, page requests, item observables, aggregates, and status. The shared stream, subscription, composite subscription, delivery queue, connection status, and primitive reactive error types live in `rayx_reactive::primitives`; `rayx_reactive::collections` uses them for collection streams and keeps collection-specific `ChangeStream` / `ChangeSet` behavior in the collection crate.
+`ValueStream<T>` is a scalar stream for values such as dynamic predicates, sort comparers, page requests, item observables, aggregates, and status. The shared stream, subscription, composite subscription, delivery queue, connection status, and primitive reactive error types live in `dxn_reactive::primitives`; `dxn_reactive::collections` uses them for collection streams and keeps collection-specific `ChangeStream` / `ChangeSet` behavior in the collection crate.
 
-Keep scalar state/ViewModel support in `rayx_reactive` depending on `rayx_reactive::primitives`, not on `rayx_reactive::collections`. Shared stream machinery belongs in primitives so local `Signal<T>` state and collection projections can share operators without creating a crate cycle or forcing scalar state consumers to depend on collection APIs.
+Keep scalar state/ViewModel support in `dxn_reactive` depending on `dxn_reactive::primitives`, not on `dxn_reactive::collections`. Shared stream machinery belongs in primitives so local `Signal<T>` state and collection projections can share operators without creating a crate cycle or forcing scalar state consumers to depend on collection APIs.
 
-`ValueStream<T, E>` supports `map`, `start_with`, `map_err`/`err_into`, and the `ReactiveValueStreamExt` operators (see [reactive-state-streams.md](reactive-state-streams.md)). Inside `rayx_reactive::collections`, `ValueStream<T>` is an alias with the error fixed to `CollectionError`.
+`ValueStream<T, E>` supports `map`, `start_with`, `map_err`/`err_into`, and the `ReactiveValueStreamExt` operators (see [reactive-state-streams.md](reactive-state-streams.md)). Inside `dxn_reactive::collections`, `ValueStream<T>` is an alias with the error fixed to `CollectionError`.
 
 Keep subscriptions alive for as long as the consumer needs updates. Dropping `Subscription` disposes child subscriptions and operator-owned state.
 
-Use `Signal<T>::values()` or `Computed<T>::values()` from `rayx_reactive` when a collection operator needs dynamic scalar state such as a predicate state, page request, virtual request, comparer, pause flag, or regroup trigger; operators accept any stream error `E` with `CollectionError: From<E>`. The signal stream can emit synchronously during subscription, so collection bridge operators subscribe downstream/private sources before upstream values.
+Use `Signal<T>::values()` or `Computed<T>::values()` from `dxn_reactive` when a collection operator needs dynamic scalar state such as a predicate state, page request, virtual request, comparer, pause flag, or regroup trigger; operators accept any stream error `E` with `CollectionError: From<E>`. The signal stream can emit synchronously during subscription, so collection bridge operators subscribe downstream/private sources before upstream values.
 
 Output ordering: every subscription of a multi-input operator has one ordered output. Batches are computed under the operator's lock, queued, and delivered after it is released, in computation order and never concurrently, possibly by another thread that is already draining that output. A subscriber may therefore edit the operator's inputs without deadlocking.
 
@@ -75,7 +75,7 @@ Use these for tests, small utility state, or simple view backing. For reusable r
 Use `ObservableList` / `ObservableCache` when a derived stream should become queryable:
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceList::default();
 let visible = source
@@ -184,7 +184,7 @@ Use `treat_moves_as_remove_add` before a binding target that cannot handle move 
 ```rust
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceList::default();
 let target = Arc::new(Mutex::new(Vec::<Row>::new()));
@@ -199,7 +199,7 @@ let _subscription = source
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceList::default();
 
@@ -216,7 +216,7 @@ let count = source.connect().count();
 ## Observable DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let source = SourceCache::new(|row: &Row| row.id);
 let view = source
@@ -240,7 +240,7 @@ fn visible_rows(source: SourceCache<u64, Row>) -> SourceCache<u64, Row> {
 Prefer returning `ObservableCache` or a `ChangeStream`:
 
 ```rust
-fn visible_rows(source: &SourceCache<u64, Row>) -> rayx_reactive::collections::Result<ObservableCache<u64, Row>> {
+fn visible_rows(source: &SourceCache<u64, Row>) -> dxn_reactive::collections::Result<ObservableCache<u64, Row>> {
     source.connect().filter(|row| row.visible).as_observable_cache(|row| row.id)
 }
 ```

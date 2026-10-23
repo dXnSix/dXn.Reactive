@@ -19,7 +19,7 @@ exactly as long as its owner keeps it. This chapter covers the tools for choosin
 struct field.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 struct AutoSave {
@@ -50,7 +50,7 @@ assert_eq!(*saved.lock().unwrap(), ["draft v2"]);
 registration, a file lock, or a metrics scope.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -78,7 +78,7 @@ A `DisposeBag` collects subscriptions and disposes them together.
 | drop | Disposes. |
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let bag = DisposeBag::new();
@@ -113,7 +113,7 @@ only while it is visible. `ViewModelActivator` models this with reference-counte
 
 | Member | Behavior |
 |---|---|
-| `when_activated(\|bag\| …)` | Registers activation work. The callback receives the active generation's `DisposeBag` and returns `rayx_reactive::Result<()>`. |
+| `when_activated(\|bag\| …)` | Registers activation work. The callback receives the active generation's `DisposeBag` and returns `dxn_reactive::Result<()>`. |
 | `when_activated_scoped(\|bag\| …)` | Runs work once for the generation that is active (or activating) now, and keeps nothing for later generations. Without an active generation it does nothing. |
 | `is_active()` | `true` while a generation is active: all its callbacks succeeded and a token is held. |
 | `activate()` | Returns an `ActivationToken`. The first live token starts a **generation**: it creates a fresh `DisposeBag` and runs every registered callback against it. |
@@ -137,7 +137,7 @@ Activation rules:
 - `ViewModelActivator` is `Clone`; clones share the same activation state.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let activator = ViewModelActivator::default();
@@ -158,7 +158,7 @@ assert_eq!(*runs.lock().unwrap(), 2);
 ```
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let activator = ViewModelActivator::default();
@@ -194,7 +194,7 @@ generation and runs every callback again. If a callback registered while active 
 disposed, it is unregistered, and the error is returned.
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -220,7 +220,7 @@ The usual shape stores the activator in the ViewModel, registers work in the con
 captures only the handles the work needs:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 struct ClockViewModel {
     seconds: Signal<u64>,
@@ -229,7 +229,7 @@ struct ClockViewModel {
 }
 
 impl ClockViewModel {
-    fn new() -> rayx_reactive::Result<Self> {
+    fn new() -> dxn_reactive::Result<Self> {
         let vm = Self {
             seconds: Signal::new(0),
             label: Signal::new(String::new()),
@@ -277,7 +277,7 @@ To activate a child whenever its parent is active, hold the child's token in the
 token is not a `Subscription`, so wrap it:
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let parent = ViewModelActivator::default();
@@ -310,14 +310,14 @@ assert!(!*child_active.lock().unwrap());
 
 ### Collection subscriptions inside activation callbacks
 
-Activation callbacks return `rayx_reactive::Result<()>` (error type `ReactiveError`), while
+Activation callbacks return `dxn_reactive::Result<()>` (error type `ReactiveError`), while
 collection streams fail with `CollectionError`. `CollectionError` converts into `ReactiveError`
 (`Poisoned` stays `Poisoned`, every other variant becomes `ReactiveError::External` holding the
 original error), so `?` works directly:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::{DisposeWith, ViewModelActivator};
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::{DisposeWith, ViewModelActivator};
 
 let rows = SourceList::new(vec![1, 2, 3]);
 let activator = ViewModelActivator::default();

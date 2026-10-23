@@ -202,7 +202,7 @@ Use these at boundaries. Prefer native cache pipelines when identity matters thr
 ## DO
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 let forced = refresh_requested_for_visible_rows();
@@ -219,7 +219,7 @@ let view_models = rows
 ## DON'T
 
 ```rust
-use rayx_reactive::collections::*;
+use dxn_reactive::collections::*;
 
 let rows = SourceCache::new(|row: &Row| row.id);
 

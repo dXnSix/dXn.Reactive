@@ -1,6 +1,6 @@
-# RayX Reactive State: Performance, Testing, And Pitfalls
+# dXn Reactive State: Performance, Testing, And Pitfalls
 
-Read this when optimizing or reviewing `rayx_reactive` usage, testing ViewModels, or deciding whether state belongs in signals or observable collections.
+Read this when optimizing or reviewing `dxn_reactive` usage, testing ViewModels, or deciding whether state belongs in signals or observable collections.
 
 Primary source files:
 
@@ -33,7 +33,7 @@ Primary source files:
 - For single-flight commands use `with_execution_policy(ExecutionPolicy::IgnoreWhileRunning)`; the default `Concurrent` policy starts overlapping executions. Bind busy state to `is_executing()`.
 - Expect subscribers to run on whichever thread is draining the queue, not necessarily the writer's; marshal to the UI thread in the consumer.
 - Do not call UI entity APIs from arbitrary stream callbacks.
-- Do not make crate-root scalar modules depend on `rayx_reactive::collections`.
+- Do not make crate-root scalar modules depend on `dxn_reactive::collections`.
 
 ## Testing Patterns
 
@@ -58,9 +58,9 @@ Test these boundaries:
 Run the touched test group while iterating, then the full list in the repository `AGENTS.md` once before committing:
 
 ```powershell
-cargo test -p rayx_reactive --all-features --lib -- --skip collections::
-cargo test -p rayx_reactive --all-features collections::tests::<group>
-cargo clippy -p rayx_reactive --all-targets --all-features -- -D warnings
+cargo test -p dxn_reactive --all-features --lib -- --skip collections::
+cargo test -p dxn_reactive --all-features collections::tests::<group>
+cargo clippy -p dxn_reactive --all-targets --all-features -- -D warnings
 ```
 
 Never build or validate RayX (or another consumer) to test a change here; mimic the consumer scenario in this repository's tests and document breaking public-API changes in the commit: a `feat` (or `fix`) that states the break, with a `Migration:` footer (never `!` or `BREAKING CHANGE:` under the 1.x policy); release-plz renders it into `CHANGELOG.md`.
@@ -68,7 +68,7 @@ Never build or validate RayX (or another consumer) to test a change here; mimic 
 ## DO
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[test]
@@ -87,7 +87,7 @@ fn query_values_emit_initial_then_distinct_updates() -> Result<(), Box<dyn std::
         })?;
 
     assert!(query.set("".to_string())?.is_none());
-    assert!(query.set("rayx".to_string())?.is_some());
+    assert!(query.set("dxn".to_string())?.is_some());
 
     Ok(())
 }
@@ -96,10 +96,10 @@ fn query_values_emit_initial_then_distinct_updates() -> Result<(), Box<dyn std::
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
-fn render_rows_bad(rows: &Signal<Vec<Row>>) -> rayx_reactive::Result<Subscription> {
+fn render_rows_bad(rows: &Signal<Vec<Row>>) -> dxn_reactive::Result<Subscription> {
     rows.values().subscribe(|rows| {
         // DON'T do full collection filtering, sorting, and rendering on every scalar emission.
         let mut visible = rows.clone();

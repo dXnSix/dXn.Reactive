@@ -39,7 +39,7 @@ so a reorder that would shift more than about four million positions in all (rev
 about 2,000 items) falls back to a positional diff that replaces the changed positions.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let words = SourceList::new(vec!["pear", "fig", "banana"]);
 let by_length = words.connect().sort_by_key(|word| word.len()).as_observable_list()?;
@@ -62,8 +62,8 @@ and pass the stream directly; no adapter is needed (see
 [Feeding signals into collection operators](15-application-patterns.md#feeding-signals-into-collection-operators)):
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -128,7 +128,7 @@ dropped. Use them when the consumer only needs an ordered list of values.
 `ChangeStream<CacheChange<K, T>>` whose indexes are **positions in the sorted order**:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let scores = SourceCache::new(|entry: &(&'static str, u32)| entry.0);
@@ -172,7 +172,7 @@ state, so the cost is linear in the collection size per batch. Items must use in
 to record the index:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -236,7 +236,7 @@ page past the end is simply empty.
 Indexes in a window's output are **relative to the window**: index 0 is the first visible item.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let log = SourceList::new((1..=10).collect::<Vec<u32>>());
 let latest_three = log.connect().reverse().top(3).as_observable_list()?;
@@ -259,8 +259,8 @@ Apply these to an ordered keyed stream, normally the output of `sort_keyed_*`:
 | `top_keyed(n)` | the first `n` keyed items; **panics if `n == 0`** |
 
 ```rust
-use rayx_reactive::collections::prelude::*;
-use rayx_reactive::prelude::Signal;
+use dxn_reactive::collections::prelude::*;
+use dxn_reactive::prelude::Signal;
 use std::sync::{Arc, Mutex};
 
 let people = SourceCache::new(|person: &(u32, &'static str)| person.0);
@@ -328,7 +328,7 @@ Choose them when the consumer needs only the visible values. Choose
 `sort_keyed_*().page_keyed*()` or `virtualize_keyed*()` when keys must survive the window.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 let prices = SourceCache::new(|item: &(&'static str, u32)| item.0);
 prices.add_or_update_range([("a", 30), ("b", 10), ("c", 20)])?;

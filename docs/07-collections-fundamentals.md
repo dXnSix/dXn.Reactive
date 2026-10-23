@@ -95,7 +95,7 @@ Consumers that only care about identity can ignore indexes.
 ### What a source emits
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let list = SourceList::new(vec!["a", "b"]);
@@ -123,7 +123,7 @@ assert_eq!(
 And a cache:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -170,7 +170,7 @@ assert_eq!(
 `Send + Sync`, and `subscribe` returns a `collections::Result<Subscription>`.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let numbers = SourceList::new(vec![1, 2, 3, 4]);
@@ -219,7 +219,7 @@ reports `0` for a source that has always been empty. Seed it with `start_with(0)
 source), or `true` when the source is empty.
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
 let inbox = SourceList::<String>::default();
@@ -263,7 +263,7 @@ A UI binding, or any custom materializer, applies changes front to back. This re
 implementation of the list semantics is complete:
 
 ```rust
-use rayx_reactive::collections::prelude::*;
+use dxn_reactive::collections::prelude::*;
 
 fn apply<T: Clone>(target: &mut Vec<T>, batch: &ChangeSet<ListChange<T>>) {
     for change in &batch.changes {

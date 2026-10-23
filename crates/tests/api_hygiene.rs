@@ -4,11 +4,11 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rayx_reactive::collections::prelude::{
+use dxn_reactive::collections::prelude::{
     CollectionError, ObservableCache, ObservableList, SourceCache, SourceList,
 };
-use rayx_reactive::prelude::*;
-use rayx_reactive::primitives::CompositeSubscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::primitives::CompositeSubscription;
 
 fn counter() -> (Arc<AtomicUsize>, impl Fn() -> Subscription) {
     let disposed = Arc::new(AtomicUsize::new(0));

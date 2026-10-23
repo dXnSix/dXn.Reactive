@@ -1,13 +1,13 @@
 ---
-name: rayx-reactive
-description: Build, change, review, and validate rayx_reactive, the UI-neutral reactive state crate in this repository (RayX.Reactive). Use for signals, computed values, effects, commands, event streams, ViewModel activation and disposal, the shared ValueStream/Subscription/DeliveryQueue primitives, and DynamicData-style observable collections (SourceList, SourceCache, change-set operators for filtering, sorting, paging, grouping, joins, lifecycle, population), and for choosing between scalar signals and collections.
+name: dxn-reactive
+description: Build, change, review, and validate dxn_reactive, the UI-neutral reactive state crate in this repository (dXn.Reactive). Use for signals, computed values, effects, commands, event streams, ViewModel activation and disposal, the shared ValueStream/Subscription/DeliveryQueue primitives, and DynamicData-style observable collections (SourceList, SourceCache, change-set operators for filtering, sorting, paging, grouping, joins, lifecycle, population), and for choosing between scalar signals and collections.
 ---
 
-# rayx-reactive
+# dxn-reactive
 
 Inspect the affected current source first; it is the source of truth. Select the reference matching the task, then follow additional links only for a concrete need. Paths below are relative to this skill; commands run from the repository root.
 
-The crate (`crates/`) has three layers: scalar state at the crate root, shared stream primitives in `rayx_reactive::primitives`, and observable collections in `rayx_reactive::collections`. It never depends on RayX, gpux, or a UI framework. RayX (`../RayX`, checked out beside this repository) is the main consumer: it re-exports the crate as `rayx::reactive`/`rayx::collections` and owns the GPUI bindings, so GPUI binding and UI recipes live in RayX's `rayx` skill.
+The crate (`crates/`) has three layers: scalar state at the crate root, shared stream primitives in `dxn_reactive::primitives`, and observable collections in `dxn_reactive::collections`. It never depends on RayX, gpux, or a UI framework. RayX (`../../RayX/RayX.Old`, checked out beside this repository) is the main consumer: it re-exports the crate as `rayx::reactive`/`rayx::collections` and owns the GPUI bindings, so GPUI binding and UI recipes live in RayX's `rayx` skill.
 
 ## Reference Router
 
@@ -36,7 +36,7 @@ The crate (`crates/`) has three layers: scalar state at the crate root, shared s
 - Prefer structured, incremental `ChangeSet` output over resets; preserve keys and indexes. Every index is a position in the emitting operator's own output (or `None`); see the index contract on `CacheChange`/`ListChange` in `crates/src/collections/change.rs`.
 - `ReactiveError`, `CollectionError` and `CommandError` are `#[non_exhaustive]`: match them with a wildcard arm. Commits are the changelog (release-plz generates `CHANGELOG.md`; never edit it by hand): describe every behavior change, breaking change and new API in a Conventional Commit. Under the 1.x policy a breaking change is a `feat` (or `fix`) whose body states the break and whose `Migration:` footer holds the consumer note; never `!` or a `BREAKING CHANGE:` footer.
 - Subscriptions, guards, `Effect`, `Computed`, `ActivationToken` and the stream types are `#[must_use]`: bind them (`let _subscription = ...`) for as long as they should stay active.
-- Keep `.references/DynamicData` (in `../RayX`) as behavioral context only; do not copy .NET overload shapes.
+- Keep `.references/DynamicData` (in `../../RayX/RayX.Old`) as behavioral context only; do not copy .NET overload shapes.
 - HARD RULE: test only what you change. Add a new test group per feature (`crates/src/collections/tests/<group>/`, or a named scalar test module) and run it alone; run the full validation list in `AGENTS.md` once before committing.
 - The crate is standalone: never depend on, build, or validate RayX (or any consumer) to test a change; mimic consumer scenarios in this repository's own tests and document breaking API changes.
 

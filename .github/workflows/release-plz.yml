@@ -16,7 +16,7 @@ on:
 jobs:
   release:
     name: release
-    if: github.repository == 'rayx-ui/RayX.Reactive'
+    if: github.repository == 'dXnSix/dXn.Reactive'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -43,7 +43,7 @@ jobs:
   release-pr:
     name: release-pr
     needs: release
-    if: github.repository == 'rayx-ui/RayX.Reactive'
+    if: github.repository == 'dXnSix/dXn.Reactive'
     runs-on: ubuntu-24.04
     permissions:
       contents: write

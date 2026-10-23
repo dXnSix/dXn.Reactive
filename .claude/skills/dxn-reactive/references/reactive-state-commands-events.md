@@ -1,4 +1,4 @@
-# RayX Reactive State: Commands And Events
+# dXn Reactive State: Commands And Events
 
 Read this when implementing `Command`, `AsyncCommand`, command state, command enablement, `EventBus`, or transient event streams.
 
@@ -79,7 +79,7 @@ Do not use `EventBus<T>` for state that a late subscriber must know. Use `Signal
 ## DO
 
 ```rust
-use rayx_reactive::prelude::*;
+use dxn_reactive::prelude::*;
 
 struct EditorViewModel {
     text: Signal<String>,
@@ -89,7 +89,7 @@ struct EditorViewModel {
 }
 
 impl EditorViewModel {
-    fn new() -> rayx_reactive::Result<Self> {
+    fn new() -> dxn_reactive::Result<Self> {
         let text = Signal::new(String::new());
         let can_save = Computed::derive(text.read_only(), |text| !text.trim().is_empty())?;
         let text_for_save = text.read_only();
@@ -121,15 +121,15 @@ impl EditorViewModel {
 ## DON'T
 
 ```rust
-use rayx_reactive::prelude::*;
-use rayx_reactive::Subscription;
+use dxn_reactive::prelude::*;
+use dxn_reactive::Subscription;
 
 struct BadViewModel {
     // DON'T use events for durable current state.
     current_document_id: EventBus<u64>,
 }
 
-fn bind_bad(vm: &BadViewModel) -> rayx_reactive::Result<Subscription> {
+fn bind_bad(vm: &BadViewModel) -> dxn_reactive::Result<Subscription> {
     // A late subscriber misses the current document id.
     vm.current_document_id.stream().subscribe(|id| load_document(*id))
 }

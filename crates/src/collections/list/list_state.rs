@@ -52,7 +52,7 @@ struct ListState<T> {
 /// # Examples
 ///
 /// ```rust
-/// use rayx_reactive::collections::prelude::*;
+/// use dxn_reactive::collections::prelude::*;
 /// use std::sync::{Arc, Mutex};
 ///
 /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -96,7 +96,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let list = SourceList::new(vec![3, 1, 2]);
@@ -219,7 +219,7 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rayx_reactive::collections::prelude::*;
+    /// use dxn_reactive::collections::prelude::*;
     ///
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let list = SourceList::new(vec!["a", "b", "c"]);

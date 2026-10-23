@@ -17,10 +17,10 @@ The crate is released as Git tags, not on crates.io, and is consumed only by rel
 
 ```toml
 [dependencies]
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.0" }
+dxn_reactive = { git = "https://github.com/dXnSix/dXn.Reactive", tag = "v1.1.0" }
 ```
 
-Use the latest tag from the repository's [Releases](https://github.com/rayx-ui/RayX.Reactive/releases)
+Use the latest tag from the repository's [Releases](https://github.com/dXnSix/dXn.Reactive/releases)
 page. `Cargo.lock` records the commit the tag points to, and tags are never moved, so a build is
 reproducible. Do not depend on a branch, a `rev` or a path to a checkout; to pick up a newer
 release, change the tag. The [changelog](../CHANGELOG.md) lists what each release changed, with a
@@ -33,7 +33,7 @@ release, change the tag. The [changelog](../CHANGELOG.md) lists what each releas
 | `diagnostics` | off | Adds `ListDiagnosticsExt` / `CacheDiagnosticsExt` (`collect_update_stats`), `ChangeSummary`, `ChangeStatistics`, and `retained_implicit_batch_count()`. Startup delivery also maintains a global gauge of buffered batches. See [chapter 13](13-stream-control-and-aggregation.md#diagnostics). |
 
 ```toml
-rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.0", features = ["diagnostics"] }
+dxn_reactive = { git = "https://github.com/dXnSix/dXn.Reactive", tag = "v1.1.0", features = ["diagnostics"] }
 ```
 
 ### Optional companions
@@ -48,8 +48,8 @@ rayx_reactive = { git = "https://github.com/rayx-ui/RayX.Reactive", tag = "v1.0.
 
 <!-- skip-check -->
 ```rust
-use rayx_reactive::prelude::*;              // Signal, Computed, Command, EventBus, DisposeBag, …
-use rayx_reactive::collections::prelude::*; // SourceList, SourceCache, ChangeSet, operators, …
+use dxn_reactive::prelude::*;              // Signal, Computed, Command, EventBus, DisposeBag, …
+use dxn_reactive::collections::prelude::*; // SourceList, SourceCache, ChangeSet, operators, …
 ```
 
 When both preludes are imported, `ValueStream` and `Result` become ambiguous if used by name. See
@@ -68,8 +68,8 @@ The example below builds a small to-do list ViewModel that uses every major part
 - activation-scoped side effects (`ViewModelActivator`).
 
 ```rust
-use rayx_reactive::collections::prelude::*; // brings `Result<T>` = Result<T, CollectionError>
-use rayx_reactive::prelude::{
+use dxn_reactive::collections::prelude::*; // brings `Result<T>` = Result<T, CollectionError>
+use dxn_reactive::prelude::{
     ActivatableViewModel, Command, Computed, DisposeWith, ReactiveError, Signal,
     ViewModelActivator,
 };
@@ -115,7 +115,7 @@ impl TodoListViewModel {
                 let id = next_id.fetch_add(1, Ordering::Relaxed);
                 todos
                     .add_or_update(Todo { id, title, done: false })
-                    .map_err(|error| rayx_reactive::CommandError::Failed(error.to_string()))?;
+                    .map_err(|error| dxn_reactive::CommandError::Failed(error.to_string()))?;
                 new_title.set(String::new())?;
                 Ok(())
             })
@@ -134,7 +134,7 @@ impl TodoListViewModel {
     }
 
     /// A live count of unfinished to-dos, for a view to subscribe to.
-    fn remaining(&self) -> rayx_reactive::collections::ValueStream<usize> {
+    fn remaining(&self) -> dxn_reactive::collections::ValueStream<usize> {
         self.todos.connect().filter(|todo| !todo.done).count()
     }
 
