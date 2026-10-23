@@ -272,69 +272,43 @@ fn change_key_refreshes_never_change_the_provider() {
     );
 }
 
-fn load_time(
-    rows: u32,
-    attach: &dyn Fn(&SourceCache<u32, Row>) -> Subscription,
-    edit: &dyn Fn(&SourceCache<u32, Row>),
-) -> Duration {
-    (0..2)
-        .map(|_| {
-            let cache = SourceCache::new(|row: &Row| row.0);
-            let _operator = attach(&cache);
-            cache
-                .add_or_update_range((0..rows).map(|key| (key, key % 97)))
-                .unwrap();
-            let start = Instant::now();
-            edit(&cache);
-            start.elapsed()
-        })
-        .min()
-        .unwrap()
-}
-
 #[test]
 fn keyed_state_bookkeeping_scales_linearly() {
-    let change_key: &dyn Fn(&SourceCache<u32, Row>) -> Subscription = &|cache| {
-        cache
+    assert_linear("change_key clear", |rows| {
+        let ops = KeyOps::default();
+        let keys = ops.clone();
+        let cache = SourceCache::new(move |row: &Row| keys.key(row.0));
+        let destinations = ops.clone();
+        let _changed = cache
             .connect()
-            .change_key(|row: &Row| row.0 + 1)
+            .change_key(move |row: &Row| destinations.key(row.0 + 1))
             .subscribe(|_| {})
-            .unwrap()
-    };
-    let clear: &dyn Fn(&SourceCache<u32, Row>) = &|cache| cache.clear().map(drop).unwrap();
-    let small = load_time(10_000, change_key, clear);
-    let large = load_time(40_000, change_key, clear);
-    assert!(
-        large < small * 8,
-        "change_key clear: {small:?} vs {large:?}"
-    );
+            .unwrap();
+        cache
+            .add_or_update_range((0..rows).map(|key| (key, key % 97)))
+            .unwrap();
+        ops.work(|| cache.clear().map(drop).unwrap())
+    });
 
-    let load = |rows: u32| {
-        (0..2)
-            .map(|_| {
-                let cache = SourceCache::new(|row: &Row| row.0);
-                let _children = cache
-                    .connect()
-                    .transform_many(
-                        |child: &Row| child.0,
-                        |row: &Row| vec![(row.0 * 2, 0), (row.0 * 2 + 1, 0)],
-                    )
-                    .subscribe(|_| {})
-                    .unwrap();
-                let start = Instant::now();
-                cache
-                    .add_or_update_range((0..rows).map(|key| (key, key)))
-                    .unwrap();
-                start.elapsed()
-            })
-            .min()
-            .unwrap()
-    };
-    let (small, large) = (load(10_000), load(40_000));
-    assert!(
-        large < small * 8,
-        "transform_many load: {small:?} vs {large:?}"
-    );
+    assert_linear("transform_many load", |rows| {
+        let ops = KeyOps::default();
+        let keys = ops.clone();
+        let cache = SourceCache::new(move |row: &Row| keys.key(row.0));
+        let children = ops.clone();
+        let _children = cache
+            .connect()
+            .transform_many(
+                move |child: &Row| children.key(child.0),
+                |row: &Row| vec![(row.0 * 2, 0), (row.0 * 2 + 1, 0)],
+            )
+            .subscribe(|_| {})
+            .unwrap();
+        ops.work(|| {
+            cache
+                .add_or_update_range((0..rows).map(|key| (key, key)))
+                .unwrap();
+        })
+    });
 }
 
 #[test]

@@ -641,79 +641,67 @@ fn a_list_concurrency_of_zero_runs_one_future_at_a_time() {
 
 #[test]
 fn cache_async_transforms_load_linearly() {
-    let load = |rows: u32| {
-        (0..2)
-            .map(|_| {
-                let cache = SourceCache::new(|row: &Row| row.0);
-                let count = Arc::new(AtomicUsize::new(0));
-                let counter = Arc::clone(&count);
-                let _transformed = cache
-                    .connect()
-                    .transform_async(|row: Row| async move { row.1 })
-                    .subscribe(move |batch| {
-                        counter.fetch_add(batch.changes.len(), AtomicOrdering::SeqCst);
-                    })
-                    .unwrap();
-                let start = Instant::now();
-                cache
-                    .add_or_update_range((0..rows).map(|key| (key, key)))
-                    .unwrap();
-                wait_until("the load", || {
-                    count.load(AtomicOrdering::SeqCst) == rows as usize
-                });
-                start.elapsed()
+    assert_linear("transform_async load", |rows| {
+        let ops = KeyOps::default();
+        let keys = ops.clone();
+        let cache = SourceCache::new(move |row: &Row| keys.key(row.0));
+        let count = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&count);
+        let _transformed = cache
+            .connect()
+            .transform_async(|row: Row| async move { row.1 })
+            .subscribe(move |batch| {
+                counter.fetch_add(batch.changes.len(), AtomicOrdering::SeqCst);
             })
-            .min()
-            .unwrap()
-    };
-    let (small, large) = (load(10_000), load(40_000));
-    assert!(
-        large < small * 8,
-        "10,000 rows in {small:?}, 40,000 in {large:?}"
-    );
+            .unwrap();
+        ops.work(|| {
+            cache
+                .add_or_update_range((0..rows).map(|key| (key, key)))
+                .unwrap();
+            wait_until("the load", || {
+                count.load(AtomicOrdering::SeqCst) == rows as usize
+            });
+        })
+    });
 }
 
 #[test]
 fn cache_async_transforms_load_linearly_after_a_skipped_item() {
-    let load = |rows: u32| {
-        (0..2)
-            .map(|_| {
-                let cache = SourceCache::new(|row: &Row| row.0);
-                let count = Arc::new(AtomicUsize::new(0));
-                let counter = Arc::clone(&count);
-                let _transformed = cache
-                    .connect()
-                    .transform_safe_async(
-                        |row: Row| async move {
-                            if row.0 == 0 {
-                                Err("skipped")
-                            } else {
-                                Ok(row.1)
-                            }
-                        },
-                        |_| {},
-                    )
-                    .subscribe(move |batch| {
-                        counter.fetch_add(batch.changes.len(), AtomicOrdering::SeqCst);
-                    })
-                    .unwrap();
-                // Key 0 stays without a projection.
-                cache.add_or_update((0, 0)).unwrap();
-                let start = Instant::now();
-                cache
-                    .add_or_update_range((1..=rows).map(|key| (key, key)))
-                    .unwrap();
-                wait_until("the load", || {
-                    count.load(AtomicOrdering::SeqCst) == rows as usize
-                });
-                start.elapsed()
+    assert_linear("transform_safe_async load after a skipped item", |rows| {
+        let ops = KeyOps::default();
+        let keys = ops.clone();
+        let cache = SourceCache::new(move |row: &Row| keys.key(row.0));
+        let (count, skipped) = (
+            Arc::new(AtomicUsize::new(0)),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let (counter, skip) = (Arc::clone(&count), Arc::clone(&skipped));
+        let _transformed = cache
+            .connect()
+            .transform_safe_async(
+                |row: Row| async move {
+                    if row.0 == 0 {
+                        Err("skipped")
+                    } else {
+                        Ok(row.1)
+                    }
+                },
+                move |_| skip.store(true, AtomicOrdering::SeqCst),
+            )
+            .subscribe(move |batch| {
+                counter.fetch_add(batch.changes.len(), AtomicOrdering::SeqCst);
             })
-            .min()
-            .unwrap()
-    };
-    let (small, large) = (load(10_000), load(40_000));
-    assert!(
-        large < small * 8,
-        "10,000 rows in {small:?}, 40,000 in {large:?}"
-    );
+            .unwrap();
+        // Key 0 stays without a projection.
+        cache.add_or_update((0, 0)).unwrap();
+        wait_until("the skipped item", || skipped.load(AtomicOrdering::SeqCst));
+        ops.work(|| {
+            cache
+                .add_or_update_range((1..=rows).map(|key| (key, key)))
+                .unwrap();
+            wait_until("the load", || {
+                count.load(AtomicOrdering::SeqCst) == rows as usize
+            });
+        })
+    });
 }

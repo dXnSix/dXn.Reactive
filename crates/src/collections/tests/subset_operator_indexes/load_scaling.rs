@@ -1,27 +1,24 @@
 //! Initial loads through the subset operators and joins stay linear: appending a new key
-//! needs no scans (a quadratic load takes about 16 times as long for 4 times the rows).
+//! needs no scans (a quadratic load does about 16 times the key work for 4 times the rows).
 
 use super::super::support::*;
 
 type Row = (u32, u32);
 /// Subscribes an operator to a source (and an optional right-hand source).
-type Attach = dyn Fn(&SourceCache<u32, Row>, &SourceCache<u32, Row>) -> Subscription;
+type Attach = dyn Fn(&SourceCache<CountedKey, Row>, &SourceCache<CountedKey, Row>) -> Subscription;
 
-/// The best of two load times of `rows` rows through the operator `attach` subscribes.
-fn load_time(rows: u32, attach: &Attach) -> Duration {
-    (0..2)
-        .map(|_| {
-            let source = SourceCache::new(|row: &Row| row.0);
-            let right = SourceCache::new(|row: &Row| row.0);
-            let _operator = attach(&source, &right);
-            let start = Instant::now();
-            source
-                .add_or_update_range((0..rows).map(|key| (key, key)))
-                .unwrap();
-            start.elapsed()
-        })
-        .min()
-        .unwrap()
+/// The work of loading `rows` rows through the operator `attach` subscribes.
+fn load_work(rows: u32, attach: &Attach) -> Work {
+    let ops = KeyOps::default();
+    let (keys, right_keys) = (ops.clone(), ops.clone());
+    let source = SourceCache::new(move |row: &Row| keys.key(row.0));
+    let right = SourceCache::new(move |row: &Row| right_keys.key(row.0));
+    let _operator = attach(&source, &right);
+    ops.work(|| {
+        source
+            .add_or_update_range((0..rows).map(|key| (key, key)))
+            .unwrap();
+    })
 }
 
 #[test]
@@ -50,11 +47,6 @@ fn initial_loads_scale_linearly() {
         }),
     ];
     for (name, attach) in operators {
-        let small = load_time(10_000, attach);
-        let large = load_time(40_000, attach);
-        assert!(
-            large < small * 8,
-            "{name}: 10,000 rows in {small:?}, 40,000 rows in {large:?} (quadratic growth)"
-        );
+        assert_linear(name, |rows| load_work(rows, attach));
     }
 }

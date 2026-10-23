@@ -254,27 +254,19 @@ fn ensure_unique_keys_moves_only_the_keys_that_moved() {
 
 #[test]
 fn ensure_unique_keys_loads_linearly() {
-    let load = |rows: u32| {
-        (0..2)
-            .map(|_| {
-                let cache = SourceCache::new(|row: &Row| row.0);
-                let _unique = cache
-                    .connect()
-                    .ensure_unique_keys()
-                    .subscribe(|_| {})
-                    .unwrap();
-                let start = Instant::now();
-                cache
-                    .add_or_update_range((0..rows).map(|key| (key, key)))
-                    .unwrap();
-                start.elapsed()
-            })
-            .min()
-            .unwrap()
-    };
-    let (small, large) = (load(10_000), load(40_000));
-    assert!(
-        large < small * 8,
-        "10,000 rows in {small:?}, 40,000 in {large:?}"
-    );
+    assert_linear("ensure_unique_keys load", |rows| {
+        let ops = KeyOps::default();
+        let keys = ops.clone();
+        let cache = SourceCache::new(move |row: &Row| keys.key(row.0));
+        let _unique = cache
+            .connect()
+            .ensure_unique_keys()
+            .subscribe(|_| {})
+            .unwrap();
+        ops.work(|| {
+            cache
+                .add_or_update_range((0..rows).map(|key| (key, key)))
+                .unwrap();
+        })
+    });
 }

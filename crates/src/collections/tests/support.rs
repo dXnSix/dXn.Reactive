@@ -552,3 +552,79 @@ pub(super) struct ParentCacheCache {
     pub(super) id: u32,
     pub(super) children: SourceCache<u32, Row>,
 }
+
+/// Counts the equality and hashing calls on the [`CountedKey`]s it makes, from any thread (an
+/// async transform's worker included); clones share the count, separate counters stay apart.
+#[derive(Clone, Debug, Default)]
+pub(super) struct KeyOps(Arc<AtomicUsize>);
+
+impl KeyOps {
+    /// A key whose equality and hashing calls this counter tallies.
+    pub(super) fn key(&self, value: u32) -> CountedKey {
+        CountedKey {
+            value,
+            ops: Arc::clone(&self.0),
+        }
+    }
+
+    /// The work `action` does: the key operations on this counter's keys, from any thread
+    /// (`action` waits for workers it relies on), and the key-order positions rewritten on
+    /// this thread.
+    pub(super) fn work(&self, action: impl FnOnce()) -> Work {
+        use crate::collections::key_order::reindexed_for_test;
+
+        let (key_ops, reindexed) = (self.0.load(AtomicOrdering::SeqCst), reindexed_for_test());
+        action();
+        Work {
+            key_ops: self.0.load(AtomicOrdering::SeqCst) - key_ops,
+            reindexed: reindexed_for_test() - reindexed,
+        }
+    }
+}
+
+/// A `u32` key whose equality and hashing calls are tallied by the [`KeyOps`] that made it.
+#[derive(Clone, Debug)]
+pub(super) struct CountedKey {
+    value: u32,
+    ops: Arc<AtomicUsize>,
+}
+
+impl PartialEq for CountedKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.ops.fetch_add(1, AtomicOrdering::Relaxed);
+        self.value == other.value
+    }
+}
+
+impl Eq for CountedKey {}
+
+impl std::hash::Hash for CountedKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.ops.fetch_add(1, AtomicOrdering::Relaxed);
+        self.value.hash(state);
+    }
+}
+
+/// Deterministic work counts (see [`KeyOps::work`]): unlike elapsed time, they do not depend
+/// on the speed or load of the machine.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Work {
+    key_ops: usize,
+    reindexed: usize,
+}
+
+/// Asserts the work `measure` reports for a number of rows grows linearly: 8,000 rows may
+/// cost at most 8 times the work of 2,000, where a quadratic cost (a scan per row) grows
+/// about 16 times. The counts are exact, so small loads suffice, and a regression fails
+/// quickly instead of crawling through a quadratic load of counted keys.
+pub(super) fn assert_linear(what: &str, measure: impl Fn(u32) -> Work) {
+    let (small, large) = (measure(2_000), measure(8_000));
+    assert!(
+        small.key_ops >= 2_000,
+        "{what}: {small:?} for 2,000 rows (the rows' keys are not counted)"
+    );
+    assert!(
+        large.key_ops <= small.key_ops * 8 && large.reindexed <= small.reindexed * 8,
+        "{what}: {small:?} for 2,000 rows, {large:?} for 8,000 (quadratic growth)"
+    );
+}
