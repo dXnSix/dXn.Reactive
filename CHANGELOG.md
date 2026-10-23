@@ -1,9 +1,15 @@
 # Changelog
 
-All notable changes to `rayx_reactive` are documented in this file. The format follows
+All notable changes to `dxn_reactive` are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). It is generated from
 Conventional Commits by release-plz.
+
+## [1.1.0] - 2026-10-23
+
+### Features
+- *(repository)* rename the crate to dxn_reactive
+  *Migration:* depend on `dxn_reactive = { git = "https://github.com/dXnSix/dXn.Reactive", tag = "v1.1.0" }` instead of `rayx_reactive`, and replace `rayx_reactive::` paths with `dxn_reactive::`.
 
 ## [1.0.0] - 2026-10-19
 
