@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/primitives
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-08T12:00:00+02:00
+  updated: 2026-10-23T22:00:00+02:00
   topics:
     - value-stream
     - delivery-queue
@@ -22,7 +22,7 @@ Read this before changing shared streams, subscriptions, or ordered delivery use
 
 ## Current Technical Shape
 
-`rayx_reactive::primitives` is the neutral layer under both scalar state and collections: generic `ValueStream<T, E>`, `ValueSubscriber<T>`, `Subscription`, `CompositeSubscription`, `DeliveryQueue<T>`, `ConnectionStatus`, `ReactiveError`, and `Result<T>`.
+`dxn_reactive::primitives` is the neutral layer under both scalar state and collections: generic `ValueStream<T, E>`, `ValueSubscriber<T>`, `Subscription`, `CompositeSubscription`, `DeliveryQueue<T>`, `ConnectionStatus`, `ReactiveError`, and `Result<T>`.
 
 `DeliveryQueue<T>` is a transient, re-entrancy-safe ordered-delivery primitive. It accepts non-`Clone` payloads, gives snapshot subscribers borrowed references, and owns no replay or versioning semantics; collections layer their versioned startup handshake and keyed partitioning above it.
 

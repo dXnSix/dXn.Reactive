@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-05T23:30:00+02:00
+  updated: 2026-10-23T22:00:00+02:00
   topics:
     - observable-collections
     - dynamicdata
@@ -14,7 +14,7 @@ agentx:
 
 # Collections Index
 
-Use this domain for `rayx_reactive::collections`: DynamicData-style observable collections. Guidance spanning sources and operators lives at this level.
+Use this domain for `dxn_reactive::collections`: DynamicData-style observable collections. Guidance spanning sources and operators lives at this level.
 
 - [state](state.md)
 - [knowledge](knowledge.md)

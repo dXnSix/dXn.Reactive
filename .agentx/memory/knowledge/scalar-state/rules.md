@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/scalar-state
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-11T12:00:00+02:00
+  updated: 2026-10-23T22:00:00+02:00
   topics:
     - signals
     - crate-boundaries
@@ -14,10 +14,10 @@ agentx:
 
 # Scalar State Rules
 
-- Keep crate-root scalar modules independent of `rayx_reactive::collections`, and keep the crate free of RayX, gpux, and any UI framework; GPUI bindings belong to RayX (`rayx::reactive`).
+- Keep crate-root scalar modules independent of `dxn_reactive::collections`, and keep the crate free of RayX, gpux, and any UI framework; GPUI bindings belong to RayX (`rayx::reactive`).
 - Use `Signal<T>` for scalar/current-value component or ViewModel state; use `SourceList`/`SourceCache` for large mutable collections and structured deltas.
 - Run signal mutation callbacks outside the signal mutex and preserve the `values()` subscribe-before-baseline handshake.
 - Run `ViewModelActivator` callbacks outside its state lock and keep generation-aware token disposal.
-- Use the `rayx-reactive` skill (`.claude/skills/rayx-reactive/`) for API usage patterns after reading current source.
+- Use the `dxn-reactive` skill (`.claude/skills/dxn-reactive/`) for API usage patterns after reading current source.
 - Handles that dispose or stop work on drop (`Subscription`, `Effect`, `Computed`, `ActivationToken`, `Disposable`, guards) and lazy streams carry `#[must_use]` with a message. `Debug` impls on handles read a snapshot without blocking: signals through `try_get` (`<locked>` when another thread holds them), sources through `len`/`count`/`version` (which report `NestedUpdate` instead of deadlocking on re-entry); never format user values while holding a lock.
 - Preserve the complete public surface: reactive optimization work must not delete, rename, or hide public items just because they lack current call sites.

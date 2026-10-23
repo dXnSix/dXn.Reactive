@@ -4,7 +4,7 @@ agentx:
   scope: decisions/repository
   status: current
   created: 2026-10-19T01:30:00+02:00
-  updated: 2026-10-19T01:30:00+02:00
+  updated: 2026-10-23T22:00:00+02:00
   promoted_from: reactive-releases
   topics:
     - release
@@ -21,11 +21,11 @@ agentx:
 
 ### Decision text
 
-`rayx_reactive` is released only as Git tags `vX.Y.Z`. release-plz (`release-plz.toml`, `.github/workflows/release-plz.yml`) runs git-only (`git_only`, `publish = false`, `git_release_enable = true`): on every push to `main` the `release` job tags a version that has no tag yet and creates the GitHub Release with its changelog section; `release-pr` (after `release`) keeps the release pull request. `doc-examples` has `release = false`; the root `CHANGELOG.md` is the package's changelog (`changelog_path`). Consumers depend on `{ git = "https://github.com/rayx-ui/RayX.Reactive", tag = "vX.Y.Z" }`, never a branch, `rev` or path.
+`dxn_reactive` is released only as Git tags `vX.Y.Z`. release-plz (`release-plz.toml`, `.github/workflows/release-plz.yml`) runs git-only (`git_only`, `publish = false`, `git_release_enable = true`): on every push to `main` the `release` job tags a version that has no tag yet and creates the GitHub Release with its changelog section; `release-pr` (after `release`) keeps the release pull request. `doc-examples` has `release = false`; the root `CHANGELOG.md` is the package's changelog (`changelog_path`). Consumers depend on `{ git = "https://github.com/dXnSix/dXn.Reactive", tag = "vX.Y.Z" }`, never a branch, `rev` or path.
 
 **1.x policy** (while the owner is the only consumer): `release_commits = "^(feat|fix|perf)"`, `semver_check = false`; a breaking change is a `feat` (or `fix`) whose body states the break and whose `Migration:` footer holds the consumer note, rendered as *Migration:* under its changelog entry. Never `!` or `BREAKING CHANGE:` (release-plz would propose 2.0.0 and cannot cap it). A release is merging the release PR after checking it is still 1.x, changes only `Cargo.toml`/`Cargo.lock`/`CHANGELOG.md` and its CI is green. The policy ends when a second consumer appears.
 
-Commits are the changelog: `CHANGELOG.md` starts byte for byte with the configured header and is never hand-edited between releases. `RELEASE_PLZ_TOKEN` is a fine-grained PAT whose **resource owner is `rayx-ui`** (a PAT owned by a user account cannot reach organization repositories; the first run failed with a 403 at tag creation until the token was replaced). Changes are pushed straight to `main` (`fetch`, `rebase`, `--force-with-lease`); pull requests exist only for releases. Details: `docs/releasing.md`.
+Commits are the changelog: `CHANGELOG.md` starts byte for byte with the configured header and is never hand-edited between releases. `RELEASE_PLZ_TOKEN` is a fine-grained PAT whose **resource owner is the repositories' owner, `dXnSix`** (it was `rayx-ui` until the repositories moved on 2026-10-23; a token for another owner cannot reach them, and the first run failed with a 403 at tag creation until the token was replaced). Changes are pushed straight to `main` (`fetch`, `rebase`, `--force-with-lease`); pull requests exist only for releases. Details: `docs/releasing.md`.
 
 ### Invariants
 
