@@ -9,16 +9,12 @@ A `Signal<Vec<T>>` can hold a list, but every change replaces the whole vector, 
 
 ## The model
 
-```text
-writes (edit, add_or_update, remove ...)
-        |
-  SourceList / SourceCache        owns the items; the only place writes happen
-        |  connect()
-  filter -> sort_keyed_by_key -> page_keyed        operators, each with its own state
-        |
-  subscriber (UI binding, ObservableList, ...)
-
-  SourceCache --connect()--> count / sum_by --> ValueStream<N>     aggregates
+```mermaid
+flowchart TB
+    W["writes<br/>edit · add_or_update · remove …"] --> S[("SourceList / SourceCache<br/>owns the items")]
+    S -- "connect()" --> F["filter"] --> T["sort_keyed_by_key"] --> P["page_keyed"]
+    P --> O["subscriber<br/>(UI binding, ObservableList, …)"]
+    S -- "connect()" --> A["count / sum_by"] --> V["ValueStream&lt;N&gt;"]
 ```
 
 - A **source** (`SourceList<T>` or `SourceCache<K, T>`) owns mutable state.

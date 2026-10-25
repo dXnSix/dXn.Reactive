@@ -12,12 +12,14 @@ order: 20
 
 ## The three layers
 
-```text
- collections   SourceList  SourceCache  ChangeSet  ChangeStream  operators
-      |  accepts ValueStream inputs from scalar state
- scalar state  Signal  Computed  Effect  Command  EventBus  DisposeBag  ViewModelActivator
-      |
- primitives    ValueStream  Subscription  DeliveryQueue  Scheduler  ReactiveError
+```mermaid
+flowchart BT
+    P["dxn_reactive::primitives<br/>ValueStream · Subscription · DeliveryQueue · Scheduler · ReactiveError"]
+    S["dxn_reactive (crate root)<br/>Signal · Computed · Effect · Command · EventBus · DisposeBag · ViewModelActivator"]
+    C["dxn_reactive::collections<br/>SourceList · SourceCache · ChangeSet · ChangeStream · operators"]
+    S --> P
+    C --> P
+    C -. "accepts ValueStream inputs from" .-> S
 ```
 
 | Layer | Module | Contents |

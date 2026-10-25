@@ -9,12 +9,27 @@ The previous pages described the building blocks. This page shows how they fit t
 
 ## Layering
 
-```text
- Services / model          ViewModel                                  View
- SourceCache / SourceList  Signals (input state)                      Binding (UI thread)
-   private, mutable        Derived streams: filter, sort, page          applies changes, writes
-        |  connect()       Commands, ViewModelActivator                 input back
-        +--------------->  derived collections ------------------->  set() / execute()
+```mermaid
+flowchart TB
+    subgraph Services["Services / model"]
+        SC[("SourceCache / SourceList<br/>(private, mutable)")]
+    end
+    subgraph VM["ViewModel"]
+        SIG["Signals<br/>(input state)"]
+        DER["Derived streams<br/>filter · sort · page"]
+        CMD["Commands"]
+        ACT["ViewModelActivator"]
+    end
+    subgraph View
+        BIND["Binding<br/>(UI thread)"]
+    end
+    SC -- "connect()" --> DER
+    SIG -- "dynamic inputs" --> DER
+    DER -- "ObservableList / ChangeStream" --> BIND
+    SIG -- "values()" --> BIND
+    BIND -- "set() / execute()" --> SIG
+    BIND --> CMD
+    CMD -- "edit" --> SC
 ```
 
 - **Services own sources.** Keep `SourceCache` and `SourceList` private; expose `connect()` streams or [observable wrappers](./materialization.md#observable-wrappers).
