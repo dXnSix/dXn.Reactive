@@ -117,8 +117,10 @@ through. It suits views that populate from several sources at startup.
 
 ### Skipping the snapshot
 
-`connect().skip_initial()` gives "live changes only". In single-threaded code it is equivalent to
-`changes()`. Under concurrent writes it keeps `connect()`'s precise boundary: it forwards exactly
+`connect().skip_initial()` gives "live changes only" for a source that already holds items. In
+single-threaded code it is then equivalent to `changes()`. It drops the first *non-empty* batch, and
+an empty source sends no snapshot, so on an **empty** source it drops the first real change: use
+`changes()` there. Under concurrent writes it keeps `connect()`'s precise boundary: it forwards exactly
 the batches committed after the snapshot point, whereas `changes()` forwards whatever reaches the
 delivery queue after subscription, which can include a batch committed just before.
 
