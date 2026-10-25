@@ -21,7 +21,7 @@ Use the latest tag from the repository's [Releases](https://github.com/dXnSix/dX
 | Requirement | Value |
 |---|---|
 | Rust edition | 2024 |
-| Minimum supported Rust | 1.95 (checked in CI) |
+| Minimum supported Rust | 1.97 (checked in CI) |
 | Development toolchain | 1.99.0, pinned by `rust-toolchain.toml` |
 | Dependencies | `futures`, `rxrust` (pinned to `=1.0.0-rc.5`), `serde`, `thiserror` |
 

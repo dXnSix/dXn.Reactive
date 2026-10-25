@@ -57,7 +57,7 @@ a service, or a test.
 | macOS (Apple silicon) | Tested in CI |
 | `wasm32-unknown-unknown` | Checked and tested (`wasm-bindgen-test` on Node) in CI. The synchronous core works; time-based operators work with your own `Scheduler`; async operators need OS threads, so do not use them on this target. See [Concurrency and platforms](docs/16-concurrency-and-platforms.md#webassembly). |
 
-- **Rust:** edition 2024, MSRV **1.95** (development and CI pin 1.99.0 through `rust-toolchain.toml`).
+- **Rust:** edition 2024, MSRV **1.97** (development and CI pin 1.99.0 through `rust-toolchain.toml`).
 - **Threading:** every public handle is `Send + Sync`. Subscribers run synchronously on the thread
   that published the change, on the scheduler's timer for timed operators, or on the operator's
   worker thread for async operators.

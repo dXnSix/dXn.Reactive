@@ -5,7 +5,7 @@
 | Requirement | Value |
 |---|---|
 | Rust edition | 2024 |
-| Minimum supported Rust version | 1.95 |
+| Minimum supported Rust version | 1.97 |
 | Toolchain used for development and CI | 1.99.0, pinned by `rust-toolchain.toml` |
 | Runtime dependencies | `futures`, `rxrust`, `serde`, `thiserror` |
 

@@ -14,7 +14,7 @@ install: |
   dxn_reactive = { git = "https://github.com/dXnSix/dXn.Reactive", tag = "v1.1.0" }
 facts:
   - { label: Version, value: "v1.1.0 (Git tags)" }
-  - { label: Rust, value: "1.95+, edition 2024" }
+  - { label: Rust, value: "1.97+, edition 2024" }
   - { label: Operators, value: "200+ incremental" }
   - { label: Targets, value: "Linux, Windows, macOS, wasm32" }
   - { label: Unsafe, value: "forbidden" }

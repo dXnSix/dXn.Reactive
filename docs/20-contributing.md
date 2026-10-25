@@ -64,7 +64,7 @@ cargo check --workspace --target wasm32-unknown-unknown
 cargo package --workspace
 ```
 
-CI also builds the rustdoc with `missing_docs` denied, checks and tests the MSRV (Rust 1.95), and
+CI also builds the rustdoc with `missing_docs` denied, checks and tests the MSRV (Rust 1.97), and
 runs the `#[wasm_bindgen_test]` tests on `wasm32-unknown-unknown`:
 
 ```bash

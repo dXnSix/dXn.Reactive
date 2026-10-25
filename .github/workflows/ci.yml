@@ -33,14 +33,14 @@ jobs:
       - run: cargo rustdoc -p dxn_reactive --all-features -- -D missing_docs -D rustdoc::broken_intra_doc_links
 
   msrv:
-    name: MSRV (Rust 1.95)
+    name: MSRV (Rust 1.97)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.95
-      # `rust-toolchain.toml` pins the development toolchain; the explicit `+1.95` overrides it.
-      - run: cargo +1.95 check -p dxn_reactive --all-features
-      - run: cargo +1.95 test -p dxn_reactive --all-features
+      - uses: dtolnay/rust-toolchain@1.97
+      # `rust-toolchain.toml` pins the development toolchain; the explicit `+1.97` overrides it.
+      - run: cargo +1.97 check -p dxn_reactive --all-features
+      - run: cargo +1.97 test -p dxn_reactive --all-features
 
   wasm-tests:
     name: wasm32 tests (wasm-bindgen-test)

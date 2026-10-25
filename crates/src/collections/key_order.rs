@@ -236,7 +236,7 @@ impl RemovedPositions {
         let mut index = position + 1;
         while index < self.counts.len() {
             self.counts[index] += 1;
-            index += index & index.wrapping_neg();
+            index += index.isolate_lowest_one();
         }
     }
 
