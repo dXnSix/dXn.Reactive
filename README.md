@@ -3,6 +3,8 @@
 [![CI](https://github.com/dXnSix/dXn.Reactive/actions/workflows/ci.yml/badge.svg)](https://github.com/dXnSix/dXn.Reactive/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
+**Documentation:** https://dxnsix.github.io/dXn.Reactive/
+
 **Reactive state for Rust applications, independent of any UI framework.** `dxn_reactive` gives
 you the state layer of an MVVM application: observable values, derived values, commands, transient
 events, ViewModel lifetimes, and observable collections whose changes travel as structured,
