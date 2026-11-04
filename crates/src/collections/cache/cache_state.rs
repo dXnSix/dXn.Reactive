@@ -87,12 +87,12 @@ pub struct SourceCache<K, T> {
     key_selector: Arc<dyn Fn(&T) -> K + Send + Sync>,
     state: Arc<SourceLock<CacheState<K, T>>>,
     changes: DeliveryQueue<VersionedChangeSet<CacheChange<K, T>>>,
-    keyed_changes: KeyedChangeHub<K, T>,
     preview: DeliveryQueue<Arc<ChangeSet<CacheChange<K, T>>>>,
     count_changed: DeliveryQueue<(u64, usize)>,
     /// Suspension guards dropped while the state was locked, applied on release.
     pending_resumes: Arc<AtomicUsize>,
     /// The rxRust subject and its bridge, created by the first `changes_rx()` call.
     rx_changes: Arc<OnceLock<(CacheRx<K, T>, Subscription)>>,
-    _keyed_bridge: Arc<Subscription>,
+    /// The keyed-watch hub and its bridge from `changes`, created by the first watch.
+    keyed: Arc<OnceLock<(KeyedChangeHub<K, T>, Subscription)>>,
 }

@@ -30,13 +30,6 @@ where
     /// ```
     pub fn new(key_selector: impl Fn(&T) -> K + Send + Sync + 'static) -> Self {
         let changes = DeliveryQueue::new();
-        let keyed_changes = KeyedChangeHub::new();
-        let keyed_changes_for_bridge = keyed_changes.clone();
-        let keyed_bridge = changes
-            .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
-                keyed_changes_for_bridge.publish(versioned);
-            })
-            .unwrap_or_else(|_| Subscription::empty());
 
         let state = Arc::new(SourceLock::new(CacheState {
             items: HashMap::new(),
@@ -71,12 +64,11 @@ where
             key_selector: Arc::new(key_selector),
             state,
             changes,
-            keyed_changes,
             preview,
             count_changed,
             pending_resumes,
             rx_changes: Arc::new(OnceLock::new()),
-            _keyed_bridge: Arc::new(keyed_bridge),
+            keyed: Arc::new(OnceLock::new()),
         }
     }
 
@@ -110,6 +102,24 @@ where
     pub(crate) fn debug_snapshot(&self) -> Option<(usize, u64)> {
         let state = self.state.try_lock_now()?;
         Some((state.items.len(), state.version))
+    }
+
+    /// The keyed-watch hub. The first call creates it and bridges `changes` into it, so a
+    /// cache that is never watched does not publish to it. A watch registers with the hub
+    /// before it snapshots the state, so the batches it can miss are covered by its snapshot.
+    fn keyed_changes(&self) -> &KeyedChangeHub<K, T> {
+        let (hub, _bridge) = self.keyed.get_or_init(|| {
+            let hub = KeyedChangeHub::new();
+            let hub_for_bridge = hub.clone();
+            let bridge = self
+                .changes
+                .subscribe(move |versioned: &VersionedChangeSet<CacheChange<K, T>>| {
+                    hub_for_bridge.publish(versioned);
+                })
+                .unwrap_or_else(|_| Subscription::empty());
+            (hub, bridge)
+        });
+        hub
     }
 
     /// Runs `callback` once, when this source's state lock is next released (or now).
@@ -531,12 +541,12 @@ where
 
     #[cfg(test)]
     pub(crate) fn keyed_delivery_snapshot_for_test(&self) -> Result<KeyedDeliverySnapshot> {
-        self.keyed_changes.snapshot()
+        self.keyed_changes().snapshot()
     }
 
     #[cfg(test)]
     pub(crate) fn with_keyed_hub_lock_held_for_test<R>(&self, action: impl FnOnce() -> R) -> R {
-        self.keyed_changes.with_registry_lock_held(action)
+        self.keyed_changes().with_registry_lock_held(action)
     }
 
     /// Returns a stream of live batches only, without a snapshot.
@@ -867,7 +877,7 @@ where
         let startup = StartupConnection::new(Arc::clone(&subscriber));
         let startup_for_changes = startup.clone();
         let subscription = self
-            .keyed_changes
+            .keyed_changes()
             .subscribe(watch_key.clone(), move |versioned| {
                 startup_for_changes.receive(versioned);
             })?;
@@ -875,7 +885,7 @@ where
         let (snapshot, snapshot_version) = {
             let state = self.state.lock()?;
             #[cfg(any(test, feature = "diagnostics"))]
-            self.keyed_changes.note_setup_lookups();
+            self.keyed_changes().note_setup_lookups();
             let snapshot = state
                 .items
                 .get(&watch_key)

@@ -9,11 +9,11 @@
   "path": "2026-11-04-08-keyed-sort-refreshes-only-the-shifted-window.json",
   "createdAt": "2026-11-04T23:24:15Z",
   "startedAt": "2026-11-04T23:24:15Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:25:26Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
-  "resultCommit": "",
+  "resultCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 98b1904fc682f13ee8a393b743d6b20f3091d686",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
-      "resultCommit": "",
+      "resultCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 98b1904fc682f13ee8a393b743d6b20f3091d686",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "a579848248c59e4fbc776f6d993a484e359b5299"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,58 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "166.15 µs median",
+      "delta": "-0.0600%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "353.98 µs median",
+      "delta": "+2.2452%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "3.2211 ms median",
+      "delta": "+4.1467%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "152.42 µs median",
+      "delta": "+0.9064%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.6449 µs median",
+      "delta": "-87.016%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.7606 ms median",
+      "delta": "+0.9475%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "baseline (criterion saved)",
+      "after": "38.001 µs median",
+      "delta": "-70.476%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Keyed Sort Refreshes Only The Shifted Window Finished\n\n**Index:** 8\n**Checkpoint:** 98b1904\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 84 focused sort/window/index tests pass (debug_assert_positions verifies the map); sort-and-page/update 132 -> 38 us at 10k, 13 -> 1.6 us at 1k; loads unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** take-then-reinsert with a single refresh of the shifted window\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| keyed-sort-large-add-batch/640 | 166.15 µs median | -0.0600% |\n| keyed-sort-large-add-batch/1280 | 353.98 µs median | +2.2452% |\n| keyed-sort-large-add-batch/10000 | 3.2211 ms median | +4.1467% |\n| sort-and-page/load/1000 | 152.42 µs median | +0.9064% |\n| sort-and-page/update/1000 | 1.6449 µs median | -87.016% |\n| sort-and-page/load/10000 | 1.7606 ms median | +0.9475% |\n| sort-and-page/update/10000 | 38.001 µs median | -70.476% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

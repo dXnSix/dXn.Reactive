@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "2745c98f-85d9-435d-b648-cd37c5c1444e",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 9,
+  "type": "hypothesis",
+  "name": "Lazy Keyed-Watch Bridge",
+  "slug": "lazy-keyed-watch-bridge",
+  "path": "2026-11-04-09-lazy-keyed-watch-bridge.json",
+  "createdAt": "2026-11-04T23:26:48Z",
+  "startedAt": "2026-11-04T23:26:48Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a579848248c59e4fbc776f6d993a484e359b5299",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a579848248c59e4fbc776f6d993a484e359b5299",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Lazy Keyed-Watch Bridge Hypothesis\n\n### Hypothesis\n\nEvery `SourceCache::new` eagerly builds a `KeyedChangeHub` and subscribes a bridge closure to its `changes` queue, so every cache pays the hub allocation at construction and the bridge delivery (queue snapshot, registry lock) on every edit, even when nothing ever calls `watch`. Trees and groups create one cache per node/group. Creating the hub and bridge on the first keyed watch (like `changes_rx` already does) removes that cost for caches that are never watched.\n\n### Scope Lock\n\n**Tested mechanism:** lazy creation of the keyed hub and its bridge on first watch.\n**Allowed changes:** `SourceCache` fields in `cache_state.rs`, `SourceCache::new` and the keyed-hub call sites in `source_cache_impl.rs`.\n**Forbidden in this experiment:** skipping batch clones or queue pushes, KeyedChangeHub internals, tree/group code.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{watch_batch_coalescing,keyed_state_operators,connect_late_delivery,source_commit_order,suspension_versions,sources,source_bookkeeping_costs,source_lock_policy,grouping_tree_switching}` plus public API tests; clippy/fmt. Bench `tree`, `live_group`, `keyed_watch`, `hot_paths` (cache-hot) vs base. Pass: tree load >=10% faster, keyed watch not slower beyond noise.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nCheaper cache construction and unwatched edits: tree/group loads 10-30% faster.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
