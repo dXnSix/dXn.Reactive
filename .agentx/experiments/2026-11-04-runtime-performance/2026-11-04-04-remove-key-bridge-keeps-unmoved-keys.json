@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "0e657bcf-56af-4435-8030-a8bb0020e406",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 4,
+  "type": "hypothesis",
+  "name": "Remove-Key Bridge Keeps Unmoved Keys",
+  "slug": "remove-key-bridge-keeps-unmoved-keys",
+  "path": "2026-11-04-04-remove-key-bridge-keeps-unmoved-keys.json",
+  "createdAt": "2026-11-04T23:11:15Z",
+  "startedAt": "2026-11-04T23:11:15Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 8fa92ea87d7786a40bfaa3304babb2675f90646a",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 8fa92ea87d7786a40bfaa3304babb2675f90646a",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Remove-Key Bridge Keeps Unmoved Keys Hypothesis\n\n### Hypothesis\n\n`CacheRemoveKeyState` (behind `bind_to_vec` and `remove_key`) handles an `Add`/`Update` of an existing key by removing the key from its `KeyOrder` and inserting it again, even when the target position equals the current one. The removal shifts the key vector and the re-insert rewrites the whole position table (O(n)). Keeping the key in place when its position does not change, while emitting the identical `Remove`+`Add` list changes, removes that O(n) bookkeeping.\n\n### Scope Lock\n\n**Tested mechanism:** skip the KeyOrder remove/insert for a key that stays at its position.\n**Allowed changes:** the `Add`/`Update` arm of `CacheRemoveKeyState::apply_change` (`crates/src/collections/operators/apply_list_changes.rs`).\n**Forbidden in this experiment:** changing the emitted list changes, `apply_list_changes`, transform state, KeyOrder itself.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{materialization_reliability,key_bridge_indexes,index_contract_harness,subset_operator_indexes,transforms_filters,combination_materialization_population}`; clippy/fmt. Bench `hot_paths` vs base. Pass: tests green, `cache-hot/update-transform-bind` improves >=15%, no other cache-hot regression >5%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n`update-transform-bind` drops by the O(n) reindex share (remaining cost: two Vec memmoves in the bound target).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

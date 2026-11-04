@@ -62,7 +62,25 @@ where
                 current_index,
                 ..
             } => {
-                if let Some(existing) = self.order.remove(key) {
+                let unmoved = self.order.index_of(key).filter(|existing| {
+                    current_index
+                        .unwrap_or(*existing)
+                        .min(self.order.len().saturating_sub(1))
+                        == *existing
+                });
+                if let Some(existing) = unmoved {
+                    // The key keeps its position: leave the order as it is.
+                    if let Some(old) = self.items.insert(key.clone(), current.clone()) {
+                        changes.push(ListChange::Remove {
+                            index: existing,
+                            old,
+                        });
+                    }
+                    changes.push(ListChange::Add {
+                        index: existing,
+                        item: current.clone(),
+                    });
+                } else if let Some(existing) = self.order.remove(key) {
                     if let Some(old) = self.items.remove(key) {
                         changes.push(ListChange::Remove {
                             index: existing,

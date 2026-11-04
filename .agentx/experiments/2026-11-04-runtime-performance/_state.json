@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
+  "lastStableCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669"
+      "lastStableCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "a82bf626-ec00-4b86-8f56-cc146239f7b0",
-  "nextExperimentIndex": 4,
+  "currentExperimentId": "0e657bcf-56af-4435-8030-a8bb0020e406",
+  "nextExperimentIndex": 5,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -61,6 +61,18 @@
       "name": "Cache Filter Visible Index Binary Search",
       "path": "2026-11-04-03-cache-filter-visible-index-binary-search.json",
       "startedAt": "2026-11-04T23:10:28Z",
+      "finishedAt": "2026-11-04T23:10:45Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a"
+    },
+    {
+      "id": "0e657bcf-56af-4435-8030-a8bb0020e406",
+      "index": 4,
+      "type": "hypothesis",
+      "name": "Remove-Key Bridge Keeps Unmoved Keys",
+      "path": "2026-11-04-04-remove-key-bridge-keeps-unmoved-keys.json",
+      "startedAt": "2026-11-04T23:11:15Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

@@ -9,11 +9,11 @@
   "path": "2026-11-04-03-cache-filter-visible-index-binary-search.json",
   "createdAt": "2026-11-04T23:10:28Z",
   "startedAt": "2026-11-04T23:10:28Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:10:45Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
-  "resultCommit": "",
+  "resultCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
-      "resultCommit": "",
+      "resultCommit": "8fa92ea87d7786a40bfaa3304babb2675f90646a",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "8fa92ea87d7786a40bfaa3304babb2675f90646a"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,44 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "129.07 ns median",
+      "delta": "-4.5465%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "145.04 ns median",
+      "delta": "+4.5027%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "332.74 ns median",
+      "delta": "-98.671%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "9.2551 µs median",
+      "delta": "+0.7774%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.9930 ms median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Cache Filter Visible Index Binary Search Finished\n\n**Index:** 3\n**Checkpoint:** d78f8b3\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — focused filter/index test groups pass (96 tests incl. fuzzed index contracts); update-filter-half 25.3 us -> 333 ns. Note: begin-experiment was recorded after the single edit was written but before any test or measurement; the checkpoint (d78f8b3 = HEAD) is unaffected.\n\n### Scope Lock\n\n**Tested mechanism:** binary search of the filtered order by source position\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 129.07 ns median | -4.5465% |\n| cache-hot/update-connect | 145.04 ns median | +4.5027% |\n| cache-hot/update-filter-half | 332.74 ns median | -98.671% |\n| cache-hot/update-transform-bind | 9.2551 µs median | +0.7774% |\n| cache-hot/load-filter-transform-bind/10000 | 2.9930 ms median | n/a |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
