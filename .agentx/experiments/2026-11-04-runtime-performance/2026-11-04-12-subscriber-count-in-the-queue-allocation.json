@@ -9,11 +9,11 @@
   "path": "2026-11-04-12-subscriber-count-in-the-queue-allocation.json",
   "createdAt": "2026-11-04T23:37:22Z",
   "startedAt": "2026-11-04T23:37:22Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:40:30Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
-  "resultCommit": "",
+  "resultCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
-      "resultCommit": "",
+      "resultCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "7c9a6d7560f5167357429a077c07c17054e620dd"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,128 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "delivery-queue-fanout/enqueue/1",
+      "before": "baseline (criterion saved)",
+      "after": "265.61 ns median",
+      "delta": "-21.379%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "delivery-queue-fanout/enqueue/32",
+      "before": "baseline (criterion saved)",
+      "after": "2.8950 µs median",
+      "delta": "+3.5145%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "delivery-queue-fanout/enqueue/256",
+      "before": "baseline (criterion saved)",
+      "after": "25.463 µs median",
+      "delta": "+5.4023%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "8.5979 ns median",
+      "delta": "-24.130%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "baseline (criterion saved)",
+      "after": "25.117 ns median",
+      "delta": "-9.8075%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "baseline (criterion saved)",
+      "after": "3.9736 ns median",
+      "delta": "+0.5990%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "baseline (criterion saved)",
+      "after": "1.8231 µs median",
+      "delta": "-1.1123%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "baseline (criterion saved)",
+      "after": "25.939 ns median",
+      "delta": "-8.2741%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/1",
+      "before": "baseline (criterion saved)",
+      "after": "460.01 ns median",
+      "delta": "-5.3487%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/1",
+      "before": "baseline (criterion saved)",
+      "after": "862.71 ns median",
+      "delta": "+0.2816%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/32",
+      "before": "baseline (criterion saved)",
+      "after": "5.5444 µs median",
+      "delta": "-0.4521%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/32",
+      "before": "baseline (criterion saved)",
+      "after": "6.5512 µs median",
+      "delta": "+1.4158%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/256",
+      "before": "baseline (criterion saved)",
+      "after": "48.172 µs median",
+      "delta": "+6.5698%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/256",
+      "before": "baseline (criterion saved)",
+      "after": "52.113 µs median",
+      "delta": "+5.3975%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/1",
+      "before": "baseline (criterion saved)",
+      "after": "532.21 ns median",
+      "delta": "-8.7527%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/32",
+      "before": "baseline (criterion saved)",
+      "after": "9.0655 µs median",
+      "delta": "+2.0140%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/256",
+      "before": "baseline (criterion saved)",
+      "after": "72.752 µs median",
+      "delta": "+3.9225%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Subscriber Count In The Queue Allocation Finished\n\n**Index:** 12\n**Checkpoint:** 5bbac2b\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 633 lib + 33 integration tests pass; signal-set-no-subscribers -24%, signal-set-one-subscriber -10%, effect -8% (reproduced on rerun); subscribe-heavy fanout +3..+5% (rerun +2.9/+4.1%), within the 5% gate. cache-hot/update-connect +13% once: that path never calls has_subscribers (noise).\n\n### Scope Lock\n\n**Tested mechanism:** atomic subscriber count stored in the same allocation as the queue mutex\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| delivery-queue-fanout/enqueue/1 | 265.61 ns median | -21.379% |\n| delivery-queue-fanout/enqueue/32 | 2.8950 µs median | +3.5145% |\n| delivery-queue-fanout/enqueue/256 | 25.463 µs median | +5.4023% |\n| scalar-hot/signal-set-no-subscribers | 8.5979 ns median | -24.130% |\n| scalar-hot/signal-set-one-subscriber | 25.117 ns median | -9.8075% |\n| scalar-hot/signal-get | 3.9736 ns median | +0.5990% |\n| scalar-hot/computed-chain-8-set-and-get | 1.8231 µs median | -1.1123% |\n| scalar-hot/effect-on-filtered-map | 25.939 ns median | -8.2741% |\n| signal-and-computed/signal/1 | 460.01 ns median | -5.3487% |\n| signal-and-computed/computed/1 | 862.71 ns median | +0.2816% |\n| signal-and-computed/signal/32 | 5.5444 µs median | -0.4521% |\n| signal-and-computed/computed/32 | 6.5512 µs median | +1.4158% |\n| signal-and-computed/signal/256 | 48.172 µs median | +6.5698% |\n| signal-and-computed/computed/256 | 52.113 µs median | +5.3975% |\n| stream-operators/filter-distinct-skip/1 | 532.21 ns median | -8.7527% |\n| stream-operators/filter-distinct-skip/32 | 9.0655 µs median | +2.0140% |\n| stream-operators/filter-distinct-skip/256 | 72.752 µs median | +3.9225% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

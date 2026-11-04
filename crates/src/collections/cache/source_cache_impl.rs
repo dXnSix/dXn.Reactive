@@ -268,8 +268,9 @@ where
                 // order equals commit order across threads.
                 if state.suspend_depth > 0 {
                     state.suspended.push((batch.version, batch.changes.clone()));
-                } else {
-                    // One shared envelope for every subscriber (the caller keeps `batch`).
+                } else if self.preview.has_subscribers() || self.changes.has_subscribers() {
+                    // One shared envelope for every subscriber (the caller keeps `batch`). An
+                    // unobserved edit publishes nothing: a later `connect` snapshots it.
                     let shared = Arc::new(batch.clone());
                     self.preview.push(Arc::clone(&shared))?;
                     self.changes.push(VersionedChangeSet::shared(shared))?;

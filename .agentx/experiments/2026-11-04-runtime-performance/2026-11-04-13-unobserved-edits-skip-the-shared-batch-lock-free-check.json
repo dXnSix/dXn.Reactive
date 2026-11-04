@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "b7684a98-9b8d-4213-a52a-a34ef94e3f74",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 13,
+  "type": "hypothesis",
+  "name": "Unobserved Edits Skip The Shared Batch (Lock-Free Check)",
+  "slug": "unobserved-edits-skip-the-shared-batch-lock-free-check",
+  "path": "2026-11-04-13-unobserved-edits-skip-the-shared-batch-lock-free-check.json",
+  "createdAt": "2026-11-04T23:40:39Z",
+  "startedAt": "2026-11-04T23:40:39Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7c9a6d7560f5167357429a077c07c17054e620dd",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7c9a6d7560f5167357429a077c07c17054e620dd",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Unobserved Edits Skip The Shared Batch (Lock-Free Check) Hypothesis\n\n### Hypothesis\n\n`SourceCache`/`SourceList::edit_at_version` deep-clones every committed batch into a shared envelope and pushes it to `preview` and `changes` even when neither queue has a subscriber (since experiment 9 an unwatched cache has none). Skipping the clone and pushes when both queues are unobserved — as `Signal` already does — removes O(batch) work from edits nobody observes; a later `connect` snapshots under the state lock, so it still sees the change.\n\n### Scope Lock\n\n**Tested mechanism:** publish the shared batch only when `preview` or `changes` has a subscriber.\n**Allowed changes:** the non-suspended publish branch of `edit_at_version` in `source_cache_impl.rs` and `list_state.rs`.\n**Forbidden in this experiment:** lock-free subscriber counts, suspension path, count_changed, DeliveryQueue internals.\n\nRetry of experiment 10, which failed only because each `has_subscribers` check locked the queue; experiment 12 made it a single atomic load.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: full lib + integration tests (both sources); clippy/fmt. Bench `hot_paths`, `tree`, `live_group` vs base. Pass: an unobserved bench (`update-no-subscribers` or `push-remove-no-subscribers`) or `tree` load improves >=5%, and `update-connect`/`push-remove-bind` regress <10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nFaster unobserved edits and tree loads (child caches are mostly unobserved at load).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
