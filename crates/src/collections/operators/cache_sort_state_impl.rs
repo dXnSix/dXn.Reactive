@@ -123,7 +123,7 @@ where
                     current_index,
                     ..
                 } => {
-                    let previous = self.remove_sorted_key(key);
+                    let previous = self.take_sorted_key(key);
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         self.insert_order_key(key.clone(), Some(*index));
@@ -131,7 +131,12 @@ where
                         let _ = self.order.push(key.clone());
                     }
                     let current_index = self.insert_position(key, current, comparer);
-                    self.insert_sorted_entry(current_index, key.clone(), current.clone());
+                    self.insert_taken_entry(
+                        current_index,
+                        key.clone(),
+                        current.clone(),
+                        previous.as_ref().map(|(index, _)| *index),
+                    );
                     match previous {
                         Some((previous_index, (_, previous)))
                             if previous_index == current_index =>
@@ -173,13 +178,18 @@ where
                     current,
                     current_index,
                 } => {
-                    let previous = self.remove_sorted_key(key);
+                    let previous = self.take_sorted_key(key);
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         self.move_order_key(key, *index);
                     }
                     let current_index = self.insert_position(key, current, comparer);
-                    self.insert_sorted_entry(current_index, key.clone(), current.clone());
+                    self.insert_taken_entry(
+                        current_index,
+                        key.clone(),
+                        current.clone(),
+                        previous.as_ref().map(|(index, _)| *index),
+                    );
                     match previous {
                         Some((previous_index, _)) => {
                             changes.push(ListChange::Refresh {
@@ -206,11 +216,16 @@ where
                     current_index,
                     ..
                 } => {
-                    let previous = self.remove_sorted_key(key);
+                    let previous = self.take_sorted_key(key);
                     self.items.insert(key.clone(), current.clone());
                     self.move_order_key(key, *current_index);
                     let current_index = self.insert_position(key, current, comparer);
-                    self.insert_sorted_entry(current_index, key.clone(), current.clone());
+                    self.insert_taken_entry(
+                        current_index,
+                        key.clone(),
+                        current.clone(),
+                        previous.as_ref().map(|(index, _)| *index),
+                    );
                     match previous {
                         Some((previous_index, _)) if previous_index != current_index => {
                             changes.push(ListChange::Move {
@@ -306,7 +321,7 @@ where
                     current_index,
                     ..
                 } => {
-                    let previous = self.remove_sorted_key(key);
+                    let previous = self.take_sorted_key(key);
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         self.insert_order_key(key.clone(), Some(*index));
@@ -314,7 +329,12 @@ where
                         let _ = self.order.push(key.clone());
                     }
                     let next_index = self.insert_position(key, current, comparer);
-                    self.insert_sorted_entry(next_index, key.clone(), current.clone());
+                    self.insert_taken_entry(
+                        next_index,
+                        key.clone(),
+                        current.clone(),
+                        previous.as_ref().map(|(index, _)| *index),
+                    );
                     match previous {
                         Some((previous_index, (_, previous))) => {
                             changes.push(CacheChange::Update {
@@ -348,13 +368,18 @@ where
                     current,
                     current_index,
                 } => {
-                    let previous = self.remove_sorted_key(key);
+                    let previous = self.take_sorted_key(key);
                     self.items.insert(key.clone(), current.clone());
                     if let Some(index) = current_index {
                         self.move_order_key(key, *index);
                     }
                     let next_index = self.insert_position(key, current, comparer);
-                    self.insert_sorted_entry(next_index, key.clone(), current.clone());
+                    self.insert_taken_entry(
+                        next_index,
+                        key.clone(),
+                        current.clone(),
+                        previous.as_ref().map(|(index, _)| *index),
+                    );
                     match previous {
                         Some((previous_index, _)) => {
                             changes.push(CacheChange::Refresh {
@@ -384,11 +409,16 @@ where
                     current_index,
                     ..
                 } => {
-                    let previous = self.remove_sorted_key(key);
+                    let previous = self.take_sorted_key(key);
                     self.items.insert(key.clone(), current.clone());
                     self.move_order_key(key, *current_index);
                     let next_index = self.insert_position(key, current, comparer);
-                    self.insert_sorted_entry(next_index, key.clone(), current.clone());
+                    self.insert_taken_entry(
+                        next_index,
+                        key.clone(),
+                        current.clone(),
+                        previous.as_ref().map(|(index, _)| *index),
+                    );
                     match previous {
                         Some((previous_index, _)) if previous_index != next_index => {
                             changes.push(CacheChange::Move {
@@ -516,6 +546,25 @@ where
         self.refresh_sorted_positions_from(index);
     }
 
+    /// Re-inserts an entry taken with [`take_sorted_key`](Self::take_sorted_key) (from
+    /// `taken`, or a new one when `None`) at `index`, refreshing only the positions it shifted.
+    fn insert_taken_entry(&mut self, index: usize, key: K, item: T, taken: Option<usize>) {
+        self.sorted.insert(index, (key, item));
+        let Some(taken) = taken else {
+            self.refresh_sorted_positions_from(index);
+            return;
+        };
+        for position in taken.min(index)..=taken.max(index) {
+            let key = &self.sorted[position].0;
+            match self.sorted_positions.get_mut(key) {
+                Some(slot) => *slot = position,
+                None => {
+                    let _ = self.sorted_positions.insert(key.clone(), position);
+                }
+            }
+        }
+    }
+
     fn clear_sorted(&mut self) {
         self.sorted.clear();
         self.sorted_positions.clear();
@@ -607,6 +656,14 @@ where
         self.sorted_positions.remove(key);
         self.refresh_sorted_positions_from(index);
         Some((index, entry))
+    }
+
+    /// Removes `key`'s entry from `sorted` without refreshing the positions after it: the
+    /// caller re-inserts it with [`insert_taken_entry`](Self::insert_taken_entry), which
+    /// refreshes the shifted window once.
+    fn take_sorted_key(&mut self, key: &K) -> Option<(usize, (K, T))> {
+        let index = self.sorted_positions.get(key).copied()?;
+        Some((index, self.sorted.remove(index)))
     }
 
     fn source_position(&self, key: &K) -> usize {

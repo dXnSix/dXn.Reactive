@@ -9,11 +9,11 @@
   "path": "2026-11-04-07-batch-capacity-reservation.json",
   "createdAt": "2026-11-04T23:20:03Z",
   "startedAt": "2026-11-04T23:20:03Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:23:16Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
-  "resultCommit": "",
+  "resultCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 87b5453bd38124fdb99264b8810a281d9fc86771",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
-      "resultCommit": "",
+      "resultCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 87b5453bd38124fdb99264b8810a281d9fc86771",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "98b1904fc682f13ee8a393b743d6b20f3091d686"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,240 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "11.338 ns median",
+      "delta": "+0.8001%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "baseline (criterion saved)",
+      "after": "28.304 ns median",
+      "delta": "+0.6751%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "baseline (criterion saved)",
+      "after": "3.9359 ns median",
+      "delta": "+0.2595%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "baseline (criterion saved)",
+      "after": "1.8388 µs median",
+      "delta": "+2.0721%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "baseline (criterion saved)",
+      "after": "28.527 ns median",
+      "delta": "+0.4275%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "141.71 ns median",
+      "delta": "+7.9701%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "135.31 ns median",
+      "delta": "-3.0528%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "328.82 ns median",
+      "delta": "+2.3341%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "265.95 ns median",
+      "delta": "-2.4423%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.7787 ms median",
+      "delta": "-40.533%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "257.73 ns median",
+      "delta": "+13.268%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "277.15 ns median",
+      "delta": "+5.0564%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "6.6539 µs median",
+      "delta": "+0.6271%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "5.6935 µs median",
+      "delta": "+7.1932%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "33.540 µs median",
+      "delta": "+11.763%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/full_join/1000",
+      "before": "baseline (criterion saved)",
+      "after": "515.31 µs median",
+      "delta": "-15.006%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.5055 ms median",
+      "delta": "-7.9810%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/full_join/4000",
+      "before": "baseline (criterion saved)",
+      "after": "2.1064 ms median",
+      "delta": "-14.349%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/4000",
+      "before": "baseline (criterion saved)",
+      "after": "6.2081 ms median",
+      "delta": "-8.4984%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "166.53 µs median",
+      "delta": "-12.441%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "354.54 µs median",
+      "delta": "-11.206%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "3.1439 ms median",
+      "delta": "-11.102%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/640",
+      "before": "baseline (criterion saved)",
+      "after": "188.18 µs median",
+      "delta": "-0.1954%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/1280",
+      "before": "baseline (criterion saved)",
+      "after": "377.09 µs median",
+      "delta": "+0.2219%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.9929 ms median",
+      "delta": "-1.6508%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "152.50 µs median",
+      "delta": "-24.081%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "baseline (criterion saved)",
+      "after": "13.024 µs median",
+      "delta": "-4.3499%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.7606 ms median",
+      "delta": "-18.671%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "baseline (criterion saved)",
+      "after": "131.89 µs median",
+      "delta": "+8.8289%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.0110 ms median",
+      "delta": "+0.2481%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "999.45 µs median",
+      "delta": "-3.2322%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "4.1635 ms median",
+      "delta": "-1.3915%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "4.1795 ms median",
+      "delta": "-0.8690%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Batch Capacity Reservation Finished\n\n**Index:** 7\n**Checkpoint:** 87b5453\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 633 lib tests pass; cache pipeline load -41% (3.03 -> 1.78 ms), sort-and-page load -19..-24%, keyed sort -11..-12%, joins -8..-15%; single-update benches unchanged within noise. list-hot benches (+5..+13%) do not execute any changed code: run-to-run drift.\n\n### Scope Lock\n\n**Tested mechanism:** one capacity reservation per add-heavy batch\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| scalar-hot/signal-set-no-subscribers | 11.338 ns median | +0.8001% |\n| scalar-hot/signal-set-one-subscriber | 28.304 ns median | +0.6751% |\n| scalar-hot/signal-get | 3.9359 ns median | +0.2595% |\n| scalar-hot/computed-chain-8-set-and-get | 1.8388 µs median | +2.0721% |\n| scalar-hot/effect-on-filtered-map | 28.527 ns median | +0.4275% |\n| cache-hot/update-no-subscribers | 141.71 ns median | +7.9701% |\n| cache-hot/update-connect | 135.31 ns median | -3.0528% |\n| cache-hot/update-filter-half | 328.82 ns median | +2.3341% |\n| cache-hot/update-transform-bind | 265.95 ns median | -2.4423% |\n| cache-hot/load-filter-transform-bind/10000 | 1.7787 ms median | -40.533% |\n| list-hot/push-remove-no-subscribers | 257.73 ns median | +13.268% |\n| list-hot/push-remove-bind | 277.15 ns median | +5.0564% |\n| list-hot/insert-remove-mid-filter-transform | 6.6539 µs median | +0.6271% |\n| list-hot/insert-remove-sort | 5.6935 µs median | +7.1932% |\n| list-hot/load-filter-transform-bind/10000 | 33.540 µs median | +11.763% |\n| joins-load/full_join/1000 | 515.31 µs median | -15.006% |\n| joins-load/left_join_many/1000 | 1.5055 ms median | -7.9810% |\n| joins-load/full_join/4000 | 2.1064 ms median | -14.349% |\n| joins-load/left_join_many/4000 | 6.2081 ms median | -8.4984% |\n| keyed-sort-large-add-batch/640 | 166.53 µs median | -12.441% |\n| keyed-sort-large-add-batch/1280 | 354.54 µs median | -11.206% |\n| keyed-sort-large-add-batch/10000 | 3.1439 ms median | -11.102% |\n| live-group-touched-members/640 | 188.18 µs median | -0.1954% |\n| live-group-touched-members/1280 | 377.09 µs median | +0.2219% |\n| live-group-touched-members/10000 | 2.9929 ms median | -1.6508% |\n| sort-and-page/load/1000 | 152.50 µs median | -24.081% |\n| sort-and-page/update/1000 | 13.024 µs median | -4.3499% |\n| sort-and-page/load/10000 | 1.7606 ms median | -18.671% |\n| sort-and-page/update/10000 | 131.89 µs median | +8.8289% |\n| transform-to-tree-load/flat/1000 | 1.0110 ms median | +0.2481% |\n| transform-to-tree-load/bushy/1000 | 999.45 µs median | -3.2322% |\n| transform-to-tree-load/flat/4000 | 4.1635 ms median | -1.3915% |\n| transform-to-tree-load/bushy/4000 | 4.1795 ms median | -0.8690% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

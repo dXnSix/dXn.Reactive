@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "a76b1d5e-535d-4c6f-a593-251ae19b121b",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 8,
+  "type": "hypothesis",
+  "name": "Keyed Sort Refreshes Only The Shifted Window",
+  "slug": "keyed-sort-refreshes-only-the-shifted-window",
+  "path": "2026-11-04-08-keyed-sort-refreshes-only-the-shifted-window.json",
+  "createdAt": "2026-11-04T23:24:15Z",
+  "startedAt": "2026-11-04T23:24:15Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 98b1904fc682f13ee8a393b743d6b20f3091d686",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 98b1904fc682f13ee8a393b743d6b20f3091d686",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Keyed Sort Refreshes Only The Shifted Window Hypothesis\n\n### Hypothesis\n\n`CacheSortState` handles an update/refresh/move by removing the entry from `sorted` (rewriting `sorted_positions` for every later entry, with a key clone and hash insert each) and re-inserting it (rewriting every later entry again): ~2·(n−i) hash writes per update, which makes `sort-and-page/update` 132 µs at 10k rows. Removing without refreshing and, after the re-insert, refreshing only the entries between the old and new positions gives the same positions with O(|i−j|) cheaper `get_mut` writes.\n\n### Scope Lock\n\n**Tested mechanism:** take-then-reinsert with a single refresh of the shifted window.\n**Allowed changes:** `crates/src/collections/operators/cache_sort_state_impl.rs`: new `take_sorted_key`/`insert_taken_entry` and the six update/refresh/move call sites.\n**Forbidden in this experiment:** replacing the sorted Vec or position map structure, the Remove/Add paths, paging/diff code.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{keyed_sort_positions,sorting_windowing,window_responses,subset_operator_indexes,index_contract_harness,snapshot_diff_indexes,operator_bookkeeping_costs}` (debug_assert_positions checks the map in debug builds); clippy/fmt. Bench `sort_and_page`, `keyed_sort`, `hot_paths` vs base. Pass: sort-and-page/update/10000 >=2x faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nsort-and-page/update/10000 from ~130 us to tens of us (remaining: Vec memmove and O(distance) position writes).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

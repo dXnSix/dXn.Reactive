@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
+  "lastStableCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "87b5453bd38124fdb99264b8810a281d9fc86771"
+      "lastStableCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "188ce83c-643e-44a6-86fb-ae6dc7c11dcd",
-  "nextExperimentIndex": 8,
+  "currentExperimentId": "a76b1d5e-535d-4c6f-a593-251ae19b121b",
+  "nextExperimentIndex": 9,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -108,6 +108,18 @@
       "name": "Batch Capacity Reservation",
       "path": "2026-11-04-07-batch-capacity-reservation.json",
       "startedAt": "2026-11-04T23:20:03Z",
+      "finishedAt": "2026-11-04T23:23:16Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "98b1904fc682f13ee8a393b743d6b20f3091d686"
+    },
+    {
+      "id": "a76b1d5e-535d-4c6f-a593-251ae19b121b",
+      "index": 8,
+      "type": "hypothesis",
+      "name": "Keyed Sort Refreshes Only The Shifted Window",
+      "path": "2026-11-04-08-keyed-sort-refreshes-only-the-shifted-window.json",
+      "startedAt": "2026-11-04T23:24:15Z",
       "finishedAt": null,
       "state": "running",
       "status": ""
