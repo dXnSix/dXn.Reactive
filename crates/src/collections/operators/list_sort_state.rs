@@ -346,11 +346,11 @@ where
         changes.push(ListChange::Add { index, item });
     }
 
+    /// The first position whose entry `item` sorts before. `sorted` is ordered by the same
+    /// comparer, so a binary search finds it with O(log n) comparer calls.
     fn insert_position(&self, item: &T, comparer: &dyn Fn(&T, &T) -> Ordering) -> usize {
         self.sorted
-            .iter()
-            .position(|existing| comparer(item, existing) == Ordering::Less)
-            .unwrap_or(self.sorted.len())
+            .partition_point(|existing| comparer(item, existing) != Ordering::Less)
     }
 
     fn remove_sorted_item(&mut self, item: &T) -> Option<(usize, T)> {

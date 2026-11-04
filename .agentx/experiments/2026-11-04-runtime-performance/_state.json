@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": null,
-  "nextExperimentIndex": 17,
+  "currentExperimentId": "10b77032-8ff0-4d59-9313-94f210609dc4",
+  "nextExperimentIndex": 18,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -217,6 +217,17 @@
       "state": "done",
       "status": "success",
       "resultCommit": "c497f154dfb01154518e21761fe3f044ea8d84ea"
+    },
+    {
+      "id": "10b77032-8ff0-4d59-9313-94f210609dc4",
+      "index": 17,
+      "type": "hypothesis",
+      "name": "List Sort Binary Insert Position",
+      "path": "2026-11-04-17-list-sort-binary-insert-position.json",
+      "startedAt": "2026-11-04T23:58:59Z",
+      "finishedAt": null,
+      "state": "running",
+      "status": ""
     }
   ]
 }

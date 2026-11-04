@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "10b77032-8ff0-4d59-9313-94f210609dc4",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 17,
+  "type": "hypothesis",
+  "name": "List Sort Binary Insert Position",
+  "slug": "list-sort-binary-insert-position",
+  "path": "2026-11-04-17-list-sort-binary-insert-position.json",
+  "createdAt": "2026-11-04T23:58:59Z",
+  "startedAt": "2026-11-04T23:58:59Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "0f8669761e6678e4d643debd3aa8dd837157ceda",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 0f8669761e6678e4d643debd3aa8dd837157ceda",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "0f8669761e6678e4d643debd3aa8dd837157ceda",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 0f8669761e6678e4d643debd3aa8dd837157ceda",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## List Sort Binary Insert Position Hypothesis\n\n### Hypothesis\n\n`ListSortState::insert_position` scans the sorted vector for the first entry the new item sorts before: O(n) comparer calls per insert, replace and refresh. The vector is kept sorted by the same comparer, so the predicate is partitioned and `partition_point` returns the identical index with O(log n) comparer calls.\n\n### Scope Lock\n\n**Tested mechanism:** binary search for the list sort's insert position.\n**Allowed changes:** `ListSortState::insert_position` in `crates/src/collections/operators/list_sort_state.rs`.\n**Forbidden in this experiment:** `remove_sorted_item`, refresh lookups, keyed sort.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{sorting_windowing,window_responses,index_contract_harness,subset_operator_indexes,keyed_sort_positions,snapshot_diff_indexes}`; clippy/fmt. Bench `hot_paths` (list-hot/insert-remove-sort) vs base. Pass: insert-remove-sort >=20% faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\ninsert-remove-sort drops by the comparison share (the removal scan and memmoves remain).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

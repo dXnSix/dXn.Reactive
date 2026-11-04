@@ -77,7 +77,7 @@
     {
       "metric": "scalar-hot/computed-chain-8-set-and-get",
       "before": "baseline (criterion saved)",
-      "after": "1.8250 µs median",
+      "after": "1.8250 \u00b5s median",
       "delta": "+1.8055%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -119,7 +119,7 @@
     {
       "metric": "cache-hot/load-filter-transform-bind/10000",
       "before": "baseline (criterion saved)",
-      "after": "634.78 µs median",
+      "after": "634.78 \u00b5s median",
       "delta": "-63.775%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -140,42 +140,42 @@
     {
       "metric": "list-hot/insert-remove-mid-filter-transform",
       "before": "baseline (criterion saved)",
-      "after": "6.6811 µs median",
+      "after": "6.6811 \u00b5s median",
       "delta": "+0.5966%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "list-hot/insert-remove-sort",
       "before": "baseline (criterion saved)",
-      "after": "5.0491 µs median",
+      "after": "5.0491 \u00b5s median",
       "delta": "+5.9505%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "list-hot/load-filter-transform-bind/10000",
       "before": "baseline (criterion saved)",
-      "after": "31.056 µs median",
+      "after": "31.056 \u00b5s median",
       "delta": "-0.6097%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "joins-load/full_join/1000",
       "before": "baseline (criterion saved)",
-      "after": "182.29 µs median",
+      "after": "182.29 \u00b5s median",
       "delta": "-64.467%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "joins-load/left_join_many/1000",
       "before": "baseline (criterion saved)",
-      "after": "963.90 µs median",
+      "after": "963.90 \u00b5s median",
       "delta": "-35.696%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "joins-load/full_join/4000",
       "before": "baseline (criterion saved)",
-      "after": "726.38 µs median",
+      "after": "726.38 \u00b5s median",
       "delta": "-65.226%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -189,14 +189,14 @@
     {
       "metric": "keyed-sort-large-add-batch/640",
       "before": "baseline (criterion saved)",
-      "after": "68.805 µs median",
+      "after": "68.805 \u00b5s median",
       "delta": "-57.958%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "keyed-sort-large-add-batch/1280",
       "before": "baseline (criterion saved)",
-      "after": "142.49 µs median",
+      "after": "142.49 \u00b5s median",
       "delta": "-59.314%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -210,21 +210,21 @@
     {
       "metric": "keyed-watch-sparse-delivery/1",
       "before": "baseline (criterion saved)",
-      "after": "2.9207 µs median",
+      "after": "2.9207 \u00b5s median",
       "delta": "-17.592%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "keyed-watch-sparse-delivery/32",
       "before": "baseline (criterion saved)",
-      "after": "8.0966 µs median",
+      "after": "8.0966 \u00b5s median",
       "delta": "-12.846%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "keyed-watch-sparse-delivery/256",
       "before": "baseline (criterion saved)",
-      "after": "33.229 µs median",
+      "after": "33.229 \u00b5s median",
       "delta": "-14.684%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -238,28 +238,28 @@
     {
       "metric": "list-diff-fixed-u/1280",
       "before": "baseline (criterion saved)",
-      "after": "1.4304 µs median",
+      "after": "1.4304 \u00b5s median",
       "delta": "-10.519%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "list-diff-fixed-u/10000",
       "before": "baseline (criterion saved)",
-      "after": "6.7911 µs median",
+      "after": "6.7911 \u00b5s median",
       "delta": "-0.2597%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "live-group-touched-members/640",
       "before": "baseline (criterion saved)",
-      "after": "90.053 µs median",
+      "after": "90.053 \u00b5s median",
       "delta": "-51.282%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "live-group-touched-members/1280",
       "before": "baseline (criterion saved)",
-      "after": "169.29 µs median",
+      "after": "169.29 \u00b5s median",
       "delta": "-54.712%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -273,42 +273,42 @@
     {
       "metric": "sort-and-page/load/1000",
       "before": "baseline (criterion saved)",
-      "after": "68.809 µs median",
+      "after": "68.809 \u00b5s median",
       "delta": "-54.701%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "sort-and-page/update/1000",
       "before": "baseline (criterion saved)",
-      "after": "1.0964 µs median",
+      "after": "1.0964 \u00b5s median",
       "delta": "-33.133%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "sort-and-page/load/10000",
       "before": "baseline (criterion saved)",
-      "after": "743.17 µs median",
+      "after": "743.17 \u00b5s median",
       "delta": "-57.270%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "sort-and-page/update/10000",
       "before": "baseline (criterion saved)",
-      "after": "2.6968 µs median",
+      "after": "2.6968 \u00b5s median",
       "delta": "-89.999%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "transform-to-tree-load/flat/1000",
       "before": "baseline (criterion saved)",
-      "after": "480.23 µs median",
+      "after": "480.23 \u00b5s median",
       "delta": "-34.551%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
     {
       "metric": "transform-to-tree-load/bushy/1000",
       "before": "baseline (criterion saved)",
-      "after": "552.70 µs median",
+      "after": "552.70 \u00b5s median",
       "delta": "-27.557%",
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     },
@@ -327,7 +327,7 @@
       "source": "cargo bench --bench <name> -- --baseline <prev>"
     }
   ],
-  "reportMarkdown": "## Seeded Fast Hasher For Collection Tables Finished\n\n**Index:** 16\n**Checkpoint:** 4a6b594\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 636 lib (3 new hasher tests) + 33 integration + 135 doc-example tests pass; wasm32 check passes. Cache pipeline load -64%, full_join -65%, left_join_many -36%, keyed sort -58%, live group -55%, sort-and-page load -57% and update@10k -90%, tree -28..-35%, keyed watch -13..-18%. The three points that read slower (update-no-subscribers +25%, list push-remove +10/+11%) reran at -21%, +1.8%, -0.5%.\n\n### Scope Lock\n\n**Tested mechanism:** replace the hasher of the collection layer's internal HashMap/HashSet tables with a seeded folded-multiply hasher\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| scalar-hot/signal-set-no-subscribers | 9.1301 ns median | +5.2738% |\n| scalar-hot/signal-set-one-subscriber | 22.724 ns median | +0.9675% |\n| scalar-hot/signal-get | 3.9490 ns median | +0.4894% |\n| scalar-hot/computed-chain-8-set-and-get | 1.8250 µs median | +1.8055% |\n| scalar-hot/effect-on-filtered-map | 22.927 ns median | +0.0471% |\n| cache-hot/update-no-subscribers | 84.215 ns median | +25.161% |\n| cache-hot/update-connect | 129.10 ns median | +5.9553% |\n| cache-hot/update-filter-half | 226.99 ns median | -28.422% |\n| cache-hot/update-transform-bind | 228.83 ns median | -3.5942% |\n| cache-hot/load-filter-transform-bind/10000 | 634.78 µs median | -63.775% |\n| list-hot/push-remove-no-subscribers | 119.45 ns median | +11.418% |\n| list-hot/push-remove-bind | 295.61 ns median | +10.476% |\n| list-hot/insert-remove-mid-filter-transform | 6.6811 µs median | +0.5966% |\n| list-hot/insert-remove-sort | 5.0491 µs median | +5.9505% |\n| list-hot/load-filter-transform-bind/10000 | 31.056 µs median | -0.6097% |\n| joins-load/full_join/1000 | 182.29 µs median | -64.467% |\n| joins-load/left_join_many/1000 | 963.90 µs median | -35.696% |\n| joins-load/full_join/4000 | 726.38 µs median | -65.226% |\n| joins-load/left_join_many/4000 | 3.9659 ms median | -35.989% |\n| keyed-sort-large-add-batch/640 | 68.805 µs median | -57.958% |\n| keyed-sort-large-add-batch/1280 | 142.49 µs median | -59.314% |\n| keyed-sort-large-add-batch/10000 | 1.3248 ms median | -58.398% |\n| keyed-watch-sparse-delivery/1 | 2.9207 µs median | -17.592% |\n| keyed-watch-sparse-delivery/32 | 8.0966 µs median | -12.846% |\n| keyed-watch-sparse-delivery/256 | 33.229 µs median | -14.684% |\n| list-diff-fixed-u/640 | 910.65 ns median | -19.422% |\n| list-diff-fixed-u/1280 | 1.4304 µs median | -10.519% |\n| list-diff-fixed-u/10000 | 6.7911 µs median | -0.2597% |\n| live-group-touched-members/640 | 90.053 µs median | -51.282% |\n| live-group-touched-members/1280 | 169.29 µs median | -54.712% |\n| live-group-touched-members/10000 | 1.3152 ms median | -54.910% |\n| sort-and-page/load/1000 | 68.809 µs median | -54.701% |\n| sort-and-page/update/1000 | 1.0964 µs median | -33.133% |\n| sort-and-page/load/10000 | 743.17 µs median | -57.270% |\n| sort-and-page/update/10000 | 2.6968 µs median | -89.999% |\n| transform-to-tree-load/flat/1000 | 480.23 µs median | -34.551% |\n| transform-to-tree-load/bushy/1000 | 552.70 µs median | -27.557% |\n| transform-to-tree-load/flat/4000 | 1.9731 ms median | -34.828% |\n| transform-to-tree-load/bushy/4000 | 2.2314 ms median | -28.104% |\n",
+  "reportMarkdown": "## Seeded Fast Hasher For Collection Tables Finished\n\n**Index:** 16\n**Checkpoint:** 4a6b594\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true \u2014 636 lib (3 new hasher tests) + 33 integration + 135 doc-example tests pass; wasm32 check passes. Cache pipeline load -64%, full_join -65%, left_join_many -36%, keyed sort -58%, live group -55%, sort-and-page load -57% and update@10k -90%, tree -28..-35%, keyed watch -13..-18%. The three points that read slower (update-no-subscribers +25%, list push-remove +10/+11%) reran at -21%, +1.8%, -0.5%.\n\n### Scope Lock\n\n**Tested mechanism:** replace the hasher of the collection layer's internal HashMap/HashSet tables with a seeded folded-multiply hasher\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| scalar-hot/signal-set-no-subscribers | 9.1301 ns median | +5.2738% |\n| scalar-hot/signal-set-one-subscriber | 22.724 ns median | +0.9675% |\n| scalar-hot/signal-get | 3.9490 ns median | +0.4894% |\n| scalar-hot/computed-chain-8-set-and-get | 1.8250 \u00b5s median | +1.8055% |\n| scalar-hot/effect-on-filtered-map | 22.927 ns median | +0.0471% |\n| cache-hot/update-no-subscribers | 84.215 ns median | +25.161% |\n| cache-hot/update-connect | 129.10 ns median | +5.9553% |\n| cache-hot/update-filter-half | 226.99 ns median | -28.422% |\n| cache-hot/update-transform-bind | 228.83 ns median | -3.5942% |\n| cache-hot/load-filter-transform-bind/10000 | 634.78 \u00b5s median | -63.775% |\n| list-hot/push-remove-no-subscribers | 119.45 ns median | +11.418% |\n| list-hot/push-remove-bind | 295.61 ns median | +10.476% |\n| list-hot/insert-remove-mid-filter-transform | 6.6811 \u00b5s median | +0.5966% |\n| list-hot/insert-remove-sort | 5.0491 \u00b5s median | +5.9505% |\n| list-hot/load-filter-transform-bind/10000 | 31.056 \u00b5s median | -0.6097% |\n| joins-load/full_join/1000 | 182.29 \u00b5s median | -64.467% |\n| joins-load/left_join_many/1000 | 963.90 \u00b5s median | -35.696% |\n| joins-load/full_join/4000 | 726.38 \u00b5s median | -65.226% |\n| joins-load/left_join_many/4000 | 3.9659 ms median | -35.989% |\n| keyed-sort-large-add-batch/640 | 68.805 \u00b5s median | -57.958% |\n| keyed-sort-large-add-batch/1280 | 142.49 \u00b5s median | -59.314% |\n| keyed-sort-large-add-batch/10000 | 1.3248 ms median | -58.398% |\n| keyed-watch-sparse-delivery/1 | 2.9207 \u00b5s median | -17.592% |\n| keyed-watch-sparse-delivery/32 | 8.0966 \u00b5s median | -12.846% |\n| keyed-watch-sparse-delivery/256 | 33.229 \u00b5s median | -14.684% |\n| list-diff-fixed-u/640 | 910.65 ns median | -19.422% |\n| list-diff-fixed-u/1280 | 1.4304 \u00b5s median | -10.519% |\n| list-diff-fixed-u/10000 | 6.7911 \u00b5s median | -0.2597% |\n| live-group-touched-members/640 | 90.053 \u00b5s median | -51.282% |\n| live-group-touched-members/1280 | 169.29 \u00b5s median | -54.712% |\n| live-group-touched-members/10000 | 1.3152 ms median | -54.910% |\n| sort-and-page/load/1000 | 68.809 \u00b5s median | -54.701% |\n| sort-and-page/update/1000 | 1.0964 \u00b5s median | -33.133% |\n| sort-and-page/load/10000 | 743.17 \u00b5s median | -57.270% |\n| sort-and-page/update/10000 | 2.6968 \u00b5s median | -89.999% |\n| transform-to-tree-load/flat/1000 | 480.23 \u00b5s median | -34.551% |\n| transform-to-tree-load/bushy/1000 | 552.70 \u00b5s median | -27.557% |\n| transform-to-tree-load/flat/4000 | 1.9731 ms median | -34.828% |\n| transform-to-tree-load/bushy/4000 | 2.2314 ms median | -28.104% |\n",
   "decisionMarkdown": "### Decision\n\nCommitted success. Public types unchanged; internal tables only.\n",
-  "notes": ""
+  "notes": "Clippy (-D warnings) rejected chunks_exact(8) in hash.rs after the result commit was made (the lint helper did not stop the commit). Follow-up commit 0f86697 replaces it with as_chunks::<8>() (identical hashed words); the helper now fails hard on lint errors."
 }
