@@ -14,7 +14,7 @@ where
         let mut changes = Vec::new();
         let mut starts = Vec::new();
         let mut touched = Vec::<ChildKey>::new();
-        let mut touched_seen = HashSet::<ChildKey>::new();
+        let mut touched_seen = HashSet::<ChildKey>::default();
         let mut removed_subscriptions = Vec::new();
 
         for change in &batch.changes {
@@ -125,7 +125,7 @@ where
             }
         }
 
-        self.recompute_keys(touched, &HashMap::new(), &mut changes);
+        self.recompute_keys(touched, &HashMap::default(), &mut changes);
         drop(removed_subscriptions);
         (self.emit(changes, Some(batch.version)), starts)
     }
@@ -142,8 +142,8 @@ where
         }
 
         let mut touched = Vec::<ChildKey>::new();
-        let mut touched_seen = HashSet::<ChildKey>::new();
-        let mut refreshes = HashMap::<ChildKey, Vec<Child>>::new();
+        let mut touched_seen = HashSet::<ChildKey>::default();
+        let mut refreshes = HashMap::<ChildKey, Vec<Child>>::default();
 
         for change in &batch.changes {
             match change {
@@ -241,7 +241,7 @@ where
             key.clone(),
             CacheAsyncTransformManyChild {
                 generation,
-                items: HashMap::new(),
+                items: HashMap::default(),
                 order: KeyOrder::new(),
                 subscription: None,
                 _transform: AbortOnDrop(handle),

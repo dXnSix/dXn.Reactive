@@ -1,5 +1,5 @@
 use crate::collections::error::CollectionError;
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
@@ -258,7 +258,7 @@ struct SnapshotDiffState<K, T> {
 impl<K, T> Default for SnapshotDiffState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: Vec::new(),
             version: 0,
         }
@@ -280,7 +280,7 @@ where
         // `SourceCache::edit_diff`). The changes apply in order (the index contract):
         // removals, then each key placed at its target position in snapshot order.
         let (next_items, next_order) = keyed_snapshot(items, key_selector);
-        let mut state_items = HashMap::<K, T>::new();
+        let mut state_items = HashMap::<K, T>::default();
         let mut changes = Vec::new();
         let mut working = self.order.clone();
 
@@ -438,7 +438,7 @@ where
     K: Clone + Eq + Hash,
     T: Clone,
 {
-    let mut snapshot = HashMap::new();
+    let mut snapshot = HashMap::default();
     let mut order = Vec::new();
     for item in items {
         let key = key_selector(item);

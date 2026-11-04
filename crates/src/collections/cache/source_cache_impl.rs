@@ -32,7 +32,7 @@ where
         let changes = DeliveryQueue::new();
 
         let state = Arc::new(SourceLock::new(CacheState {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
             version: 0,
             editing: false,

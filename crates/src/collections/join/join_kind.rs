@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 

@@ -349,7 +349,7 @@ where
     K: Clone + Eq + Hash,
     T: Clone,
 {
-    let mut seen = HashSet::with_capacity(changes.len());
+    let mut seen = HashSet::with_capacity_and_hasher(changes.len(), Default::default());
     for (end, change) in (order.len()..).zip(changes) {
         let CacheChange::Add {
             key, current_index, ..
@@ -392,15 +392,15 @@ where
         return added;
     }
     let mut touched = Vec::<K>::new();
-    let mut previous = HashMap::<K, Option<T>>::new();
-    let mut refreshed = HashSet::<K>::new();
+    let mut previous = HashMap::<K, Option<T>>::default();
+    let mut refreshed = HashSet::<K>::default();
     let mut touch = |key: &K, state: &HashMap<K, T>, touched: &mut Vec<K>| {
         if !previous.contains_key(key) {
             previous.insert(key.clone(), state.get(key).cloned());
             touched.push(key.clone());
         }
     };
-    let mut replayed = HashMap::<K, T>::new();
+    let mut replayed = HashMap::<K, T>::default();
     let mut replayed_order = KeyOrder::<K>::new();
     std::mem::swap(&mut replayed, state);
     std::mem::swap(&mut replayed_order, order);
@@ -450,7 +450,7 @@ where
             });
         }
     }
-    let mut repositioned = HashSet::<K>::new();
+    let mut repositioned = HashSet::<K>::default();
     // Existing keys move into the upstream order first (as few as possible); new keys are then
     // inserted at their final positions, so every key gets a single change.
     let existing = order

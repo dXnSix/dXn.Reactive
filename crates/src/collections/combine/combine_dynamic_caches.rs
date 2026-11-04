@@ -10,7 +10,7 @@ where
     ChangeStream::new(move |subscriber| {
         let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(DynamicCacheCombineState::<K, T>::new(operator)));
-        let child_subscriptions = Arc::new(Mutex::new(HashMap::<u64, Subscription>::new()));
+        let child_subscriptions = Arc::new(Mutex::new(HashMap::<u64, Subscription>::default()));
         let suppress_child_output = Arc::new(AtomicBool::new(false));
 
         let parent_state = Arc::clone(&state);
@@ -85,7 +85,7 @@ where
     ChangeStream::new(move |subscriber| {
         let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
         let state = Arc::new(Mutex::new(DynamicListCombineState::<T>::new(operator)));
-        let child_subscriptions = Arc::new(Mutex::new(HashMap::<u64, Subscription>::new()));
+        let child_subscriptions = Arc::new(Mutex::new(HashMap::<u64, Subscription>::default()));
         let suppress_child_output = Arc::new(AtomicBool::new(false));
 
         let parent_state = Arc::clone(&state);
@@ -158,7 +158,7 @@ struct OrderedCache<K, T> {
 impl<K, T> Default for OrderedCache<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: Vec::new(),
         }
     }

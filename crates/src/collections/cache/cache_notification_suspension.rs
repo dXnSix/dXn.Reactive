@@ -377,7 +377,7 @@ where
     ) {
         // The last occurrence of a key wins and takes its position (earlier ones are left
         // as holes).
-        let mut next_items = HashMap::<K, (T, usize)>::new();
+        let mut next_items = HashMap::<K, (T, usize)>::default();
         let mut next_order = Vec::<Option<K>>::new();
         for item in items {
             let key = (self.key_selector)(&item);

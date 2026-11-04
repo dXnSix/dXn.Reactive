@@ -1,7 +1,7 @@
 impl<K, T> Default for OrderedCache<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
         }
     }

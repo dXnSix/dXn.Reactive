@@ -1,9 +1,9 @@
 impl<K, T, U> Default for CacheInlineTransformState<K, T, U> {
     fn default() -> Self {
         Self {
-            source_items: HashMap::new(),
+            source_items: HashMap::default(),
             order: KeyOrder::new(),
-            projected: HashMap::new(),
+            projected: HashMap::default(),
             version: 0,
         }
     }
@@ -458,10 +458,10 @@ struct CacheSortState<K, T> {
 impl<K, T> Default for CacheSortState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
             sorted: Vec::new(),
-            sorted_positions: HashMap::new(),
+            sorted_positions: HashMap::default(),
             comparer: None,
             version: 0,
         }

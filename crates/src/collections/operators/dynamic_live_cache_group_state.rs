@@ -108,7 +108,7 @@ where
             self.grouped.apply_source(batch, &**selector)
         } else {
             self.ungrouped.apply_source(batch);
-            (Vec::new(), HashMap::new())
+            (Vec::new(), HashMap::default())
         }
     }
 
@@ -121,7 +121,7 @@ where
             .as_ref()
             .is_some_and(|current| Arc::ptr_eq(current, &selector))
         {
-            return (Vec::new(), HashMap::new(), self.version);
+            return (Vec::new(), HashMap::default(), self.version);
         }
 
         let had_selector = self.selector.is_some();
@@ -134,7 +134,7 @@ where
 
         let changes = self.ungrouped.to_add_changes();
         if changes.is_empty() {
-            return (Vec::new(), HashMap::new(), self.version);
+            return (Vec::new(), HashMap::default(), self.version);
         }
 
         let version = self.next_version();
@@ -145,7 +145,7 @@ where
 
     fn regroup_all(&mut self) -> CacheGroupRegroupResult<K, T, G> {
         let Some(selector) = self.selector.clone() else {
-            return (Vec::new(), HashMap::new(), self.version);
+            return (Vec::new(), HashMap::default(), self.version);
         };
         let (changes, pending, version) = self.grouped.regroup_all(&*selector);
         self.version = self.version.max(version);

@@ -1,7 +1,7 @@
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
+use crate::collections::hash::{HashMap, HashSet};
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
@@ -809,14 +809,14 @@ impl<K, U> MergeManyListCacheChangeSetsState<K, U> {
     fn new(comparer: Option<Comparer<U>>) -> Self {
         Self {
             children: Vec::new(),
-            result: HashMap::new(),
+            result: HashMap::default(),
             result_order: Vec::new(),
             comparer,
             next_id: 0,
             phase: StartPhase::default(),
             deferred: Vec::new(),
-            deferred_seen: HashSet::new(),
-            deferred_refreshes: HashMap::new(),
+            deferred_seen: HashSet::default(),
+            deferred_refreshes: HashMap::default(),
             version: 0,
         }
     }
@@ -838,7 +838,7 @@ where
         let mut changes = Vec::new();
         let mut starts = Vec::new();
         let mut touched = Vec::<K>::new();
-        let mut touched_seen = HashSet::<K>::new();
+        let mut touched_seen = HashSet::<K>::default();
         let mut removed_subscriptions = Vec::new();
 
         for change in &batch.changes {
@@ -850,7 +850,7 @@ where
                         index,
                         MergeManyListCacheChild {
                             id,
-                            items: HashMap::new(),
+                            items: HashMap::default(),
                             subscription: None,
                         },
                     );
@@ -865,7 +865,7 @@ where
                             starts.push((id, item.clone()));
                             MergeManyListCacheChild {
                                 id,
-                                items: HashMap::new(),
+                                items: HashMap::default(),
                                 subscription: None,
                             }
                         })
@@ -879,7 +879,7 @@ where
                             &mut self.children[*index],
                             MergeManyListCacheChild {
                                 id,
-                                items: HashMap::new(),
+                                items: HashMap::default(),
                                 subscription: None,
                             },
                         );
@@ -950,7 +950,7 @@ where
             }
         }
 
-        self.recompute_or_defer(touched, HashMap::new(), &mut changes);
+        self.recompute_or_defer(touched, HashMap::default(), &mut changes);
         drop(removed_subscriptions);
         (changes, starts)
     }
@@ -965,8 +965,8 @@ where
             .iter()
             .position(|child| child.id == child_id)?;
         let mut touched = Vec::<K>::new();
-        let mut touched_seen = HashSet::<K>::new();
-        let mut refreshes = HashMap::<K, Vec<U>>::new();
+        let mut touched_seen = HashSet::<K>::default();
+        let mut refreshes = HashMap::<K, Vec<U>>::default();
 
         {
             let child = &mut self.children[child_index];
@@ -1609,7 +1609,7 @@ impl<T> Default for FilterOnObservableListState<T> {
     fn default() -> Self {
         Self {
             entries: Vec::new(),
-            positions: HashMap::new(),
+            positions: HashMap::default(),
             next_id: 0,
             version: 0,
             phase: StartPhase::default(),
@@ -1975,9 +1975,9 @@ impl<T> Default for AutoRefreshListState<T> {
     fn default() -> Self {
         Self {
             entries: Vec::new(),
-            positions: HashMap::new(),
+            positions: HashMap::default(),
             pending_refresh_ids: Vec::new(),
-            pending_refresh_seen: HashSet::new(),
+            pending_refresh_seen: HashSet::default(),
             timer: OperatorTimer::default(),
             next_id: 0,
             version: 0,

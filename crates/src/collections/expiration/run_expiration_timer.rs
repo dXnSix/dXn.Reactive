@@ -10,7 +10,7 @@ impl<I> Default for ExpiryQueue<I> {
     fn default() -> Self {
         Self {
             queue: BTreeMap::new(),
-            slots: HashMap::new(),
+            slots: HashMap::default(),
             next_sequence: 0,
         }
     }
@@ -219,8 +219,8 @@ impl<K, T> Default for CacheExpirationState<K, T> {
         Self {
             order: KeyOrder::new(),
             live: 0,
-            expired: HashSet::new(),
-            items: HashMap::new(),
+            expired: HashSet::default(),
+            items: HashMap::default(),
             queue: ExpiryQueue::default(),
             timer: ExpiryTimer::default(),
             indexed: false,

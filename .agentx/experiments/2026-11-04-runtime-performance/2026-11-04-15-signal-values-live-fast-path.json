@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "id": "ceff9f05-22a6-4fa6-a2ed-15db29cf5ac5",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 15,
+  "type": "hypothesis",
+  "name": "Signal Values Live Fast Path",
+  "slug": "signal-values-live-fast-path",
+  "path": "2026-11-04-15-signal-values-live-fast-path.json",
+  "createdAt": "2026-11-04T23:47:33Z",
+  "startedAt": "2026-11-04T23:47:33Z",
+  "finishedAt": "2026-11-04T23:51:08Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Signal Values Live Fast Path Hypothesis\n\n### Hypothesis\n\nEvery change delivered to a `Signal::values()` subscriber locks that subscription's startup mutex to decide between buffering (before the baseline is delivered) and forwarding, long after startup ended. Recording the live phase in an atomic flag and the last delivered version in an `AtomicU64` (`fetch_max`) forwards live changes without the mutex; the mutex is kept only for the buffering phase and the hand-over, so ordering and the never-older-after-newer rule are unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** atomic live-phase fast path for `values()` deliveries.\n**Allowed changes:** `SignalInner::values` and its startup state in `crates/src/signal.rs`.\n**Forbidden in this experiment:** DeliveryQueue changes, Computed changes, `changes()` stream.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nScalar tests (`tests`, `scalar_tests`), signal startup/race tests, full lib + integration tests; clippy/fmt. Bench `hot_paths` scalar-hot, `reactive_complexity`. Pass: `signal-set-one-subscriber` >=10% faster on rerun; `signal-and-computed/*` subscribe-heavy benches not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n~5-10 ns less per delivered value per subscriber.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "8.9262 ns median",
+      "delta": "+2.6203%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "baseline (criterion saved)",
+      "after": "39.881 ns median",
+      "delta": "+70.614%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "baseline (criterion saved)",
+      "after": "3.9644 ns median",
+      "delta": "+1.1109%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "baseline (criterion saved)",
+      "after": "1.8565 µs median",
+      "delta": "+4.0535%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "baseline (criterion saved)",
+      "after": "25.067 ns median",
+      "delta": "+9.2591%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/1",
+      "before": "baseline (criterion saved)",
+      "after": "557.59 ns median",
+      "delta": "+20.050%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/1",
+      "before": "baseline (criterion saved)",
+      "after": "1.0404 µs median",
+      "delta": "+17.497%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/32",
+      "before": "baseline (criterion saved)",
+      "after": "5.9793 µs median",
+      "delta": "+1.7243%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/32",
+      "before": "baseline (criterion saved)",
+      "after": "7.0358 µs median",
+      "delta": "+6.8219%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/256",
+      "before": "baseline (criterion saved)",
+      "after": "49.264 µs median",
+      "delta": "+0.6541%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/256",
+      "before": "baseline (criterion saved)",
+      "after": "52.610 µs median",
+      "delta": "+1.8185%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/1",
+      "before": "baseline (criterion saved)",
+      "after": "635.24 ns median",
+      "delta": "+13.065%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/32",
+      "before": "baseline (criterion saved)",
+      "after": "9.5011 µs median",
+      "delta": "+4.8373%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/256",
+      "before": "baseline (criterion saved)",
+      "after": "76.611 µs median",
+      "delta": "+4.9520%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Signal Values Live Fast Path Finished\n\n**Index:** 15\n**Checkpoint:** 4a6b594\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure. The live-path mutex costs ~2-3 ns per delivery; not worth a subscription-setup regression.\n\n### Scope Lock\n\n**Tested mechanism:** tests pass; steady-state delivery improved on rerun (signal-set-one-subscriber -11.6%, effect -12%; a first run showed +70%, bimodal scheduling noise), but the subscribe-per-iteration bench signal-and-computed/signal/1 regressed +20% and +22% on two runs (computed/1 +17%/+8%), failing the <10% gate.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| scalar-hot/signal-set-no-subscribers | 8.9262 ns median | +2.6203% |\n| scalar-hot/signal-set-one-subscriber | 39.881 ns median | +70.614% |\n| scalar-hot/signal-get | 3.9644 ns median | +1.1109% |\n| scalar-hot/computed-chain-8-set-and-get | 1.8565 µs median | +4.0535% |\n| scalar-hot/effect-on-filtered-map | 25.067 ns median | +9.2591% |\n| signal-and-computed/signal/1 | 557.59 ns median | +20.050% |\n| signal-and-computed/computed/1 | 1.0404 µs median | +17.497% |\n| signal-and-computed/signal/32 | 5.9793 µs median | +1.7243% |\n| signal-and-computed/computed/32 | 7.0358 µs median | +6.8219% |\n| signal-and-computed/signal/256 | 49.264 µs median | +0.6541% |\n| signal-and-computed/computed/256 | 52.610 µs median | +1.8185% |\n| stream-operators/filter-distinct-skip/1 | 635.24 ns median | +13.065% |\n| stream-operators/filter-distinct-skip/32 | 9.5011 µs median | +4.8373% |\n| stream-operators/filter-distinct-skip/256 | 76.611 µs median | +4.9520% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 4a6b594.\n",
+  "notes": ""
+}

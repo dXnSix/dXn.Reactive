@@ -1,5 +1,5 @@
 use crate::collections::source_lock::SourceLock;
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::convert::Infallible;
 use std::hash::Hash;
 use std::mem;

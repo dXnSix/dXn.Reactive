@@ -16,10 +16,10 @@ impl<I> Default for AsyncCancellation<I> {
     fn default() -> Self {
         Self {
             next_sequence: 0,
-            superseded: HashMap::new(),
+            superseded: HashMap::default(),
             cleared: 0,
             closed: false,
-            running: HashMap::new(),
+            running: HashMap::default(),
             next_token: 0,
         }
     }

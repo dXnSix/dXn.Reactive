@@ -15,9 +15,9 @@ impl<K, ChildKey, Child> Default for SyncTransformManyState<K, ChildKey, Child> 
     fn default() -> Self {
         Self {
             parent_order: KeyOrder::new(),
-            children: HashMap::new(),
-            holders: HashMap::new(),
-            result: HashMap::new(),
+            children: HashMap::default(),
+            holders: HashMap::default(),
+            result: HashMap::default(),
         }
     }
 }
@@ -35,8 +35,8 @@ where
         child_key: &dyn Fn(&Child) -> ChildKey,
     ) -> Vec<CacheChange<ChildKey, Child>> {
         let mut touched = Vec::<ChildKey>::new();
-        let mut seen = HashSet::<ChildKey>::new();
-        let mut refreshed = HashSet::<ChildKey>::new();
+        let mut seen = HashSet::<ChildKey>::default();
+        let mut refreshed = HashSet::<ChildKey>::default();
         for change in changes {
             match change {
                 CacheChange::Add {
@@ -171,7 +171,7 @@ where
         seen: &mut HashSet<ChildKey>,
     ) -> Vec<ChildKey> {
         let mut next = Vec::<(ChildKey, Child)>::new();
-        let mut positions = HashMap::<ChildKey, usize>::new();
+        let mut positions = HashMap::<ChildKey, usize>::default();
         for child in transform(item) {
             let child_key = child_key(&child);
             match positions.get(&child_key) {

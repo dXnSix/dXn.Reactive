@@ -17,9 +17,9 @@ struct ChangeKeyState<K, DestinationKey, T> {
 impl<K, DestinationKey, T> Default for ChangeKeyState<K, DestinationKey, T> {
     fn default() -> Self {
         Self {
-            sources: HashMap::new(),
-            holders: HashMap::new(),
-            output: HashMap::new(),
+            sources: HashMap::default(),
+            holders: HashMap::default(),
+            output: HashMap::default(),
             next_sequence: 0,
         }
     }
@@ -176,7 +176,7 @@ where
     /// (in the order they were added), ones handed to a remaining key as updates.
     fn clear(&mut self, keys: &[K], emitted: &mut Vec<CacheChange<DestinationKey, T>>) {
         let mut affected = Vec::<(DestinationKey, Option<K>)>::new();
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         for key in keys {
             let Some((destination, _)) = self.sources.remove(key) else {
                 continue;

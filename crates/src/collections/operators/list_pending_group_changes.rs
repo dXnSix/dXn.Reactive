@@ -10,9 +10,9 @@ where
     ) -> Option<ChangeSet<ImmutableListGroupChange<T, G>>> {
         self.version = self.version.max(batch.version);
         let previous_order = self.group_order.clone();
-        let mut initial = HashMap::<G, Option<ImmutableListGroup<G, T>>>::new();
+        let mut initial = HashMap::<G, Option<ImmutableListGroup<G, T>>>::default();
         let mut touched_order = Vec::<G>::new();
-        let mut touched_seen = HashSet::<G>::new();
+        let mut touched_seen = HashSet::<G>::default();
 
         for change in &batch.changes {
             match change {
@@ -187,9 +187,9 @@ where
         group_selector: &dyn Fn(&T) -> G,
     ) -> Option<ChangeSet<ImmutableListGroupChange<T, G>>> {
         let previous_order = self.group_order.clone();
-        let mut initial = HashMap::<G, Option<ImmutableListGroup<G, T>>>::new();
+        let mut initial = HashMap::<G, Option<ImmutableListGroup<G, T>>>::default();
         let mut touched_order = Vec::<G>::new();
-        let mut touched_seen = HashSet::<G>::new();
+        let mut touched_seen = HashSet::<G>::default();
 
         for index in 0..self.entries.len() {
             let next_group_key = group_selector(&self.entries[index].item);
@@ -420,11 +420,11 @@ struct LiveCacheGroupState<K, T, G> {
 impl<K, T, G> Default for LiveCacheGroupState<K, T, G> {
     fn default() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: HashMap::default(),
             source_order: KeyOrder::new(),
-            groups: HashMap::new(),
+            groups: HashMap::default(),
             group_order: KeyOrder::new(),
-            empty_groups: HashSet::new(),
+            empty_groups: HashSet::default(),
             version: 0,
         }
     }

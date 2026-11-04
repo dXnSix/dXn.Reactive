@@ -1,4 +1,5 @@
-use std::collections::{HashMap, VecDeque};
+use crate::collections::hash::HashMap;
+use std::collections::VecDeque;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
@@ -347,7 +348,7 @@ struct CacheRefCountState<K, T> {
 impl<K, T> Default for CacheRefCountState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: Vec::new(),
             version: 0,
         }

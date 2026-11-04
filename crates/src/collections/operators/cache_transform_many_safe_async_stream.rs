@@ -268,9 +268,9 @@ type CacheAsyncTransformManyParentResult<K, T, ChildKey, Child> = (
 impl<K, ChildKey, Child> CacheAsyncTransformManyState<K, ChildKey, Child> {
     fn new(comparer: Option<Comparer<Child>>) -> Self {
         Self {
-            children: HashMap::new(),
+            children: HashMap::default(),
             parent_order: KeyOrder::new(),
-            result: HashMap::new(),
+            result: HashMap::default(),
             result_order: Vec::new(),
             comparer,
             version: 0,

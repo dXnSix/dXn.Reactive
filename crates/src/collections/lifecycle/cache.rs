@@ -1,8 +1,8 @@
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
+use crate::collections::hash::{HashMap, HashSet};
 use crate::collections::key_order::KeyOrder;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
@@ -550,7 +550,7 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
             let cleanup = Subscription::new(move || {
                 let released = match state.lock() {
                     Ok(mut state) => state.clear_subscriptions(),
-                    Err(_) => HashMap::new(),
+                    Err(_) => HashMap::default(),
                 };
                 drop(released);
             });
@@ -932,7 +932,7 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
                     if let Ok(mut state) = state_for_source.lock() {
                         state.apply_source(batch)
                     } else {
-                        (Vec::new(), Vec::new(), HashMap::new(), batch.version)
+                        (Vec::new(), Vec::new(), HashMap::default(), batch.version)
                     };
 
                 start_cache_group_on_observable_subscriptions(
@@ -1358,7 +1358,7 @@ impl<K, T> CacheLifecycleExt<K, T> for ChangeStream<CacheChange<K, T>> {
         let source = self.clone();
         let subscription_factory: CacheSubscriptionFactory<K, T> = Arc::new(subscription_factory);
         ChangeStream::new(move |subscriber| {
-            let subscriptions = Arc::new(Mutex::new(HashMap::<K, Subscription>::new()));
+            let subscriptions = Arc::new(Mutex::new(HashMap::<K, Subscription>::default()));
             let subscriptions_for_source = Arc::clone(&subscriptions);
             let factory = Arc::clone(&subscription_factory);
             let source_subscription = source.subscribe(move |batch| {
@@ -1459,15 +1459,15 @@ struct MergeManyCacheCacheChangeSetsState<K, ChildKey, Child> {
 impl<K, ChildKey, Child> MergeManyCacheCacheChangeSetsState<K, ChildKey, Child> {
     fn new(comparer: Option<Comparer<Child>>) -> Self {
         Self {
-            children: HashMap::new(),
+            children: HashMap::default(),
             parent_order: KeyOrder::new(),
-            result: HashMap::new(),
+            result: HashMap::default(),
             result_order: KeyOrder::new(),
             comparer,
             phase: StartPhase::default(),
             deferred: Vec::new(),
-            deferred_seen: HashSet::new(),
-            deferred_refreshes: HashMap::new(),
+            deferred_seen: HashSet::default(),
+            deferred_refreshes: HashMap::default(),
             version: 0,
         }
     }
@@ -1490,7 +1490,7 @@ where
         let mut changes = Vec::new();
         let mut starts = Vec::new();
         let mut touched = Vec::<ChildKey>::new();
-        let mut touched_seen = HashSet::<ChildKey>::new();
+        let mut touched_seen = HashSet::<ChildKey>::default();
         let mut removed_subscriptions = Vec::new();
 
         for change in &batch.changes {
@@ -1506,7 +1506,7 @@ where
                     if let Some(previous) = self.children.insert(
                         key.clone(),
                         MergeManyCacheCacheChild {
-                            items: HashMap::new(),
+                            items: HashMap::default(),
                             subscription: None,
                         },
                     ) {
@@ -1533,7 +1533,7 @@ where
                     if let Some(previous) = self.children.insert(
                         key.clone(),
                         MergeManyCacheCacheChild {
-                            items: HashMap::new(),
+                            items: HashMap::default(),
                             subscription: None,
                         },
                     ) {
@@ -1604,7 +1604,7 @@ where
             }
         }
 
-        self.recompute_or_defer(touched, HashMap::new(), &mut changes);
+        self.recompute_or_defer(touched, HashMap::default(), &mut changes);
         drop(removed_subscriptions);
         (changes, starts)
     }
@@ -1616,8 +1616,8 @@ where
     ) -> Option<ChangeSet<CacheChange<ChildKey, Child>>> {
         let child = self.children.get_mut(parent_key)?;
         let mut touched = Vec::<ChildKey>::new();
-        let mut touched_seen = HashSet::<ChildKey>::new();
-        let mut refreshes = HashMap::<ChildKey, Vec<Child>>::new();
+        let mut touched_seen = HashSet::<ChildKey>::default();
+        let mut refreshes = HashMap::<ChildKey, Vec<Child>>::default();
 
         for change in &batch.changes {
             match change {
@@ -1885,7 +1885,7 @@ struct MergeManyCacheListChangeSetsState<K, U> {
 impl<K, U> Default for MergeManyCacheListChangeSetsState<K, U> {
     fn default() -> Self {
         Self {
-            children: HashMap::new(),
+            children: HashMap::default(),
             order: KeyOrder::new(),
             merged: Vec::new(),
             phase: StartPhase::default(),
@@ -2270,7 +2270,7 @@ struct TransformOnObservableCacheState<K, U> {
 impl<K, U> Default for TransformOnObservableCacheState<K, U> {
     fn default() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: HashMap::default(),
             order: KeyOrder::new(),
             version: 0,
             next_token: 0,
@@ -2612,11 +2612,11 @@ struct GroupOnObservableCacheState<K, T, G> {
 impl<K, T, G> Default for GroupOnObservableCacheState<K, T, G> {
     fn default() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: HashMap::default(),
             source_order: KeyOrder::new(),
-            groups: HashMap::new(),
+            groups: HashMap::default(),
             group_order: KeyOrder::new(),
-            empty_groups: HashSet::new(),
+            empty_groups: HashSet::default(),
             version: 0,
             next_token: 0,
         }
@@ -2636,7 +2636,7 @@ where
         self.version = self.version.max(batch.version);
         let group_changes = Vec::new();
         let mut starts = Vec::new();
-        let mut pending = HashMap::new();
+        let mut pending = HashMap::default();
         let mut removed_subscriptions = Vec::new();
 
         for change in &batch.changes {
@@ -2777,7 +2777,7 @@ where
         finalize_empty_groups: bool,
     ) -> CacheGroupChildResult<K, T, G> {
         let mut group_changes = Vec::new();
-        let mut pending = HashMap::new();
+        let mut pending = HashMap::default();
         let Some(entry) = self.entries.get(key) else {
             return (group_changes, pending, self.version);
         };
@@ -3102,7 +3102,7 @@ fn start_cache_group_on_observable_subscriptions<K, T, G>(
                     !is_startup,
                 )
             } else {
-                (Vec::new(), HashMap::new(), 0)
+                (Vec::new(), HashMap::default(), 0)
             };
 
             if is_startup {
@@ -3182,7 +3182,7 @@ struct FilterOnObservableCacheState<K, T> {
 impl<K, T> Default for FilterOnObservableCacheState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
             version: 0,
             phase: StartPhase::default(),
@@ -3201,7 +3201,7 @@ where
     ) -> (Vec<CacheChange<K, T>>, HashMap<K, T>) {
         self.version = self.version.max(batch.version);
         let mut changes = Vec::new();
-        let mut starts = HashMap::new();
+        let mut starts = HashMap::default();
         let mut removed_subscriptions = Vec::new();
 
         for change in &batch.changes {
@@ -3568,10 +3568,10 @@ struct AutoRefreshCacheState<K, T> {
 impl<K, T> Default for AutoRefreshCacheState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
             pending_refresh_keys: Vec::new(),
-            pending_refresh_seen: HashSet::new(),
+            pending_refresh_seen: HashSet::default(),
             timer: OperatorTimer::default(),
             version: 0,
         }
@@ -3590,7 +3590,7 @@ where
         batch: &ChangeSet<CacheChange<K, T>>,
     ) -> (HashMap<K, T>, Vec<Subscription>) {
         self.version = self.version.max(batch.version);
-        let mut starts = HashMap::new();
+        let mut starts = HashMap::default();
         let mut removed_subscriptions = Vec::new();
 
         for change in &batch.changes {
@@ -3784,7 +3784,7 @@ where
         let state_for_source = Arc::clone(&state);
         let reevaluator = Arc::clone(&reevaluator);
         let source_subscription = source.subscribe(move |batch| {
-            let mut applied = (HashMap::new(), Vec::new());
+            let mut applied = (HashMap::default(), Vec::new());
             emitter.update(&state_for_source, |state| {
                 if state.timer.is_closed() {
                     return None;
@@ -4023,7 +4023,7 @@ struct TrackedCache<K, T> {
 impl<K, T> Default for TrackedCache<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
         }
     }

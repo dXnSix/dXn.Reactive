@@ -274,9 +274,9 @@ impl<T, G> Default for LiveListGroupState<T, G> {
     fn default() -> Self {
         Self {
             entries: Vec::new(),
-            groups: HashMap::new(),
+            groups: HashMap::default(),
             group_order: KeyOrder::new(),
-            empty_groups: HashSet::new(),
+            empty_groups: HashSet::default(),
             version: 0,
         }
     }

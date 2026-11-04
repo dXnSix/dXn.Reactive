@@ -10,7 +10,7 @@ where
     ) -> ListGroupApplyResult<T, G> {
         self.version = self.version.max(batch.version);
         let mut group_changes = Vec::new();
-        let mut pending = HashMap::new();
+        let mut pending = HashMap::default();
 
         for change in &batch.changes {
             match change {
@@ -171,7 +171,7 @@ where
 
     fn regroup_all(&mut self, group_selector: &dyn Fn(&T) -> G) -> ListGroupRegroupResult<T, G> {
         let mut group_changes = Vec::new();
-        let mut pending = HashMap::new();
+        let mut pending = HashMap::default();
 
         for index in 0..self.entries.len() {
             let next_group_key = group_selector(&self.entries[index].item);

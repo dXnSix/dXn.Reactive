@@ -11,9 +11,9 @@ where
     ) -> Option<ChangeSet<ImmutableCacheGroupChange<K, T, G>>> {
         self.version = self.version.max(batch.version);
         let previous_order = self.group_order.to_vec();
-        let mut initial = HashMap::<G, Option<ImmutableCacheGroup<G, K, T>>>::new();
+        let mut initial = HashMap::<G, Option<ImmutableCacheGroup<G, K, T>>>::default();
         let mut touched_order = Vec::<G>::new();
-        let mut touched_seen = HashSet::<G>::new();
+        let mut touched_seen = HashSet::<G>::default();
 
         for change in &batch.changes {
             match change {
@@ -203,9 +203,9 @@ where
         group_selector: &dyn Fn(&T, &K) -> G,
     ) -> Option<ChangeSet<ImmutableCacheGroupChange<K, T, G>>> {
         let previous_order = self.group_order.to_vec();
-        let mut initial = HashMap::<G, Option<ImmutableCacheGroup<G, K, T>>>::new();
+        let mut initial = HashMap::<G, Option<ImmutableCacheGroup<G, K, T>>>::default();
         let mut touched_order = Vec::<G>::new();
-        let mut touched_seen = HashSet::<G>::new();
+        let mut touched_seen = HashSet::<G>::default();
         let keys = self.source_order.to_vec();
 
         for key in keys {
@@ -376,7 +376,7 @@ struct UngroupedCacheState<K, T> {
 impl<K, T> Default for UngroupedCacheState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
         }
     }

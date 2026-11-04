@@ -122,7 +122,7 @@ where
         .map(|(index, (key, item))| (key.clone(), (index, item.clone())))
         .collect::<HashMap<_, _>>();
 
-    let mut refresh_keys = HashSet::<K>::new();
+    let mut refresh_keys = HashSet::<K>::default();
     if refresh_intersection {
         refresh_keys.extend(
             previous_by_key
@@ -335,7 +335,7 @@ struct CacheRemoveKeyState<K, T> {
 impl<K, T> Default for CacheRemoveKeyState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
         }
     }
@@ -430,7 +430,7 @@ where
             tails[slot] = index;
         }
     }
-    let mut kept = HashSet::new();
+    let mut kept = HashSet::default();
     let mut cursor = tails.last().copied().unwrap_or(usize::MAX);
     while cursor != usize::MAX {
         kept.insert(sequence[cursor].1.clone());

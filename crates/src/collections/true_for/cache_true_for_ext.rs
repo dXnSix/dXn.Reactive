@@ -1,5 +1,5 @@
 use crate::collections::error::CollectionError;
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
@@ -510,7 +510,7 @@ struct TrueForState<K, T, U> {
 impl<K, T, U> Default for TrueForState<K, T, U> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             last: None,
             next_generation: 0,
             starting: 0,

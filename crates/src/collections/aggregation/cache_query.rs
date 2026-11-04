@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::ops::{Add, Sub};
 use std::sync::{Arc, Mutex};

@@ -1,6 +1,7 @@
 use crate::collections::error::CollectionError;
 use crate::collections::materialize::{ErrorSink, OrderedWriter, WriterOptions};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use crate::collections::hash::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
@@ -270,7 +271,7 @@ impl<I> Default for WriteOrder<I> {
     fn default() -> Self {
         Self {
             by_sequence: BTreeMap::new(),
-            sequences: HashMap::new(),
+            sequences: HashMap::default(),
             next_sequence: 0,
         }
     }
@@ -497,7 +498,7 @@ where
     fn new(size: usize) -> Self {
         Self {
             size,
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: WriteOrder::default(),
             positions: Vec::new(),
         }

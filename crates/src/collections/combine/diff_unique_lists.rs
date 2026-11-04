@@ -83,7 +83,7 @@ where
             DynamicListChild {
                 id: child_id,
                 items: Vec::new(),
-                counts: HashMap::new(),
+                counts: HashMap::default(),
             },
         );
         child_id
@@ -268,7 +268,7 @@ where
 {
     fn new(source_count: usize, operator: CombineOperator) -> Self {
         Self {
-            sources: (0..source_count).map(|_| HashMap::new()).collect(),
+            sources: (0..source_count).map(|_| HashMap::default()).collect(),
             result: Vec::new(),
             operator,
         }

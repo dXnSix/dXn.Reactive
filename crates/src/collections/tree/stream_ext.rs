@@ -1,7 +1,7 @@
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
+use crate::collections::hash::HashMap;
 use crate::collections::key_order::KeyOrder;
-use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
@@ -129,12 +129,12 @@ where
 {
     fn default() -> Self {
         Self {
-            nodes: HashMap::new(),
+            nodes: HashMap::default(),
             order: KeyOrder::new(),
-            desired_parents: HashMap::new(),
-            pivot_groups: HashMap::new(),
-            actual_parents: HashMap::new(),
-            visible: HashMap::new(),
+            desired_parents: HashMap::default(),
+            pivot_groups: HashMap::default(),
+            actual_parents: HashMap::default(),
+            visible: HashMap::default(),
             visible_order: KeyOrder::new(),
             predicate: None,
             version: 0,
@@ -165,7 +165,7 @@ where
     K: Clone + Eq + Hash,
 {
     // 1: on the current walk, 2: finished.
-    let mut marks = HashMap::<&K, u8>::new();
+    let mut marks = HashMap::<&K, u8>::default();
     let mut cycles = Vec::new();
     for start in parents.keys() {
         let mut path = Vec::new();
@@ -433,7 +433,7 @@ where
 
     fn refilter(&mut self) -> Option<ChangeSet<CacheChange<K, TreeNode<K, T>>>> {
         let predicate = self.predicate.as_ref()?;
-        let mut next = HashMap::new();
+        let mut next = HashMap::default();
         let mut next_order = KeyOrder::new();
         for key in self.order.iter() {
             if let Some(node) = self.nodes.get(key)

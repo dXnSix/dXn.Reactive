@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
@@ -104,7 +104,7 @@ struct DistinctCounts<V> {
 impl<V> Default for DistinctCounts<V> {
     fn default() -> Self {
         Self {
-            counts: HashMap::new(),
+            counts: HashMap::default(),
             order: Vec::new(),
         }
     }
@@ -241,7 +241,7 @@ struct CacheDistinctState<K, V> {
 impl<K, V> Default for CacheDistinctState<K, V> {
     fn default() -> Self {
         Self {
-            values_by_key: HashMap::new(),
+            values_by_key: HashMap::default(),
             distinct: DistinctCounts::default(),
         }
     }

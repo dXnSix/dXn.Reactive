@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce",
+  "lastStableCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce"
+      "lastStableCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "9588f2a6-c30f-42b7-be63-51258943c5cb",
-  "nextExperimentIndex": 15,
+  "currentExperimentId": "6a7f66fe-ef67-48e2-825f-5a06a0e8a03f",
+  "nextExperimentIndex": 17,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -190,6 +190,29 @@
       "name": "Drain Claims And Pops Under One Lock",
       "path": "2026-11-04-14-drain-claims-and-pops-under-one-lock.json",
       "startedAt": "2026-11-04T23:43:58Z",
+      "finishedAt": "2026-11-04T23:47:08Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5"
+    },
+    {
+      "id": "ceff9f05-22a6-4fa6-a2ed-15db29cf5ac5",
+      "index": 15,
+      "type": "hypothesis",
+      "name": "Signal Values Live Fast Path",
+      "path": "2026-11-04-15-signal-values-live-fast-path.json",
+      "startedAt": "2026-11-04T23:47:33Z",
+      "finishedAt": "2026-11-04T23:51:08Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "6a7f66fe-ef67-48e2-825f-5a06a0e8a03f",
+      "index": 16,
+      "type": "hypothesis",
+      "name": "Seeded Fast Hasher For Collection Tables",
+      "path": "2026-11-04-16-seeded-fast-hasher-for-collection-tables.json",
+      "startedAt": "2026-11-04T23:52:44Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

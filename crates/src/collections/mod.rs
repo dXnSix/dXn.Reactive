@@ -31,6 +31,7 @@ pub mod expiration;
 pub mod factory;
 /// Cache groups produced by the grouping operators.
 pub mod group;
+mod hash;
 /// Inner, left, right and full joins between keyed change streams.
 pub mod join;
 mod key_order;

@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use crate::collections::hash::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;

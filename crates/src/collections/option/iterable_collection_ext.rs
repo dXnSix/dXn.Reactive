@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 
 use crate::collections::option::ItemWithIndex;
@@ -68,7 +68,8 @@ where
             })
             .collect::<Vec<_>>();
 
-        let mut counts = HashMap::<K, usize>::with_capacity(keyed_items.len());
+        let mut counts =
+            HashMap::<K, usize>::with_capacity_and_hasher(keyed_items.len(), Default::default());
         for (_, key) in &keyed_items {
             *counts.entry(key.clone()).or_insert(0) += 1;
         }
@@ -115,7 +116,8 @@ where
         T: Clone + Eq + Hash,
     {
         let source = self.into_iter().collect::<Vec<_>>();
-        let mut index = HashMap::<T, Vec<usize>>::with_capacity(source.len());
+        let mut index =
+            HashMap::<T, Vec<usize>>::with_capacity_and_hasher(source.len(), Default::default());
         for (position, item) in source.iter().enumerate() {
             index.entry(item.clone()).or_default().push(position);
         }

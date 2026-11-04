@@ -1,5 +1,5 @@
+use crate::collections::hash::HashMap;
 use crate::collections::source_lock::SourceLock;
-use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -94,7 +94,7 @@ where
             key,
             inner: Arc::new(RayCacheGroupInner {
                 state: SourceLock::new(GroupCacheState {
-                    items: HashMap::new(),
+                    items: HashMap::default(),
                     order: KeyOrder::new(),
                     version: 0,
                 }),

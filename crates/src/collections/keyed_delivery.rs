@@ -1,5 +1,5 @@
+use crate::collections::hash::HashMap;
 use crate::collections::source_lock::SourceLock;
-use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -68,7 +68,7 @@ impl<K, T> KeyedChangeHub<K, T> {
     pub(crate) fn new() -> Self {
         Self {
             registry: Arc::new(SourceLock::new(KeyedRegistry {
-                buckets: HashMap::new(),
+                buckets: HashMap::default(),
                 next_subscriber_id: 0,
             })),
             #[cfg(any(test, feature = "diagnostics"))]
@@ -135,7 +135,7 @@ where
         }
         // Changes keep the version they were committed at, so a watch that subscribed
         // during notification suspension can drop the segments its snapshot covers.
-        let mut partitioned = HashMap::<K, Vec<(u64, CacheChange<K, T>)>>::new();
+        let mut partitioned = HashMap::<K, Vec<(u64, CacheChange<K, T>)>>::default();
         for (version, change) in versioned.versioned_changes() {
             match change {
                 CacheChange::Add { key, .. }

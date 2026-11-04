@@ -126,7 +126,7 @@ struct CacheSnapshotState<K, T> {
 impl<K, T> Default for CacheSnapshotState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: Vec::new(),
         }
     }
@@ -141,7 +141,7 @@ impl<K, T> Default for CacheQueryWhenChangedOnState<K, T> {
     fn default() -> Self {
         Self {
             snapshot: CacheSnapshotState::default(),
-            children: HashMap::new(),
+            children: HashMap::default(),
         }
     }
 }
@@ -198,7 +198,7 @@ where
 {
     fn default() -> Self {
         Self {
-            values: HashMap::new(),
+            values: HashMap::default(),
             total: RunningTotal::default(),
         }
     }
@@ -213,7 +213,7 @@ struct CacheAverageState<K> {
 impl<K> CacheAverageState<K> {
     fn new(empty_value: f64) -> Self {
         Self {
-            values: HashMap::new(),
+            values: HashMap::default(),
             sum: FloatSum::default(),
             empty_value,
         }
@@ -237,7 +237,7 @@ struct CacheStdDevState<K> {
 impl<K> CacheStdDevState<K> {
     fn new(fallback_value: f64) -> Self {
         Self {
-            values: HashMap::new(),
+            values: HashMap::default(),
             totals: StdDevTotals::default(),
             fallback_value,
         }

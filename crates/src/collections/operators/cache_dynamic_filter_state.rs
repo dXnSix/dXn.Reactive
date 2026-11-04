@@ -333,9 +333,9 @@ struct CacheDynamicFilterState<K, T, S> {
 impl<K, T, S> Default for CacheDynamicFilterState<K, T, S> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: KeyOrder::new(),
-            filtered: HashMap::new(),
+            filtered: HashMap::default(),
             filtered_order: KeyOrder::new(),
             state: None,
             version: 0,

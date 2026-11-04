@@ -1,7 +1,8 @@
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::key_order::KeyOrder;
 use std::cmp::{Ordering, Reverse};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use crate::collections::hash::{HashMap, HashSet};
 use std::future::Future;
 use std::hash::Hash;
 use std::sync::mpsc;

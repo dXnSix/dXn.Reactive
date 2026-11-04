@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "6a7f66fe-ef67-48e2-825f-5a06a0e8a03f",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 16,
+  "type": "hypothesis",
+  "name": "Seeded Fast Hasher For Collection Tables",
+  "slug": "seeded-fast-hasher-for-collection-tables",
+  "path": "2026-11-04-16-seeded-fast-hasher-for-collection-tables.json",
+  "createdAt": "2026-11-04T23:52:44Z",
+  "startedAt": "2026-11-04T23:52:44Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 4a6b5943c67aee4d1f5190ca3351c27fade805e5",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Seeded Fast Hasher For Collection Tables Hypothesis\n\n### Hypothesis\n\nEvery collection profile is dominated by SipHash-1-3 (`RandomState`): `hash_one` + `Sip13Rounds::write` are the top self-time frames of the cache pipeline load, and every operator mirror hashes each key several times. Hashing the crate's internal tables with a folded-multiply hasher keyed by a per-process random seed (so colliding keys cannot be chosen without the seed) makes each hash a few instructions while keeping table behavior identical. Public types are unaffected: no public signature exposes these tables.\n\n### Scope Lock\n\n**Tested mechanism:** replace the hasher of the collection layer's internal `HashMap`/`HashSet` tables.\n**Allowed changes:** new `crates/src/collections/hash.rs`; `use` lines and `HashMap/HashSet::new/with_capacity` constructors in non-test collection source files (mechanical).\n**Forbidden in this experiment:** algorithm or structure changes, scalar-state files, public API changes, test files beyond compile fixes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFull lib + integration tests, doc-example tests, clippy/fmt, `cargo check --target wasm32-unknown-unknown` if the target is installed. Unit tests for the hasher (distinct small keys, strings, seeded). Bench all collection benches vs base. Pass: cache/group/tree/join loads >=15% faster; no bench slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n20-40% faster collection loads and keyed updates.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

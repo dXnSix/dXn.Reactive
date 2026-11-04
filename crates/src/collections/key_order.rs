@@ -1,6 +1,6 @@
 //! Keys in order with O(1) key-to-position lookups.
 
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::ops::Deref;
 
@@ -50,7 +50,7 @@ impl<K> Default for KeyOrder<K> {
             tickets: Vec::new(),
             head: 0,
             positions: Vec::new(),
-            ticket_of: HashMap::new(),
+            ticket_of: HashMap::default(),
             free: Vec::new(),
             removed: None,
         }

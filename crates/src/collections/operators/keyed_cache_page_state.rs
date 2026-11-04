@@ -65,9 +65,9 @@ struct KeyedCachePageState<K, T> {
 impl<K, T> Default for KeyedCachePageState<K, T> {
     fn default() -> Self {
         Self {
-            all: HashMap::new(),
+            all: HashMap::default(),
             order: KeyOrder::new(),
-            page: HashMap::new(),
+            page: HashMap::default(),
             page_order: Vec::new(),
             request: None,
             last_response: None,
@@ -153,9 +153,9 @@ struct KeyedCacheVirtualState<K, T> {
 impl<K, T> Default for KeyedCacheVirtualState<K, T> {
     fn default() -> Self {
         Self {
-            all: HashMap::new(),
+            all: HashMap::default(),
             order: KeyOrder::new(),
-            window: HashMap::new(),
+            window: HashMap::default(),
             window_order: Vec::new(),
             request: None,
             last_response: None,

@@ -1,5 +1,5 @@
 use crate::collections::error::CollectionError;
-use std::collections::HashMap;
+use crate::collections::hash::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -470,7 +470,7 @@ struct CacheSwitchState<K, T> {
 impl<K, T> Default for CacheSwitchState<K, T> {
     fn default() -> Self {
         Self {
-            items: HashMap::new(),
+            items: HashMap::default(),
             order: Vec::new(),
             version: 0,
         }

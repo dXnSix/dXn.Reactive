@@ -11,7 +11,7 @@ where
     ) -> CacheGroupApplyResult<K, T, G> {
         self.version = self.version.max(batch.version);
         let mut group_changes = Vec::new();
-        let mut pending = HashMap::new();
+        let mut pending = HashMap::default();
 
         for change in &batch.changes {
             match change {
@@ -153,7 +153,7 @@ where
         group_selector: &dyn Fn(&T, &K) -> G,
     ) -> CacheGroupRegroupResult<K, T, G> {
         let mut group_changes = Vec::new();
-        let mut pending = HashMap::new();
+        let mut pending = HashMap::default();
         let keys = self.source_order.clone();
         for key in keys {
             let Some(item) = self.entries.get(&key).map(|entry| entry.item.clone()) else {
@@ -309,7 +309,7 @@ struct ImmutableCacheGroupState<K, T, G> {
 impl<K, T, G> Default for ImmutableCacheGroupState<K, T, G> {
     fn default() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: HashMap::default(),
             source_order: KeyOrder::new(),
             group_order: KeyOrder::new(),
             version: 0,

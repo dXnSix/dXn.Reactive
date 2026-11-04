@@ -237,9 +237,9 @@ struct CacheAsyncTransformState<K, T, U> {
 impl<K, T, U> Default for CacheAsyncTransformState<K, T, U> {
     fn default() -> Self {
         Self {
-            source_items: HashMap::new(),
+            source_items: HashMap::default(),
             order: KeyOrder::new(),
-            projected: HashMap::new(),
+            projected: HashMap::default(),
             version: 0,
         }
     }

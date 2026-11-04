@@ -11,9 +11,9 @@ where
         Self {
             kind,
             left: OrderedCache::default(),
-            right_items: HashMap::new(),
+            right_items: HashMap::default(),
             right_order: KeyOrder::new(),
-            groups: HashMap::new(),
+            groups: HashMap::default(),
             group_order: KeyOrder::new(),
             result: OrderedCache::default(),
             staged: Vec::new(),
@@ -425,7 +425,7 @@ where
 {
     // Deduplicated through a position map, so a large batch stays linear.
     let mut affected = Vec::<AffectedKey<K>>::new();
-    let mut positions = HashMap::<K, usize>::new();
+    let mut positions = HashMap::<K, usize>::default();
     let mut upsert = |key: K, refresh: bool| match positions.get(&key) {
         Some(&index) => affected[index].refresh = refresh,
         None => {
@@ -466,7 +466,7 @@ impl<K> Default for AffectedKeys<K> {
     fn default() -> Self {
         Self {
             keys: Vec::new(),
-            positions: HashMap::new(),
+            positions: HashMap::default(),
         }
     }
 }
