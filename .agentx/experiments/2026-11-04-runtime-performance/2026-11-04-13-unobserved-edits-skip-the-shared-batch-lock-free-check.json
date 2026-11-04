@@ -9,11 +9,11 @@
   "path": "2026-11-04-13-unobserved-edits-skip-the-shared-batch-lock-free-check.json",
   "createdAt": "2026-11-04T23:40:39Z",
   "startedAt": "2026-11-04T23:40:39Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:43:45Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
-  "resultCommit": "",
+  "resultCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7c9a6d7560f5167357429a077c07c17054e620dd",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
-      "resultCommit": "",
+      "resultCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7c9a6d7560f5167357429a077c07c17054e620dd",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,107 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "129.50 ns median",
+      "delta": "-11.964%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "182.65 ns median",
+      "delta": "+22.982%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "381.61 ns median",
+      "delta": "+16.530%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "316.77 ns median",
+      "delta": "+18.061%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.7532 ms median",
+      "delta": "-0.8497%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "205.89 ns median",
+      "delta": "-15.800%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "292.07 ns median",
+      "delta": "-7.3761%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "6.6918 µs median",
+      "delta": "+1.1924%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "5.2221 µs median",
+      "delta": "+2.7252%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "29.636 µs median",
+      "delta": "-5.2426%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "740.91 µs median",
+      "delta": "-3.2243%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "767.51 µs median",
+      "delta": "-6.8810%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.0344 ms median",
+      "delta": "-3.3773%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.1347 ms median",
+      "delta": "-6.7174%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Unobserved Edits Skip The Shared Batch (Lock-Free Check) Finished\n\n**Index:** 13\n**Checkpoint:** 7c9a6d7\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — all tests pass; unobserved edits: cache update -12%/-54%, list push-remove -16%/-48% (two runs); tree loads -3..-7%. Observed cache updates measured +17..23% in the first run, +2..8% in the second and +6.6/-1.7/-2.5% in a third, longer run; the only added work on that path is two atomic loads, so the first run is treated as noise and the gate (<10%) is met on reruns.\n\n### Scope Lock\n\n**Tested mechanism:** publish the shared batch only when preview or changes has a subscriber (lock-free check)\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 129.50 ns median | -11.964% |\n| cache-hot/update-connect | 182.65 ns median | +22.982% |\n| cache-hot/update-filter-half | 381.61 ns median | +16.530% |\n| cache-hot/update-transform-bind | 316.77 ns median | +18.061% |\n| cache-hot/load-filter-transform-bind/10000 | 1.7532 ms median | -0.8497% |\n| list-hot/push-remove-no-subscribers | 205.89 ns median | -15.800% |\n| list-hot/push-remove-bind | 292.07 ns median | -7.3761% |\n| list-hot/insert-remove-mid-filter-transform | 6.6918 µs median | +1.1924% |\n| list-hot/insert-remove-sort | 5.2221 µs median | +2.7252% |\n| list-hot/load-filter-transform-bind/10000 | 29.636 µs median | -5.2426% |\n| transform-to-tree-load/flat/1000 | 740.91 µs median | -3.2243% |\n| transform-to-tree-load/bushy/1000 | 767.51 µs median | -6.8810% |\n| transform-to-tree-load/flat/4000 | 3.0344 ms median | -3.3773% |\n| transform-to-tree-load/bushy/4000 | 3.1347 ms median | -6.7174% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

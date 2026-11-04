@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "7c9a6d7560f5167357429a077c07c17054e620dd",
+  "lastStableCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "7c9a6d7560f5167357429a077c07c17054e620dd"
+      "lastStableCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "b7684a98-9b8d-4213-a52a-a34ef94e3f74",
-  "nextExperimentIndex": 14,
+  "currentExperimentId": "9588f2a6-c30f-42b7-be63-51258943c5cb",
+  "nextExperimentIndex": 15,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -178,6 +178,18 @@
       "name": "Unobserved Edits Skip The Shared Batch (Lock-Free Check)",
       "path": "2026-11-04-13-unobserved-edits-skip-the-shared-batch-lock-free-check.json",
       "startedAt": "2026-11-04T23:40:39Z",
+      "finishedAt": "2026-11-04T23:43:45Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "a7af9e02f40ae73f094f3af7cc980f9c75fcabce"
+    },
+    {
+      "id": "9588f2a6-c30f-42b7-be63-51258943c5cb",
+      "index": 14,
+      "type": "hypothesis",
+      "name": "Drain Claims And Pops Under One Lock",
+      "path": "2026-11-04-14-drain-claims-and-pops-under-one-lock.json",
+      "startedAt": "2026-11-04T23:43:58Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

@@ -192,42 +192,40 @@ impl<T> DeliveryQueue<T> {
     /// A subscriber panic propagates to the caller; the queue stays usable and the
     /// remaining items are delivered by the next `drain`.
     pub fn drain(&self) -> Result<()> {
-        {
+        // Claiming the drain and popping its first item share one critical section.
+        let mut next = {
             let mut state = self.lock()?;
-            if state.delivering || state.queue.is_empty() {
+            if state.delivering {
                 return Ok(());
             }
+            let Some(item) = state.queue.pop_front() else {
+                return Ok(());
+            };
             state.delivering = true;
-        }
+            Some((item, state.snapshot()))
+        };
 
         let mut guard = DrainGuard {
             state: &self.shared.state,
             armed: true,
         };
 
-        loop {
-            let next = {
-                let mut state = self.lock()?;
-                match state.queue.pop_front() {
-                    Some(item) => Some((item, state.snapshot())),
-                    None => {
-                        state.delivering = false;
-                        None
-                    }
-                }
-            };
-
-            let Some((item, subscribers)) = next else {
-                guard.armed = false;
-                break;
-            };
-
+        while let Some((item, subscribers)) = next.take() {
             for entry in subscribers.iter() {
                 if entry.active.load(Ordering::SeqCst) {
                     (entry.subscriber)(&item);
                 }
             }
+            drop(item);
+            drop(subscribers);
+
+            let mut state = self.lock()?;
+            match state.queue.pop_front() {
+                Some(item) => next = Some((item, state.snapshot())),
+                None => state.delivering = false,
+            }
         }
+        guard.armed = false;
 
         Ok(())
     }
