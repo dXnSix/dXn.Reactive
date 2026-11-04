@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 1,
+  "type": "baseline",
+  "name": "Baseline Measurement",
+  "slug": "baseline-measurement",
+  "path": "2026-11-04-01-baseline-measurement.json",
+  "createdAt": "2026-11-04T23:00:25Z",
+  "startedAt": "2026-11-04T23:00:25Z",
+  "finishedAt": "2026-11-04T23:05:20Z",
+  "state": "done",
+  "status": "success",
+  "checkpointCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 6f402438ef25a9503f81bde7e8be4408a4a71e23",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 6f402438ef25a9503f81bde7e8be4408a4a71e23",
+      "status": "unchanged"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64, 10 cores)",
+  "hypothesisMarkdown": "## Baseline Measurement\n\nMeasure and document the starting point for this improvement loop before making optimization changes.",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nRun every criterion bench in `crates/benches/` in release mode with `--save-baseline base --warm-up-time 1 --measurement-time 2 --noplot`; later experiments compare with `--baseline base` (or the latest accepted baseline) on the benches that exercise the changed code. Behavior gates: the focused test groups of the touched module, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo fmt --check`.",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nBaseline metrics are captured and stored so later experiments compare against a known starting point.",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "delivery-queue-fanout/enqueue/1",
+      "before": "341.45 ns median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "delivery-queue-fanout/enqueue/32",
+      "before": "2.8063 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "delivery-queue-fanout/enqueue/256",
+      "before": "23.775 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "joins-load/full_join/1000",
+      "before": "609.11 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "joins-load/left_join_many/1000",
+      "before": "1.6424 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "joins-load/full_join/4000",
+      "before": "2.4949 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "joins-load/left_join_many/4000",
+      "before": "6.8419 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "191.51 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "401.59 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "3.5817 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/1",
+      "before": "4.0051 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/32",
+      "before": "9.9819 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/256",
+      "before": "40.692 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "list-diff-fixed-u/640",
+      "before": "1.1352 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "list-diff-fixed-u/1280",
+      "before": "1.6306 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "list-diff-fixed-u/10000",
+      "before": "7.0926 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "live-group-touched-members/640",
+      "before": "189.51 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "live-group-touched-members/1280",
+      "before": "378.79 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "live-group-touched-members/10000",
+      "before": "3.1331 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "signal-and-computed/signal/1",
+      "before": "490.56 ns median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "signal-and-computed/computed/1",
+      "before": "859.32 ns median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "signal-and-computed/signal/32",
+      "before": "5.6667 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "signal-and-computed/computed/32",
+      "before": "6.5829 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "signal-and-computed/signal/256",
+      "before": "45.439 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "signal-and-computed/computed/256",
+      "before": "51.953 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/1",
+      "before": "586.69 ns median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/32",
+      "before": "8.9639 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/256",
+      "before": "72.954 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "203.74 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "13.864 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "2.1891 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "131.82 µs median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "1.0247 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "1.0417 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "4.2277 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "4.2849 ms median",
+      "after": "",
+      "delta": "",
+      "source": "cargo bench -p dxn_reactive --all-features --bench <all> -- --save-baseline base --warm-up-time 1 --measurement-time 2"
+    }
+  ],
+  "reportMarkdown": "## Baseline Measurement Finished\n\n**Index:** 1\n**Checkpoint:** 6f40243\n**Result Commit:** none (measurement only)\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — all 36 criterion bench points captured in release mode; no source edited.\n\n### Measurements (median)\n\n| Bench | Median |\n| --- | ---: |\n| delivery-queue-fanout/enqueue/1 · 32 · 256 | 341 ns · 2.81 µs · 23.8 µs |\n| signal-and-computed/signal/1 · 32 · 256 | 491 ns · 5.67 µs · 45.4 µs |\n| signal-and-computed/computed/1 · 32 · 256 | 859 ns · 6.58 µs · 52.0 µs |\n| stream-operators/filter-distinct-skip/1 · 32 · 256 | 587 ns · 8.96 µs · 73.0 µs |\n| keyed-sort-large-add-batch/640 · 1280 · 10000 | 192 µs · 402 µs · 3.58 ms |\n| keyed-watch-sparse-delivery/1 · 32 · 256 | 4.01 µs · 9.98 µs · 40.7 µs |\n| list-diff-fixed-u/640 · 1280 · 10000 | 1.14 µs · 1.63 µs · 7.09 µs |\n| live-group-touched-members/640 · 1280 · 10000 | 190 µs · 379 µs · 3.13 ms |\n| sort-and-page/load/1000 · 10000 | 204 µs · 2.19 ms |\n| sort-and-page/update/1000 · 10000 | 13.9 µs · **131.8 µs** |\n| joins-load/full_join/1000 · 4000 | 609 µs · 2.49 ms |\n| joins-load/left_join_many/1000 · 4000 | 1.64 ms · 6.84 ms |\n| transform-to-tree-load/flat/1000 · 4000 | 1.02 ms · 4.23 ms |\n| transform-to-tree-load/bushy/1000 · 4000 | 1.04 ms · 4.28 ms |\n\n### Ranked Candidate Backlog\n\n1. **Measurement gap** — no steady-state per-write benches for the most common paths (signal set/get, computed chains, effects, cache update with connect/filter/transform/bind, list push/insert/remove with filter/transform/sort/bind, pipeline loads). Mechanism: add a `hot_paths` criterion bench. Measurement enablement only.\n2. **sort-and-page single update is O(n)** — 13.9 µs @1k → 132 µs @10k (linear in cache size *n*) for one row update. Inspect `cache_sorted_page_state.rs`; expected O(log n + page).\n3. **Cache filter `visible_index_for_key` is O(n)** (`cache_dynamic_filter_state_impl.rs`) — counts included keys before the source position on every update/refresh/move once any key is excluded. Mechanism: reuse the previous filtered index when the source position is unchanged, or index the visible count.\n4. **List filter `visible_index_for_source_index` is O(index)** (`list_dynamic_filter_state.rs`, `cache_dynamic_filter_state.rs`) per change.\n5. **Source edits clone every batch for the shared envelope** (`SourceCache`/`SourceList::edit_at_version`) even when no subscriber observes `preview`/`changes`: an O(batch) deep clone per edit.\n6. **`DeliveryQueue::drain` takes three locks for a single item** (claim, pop, empty-check); `enqueue` adds a fourth. Every operator's `OrderedEmitter` pays it per batch.\n7. **`Signal::values()` locks a per-subscriber startup mutex on every live change**; an atomic live fast path would drop one mutex per delivery per subscriber.\n8. **Signal commit** — `has_subscribers` lock and change clones on every write.\n9. **Cache inline transform `visible_index` O(n)** scan.\n10. **List `transform_many` child offset O(parents)** and per-change `vec!` allocation in `offset_child_changes`.\n11. **`KeyedChangeHub::publish` locks the registry on every batch** even without watches (an atomic watch count would skip it).\n12. **Tree and join loads** (~1 µs/node; left_join_many 1.7 µs/row) — need profiling before a hypothesis.\n\nAlready-simple code to keep unchanged: `KeyOrder` (O(1)/O(log n) ticketed order), `DeliveryQueue` snapshot caching, `Subscription`.\n",
+  "decisionMarkdown": "### Decision\n\nBaseline recorded; no source changed. Next: experiment 2 adds the hot-path bench (measurement enablement).\n",
+  "notes": ""
+}

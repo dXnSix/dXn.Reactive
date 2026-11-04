@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "dd5694a7-d3d0-4ee7-b9f3-2f55371ab659",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 2,
+  "type": "hypothesis",
+  "name": "Hot-Path Bench Harness",
+  "slug": "hot-path-bench-harness",
+  "path": "2026-11-04-02-hot-path-bench-harness.json",
+  "createdAt": "2026-11-04T23:05:39Z",
+  "startedAt": "2026-11-04T23:05:39Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 6f402438ef25a9503f81bde7e8be4408a4a71e23",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 6f402438ef25a9503f81bde7e8be4408a4a71e23",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Hot-Path Bench Harness Hypothesis\n\n### Hypothesis\n\nThe existing benches cover construction-heavy scenarios only; adding a `hot_paths` criterion bench that measures one write into an already-built pipeline (signal set/get, computed chain, effect, cache update with connect/filter/transform+bind, list push/insert/remove with bind/filter+transform/sort) and whole-pipeline loads gives trustworthy per-write numbers for the following experiments.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement (new bench target only).\n**Allowed changes:** `crates/benches/hot_paths.rs`, the `[[bench]]` entry in `crates/Cargo.toml`.\n**Forbidden in this experiment:** any production source change or optimization.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`cargo bench -p dxn_reactive --all-features --bench hot_paths -- --save-baseline base --warm-up-time 1 --measurement-time 2 --noplot`. Pass: the bench compiles, passes clippy (`--all-targets -D warnings`) and fmt, and every point reports a stable median.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nA per-write baseline for the hot paths; no production behavior change.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
