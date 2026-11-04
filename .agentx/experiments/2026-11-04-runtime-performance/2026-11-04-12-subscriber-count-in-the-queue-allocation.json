@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "4635f9e7-df18-4d15-a478-cbde770d0e55",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 12,
+  "type": "hypothesis",
+  "name": "Subscriber Count In The Queue Allocation",
+  "slug": "subscriber-count-in-the-queue-allocation",
+  "path": "2026-11-04-12-subscriber-count-in-the-queue-allocation.json",
+  "createdAt": "2026-11-04T23:37:22Z",
+  "startedAt": "2026-11-04T23:37:22Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Subscriber Count In The Queue Allocation Hypothesis\n\n### Hypothesis\n\nExperiment 11 showed a lock-free subscriber count speeds up every Signal write (−27% unobserved, −9% observed) but cost ~10% on subscription churn because the counter was a second `Arc` cloned into every subscription. Keeping the counter next to the mutex in the queue's single shared allocation keeps the lock-free read while subscriptions capture one `Weak`, as before.\n\n### Scope Lock\n\n**Tested mechanism:** atomic subscriber count stored in the same allocation as the queue mutex.\n**Allowed changes:** `crates/src/primitives/delivery.rs`.\n**Forbidden in this experiment:** new callers of `has_subscribers`, drain/enqueue lock changes, Signal changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFull lib + integration tests; clippy/fmt. Bench `hot_paths` (scalar-hot), `delivery_complexity` (run twice), `reactive_complexity` vs base. Pass: `signal-set-*` >=10% faster on reruns and fanout regression <5% on reruns.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nSignal write gains of experiment 11 without the subscription-churn cost.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

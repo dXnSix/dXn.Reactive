@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "id": "42bc4104-21ce-4dbc-b684-997d1e75c8db",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 11,
+  "type": "hypothesis",
+  "name": "Lock-Free DeliveryQueue Subscriber Count",
+  "slug": "lock-free-delivery-queue-subscriber-count",
+  "path": "2026-11-04-11-lock-free-delivery-queue-subscriber-count.json",
+  "createdAt": "2026-11-04T23:33:29Z",
+  "startedAt": "2026-11-04T23:33:29Z",
+  "finishedAt": "2026-11-04T23:37:12Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Lock-Free DeliveryQueue Subscriber Count Hypothesis\n\n### Hypothesis\n\n`DeliveryQueue::has_subscribers` locks the queue mutex; every `Signal` write calls it under the signal lock (experiment 10 measured ~20 ns per call). Mirroring the subscriber count into an atomic, updated under the queue lock whenever an entry is added or removed, answers it with one load and keeps the publisher/subscriber ordering argument (a subscriber registers before it snapshots under the publisher's lock).\n\n### Scope Lock\n\n**Tested mechanism:** atomic mirror of the subscriber count read by `has_subscribers`.\n**Allowed changes:** `crates/src/primitives/delivery.rs` (shared state struct holding the mutex and the counter).\n**Forbidden in this experiment:** new callers of `has_subscribers`, drain/enqueue lock changes, Signal changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `primitives::tests`, `primitives::delivery`, scalar tests (`tests`, `scalar_tests`) and full lib (DeliveryQueue is shared by everything); clippy/fmt. Bench `hot_paths` scalar-hot, `reactive_complexity`, `delivery_complexity` vs base. Pass: `signal-set-*` >=10% faster, no regression >10% elsewhere.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nSignal writes ~5-15 ns cheaper.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "delivery-queue-fanout/enqueue/1",
+      "before": "baseline (criterion saved)",
+      "after": "370.94 ns median",
+      "delta": "+9.5961%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "delivery-queue-fanout/enqueue/32",
+      "before": "baseline (criterion saved)",
+      "after": "3.1712 µs median",
+      "delta": "+12.267%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "delivery-queue-fanout/enqueue/256",
+      "before": "baseline (criterion saved)",
+      "after": "25.173 µs median",
+      "delta": "+8.4457%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "8.2968 ns median",
+      "delta": "-26.759%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "baseline (criterion saved)",
+      "after": "54.859 ns median",
+      "delta": "+96.930%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "baseline (criterion saved)",
+      "after": "3.9781 ns median",
+      "delta": "+0.9227%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "baseline (criterion saved)",
+      "after": "1.8801 µs median",
+      "delta": "+2.0918%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "baseline (criterion saved)",
+      "after": "26.158 ns median",
+      "delta": "-7.4783%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/1",
+      "before": "baseline (criterion saved)",
+      "after": "469.02 ns median",
+      "delta": "-3.9365%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/1",
+      "before": "baseline (criterion saved)",
+      "after": "945.98 ns median",
+      "delta": "+11.485%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/32",
+      "before": "baseline (criterion saved)",
+      "after": "5.6047 µs median",
+      "delta": "+0.1891%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/32",
+      "before": "baseline (criterion saved)",
+      "after": "6.7142 µs median",
+      "delta": "+3.9282%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/256",
+      "before": "baseline (criterion saved)",
+      "after": "46.416 µs median",
+      "delta": "+4.3342%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/256",
+      "before": "baseline (criterion saved)",
+      "after": "51.292 µs median",
+      "delta": "-0.9961%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Lock-Free DeliveryQueue Subscriber Count Finished\n\n**Index:** 11\n**Checkpoint:** 5bbac2b\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure. Next: keep the counter in the same allocation as the queue mutex so subscriptions capture one Weak as before.\n\n### Scope Lock\n\n**Tested mechanism:** tests pass; signal-set-no-subscribers -27% and signal-set-one-subscriber -9% (reproduced in two reruns; one +97% outlier was noise), but the subscribe-heavy delivery-queue-fanout bench regressed +6..+15% over three runs (mean ~10% at 32/256 subscribers): the counter lives in a second Arc, cloned into every subscription.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| delivery-queue-fanout/enqueue/1 | 370.94 ns median | +9.5961% |\n| delivery-queue-fanout/enqueue/32 | 3.1712 µs median | +12.267% |\n| delivery-queue-fanout/enqueue/256 | 25.173 µs median | +8.4457% |\n| scalar-hot/signal-set-no-subscribers | 8.2968 ns median | -26.759% |\n| scalar-hot/signal-set-one-subscriber | 54.859 ns median | +96.930% |\n| scalar-hot/signal-get | 3.9781 ns median | +0.9227% |\n| scalar-hot/computed-chain-8-set-and-get | 1.8801 µs median | +2.0918% |\n| scalar-hot/effect-on-filtered-map | 26.158 ns median | -7.4783% |\n| signal-and-computed/signal/1 | 469.02 ns median | -3.9365% |\n| signal-and-computed/computed/1 | 945.98 ns median | +11.485% |\n| signal-and-computed/signal/32 | 5.6047 µs median | +0.1891% |\n| signal-and-computed/computed/32 | 6.7142 µs median | +3.9282% |\n| signal-and-computed/signal/256 | 46.416 µs median | +4.3342% |\n| signal-and-computed/computed/256 | 51.292 µs median | -0.9961% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 5bbac2b.\n",
+  "notes": ""
+}

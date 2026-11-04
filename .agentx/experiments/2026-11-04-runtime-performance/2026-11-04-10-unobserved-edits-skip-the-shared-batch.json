@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "id": "7a18812b-81b7-4af4-aa9a-ae7cc5987e5a",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 10,
+  "type": "hypothesis",
+  "name": "Unobserved Edits Skip The Shared Batch",
+  "slug": "unobserved-edits-skip-the-shared-batch",
+  "path": "2026-11-04-10-unobserved-edits-skip-the-shared-batch.json",
+  "createdAt": "2026-11-04T23:30:53Z",
+  "startedAt": "2026-11-04T23:30:53Z",
+  "finishedAt": "2026-11-04T23:33:11Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Unobserved Edits Skip The Shared Batch Hypothesis\n\n### Hypothesis\n\n`SourceCache`/`SourceList::edit_at_version` deep-clones every committed batch into a shared envelope and pushes it to `preview` and `changes` even when neither queue has a subscriber (since experiment 9 an unwatched cache has none). Skipping the clone and pushes when both queues are unobserved — as `Signal` already does — removes O(batch) work from edits nobody observes; a later `connect` snapshots under the state lock, so it still sees the change.\n\n### Scope Lock\n\n**Tested mechanism:** publish the shared batch only when `preview` or `changes` has a subscriber.\n**Allowed changes:** the non-suspended publish branch of `edit_at_version` in `source_cache_impl.rs` and `list_state.rs`.\n**Forbidden in this experiment:** lock-free subscriber counts, suspension path, count_changed, DeliveryQueue internals.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: full lib + integration tests (both sources); clippy/fmt. Bench `hot_paths`, `tree`, `live_group` vs base. Pass: an unobserved bench (`update-no-subscribers` or `push-remove-no-subscribers`) or `tree` load improves >=5%, and `update-connect`/`push-remove-bind` regress <10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nFaster unobserved edits and tree loads (child caches are mostly unobserved at load).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "121.69 ns median",
+      "delta": "-20.665%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "179.06 ns median",
+      "delta": "+35.729%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "382.19 ns median",
+      "delta": "+18.309%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "315.83 ns median",
+      "delta": "+16.228%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.7635 ms median",
+      "delta": "+0.7257%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "134.68 ns median",
+      "delta": "-43.478%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "335.78 ns median",
+      "delta": "+20.328%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "6.7693 µs median",
+      "delta": "+1.2670%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "5.4365 µs median",
+      "delta": "+8.9966%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "30.778 µs median",
+      "delta": "-6.2272%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "775.05 µs median",
+      "delta": "-0.4576%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "776.73 µs median",
+      "delta": "-6.0133%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.0508 ms median",
+      "delta": "-4.4100%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.1807 ms median",
+      "delta": "-3.8021%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Unobserved Edits Skip The Shared Batch Finished\n\n**Index:** 10\n**Checkpoint:** 5bbac2b\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure. Next: a lock-free subscriber count in DeliveryQueue, then retry this skip.\n\n### Scope Lock\n\n**Tested mechanism:** tests pass and unobserved edits got faster (cache update-no-subscribers -21%, list push-remove-no-subscribers -43%), but observed edits regressed beyond the 10% gate (update-connect +36%, push-remove-bind +20%, filter +18%, transform-bind +16%): each has_subscribers() check is a DeliveryQueue mutex round trip (~20 ns), two per edit.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 121.69 ns median | -20.665% |\n| cache-hot/update-connect | 179.06 ns median | +35.729% |\n| cache-hot/update-filter-half | 382.19 ns median | +18.309% |\n| cache-hot/update-transform-bind | 315.83 ns median | +16.228% |\n| cache-hot/load-filter-transform-bind/10000 | 1.7635 ms median | +0.7257% |\n| list-hot/push-remove-no-subscribers | 134.68 ns median | -43.478% |\n| list-hot/push-remove-bind | 335.78 ns median | +20.328% |\n| list-hot/insert-remove-mid-filter-transform | 6.7693 µs median | +1.2670% |\n| list-hot/insert-remove-sort | 5.4365 µs median | +8.9966% |\n| list-hot/load-filter-transform-bind/10000 | 30.778 µs median | -6.2272% |\n| transform-to-tree-load/flat/1000 | 775.05 µs median | -0.4576% |\n| transform-to-tree-load/bushy/1000 | 776.73 µs median | -6.0133% |\n| transform-to-tree-load/flat/4000 | 3.0508 ms median | -4.4100% |\n| transform-to-tree-load/bushy/4000 | 3.1807 ms median | -3.8021% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 5bbac2b.\n",
+  "notes": ""
+}

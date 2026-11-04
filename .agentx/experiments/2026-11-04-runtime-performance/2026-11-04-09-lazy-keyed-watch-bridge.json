@@ -9,11 +9,11 @@
   "path": "2026-11-04-09-lazy-keyed-watch-bridge.json",
   "createdAt": "2026-11-04T23:26:48Z",
   "startedAt": "2026-11-04T23:26:48Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:30:30Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
-  "resultCommit": "",
+  "resultCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a579848248c59e4fbc776f6d993a484e359b5299",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
-      "resultCommit": "",
+      "resultCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a579848248c59e4fbc776f6d993a484e359b5299",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,114 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "184.40 ns median",
+      "delta": "+33.814%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "140.73 ns median",
+      "delta": "+5.3052%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "346.01 ns median",
+      "delta": "+5.5549%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "296.06 ns median",
+      "delta": "+11.578%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.7562 ms median",
+      "delta": "-0.5310%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/1",
+      "before": "baseline (criterion saved)",
+      "after": "3.9710 µs median",
+      "delta": "+6.2103%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/32",
+      "before": "baseline (criterion saved)",
+      "after": "9.7639 µs median",
+      "delta": "+0.4096%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/256",
+      "before": "baseline (criterion saved)",
+      "after": "40.196 µs median",
+      "delta": "+1.9287%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/640",
+      "before": "baseline (criterion saved)",
+      "after": "188.43 µs median",
+      "delta": "+0.6619%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/1280",
+      "before": "baseline (criterion saved)",
+      "after": "374.29 µs median",
+      "delta": "-0.1583%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.9540 ms median",
+      "delta": "-0.9817%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "779.76 µs median",
+      "delta": "-12.946%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "832.97 µs median",
+      "delta": "-16.122%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.3233 ms median",
+      "delta": "-18.532%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.5170 ms median",
+      "delta": "-14.263%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Lazy Keyed-Watch Bridge Finished\n\n**Index:** 9\n**Checkpoint:** a579848\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 633 lib + 33 integration tests pass; tree loads -13..-18%, keyed watch and live group unchanged. update-no-subscribers varied +6..+34% over three runs while doing strictly less work (no bridge delivery); the same bench showed +30% on unchanged code in experiment 4's control, so it is treated as noise.\n\n### Scope Lock\n\n**Tested mechanism:** lazy creation of the keyed hub and its bridge on first watch\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 184.40 ns median | +33.814% |\n| cache-hot/update-connect | 140.73 ns median | +5.3052% |\n| cache-hot/update-filter-half | 346.01 ns median | +5.5549% |\n| cache-hot/update-transform-bind | 296.06 ns median | +11.578% |\n| cache-hot/load-filter-transform-bind/10000 | 1.7562 ms median | -0.5310% |\n| keyed-watch-sparse-delivery/1 | 3.9710 µs median | +6.2103% |\n| keyed-watch-sparse-delivery/32 | 9.7639 µs median | +0.4096% |\n| keyed-watch-sparse-delivery/256 | 40.196 µs median | +1.9287% |\n| live-group-touched-members/640 | 188.43 µs median | +0.6619% |\n| live-group-touched-members/1280 | 374.29 µs median | -0.1583% |\n| live-group-touched-members/10000 | 2.9540 ms median | -0.9817% |\n| transform-to-tree-load/flat/1000 | 779.76 µs median | -12.946% |\n| transform-to-tree-load/bushy/1000 | 832.97 µs median | -16.122% |\n| transform-to-tree-load/flat/4000 | 3.3233 ms median | -18.532% |\n| transform-to-tree-load/bushy/4000 | 3.5170 ms median | -14.263% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

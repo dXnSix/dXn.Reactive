@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::primitives::error::{ReactiveError, Result};
@@ -38,6 +38,14 @@ impl<T> DeliveryState<T> {
     }
 }
 
+/// The queue state and its subscriber count, in one allocation.
+struct Shared<T> {
+    state: Mutex<DeliveryState<T>>,
+    /// The number of registered subscribers, mirrored from `entries` under the lock so
+    /// `has_subscribers` needs no lock.
+    subscribers: AtomicUsize,
+}
+
 /// A FIFO queue that delivers items to its subscribers one at a time.
 ///
 /// Items are delivered strictly in push order and subscribers are invoked in
@@ -45,13 +53,13 @@ impl<T> DeliveryState<T> {
 /// while another thread (or a subscriber on the draining thread) is delivering
 /// is queued and delivered by that draining thread, never recursively.
 pub struct DeliveryQueue<T> {
-    state: Arc<Mutex<DeliveryState<T>>>,
+    shared: Arc<Shared<T>>,
 }
 
 impl<T> Clone for DeliveryQueue<T> {
     fn clone(&self) -> Self {
         Self {
-            state: Arc::clone(&self.state),
+            shared: Arc::clone(&self.shared),
         }
     }
 }
@@ -66,20 +74,26 @@ impl<T> DeliveryQueue<T> {
     /// Creates a queue without subscribers or pending items.
     pub fn new() -> Self {
         Self {
-            state: Arc::new(Mutex::new(DeliveryState {
-                queue: VecDeque::new(),
-                entries: Vec::new(),
-                snapshot: None,
-                next_subscriber_id: 0,
-                delivering: false,
-                #[cfg(test)]
-                snapshot_rebuilds: 0,
-            })),
+            shared: Arc::new(Shared {
+                state: Mutex::new(DeliveryState {
+                    queue: VecDeque::new(),
+                    entries: Vec::new(),
+                    snapshot: None,
+                    next_subscriber_id: 0,
+                    delivering: false,
+                    #[cfg(test)]
+                    snapshot_rebuilds: 0,
+                }),
+                subscribers: AtomicUsize::new(0),
+            }),
         }
     }
 
     fn lock(&self) -> Result<MutexGuard<'_, DeliveryState<T>>> {
-        self.state.lock().map_err(|_| ReactiveError::Poisoned)
+        self.shared
+            .state
+            .lock()
+            .map_err(|_| ReactiveError::Poisoned)
     }
 
     /// Number of items pushed but not yet delivered.
@@ -88,8 +102,12 @@ impl<T> DeliveryQueue<T> {
     }
 
     /// Whether any subscriber is registered (a publisher may skip building items).
+    ///
+    /// A subscriber is counted before its `subscribe` returns, so a publisher that checks
+    /// while holding its own state lock either sees it or commits before the subscriber
+    /// takes its snapshot under that lock.
     pub(crate) fn has_subscribers(&self) -> bool {
-        self.lock().is_ok_and(|state| !state.entries.is_empty())
+        self.shared.subscribers.load(Ordering::SeqCst) != 0
     }
 
     #[cfg(test)]
@@ -118,26 +136,33 @@ impl<T: Send + 'static> DeliveryQueue<T> {
                 active: Arc::clone(&active),
                 subscriber: Arc::new(subscriber),
             }));
+            self.shared
+                .subscribers
+                .store(state.entries.len(), Ordering::SeqCst);
             stale_snapshot = state.snapshot.take();
             id
         };
         drop(stale_snapshot);
-        let state = Arc::downgrade(&self.state);
+        let shared = Arc::downgrade(&self.shared);
         Ok(Subscription::new(move || {
             // Cleared before taking the lock so the delivering thread never calls a
             // subscriber after its disposal on that thread returned.
             active.store(false, Ordering::SeqCst);
-            let Some(state) = state.upgrade() else {
+            let Some(shared) = shared.upgrade() else {
                 return;
             };
             // The removed entry and the stale snapshot are dropped after unlocking: the
             // subscriber closure may own other subscriptions to this queue.
-            let removed = state.lock().ok().and_then(|mut state| {
+            let removed = shared.state.lock().ok().and_then(|mut state| {
                 let position = state
                     .entries
                     .binary_search_by_key(&id, |entry| entry.id)
                     .ok()?;
-                Some((state.entries.remove(position), state.snapshot.take()))
+                let removed = state.entries.remove(position);
+                shared
+                    .subscribers
+                    .store(state.entries.len(), Ordering::SeqCst);
+                Some((removed, state.snapshot.take()))
             });
             drop(removed);
         }))
@@ -176,7 +201,7 @@ impl<T> DeliveryQueue<T> {
         }
 
         let mut guard = DrainGuard {
-            state: &self.state,
+            state: &self.shared.state,
             armed: true,
         };
 

@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "a579848248c59e4fbc776f6d993a484e359b5299",
+  "lastStableCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "a579848248c59e4fbc776f6d993a484e359b5299"
+      "lastStableCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "2745c98f-85d9-435d-b648-cd37c5c1444e",
-  "nextExperimentIndex": 10,
+  "currentExperimentId": "4635f9e7-df18-4d15-a478-cbde770d0e55",
+  "nextExperimentIndex": 13,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -132,6 +132,40 @@
       "name": "Lazy Keyed-Watch Bridge",
       "path": "2026-11-04-09-lazy-keyed-watch-bridge.json",
       "startedAt": "2026-11-04T23:26:48Z",
+      "finishedAt": "2026-11-04T23:30:30Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "5bbac2b92202d51ab0e5bcadae92df3af3fb9fa8"
+    },
+    {
+      "id": "7a18812b-81b7-4af4-aa9a-ae7cc5987e5a",
+      "index": 10,
+      "type": "hypothesis",
+      "name": "Unobserved Edits Skip The Shared Batch",
+      "path": "2026-11-04-10-unobserved-edits-skip-the-shared-batch.json",
+      "startedAt": "2026-11-04T23:30:53Z",
+      "finishedAt": "2026-11-04T23:33:11Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "42bc4104-21ce-4dbc-b684-997d1e75c8db",
+      "index": 11,
+      "type": "hypothesis",
+      "name": "Lock-Free DeliveryQueue Subscriber Count",
+      "path": "2026-11-04-11-lock-free-delivery-queue-subscriber-count.json",
+      "startedAt": "2026-11-04T23:33:29Z",
+      "finishedAt": "2026-11-04T23:37:12Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "4635f9e7-df18-4d15-a478-cbde770d0e55",
+      "index": 12,
+      "type": "hypothesis",
+      "name": "Subscriber Count In The Queue Allocation",
+      "path": "2026-11-04-12-subscriber-count-in-the-queue-allocation.json",
+      "startedAt": "2026-11-04T23:37:22Z",
       "finishedAt": null,
       "state": "running",
       "status": ""
