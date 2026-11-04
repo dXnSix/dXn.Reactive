@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "188ce83c-643e-44a6-86fb-ae6dc7c11dcd",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 7,
+  "type": "hypothesis",
+  "name": "Batch Capacity Reservation",
+  "slug": "batch-capacity-reservation",
+  "path": "2026-11-04-07-batch-capacity-reservation.json",
+  "createdAt": "2026-11-04T23:20:03Z",
+  "startedAt": "2026-11-04T23:20:03Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 87b5453bd38124fdb99264b8810a281d9fc86771",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 87b5453bd38124fdb99264b8810a281d9fc86771",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Batch Capacity Reservation Hypothesis\n\n### Hypothesis\n\nLoading 10k rows through a cache pipeline spends ~40% of samples in `hashbrown::reserve_rehash`: every mirror (source items + order, filter items + order, transform source items + order + projections, bind items + order) grows its tables by repeated doubling. Reserving capacity once per batch for the tables that receive every added key — the source on an initial range load, and the operator mirrors for the batch's `Add` count — removes that regrowth.\n\n### Scope Lock\n\n**Tested mechanism:** one capacity reservation per add-heavy batch.\n**Allowed changes:** `KeyOrder::reserve`; `CacheUpdater::add_or_update_range` (reserve when the cache is empty); `apply_source` of `CacheDynamicFilterState` (items/order only), `CacheTransformState`, and `CacheRemoveKeyState::apply`.\n**Forbidden in this experiment:** redundant-lookup removal, hasher changes, reserving the filter's included-only tables.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: full lib tests (KeyOrder is shared); clippy/fmt. Bench `hot_paths`, `keyed_sort`, `sort_and_page`, `joins`, `tree`, `live_group` vs base. Pass: `cache-hot/load-filter-transform-bind` >=10% faster; single-update benches not regressed beyond noise.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n10-30% faster cache pipeline loads.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

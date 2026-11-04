@@ -40,6 +40,9 @@ where
 
     fn apply(&mut self, batch: &ChangeSet<CacheChange<K, T>>) -> Vec<ListChange<T>> {
         let mut changes = Vec::new();
+        let added = added_key_count(&batch.changes);
+        self.items.reserve(added);
+        self.order.reserve(added);
         for change in &batch.changes {
             self.apply_change(change, &mut changes);
         }

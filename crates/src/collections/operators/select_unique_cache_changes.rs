@@ -21,6 +21,15 @@ where
     }
 }
 
+/// The number of `Add`s in `changes`: room to reserve in a mirror that receives every added
+/// key.
+fn added_key_count<K, T>(changes: &[CacheChange<K, T>]) -> usize {
+    changes
+        .iter()
+        .filter(|change| matches!(change, CacheChange::Add { .. }))
+        .count()
+}
+
 fn move_cache_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: &K, index: usize) {
     if let Some(previous_index) = order.index_of(key) {
         let _ = order.move_to(previous_index, index);

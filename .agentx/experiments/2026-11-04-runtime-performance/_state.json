@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "5ad90cfe285edf65ebb8161af453d44f88039e43",
+  "lastStableCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "5ad90cfe285edf65ebb8161af453d44f88039e43"
+      "lastStableCommit": "87b5453bd38124fdb99264b8810a281d9fc86771"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "3ca64b47-9267-42ac-8837-fc98ae0e0ae6",
-  "nextExperimentIndex": 6,
+  "currentExperimentId": "188ce83c-643e-44a6-86fb-ae6dc7c11dcd",
+  "nextExperimentIndex": 8,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -85,6 +85,29 @@
       "name": "Bound Vec Replaces Remove-Add Pairs In Place",
       "path": "2026-11-04-05-bound-vec-replaces-remove-add-pairs-in-place.json",
       "startedAt": "2026-11-04T23:13:39Z",
+      "finishedAt": "2026-11-04T23:15:22Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "87b5453bd38124fdb99264b8810a281d9fc86771"
+    },
+    {
+      "id": "14ccf38d-acdb-4483-8dc8-c700b3c3974b",
+      "index": 6,
+      "type": "hypothesis",
+      "name": "KeyOrder Inserts Known-New Keys Without Lookup",
+      "path": "2026-11-04-06-key-order-inserts-known-new-keys-without-lookup.json",
+      "startedAt": "2026-11-04T23:17:06Z",
+      "finishedAt": "2026-11-04T23:19:29Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "188ce83c-643e-44a6-86fb-ae6dc7c11dcd",
+      "index": 7,
+      "type": "hypothesis",
+      "name": "Batch Capacity Reservation",
+      "path": "2026-11-04-07-batch-capacity-reservation.json",
+      "startedAt": "2026-11-04T23:20:03Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

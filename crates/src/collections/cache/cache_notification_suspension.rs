@@ -196,6 +196,13 @@ where
 
     /// Inserts or updates every item in `items`.
     pub fn add_or_update_range(&mut self, items: impl IntoIterator<Item = T>) {
+        let items = items.into_iter();
+        // A load into an empty cache adds every item: size the tables once.
+        if self.items.is_empty() {
+            let (additional, _) = items.size_hint();
+            self.items.reserve(additional);
+            self.order.reserve(additional);
+        }
         for item in items {
             self.add_or_update(item);
         }

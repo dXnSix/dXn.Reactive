@@ -9,11 +9,11 @@
   "path": "2026-11-04-05-bound-vec-replaces-remove-add-pairs-in-place.json",
   "createdAt": "2026-11-04T23:13:39Z",
   "startedAt": "2026-11-04T23:13:39Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:15:22Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "5ad90cfe285edf65ebb8161af453d44f88039e43",
-  "resultCommit": "",
+  "resultCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5ad90cfe285edf65ebb8161af453d44f88039e43",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "5ad90cfe285edf65ebb8161af453d44f88039e43",
-      "resultCommit": "",
+      "resultCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5ad90cfe285edf65ebb8161af453d44f88039e43",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "87b5453bd38124fdb99264b8810a281d9fc86771"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,79 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "133.31 ns median",
+      "delta": "-20.984%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "140.88 ns median",
+      "delta": "+2.1873%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "327.83 ns median",
+      "delta": "+1.7000%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "275.04 ns median",
+      "delta": "-77.086%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "3.0340 ms median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "235.08 ns median",
+      "delta": "-2.4443%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "267.03 ns median",
+      "delta": "-6.7780%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "6.6112 µs median",
+      "delta": "-0.0823%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "5.4225 µs median",
+      "delta": "+12.404%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "30.684 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Bound Vec Replaces Remove-Add Pairs In Place Finished\n\n**Index:** 5\n**Checkpoint:** 5ad90cf\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 134 focused tests pass (bridges, materialization, ref_count, switch, side effects, aggregation, public API); update-transform-bind 1.14 us -> 275 ns. insert-remove-sort (+12%) does not execute apply_list_changes: noise.\n\n### Scope Lock\n\n**Tested mechanism:** coalescing an adjacent Remove/Add at the same index into an in-place write\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 133.31 ns median | -20.984% |\n| cache-hot/update-connect | 140.88 ns median | +2.1873% |\n| cache-hot/update-filter-half | 327.83 ns median | +1.7000% |\n| cache-hot/update-transform-bind | 275.04 ns median | -77.086% |\n| cache-hot/load-filter-transform-bind/10000 | 3.0340 ms median | n/a |\n| list-hot/push-remove-no-subscribers | 235.08 ns median | -2.4443% |\n| list-hot/push-remove-bind | 267.03 ns median | -6.7780% |\n| list-hot/insert-remove-mid-filter-transform | 6.6112 µs median | -0.0823% |\n| list-hot/insert-remove-sort | 5.4225 µs median | +12.404% |\n| list-hot/load-filter-transform-bind/10000 | 30.684 µs median | n/a |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

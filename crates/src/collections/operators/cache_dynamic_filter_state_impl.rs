@@ -16,6 +16,9 @@ where
         };
 
         let mut changes = Vec::new();
+        let added = added_key_count(&batch.changes);
+        self.items.reserve(added);
+        self.order.reserve(added);
         for change in &batch.changes {
             self.apply_source_change(change, &state, predicate, &mut changes);
         }

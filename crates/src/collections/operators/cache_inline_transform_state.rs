@@ -11,6 +11,10 @@ where
         transform_on_refresh: bool,
     ) -> Option<ChangeSet<CacheChange<K, U>>> {
         let mut changes = Vec::new();
+        let added = added_key_count(&batch.changes);
+        self.source_items.reserve(added);
+        self.order.reserve(added);
+        self.projected.reserve(added);
 
         for change in &batch.changes {
             match change {

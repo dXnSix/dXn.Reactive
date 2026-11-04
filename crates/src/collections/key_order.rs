@@ -85,6 +85,14 @@ where
             .map(|ticket| self.current(self.positions[*ticket]))
     }
 
+    /// Reserves room for `additional` more keys.
+    pub(crate) fn reserve(&mut self, additional: usize) {
+        self.keys.reserve(additional);
+        self.tickets.reserve(additional);
+        self.positions.reserve(additional);
+        self.ticket_of.reserve(additional);
+    }
+
     pub(crate) fn contains_key(&self, key: &K) -> bool {
         self.ticket_of.contains_key(key)
     }

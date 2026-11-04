@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "id": "14ccf38d-acdb-4483-8dc8-c700b3c3974b",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 6,
+  "type": "hypothesis",
+  "name": "KeyOrder Inserts Known-New Keys Without Lookup",
+  "slug": "key-order-inserts-known-new-keys-without-lookup",
+  "path": "2026-11-04-06-key-order-inserts-known-new-keys-without-lookup.json",
+  "createdAt": "2026-11-04T23:17:06Z",
+  "startedAt": "2026-11-04T23:17:06Z",
+  "finishedAt": "2026-11-04T23:19:29Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 87b5453bd38124fdb99264b8810a281d9fc86771",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "87b5453bd38124fdb99264b8810a281d9fc86771",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 87b5453bd38124fdb99264b8810a281d9fc86771",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## KeyOrder Inserts Known-New Keys Without Lookup Hypothesis\n\n### Hypothesis\n\nEvery new key costs up to three hashes in each `KeyOrder`: callers check `index_of` first, `KeyOrder::insert` checks `index_of` again, then inserts into `ticket_of`. The profile of a 10k-row cache pipeline load shows `KeyOrder::insert` at 46% inclusive and `index_of` at 19%. An `insert_new`/`push_new` entry point for keys the caller already knows are absent removes the redundant lookups.\n\n### Scope Lock\n\n**Tested mechanism:** skip the existence lookup when inserting a key known to be absent.\n**Allowed changes:** `KeyOrder` (`insert_new`, `push_new`), and the callers that already proved absence: `CacheUpdater::add_or_update_key_at`, `insert_cache_key` (operators), `CacheRemoveKeyState::insert`, the cache filter's appended-add path.\n**Forbidden in this experiment:** capacity reservation, hasher changes, other operator restructuring.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: KeyOrder unit tests, `collections::tests::{sources,source_bookkeeping_costs,operator_bookkeeping_costs,subset_operator_indexes,index_contract_harness,key_bridge_indexes,transforms_filters,keyed_sort_positions,snapshot_diff_indexes,materialization_reliability}`; clippy/fmt. Bench `hot_paths` + `keyed_sort` + `sort_and_page` vs base. Pass: tests green, `cache-hot/load-filter-transform-bind` improves >=10%, no regression >5% on touched paths.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n10-25% faster cache loads.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "128.08 ns median",
+      "delta": "-1.9685%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "136.18 ns median",
+      "delta": "-1.9159%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "330.42 ns median",
+      "delta": "+1.5493%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "287.38 ns median",
+      "delta": "+6.0518%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.9134 ms median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "186.20 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "391.16 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "3.4928 ms median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "194.65 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "baseline (criterion saved)",
+      "after": "13.338 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.0948 ms median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "baseline (criterion saved)",
+      "after": "128.57 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## KeyOrder Inserts Known-New Keys Without Lookup Finished\n\n**Index:** 6\n**Checkpoint:** 87b5453\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure. Next hypothesis: reserve capacity for add-heavy batches.\n\n### Scope Lock\n\n**Tested mechanism:** all 633 lib tests pass, but cache-hot/load-filter-transform-bind improved only 4% (2.91 ms) against the predeclared >=10% target; keyed-sort and sort-and-page loads moved 2-4%. The redundant existence lookups are a minor share; the larger cost is hash-table regrowth (reserve_rehash ~40% of samples).\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 128.08 ns median | -1.9685% |\n| cache-hot/update-connect | 136.18 ns median | -1.9159% |\n| cache-hot/update-filter-half | 330.42 ns median | +1.5493% |\n| cache-hot/update-transform-bind | 287.38 ns median | +6.0518% |\n| cache-hot/load-filter-transform-bind/10000 | 2.9134 ms median | n/a |\n| keyed-sort-large-add-batch/640 | 186.20 µs median | n/a |\n| keyed-sort-large-add-batch/1280 | 391.16 µs median | n/a |\n| keyed-sort-large-add-batch/10000 | 3.4928 ms median | n/a |\n| sort-and-page/load/1000 | 194.65 µs median | n/a |\n| sort-and-page/update/1000 | 13.338 µs median | n/a |\n| sort-and-page/load/10000 | 2.0948 ms median | n/a |\n| sort-and-page/update/10000 | 128.57 µs median | n/a |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 87b5453; no commit.\n",
+  "notes": ""
+}
