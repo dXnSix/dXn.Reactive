@@ -185,7 +185,22 @@ where
 /// A change whose index is out of range for `target` is skipped. `Refresh` writes the carried
 /// item into its slot, and `Clear` empties `target` whatever items it lists.
 pub fn apply_list_changes<T: Clone>(target: &mut Vec<T>, changes: &[ListChange<T>]) {
-    for change in changes {
+    let mut changes = changes.iter().peekable();
+    while let Some(change) = changes.next() {
+        // A removal followed by an insertion at the same index (an update) is the same as
+        // overwriting that slot, without shifting the rest of the vector twice.
+        if let ListChange::Remove { index, .. } = change
+            && *index < target.len()
+            && let Some(ListChange::Add {
+                index: added,
+                item,
+            }) = changes.peek()
+            && added == index
+        {
+            target[*index] = item.clone();
+            let _ = changes.next();
+            continue;
+        }
         match change {
             ListChange::Add { index, item } => {
                 if *index <= target.len() {

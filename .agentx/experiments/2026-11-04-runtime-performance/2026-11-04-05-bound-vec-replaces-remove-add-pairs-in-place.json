@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "3ca64b47-9267-42ac-8837-fc98ae0e0ae6",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 5,
+  "type": "hypothesis",
+  "name": "Bound Vec Replaces Remove-Add Pairs In Place",
+  "slug": "bound-vec-replaces-remove-add-pairs-in-place",
+  "path": "2026-11-04-05-bound-vec-replaces-remove-add-pairs-in-place.json",
+  "createdAt": "2026-11-04T23:13:39Z",
+  "startedAt": "2026-11-04T23:13:39Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "5ad90cfe285edf65ebb8161af453d44f88039e43",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5ad90cfe285edf65ebb8161af453d44f88039e43",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "5ad90cfe285edf65ebb8161af453d44f88039e43",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 5ad90cfe285edf65ebb8161af453d44f88039e43",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Bound Vec Replaces Remove-Add Pairs In Place Hypothesis\n\n### Hypothesis\n\n`apply_list_changes` (used by every `bind_to_vec`) applies an update arriving as `Remove{i}` followed by `Add{i}` as two `Vec` shifts (two O(n) memmoves). Applying such an adjacent pair as one in-place assignment yields the identical vector in O(1).\n\n### Scope Lock\n\n**Tested mechanism:** coalescing an adjacent Remove/Add at the same index into an in-place write.\n**Allowed changes:** `apply_list_changes` in `crates/src/collections/operators/apply_list_changes.rs`.\n**Forbidden in this experiment:** changing emitted change sets, the remove-key bridge, any operator.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{materialization_reliability,key_bridge_indexes,index_contract_harness,subset_operator_indexes,combination_materialization_population,snapshot_diff_indexes}` plus public tests mentioning `apply_list_changes`; clippy/fmt. Bench `hot_paths` vs base. Pass: tests green, `cache-hot/update-transform-bind` improves >=20%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n`update-transform-bind` drops from ~1.1 us toward ~0.4 us.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
