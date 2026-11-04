@@ -293,13 +293,27 @@ where
         if self.filtered.len() == self.order.len() {
             return Some(source_index);
         }
-        Some(
-            self.order
-                .iter()
-                .take(source_index)
-                .filter(|existing| self.filtered.contains_key(*existing))
-                .count(),
-        )
+        // The filtered order holds the included keys in source order, apart from `key` itself,
+        // which may still sit at its old place: binary search the others by source position.
+        let own = self.filtered_order.index_of(key);
+        let others = self.filtered_order.len() - usize::from(own.is_some());
+        let source_position = |index: usize| {
+            let index = match own {
+                Some(own) if index >= own => index + 1,
+                _ => index,
+            };
+            self.order.index_of(&self.filtered_order[index])
+        };
+        let (mut low, mut high) = (0, others);
+        while low < high {
+            let middle = low + (high - low) / 2;
+            if source_position(middle).is_some_and(|position| position < source_index) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        Some(low)
     }
 
     fn emit(

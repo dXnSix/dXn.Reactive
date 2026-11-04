@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
+  "lastStableCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23"
+      "lastStableCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "dd5694a7-d3d0-4ee7-b9f3-2f55371ab659",
-  "nextExperimentIndex": 3,
+  "currentExperimentId": "a82bf626-ec00-4b86-8f56-cc146239f7b0",
+  "nextExperimentIndex": 4,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -49,6 +49,18 @@
       "name": "Hot-Path Bench Harness",
       "path": "2026-11-04-02-hot-path-bench-harness.json",
       "startedAt": "2026-11-04T23:05:39Z",
+      "finishedAt": "2026-11-04T23:07:13Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669"
+    },
+    {
+      "id": "a82bf626-ec00-4b86-8f56-cc146239f7b0",
+      "index": 3,
+      "type": "hypothesis",
+      "name": "Cache Filter Visible Index Binary Search",
+      "path": "2026-11-04-03-cache-filter-visible-index-binary-search.json",
+      "startedAt": "2026-11-04T23:10:28Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

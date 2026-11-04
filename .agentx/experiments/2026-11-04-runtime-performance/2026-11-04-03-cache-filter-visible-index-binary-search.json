@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "a82bf626-ec00-4b86-8f56-cc146239f7b0",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 3,
+  "type": "hypothesis",
+  "name": "Cache Filter Visible Index Binary Search",
+  "slug": "cache-filter-visible-index-binary-search",
+  "path": "2026-11-04-03-cache-filter-visible-index-binary-search.json",
+  "createdAt": "2026-11-04T23:10:28Z",
+  "startedAt": "2026-11-04T23:10:28Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Cache Filter Visible Index Binary Search Hypothesis\n\n### Hypothesis\n\n`CacheDynamicFilterState::visible_index_for_key` counts included keys before the source position linearly (O(n) per update/refresh/move once any key is excluded). The filtered order is the included keys as a subsequence of the source order (except possibly the key itself at a stale place), so a binary search over it by source position returns the same index in O(log m) lookups.\n\n### Scope Lock\n\n**Tested mechanism:** binary search of the filtered order by source position.\n**Allowed changes:** `visible_index_for_key` in `crates/src/collections/operators/cache_dynamic_filter_state_impl.rs`.\n**Forbidden in this experiment:** list filter scans, inline transform scans, any other operator.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{subset_operator_indexes,transforms_filters,ordered_emission_core,snapshot_diff_indexes,index_contract_harness,operator_bookkeeping_costs,operator_input_interop}`; clippy/fmt. Bench: `hot_paths` vs `base`. Pass: tests green and `cache-hot/update-filter-half` at least 5x faster with no regression > 5% elsewhere in `cache-hot`.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n`update-filter-half` drops from ~25 us to sub-microsecond.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

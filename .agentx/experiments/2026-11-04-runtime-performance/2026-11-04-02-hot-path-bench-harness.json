@@ -9,11 +9,11 @@
   "path": "2026-11-04-02-hot-path-bench-harness.json",
   "createdAt": "2026-11-04T23:05:39Z",
   "startedAt": "2026-11-04T23:05:39Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-04T23:07:13Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
-  "resultCommit": "",
+  "resultCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 6f402438ef25a9503f81bde7e8be4408a4a71e23",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "6f402438ef25a9503f81bde7e8be4408a4a71e23",
-      "resultCommit": "",
+      "resultCommit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 6f402438ef25a9503f81bde7e8be4408a4a71e23",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "d78f8b38bc460c4ff8160d9a6d781bc64e3ff669"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,114 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "n/a (new bench)",
+      "after": "11.221 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "n/a (new bench)",
+      "after": "28.019 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "n/a (new bench)",
+      "after": "3.9357 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "n/a (new bench)",
+      "after": "1.8227 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "n/a (new bench)",
+      "after": "28.564 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "n/a (new bench)",
+      "after": "136.10 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "n/a (new bench)",
+      "after": "138.65 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "n/a (new bench)",
+      "after": "25.278 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "n/a (new bench)",
+      "after": "9.3551 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "n/a (new bench)",
+      "after": "2.9832 ms median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "n/a (new bench)",
+      "after": "235.30 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "n/a (new bench)",
+      "after": "264.79 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "n/a (new bench)",
+      "after": "6.6129 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "n/a (new bench)",
+      "after": "5.3586 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "n/a (new bench)",
+      "after": "30.878 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench hot_paths -- --save-baseline base"
+    }
+  ],
+  "reportMarkdown": "## Hot-Path Bench Harness Finished\n\n**Index:** 2\n**Checkpoint:** 6f40243\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — the new `hot_paths` bench builds, passes clippy/fmt, and reports stable medians.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement.\n**Out-of-scope changes:** none.\n\n### Measurements (new baseline)\n\n| Bench | Median |\n| --- | ---: |\n| scalar-hot/signal-set-no-subscribers | 11.221 ns median |\n| scalar-hot/signal-set-one-subscriber | 28.019 ns median |\n| scalar-hot/signal-get | 3.9357 ns median |\n| scalar-hot/computed-chain-8-set-and-get | 1.8227 µs median |\n| scalar-hot/effect-on-filtered-map | 28.564 ns median |\n| cache-hot/update-no-subscribers | 136.10 ns median |\n| cache-hot/update-connect | 138.65 ns median |\n| cache-hot/update-filter-half | 25.278 µs median |\n| cache-hot/update-transform-bind | 9.3551 µs median |\n| cache-hot/load-filter-transform-bind/10000 | 2.9832 ms median |\n| list-hot/push-remove-no-subscribers | 235.30 ns median |\n| list-hot/push-remove-bind | 264.79 ns median |\n| list-hot/insert-remove-mid-filter-transform | 6.6129 µs median |\n| list-hot/insert-remove-sort | 5.3586 µs median |\n| list-hot/load-filter-transform-bind/10000 | 30.878 µs median |\n\n### Findings\n\n- A filtered cache update costs 25 µs at 10k rows (O(n) visible-index scan), transform+bind 9.4 µs per update.\n- Loading 10k rows through cache filter→transform→bind costs 2.98 ms (≈300 ns/row) versus 31 µs for the list equivalent.\n- List insert/remove in the middle with filter+transform costs 6.6 µs; with sort 5.4 µs.\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success: the bench is the per-write measurement baseline for later experiments.\n",
   "notes": ""
 }
