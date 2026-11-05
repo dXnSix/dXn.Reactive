@@ -56,14 +56,18 @@ impl<V: Send + 'static> OrderedEmitter<V> {
     /// Computes the next batch under `state`'s lock, queues it before unlocking, then
     /// delivers. A poisoned state lock emits nothing.
     pub(crate) fn update<S>(&self, state: &Mutex<S>, compute: impl FnOnce(&mut S) -> Option<V>) {
-        {
+        let claimed = {
             let Ok(mut state) = state.lock() else {
                 return;
             };
-            if let Some(value) = compute(&mut state) {
-                self.push(value);
-            }
+            // An idle queue is claimed in the push's critical section, saving a round trip.
+            compute(&mut state).and_then(|value| self.queue.push_or_claim(value).ok().flatten())
+        };
+        match claimed {
+            Some(claimed) => match claimed.deliver() {
+                Ok(()) | Err(_) => {}
+            },
+            None => self.drain(),
         }
-        self.drain();
     }
 }

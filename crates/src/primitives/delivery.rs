@@ -7,6 +7,9 @@ use crate::primitives::subscription::Subscription;
 
 type Subscriber<T> = Arc<dyn Fn(&T) + Send + Sync>;
 
+/// An item with the subscribers it is delivered to.
+type Delivery<T> = (T, Arc<[Arc<Entry<T>>]>);
+
 struct Entry<T> {
     id: u64,
     active: Arc<AtomicBool>,
@@ -205,7 +208,7 @@ impl<T> DeliveryQueue<T> {
             return Ok(());
         }
         // Claiming the drain and popping its first item share one critical section.
-        let mut next = {
+        let first = {
             let mut state = self.lock()?;
             if state.delivering {
                 return Ok(());
@@ -217,14 +220,39 @@ impl<T> DeliveryQueue<T> {
                 .pending
                 .store(state.queue.len(), Ordering::SeqCst);
             state.delivering = true;
-            Some((item, state.snapshot()))
+            (item, state.snapshot())
         };
+        self.deliver_from(first)
+    }
 
+    /// Queues `item`, unless no drain is running and nothing is queued: then the drain is
+    /// claimed in the same critical section and `item` is handed back, to be delivered with
+    /// [`ClaimedDrain::deliver`] once the caller released its own lock. Either way the
+    /// delivery order is the order of the calls.
+    pub(crate) fn push_or_claim(&self, item: T) -> Result<Option<ClaimedDrain<'_, T>>> {
+        let mut state = self.lock()?;
+        if state.delivering || !state.queue.is_empty() {
+            state.queue.push_back(item);
+            self.shared
+                .pending
+                .store(state.queue.len(), Ordering::SeqCst);
+            return Ok(None);
+        }
+        state.delivering = true;
+        let subscribers = state.snapshot();
+        Ok(Some(ClaimedDrain {
+            queue: self,
+            first: Some((item, subscribers)),
+        }))
+    }
+
+    /// Delivers `first`, then every item queued meanwhile, while this thread owns the drain.
+    fn deliver_from(&self, first: Delivery<T>) -> Result<()> {
         let mut guard = DrainGuard {
             state: &self.shared.state,
             armed: true,
         };
-
+        let mut next = Some(first);
         while let Some((item, subscribers)) = next.take() {
             for entry in subscribers.iter() {
                 if entry.active.load(Ordering::SeqCst) {
@@ -248,6 +276,42 @@ impl<T> DeliveryQueue<T> {
         guard.armed = false;
 
         Ok(())
+    }
+}
+
+/// A drain claimed by [`DeliveryQueue::push_or_claim`] with its first item. Dropped without
+/// [`deliver`](Self::deliver), it queues the item back first and releases the drain.
+pub(crate) struct ClaimedDrain<'a, T> {
+    queue: &'a DeliveryQueue<T>,
+    first: Option<Delivery<T>>,
+}
+
+impl<T> ClaimedDrain<'_, T> {
+    /// Delivers the claimed item and everything queued behind it.
+    pub(crate) fn deliver(mut self) -> Result<()> {
+        match self.first.take() {
+            Some(first) => self.queue.deliver_from(first),
+            None => Ok(()),
+        }
+    }
+}
+
+impl<T> Drop for ClaimedDrain<'_, T> {
+    fn drop(&mut self) {
+        if let Some((item, _)) = self.first.take() {
+            let mut state = self
+                .queue
+                .shared
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            state.queue.push_front(item);
+            self.queue
+                .shared
+                .pending
+                .store(state.queue.len(), Ordering::SeqCst);
+            state.delivering = false;
+        }
     }
 }
 

@@ -9,11 +9,11 @@
   "path": "2026-11-05-37-list-immutable-groups-check-only-touched-groups-for-emptiness.json",
   "createdAt": "2026-11-05T00:43:08Z",
   "startedAt": "2026-11-05T00:43:08Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:44:05Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5",
-  "resultCommit": "",
+  "resultCommit": "0b44052f2e68142996b3b239cb94efbe4d8160ca",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 4c363fb6ffd13503fa07707c5a603e45020198c5",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5",
-      "resultCommit": "",
+      "resultCommit": "0b44052f2e68142996b3b239cb94efbe4d8160ca",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 4c363fb6ffd13503fa07707c5a603e45020198c5",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "0b44052f2e68142996b3b239cb94efbe4d8160ca"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,37 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/group",
+      "before": "baseline (criterion saved)",
+      "after": "740.38 ns median",
+      "delta": "+0.4281%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/group",
+      "before": "baseline (criterion saved)",
+      "after": "1.4051 µs median",
+      "delta": "+2.0228%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/group-immutable",
+      "before": "baseline (criterion saved)",
+      "after": "7.7335 µs median",
+      "delta": "-0.5500%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/group-immutable",
+      "before": "baseline (criterion saved)",
+      "after": "15.063 µs median",
+      "delta": "-52.549%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## List Immutable Groups Check Only Touched Groups For Emptiness Finished\n\n**Index:** 37\n**Checkpoint:** 4c363fb\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 79 focused group/index tests pass; list group_immutable replace 31.7 -> 15.1 us (-53%); other group points unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** emptiness check restricted to touched groups, with an early-exit scan\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/group | 740.38 ns median | +0.4281% |\n| list-replace/group | 1.4051 µs median | +2.0228% |\n| cache-update/group-immutable | 7.7335 µs median | -0.5500% |\n| list-replace/group-immutable | 15.063 µs median | -52.549% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "60b5426e-03aa-4501-9b03-67f14319d78b",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 38,
+  "type": "hypothesis",
+  "name": "Emitter Claims An Idle Queue While Pushing",
+  "slug": "emitter-claims-an-idle-queue-while-pushing",
+  "path": "2026-11-05-38-emitter-claims-an-idle-queue-while-pushing.json",
+  "createdAt": "2026-11-05T00:45:20Z",
+  "startedAt": "2026-11-05T00:45:20Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "0b44052f2e68142996b3b239cb94efbe4d8160ca",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 0b44052f2e68142996b3b239cb94efbe4d8160ca",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "0b44052f2e68142996b3b239cb94efbe4d8160ca",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 0b44052f2e68142996b3b239cb94efbe4d8160ca",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Emitter Claims An Idle Queue While Pushing Hypothesis\n\n### Hypothesis\n\n`OrderedEmitter::update` pushes each computed batch under the operator's state lock (one queue lock), then drains after unlocking (a second lock to claim and pop, a third to find the queue empty): three queue round trips per operator per batch, and pipelines chain several operators. When no drain is running and nothing is queued, claiming the drain in the push's critical section and keeping the batch out of the queue is equivalent to pushing then winning the drain claim; it saves one round trip per operator per batch. Batches pushed meanwhile by other threads queue behind it and are delivered by the same loop, so order is unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** push-or-claim in one critical section for `OrderedEmitter::update`.\n**Allowed changes:** `crates/src/primitives/delivery.rs` (`push_or_claim`, a claimed-drain guard, the shared delivery loop) and `OrderedEmitter::update` in `crates/src/collections/emit.rs`.\n**Forbidden in this experiment:** Signal and source publish paths, subscriber-count/pending logic.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`primitives::tests` (ordered/panic-safe delivery) and full lib + integration tests (every operator emits through it); clippy/fmt. Bench `hot_paths` and `operator_updates` vs base, rerun borderline. Pass: cache-hot/update-transform-bind or update-filter-half >=5% faster; nothing slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n~10-20 ns less per operator per batch.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
