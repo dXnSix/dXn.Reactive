@@ -9,11 +9,11 @@
   "path": "2026-11-05-47-computed-publishes-mark-themselves-fresh.json",
   "createdAt": "2026-11-05T01:13:13Z",
   "startedAt": "2026-11-05T01:13:13Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:16:51Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
-  "resultCommit": "",
+  "resultCommit": "f162335b274ff6c4b3d0883875ac7786a639e786",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 55475e90f088d226da9d9dee81452708f3ed7c01",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
-      "resultCommit": "",
+      "resultCommit": "f162335b274ff6c4b3d0883875ac7786a639e786",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 55475e90f088d226da9d9dee81452708f3ed7c01",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "f162335b274ff6c4b3d0883875ac7786a639e786"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,107 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "5.1796 ns median",
+      "delta": "+0.9674%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "baseline (criterion saved)",
+      "after": "39.876 ns median",
+      "delta": "+78.092%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "baseline (criterion saved)",
+      "after": "3.9574 ns median",
+      "delta": "+0.4469%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "baseline (criterion saved)",
+      "after": "576.86 ns median",
+      "delta": "-53.626%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "baseline (criterion saved)",
+      "after": "23.133 ns median",
+      "delta": "-0.2457%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/1",
+      "before": "baseline (criterion saved)",
+      "after": "450.39 ns median",
+      "delta": "+9.6420%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/1",
+      "before": "baseline (criterion saved)",
+      "after": "851.03 ns median",
+      "delta": "-0.9339%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/32",
+      "before": "baseline (criterion saved)",
+      "after": "5.7512 µs median",
+      "delta": "+1.2383%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/32",
+      "before": "baseline (criterion saved)",
+      "after": "6.2551 µs median",
+      "delta": "+0.9322%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/256",
+      "before": "baseline (criterion saved)",
+      "after": "48.072 µs median",
+      "delta": "+1.9476%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/256",
+      "before": "baseline (criterion saved)",
+      "after": "49.995 µs median",
+      "delta": "+3.5705%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/1",
+      "before": "baseline (criterion saved)",
+      "after": "557.97 ns median",
+      "delta": "+2.7867%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/32",
+      "before": "baseline (criterion saved)",
+      "after": "9.0497 µs median",
+      "delta": "+1.5153%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "stream-operators/filter-distinct-skip/256",
+      "before": "baseline (criterion saved)",
+      "after": "73.902 µs median",
+      "delta": "+1.4779%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Computed Publishes Mark Themselves Fresh Finished\n\n**Index:** 47\n**Checkpoint:** 55475e9\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 636 lib tests pass five runs in a row, plus integration and 135 doc-example tests; computed-chain-8-set-and-get 1.24 -> 0.57 us (-54%, three runs); signal-set-one-subscriber's +78% first-run reading reran at +1.2% and +0.9%; other scalar points within +-4% (signal/1 +9.6% once).\n\n### Scope Lock\n\n**Tested mechanism:** record the verified epoch after a recompute/publish when no foreign write intervened\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| scalar-hot/signal-set-no-subscribers | 5.1796 ns median | +0.9674% |\n| scalar-hot/signal-set-one-subscriber | 39.876 ns median | +78.092% |\n| scalar-hot/signal-get | 3.9574 ns median | +0.4469% |\n| scalar-hot/computed-chain-8-set-and-get | 576.86 ns median | -53.626% |\n| scalar-hot/effect-on-filtered-map | 23.133 ns median | -0.2457% |\n| signal-and-computed/signal/1 | 450.39 ns median | +9.6420% |\n| signal-and-computed/computed/1 | 851.03 ns median | -0.9339% |\n| signal-and-computed/signal/32 | 5.7512 µs median | +1.2383% |\n| signal-and-computed/computed/32 | 6.2551 µs median | +0.9322% |\n| signal-and-computed/signal/256 | 48.072 µs median | +1.9476% |\n| signal-and-computed/computed/256 | 49.995 µs median | +3.5705% |\n| stream-operators/filter-distinct-skip/1 | 557.97 ns median | +2.7867% |\n| stream-operators/filter-distinct-skip/32 | 9.0497 µs median | +1.5153% |\n| stream-operators/filter-distinct-skip/256 | 73.902 µs median | +1.4779% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

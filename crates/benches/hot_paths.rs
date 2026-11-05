@@ -278,5 +278,93 @@ fn list(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, scalar, cache, list);
+const WRITES_PER_THREAD: u64 = 2_000;
+
+/// Runs `writes` on `threads` threads at once and returns the elapsed time of `iterations`
+/// rounds, each thread performing `WRITES_PER_THREAD` writes per round.
+fn contended(
+    threads: usize,
+    iterations: u64,
+    writes: impl Fn(usize) + Send + Sync,
+) -> std::time::Duration {
+    let start = std::time::Instant::now();
+    for _ in 0..iterations {
+        std::thread::scope(|scope| {
+            for thread in 0..threads {
+                let writes = &writes;
+                scope.spawn(move || writes(thread));
+            }
+        });
+    }
+    start.elapsed()
+}
+
+fn contention(c: &mut Criterion) {
+    let mut group = c.benchmark_group("contention");
+    for threads in [1_usize, 4] {
+        group.throughput(Throughput::Elements(WRITES_PER_THREAD * threads as u64));
+        group.bench_with_input(
+            BenchmarkId::new("signal-writes", threads),
+            &threads,
+            |b, &threads| {
+                let signals = (0..threads).map(|_| Signal::new(0_u64)).collect::<Vec<_>>();
+                let _subscriptions = signals
+                    .iter()
+                    .map(|signal| {
+                        signal
+                            .values()
+                            .subscribe(|value| {
+                                black_box(*value);
+                            })
+                            .expect("subscribe")
+                    })
+                    .collect::<Vec<_>>();
+                b.iter_custom(|iterations| {
+                    contended(threads, iterations, |thread| {
+                        let signal = &signals[thread];
+                        for step in 0..WRITES_PER_THREAD {
+                            signal.set(step + 1).expect("set");
+                        }
+                        signal.set(0).expect("reset");
+                    })
+                });
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("cache-writes", threads),
+            &threads,
+            |b, &threads| {
+                let caches = (0..threads).map(|_| loaded_cache()).collect::<Vec<_>>();
+                let _subscriptions = caches
+                    .iter()
+                    .map(|cache| {
+                        cache
+                            .connect()
+                            .filter(|row| row.value % 2 == 0)
+                            .subscribe(|batch| {
+                                black_box(batch.changes.len());
+                            })
+                            .expect("subscribe")
+                    })
+                    .collect::<Vec<_>>();
+                b.iter_custom(|iterations| {
+                    contended(threads, iterations, |thread| {
+                        let cache = &caches[thread];
+                        for step in 0..WRITES_PER_THREAD as u32 {
+                            cache
+                                .add_or_update(Row {
+                                    id: step % CACHE_SIZE,
+                                    value: step,
+                                })
+                                .expect("update");
+                        }
+                    })
+                });
+            },
+        );
+    }
+    group.finish();
+}
+
+criterion_group!(benches, scalar, cache, list, contention);
 criterion_main!(benches);

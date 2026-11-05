@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "b02348ea-b2a2-414a-afec-b2f1db86a053",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 48,
+  "type": "hypothesis",
+  "name": "Multi-Threaded Write Contention Bench",
+  "slug": "multi-threaded-write-contention-bench",
+  "path": "2026-11-05-48-multi-threaded-write-contention-bench.json",
+  "createdAt": "2026-11-05T01:17:22Z",
+  "startedAt": "2026-11-05T01:17:22Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "f162335b274ff6c4b3d0883875ac7786a639e786",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f162335b274ff6c4b3d0883875ac7786a639e786",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "f162335b274ff6c4b3d0883875ac7786a639e786",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f162335b274ff6c4b3d0883875ac7786a639e786",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Multi-Threaded Write Contention Bench Hypothesis\n\n### Hypothesis\n\nExperiments 25 and 47 advance one process-wide write epoch on every observed signal write, and experiments 12/29 added atomics to every delivery queue. Writers on several threads touching independent signals and caches now share the epoch's cache line. A bench with 1 and 4 threads each writing its own observed signal (and its own connected cache) measures whether that sharing costs throughput.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement (a new bench group only).\n**Allowed changes:** `crates/benches/hot_paths.rs`.\n**Forbidden in this experiment:** production source changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`cargo bench --bench hot_paths -- contention --save-baseline base`; plus a diagnostic control run with the epoch advance compiled out (not committed) to size its share. Pass: compiles, clippy/fmt clean, stable medians.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nPer-write cost at 4 threads vs 1 thread, and the epoch share of it.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
