@@ -32,7 +32,8 @@ where
         let state = self.state.as_ref()?;
         let mut changes = Vec::new();
         let mut index = 0;
-        for entry in &mut self.entries {
+        for position in 0..self.entries.len() {
+            let entry = &self.entries[position];
             let included = predicate(state, &entry.item);
             match (entry.included, included) {
                 (true, true) => index += 1,
@@ -43,7 +44,7 @@ where
                 }
                 (false, false) => {}
             }
-            entry.included = included;
+            self.entries.set_included(position, included);
         }
         if changes.is_empty() {
             None
@@ -67,19 +68,28 @@ where
                 }
                 ListChange::AddRange { index, items } => {
                     let index = (*index).min(self.entries.len());
-                    self.entries.splice(
-                        index..index,
-                        items.iter().cloned().map(|item| ListFilterEntry {
-                            item,
-                            included: false,
-                        }),
+                    self.entries.insert_all(
+                        index,
+                        items
+                            .iter()
+                            .cloned()
+                            .map(|item| ListFilterEntry {
+                                item,
+                                included: false,
+                            })
+                            .collect(),
                     );
                 }
                 ListChange::Replace { index, new, .. }
                 | ListChange::Refresh { index, item: new } => {
-                    if let Some(entry) = self.entries.get_mut(*index) {
-                        entry.item = new.clone();
-                        entry.included = false;
+                    if *index < self.entries.len() {
+                        self.entries.set(
+                            *index,
+                            ListFilterEntry {
+                                item: new.clone(),
+                                included: false,
+                            },
+                        );
                     }
                 }
                 ListChange::Move { from, to, .. } => {
@@ -155,7 +165,7 @@ where
                         .filter(|entry| entry.included)
                         .map(|entry| entry.item.clone())
                         .collect::<Vec<_>>();
-                    self.entries.splice(index..index, entries);
+                    self.entries.insert_all(index, entries);
                     if !visible_items.is_empty() {
                         changes.push(ListChange::AddRange {
                             index: visible_index,
@@ -172,10 +182,13 @@ where
                     let previous = self.entries[index].item.clone();
                     let was_included = self.entries[index].included;
                     let is_included = predicate(state, new);
-                    self.entries[index] = ListFilterEntry {
+                    self.entries.set(
+                    index,
+                    ListFilterEntry {
                         item: new.clone(),
                         included: is_included,
-                    };
+                        },
+                    );
                     match (was_included, is_included) {
                         (true, true) => changes.push(ListChange::Replace {
                             index: visible_index,
@@ -202,10 +215,13 @@ where
                     let previous = self.entries[index].item.clone();
                     let was_included = self.entries[index].included;
                     let is_included = predicate(state, item);
-                    self.entries[index] = ListFilterEntry {
+                    self.entries.set(
+                    index,
+                    ListFilterEntry {
                         item: item.clone(),
                         included: is_included,
-                    };
+                        },
+                    );
                     match (was_included, is_included) {
                         (true, true) => changes.push(ListChange::Refresh {
                             index: visible_index,
@@ -295,11 +311,7 @@ where
     }
 
     fn visible_index_for_source_index(&self, index: usize) -> usize {
-        self.entries
-            .iter()
-            .take(index.min(self.entries.len()))
-            .filter(|entry| entry.included)
-            .count()
+        self.entries.included_before(index)
     }
 
     fn emit(

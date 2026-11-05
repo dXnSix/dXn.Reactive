@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "7eedc179-fb35-4fc4-9d51-b7622d427a9e",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 45,
+  "type": "hypothesis",
+  "name": "Dynamic List Filter Inclusion Flags In A Byte Vector",
+  "slug": "dynamic-list-filter-inclusion-flags-in-a-byte-vector",
+  "path": "2026-11-05-45-dynamic-list-filter-inclusion-flags-in-a-byte-vector.json",
+  "createdAt": "2026-11-05T01:09:25Z",
+  "startedAt": "2026-11-05T01:09:25Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Dynamic List Filter Inclusion Flags In A Byte Vector Hypothesis\n\n### Hypothesis\n\n`ListDynamicFilterState::visible_index_for_source_index` (behind list `filter_dynamic` and `filter_with_state`) counts the included entries before a source position by striding over `ListFilterEntry { item, included }` records; on a 10k-item list an edit in the middle reads ~80 KB for that count (~25% self time of `insert-remove-mid-filter-transform`). Keeping the inclusion flags in a parallel `Vec<bool>`, updated with every entry insert/remove/replace, makes the same count read 1 byte per entry, which the compiler vectorizes.\n\n### Scope Lock\n\n**Tested mechanism:** parallel inclusion-flag vector for the dynamic list filter (reusing experiment 30's container)'s visible-index count.\n**Allowed changes:** `ListDynamicFilterState` (`list_dynamic_filter_state.rs` struct, `cache_dynamic_filter_state.rs` impl) and a `set_included` method on `ListFilterEntries`.\n**Forbidden in this experiment:** the static list filter, cache filters, Fenwick counting.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{subset_operator_indexes,index_contract_harness,ordered_emission_core,transforms_filters,snapshot_diff_indexes}`; clippy/fmt. Bench `operator_updates` list-replace vs base. Pass: list-replace/filter-dynamic >=10% faster, list load not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nMid-list dynamic-filter edits 15-25% faster.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

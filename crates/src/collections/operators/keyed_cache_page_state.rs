@@ -259,6 +259,16 @@ impl<T> ListFilterEntries<T> {
         self.entries[index] = entry;
     }
 
+    fn clear(&mut self) {
+        self.included.clear();
+        self.entries.clear();
+    }
+
+    fn set_included(&mut self, index: usize, included: bool) {
+        self.included[index] = included;
+        self.entries[index].included = included;
+    }
+
     fn remove(&mut self, index: usize) -> ListFilterEntry<T> {
         let _ = self.included.remove(index);
         self.entries.remove(index)

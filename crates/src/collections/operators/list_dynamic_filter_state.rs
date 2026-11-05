@@ -211,7 +211,7 @@ where
 }
 
 struct ListDynamicFilterState<T, S> {
-    entries: Vec<ListFilterEntry<T>>,
+    entries: ListFilterEntries<T>,
     state: Option<S>,
     version: u64,
 }
@@ -219,7 +219,10 @@ struct ListDynamicFilterState<T, S> {
 impl<T, S> Default for ListDynamicFilterState<T, S> {
     fn default() -> Self {
         Self {
-            entries: Vec::new(),
+            entries: ListFilterEntries {
+                entries: Vec::new(),
+                included: Vec::new(),
+            },
             state: None,
             version: 0,
         }

@@ -9,11 +9,11 @@
   "path": "2026-11-05-44-list-transform-many-child-counts-in-a-parallel-vector.json",
   "createdAt": "2026-11-05T01:07:44Z",
   "startedAt": "2026-11-05T01:07:44Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:08:49Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2",
-  "resultCommit": "",
+  "resultCommit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 436ee3b414d8cf4bc71a84ab083234b69c3feba2",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2",
-      "resultCommit": "",
+      "resultCommit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 436ee3b414d8cf4bc71a84ab083234b69c3feba2",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,23 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/transform-many",
+      "before": "baseline (criterion saved)",
+      "after": "428.15 ns median",
+      "delta": "+9.3969%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/transform-many",
+      "before": "baseline (criterion saved)",
+      "after": "539.27 ns median",
+      "delta": "-38.488%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## List Transform-Many Child Counts In A Parallel Vector Finished\n\n**Index:** 44\n**Checkpoint:** 436ee3b\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 71 focused transform/index tests pass; list transform_many replace 877 -> 539 ns (-38%); cache transform_many (+9%) uses a different state type, untouched (noise).\n\n### Scope Lock\n\n**Tested mechanism:** parallel child-count vector for the list transform-many child offset\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/transform-many | 428.15 ns median | +9.3969% |\n| list-replace/transform-many | 539.27 ns median | -38.488% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
