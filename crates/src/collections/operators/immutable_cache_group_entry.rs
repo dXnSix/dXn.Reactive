@@ -303,6 +303,8 @@ struct ImmutableCacheGroupState<K, T, G> {
     entries: HashMap<K, ImmutableCacheGroupEntry<T, G>>,
     source_order: KeyOrder<K>,
     group_order: KeyOrder<G>,
+    /// Each group's keys in source order, so a snapshot reads only its members.
+    members: HashMap<G, Vec<K>>,
     version: u64,
 }
 
@@ -312,6 +314,7 @@ impl<K, T, G> Default for ImmutableCacheGroupState<K, T, G> {
             entries: HashMap::default(),
             source_order: KeyOrder::new(),
             group_order: KeyOrder::new(),
+            members: HashMap::default(),
             version: 0,
         }
     }

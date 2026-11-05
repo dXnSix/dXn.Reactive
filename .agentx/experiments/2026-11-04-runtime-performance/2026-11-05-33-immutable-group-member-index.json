@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "c5dd9007-eeea-46a4-9431-c2733c742807",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 33,
+  "type": "hypothesis",
+  "name": "Immutable Group Member Index",
+  "slug": "immutable-group-member-index",
+  "path": "2026-11-05-33-immutable-group-member-index.json",
+  "createdAt": "2026-11-05T00:35:06Z",
+  "startedAt": "2026-11-05T00:35:06Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "192180549f6fb40572c62c992ff1836285a0895a",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 192180549f6fb40572c62c992ff1836285a0895a",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "192180549f6fb40572c62c992ff1836285a0895a",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 192180549f6fb40572c62c992ff1836285a0895a",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Immutable Group Member Index Hypothesis\n\n### Hypothesis\n\nEach immutable group snapshot walks the whole source order and filters by group key (O(n) hash lookups), and a regrouping batch takes at least four snapshots, so one regroup in a 10k-row cache with 16 groups costs ~50 µs although each group holds ~625 rows. Keeping each group's member keys in source order (inserted by binary search on source positions, repositioned when a key moves, removed on regroup/removal) lets a snapshot read only its members: O(group) instead of O(n). A debug assertion compares every indexed snapshot with the full scan.\n\n### Scope Lock\n\n**Tested mechanism:** per-group member index in source order for cache immutable group snapshots.\n**Allowed changes:** `ImmutableCacheGroupState` (struct in `immutable_cache_group_entry.rs`, impl in `ungrouped_cache_state.rs`).\n**Forbidden in this experiment:** list immutable groups, live groups, snapshot diffing/move logic.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{group_and_combiner_indexes,grouping_tree_switching,snapshot_diff_indexes,index_contract_harness,ordered_emission_core,operator_input_interop}` and public API tests (debug assertion compares with the scan); clippy/fmt. Bench `operator_updates` (group-immutable). Pass: group-immutable update >=3x faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\ngroup-immutable regrouping update from ~50 us to ~10-15 us (four O(group) snapshots remain inherent).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

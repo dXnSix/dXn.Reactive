@@ -39,8 +39,10 @@ where
                         &mut touched_order,
                         &mut touched_seen,
                     );
+                    self.unlink_member(key);
                     insert_group_order_key(&mut self.source_order, key.clone(), *current_index);
                     self.ensure_group_order(&next_group_key);
+                    self.link_member(key, &next_group_key);
                     self.entries.insert(
                         key.clone(),
                         ImmutableCacheGroupEntry {
@@ -72,12 +74,14 @@ where
                         &mut touched_order,
                         &mut touched_seen,
                     );
+                    self.unlink_member(key);
                     if let Some(index) = current_index {
                         move_group_order_key(&mut self.source_order, key, *index);
                     } else if !self.entries.contains_key(key) {
                         self.source_order.push(key.clone());
                     }
                     self.ensure_group_order(&next_group_key);
+                    self.link_member(key, &next_group_key);
                     self.entries.insert(
                         key.clone(),
                         ImmutableCacheGroupEntry {
@@ -106,7 +110,9 @@ where
                         &mut touched_order,
                         &mut touched_seen,
                     );
+                    self.unlink_member(key);
                     self.ensure_group_order(&next_group_key);
+                    self.link_member(key, &next_group_key);
                     self.entries.insert(
                         key.clone(),
                         ImmutableCacheGroupEntry {
@@ -132,7 +138,9 @@ where
                         &mut touched_order,
                         &mut touched_seen,
                     );
+                    self.unlink_member(key);
                     move_group_order_key(&mut self.source_order, key, *current_index);
+                    self.link_member(key, &group_key);
                     if let Some(entry) = self.entries.get_mut(key) {
                         entry.item = current.clone();
                     }
@@ -149,6 +157,7 @@ where
                         &mut touched_order,
                         &mut touched_seen,
                     );
+                    self.unlink_member(key);
                     self.entries.remove(key);
                     remove_group_order_key(&mut self.source_order, key);
                 }
@@ -163,6 +172,7 @@ where
                     }
                     self.entries.clear();
                     self.source_order.clear();
+                    self.members.clear();
                 }
                 CacheChange::Clear { previous } => {
                     for (key, _) in previous {
@@ -177,6 +187,7 @@ where
                             &mut touched_order,
                             &mut touched_seen,
                         );
+                        self.unlink_member(key);
                         self.entries.remove(key);
                         remove_group_order_key(&mut self.source_order, key);
                     }
@@ -233,6 +244,8 @@ where
                 &mut touched_seen,
             );
             self.ensure_group_order(&next_group_key);
+            self.unlink_member(&key);
+            self.link_member(&key, &next_group_key);
             if let Some(entry) = self.entries.get_mut(&key) {
                 entry.group_key = next_group_key;
             }
@@ -292,15 +305,58 @@ where
 
     fn group_snapshot(&self, group_key: &G) -> Option<ImmutableCacheGroup<G, K, T>> {
         let key_values = self
-            .source_order
-            .iter()
-            .filter_map(|key| {
-                self.entries.get(key).and_then(|entry| {
-                    (&entry.group_key == group_key).then(|| (key.clone(), entry.item.clone()))
-                })
+            .members
+            .get(group_key)
+            .map(|members| {
+                members
+                    .iter()
+                    .filter_map(|key| {
+                        self.entries
+                            .get(key)
+                            .map(|entry| (key.clone(), entry.item.clone()))
+                    })
+                    .collect::<Vec<_>>()
             })
-            .collect::<Vec<_>>();
+            .unwrap_or_default();
+        debug_assert!(
+            key_values.iter().map(|(key, _)| key).eq(self
+                .source_order
+                .iter()
+                .filter(|key| self
+                    .entries
+                    .get(*key)
+                    .is_some_and(|entry| &entry.group_key == group_key))),
+            "immutable group members out of sync with the source order"
+        );
         (!key_values.is_empty()).then(|| ImmutableCacheGroup::new(group_key.clone(), key_values))
+    }
+
+    /// Removes `key` from the members of the group it is in (before its entry changes).
+    fn unlink_member(&mut self, key: &K) {
+        let Some(group_key) = self.entries.get(key).map(|entry| &entry.group_key) else {
+            return;
+        };
+        let emptied = self.members.get_mut(group_key).is_some_and(|members| {
+            if let Some(position) = members.iter().position(|member| member == key) {
+                let _ = members.remove(position);
+            }
+            members.is_empty()
+        });
+        if emptied {
+            let group_key = group_key.clone();
+            let _ = self.members.remove(&group_key);
+        }
+    }
+
+    /// Adds `key` to `group_key`'s members at its source-order position (after its source
+    /// position is final).
+    fn link_member(&mut self, key: &K, group_key: &G) {
+        let order = &self.source_order;
+        let rank = |key: &K| order.index_of(key).unwrap_or(usize::MAX);
+        let target = rank(key);
+        let members = self.members.entry(group_key.clone()).or_default();
+        let position = members.partition_point(|member| rank(member) < target);
+        members.insert(position, key.clone());
     }
 
     fn snapshot_changes(
