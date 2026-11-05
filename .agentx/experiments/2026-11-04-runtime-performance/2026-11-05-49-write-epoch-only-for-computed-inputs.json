@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "8a85047f-8470-449f-9b2a-d523ee6c4992",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 49,
+  "type": "hypothesis",
+  "name": "Write Epoch Only For Computed Inputs",
+  "slug": "write-epoch-only-for-computed-inputs",
+  "path": "2026-11-05-49-write-epoch-only-for-computed-inputs.json",
+  "createdAt": "2026-11-05T01:19:07Z",
+  "startedAt": "2026-11-05T01:19:07Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "b61ce536c52d803e438d87f4692d21267d2735bd",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard b61ce536c52d803e438d87f4692d21267d2735bd",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "b61ce536c52d803e438d87f4692d21267d2735bd",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard b61ce536c52d803e438d87f4692d21267d2735bd",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Write Epoch Only For Computed Inputs Hypothesis\n\n### Hypothesis\n\nEvery observed signal write advances the process-wide write epoch, so writers on different threads updating unrelated signals contend on one cache line (experiment 48: ~25% of the 4-thread write cost). Only writes to a `Computed` input can make a `Computed` stale, and every input is registered through `track`. Marking a signal when a `Computed` tracks it and advancing the epoch only for marked signals (the mark is read under the signal lock, so a write racing with a new `track` is seen by that core's first verification) removes the shared write for everything else.\n\n### Scope Lock\n\n**Tested mechanism:** advance the write epoch only for signals tracked by a `Computed`.\n**Allowed changes:** `crates/src/signal.rs` (a feeds-computed flag, commit helpers), `track` in `crates/src/computed.rs`.\n**Forbidden in this experiment:** the verification protocol, delivery queues, collections.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nScalar tests five runs, full lib + integration + doc-example tests; clippy/fmt. Bench `hot_paths` contention + scalar-hot and `reactive_complexity` vs base. Pass: contention/signal-writes/4 >=15% faster; computed-chain not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n4-thread observed signal writes ~25% faster; single-thread and computed paths unchanged.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

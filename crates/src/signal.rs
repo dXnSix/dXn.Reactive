@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, TryLockError, Weak};
 
 use crate::primitives::{DeliveryQueue, Result, ValueStream};
@@ -114,6 +114,9 @@ struct SignalInner<T> {
     state: Mutex<SignalState<T>>,
     changes: DeliveryQueue<SignalChange<T>>,
     refresh: OnceLock<Weak<dyn SignalRefresh>>,
+    /// Set once a `Computed` tracks this signal: only then do its writes advance the write
+    /// epoch.
+    feeds_computed: AtomicBool,
 }
 
 struct SignalState<T> {
@@ -180,8 +183,8 @@ fn next_version(version: u64) -> u64 {
     version.wrapping_add(1).max(1)
 }
 
-/// Advanced by every committed write of a signal that has subscribers (a `Computed` input
-/// always has one), after the new version is stored and while the signal is locked.
+/// Advanced by every committed write of a signal a `Computed` tracks, after the new version
+/// is stored and while the signal is locked.
 static WRITE_EPOCH: AtomicU64 = AtomicU64::new(0);
 
 /// The current write epoch: a `Computed` that verified itself fresh at this epoch is still
@@ -212,9 +215,13 @@ where
             current,
             version,
         };
-        let advanced = self.changes.has_subscribers();
-        if advanced {
+        if self.changes.has_subscribers() {
             self.changes.push(change.clone())?;
+        }
+        // Read under the state lock: a write racing with a new `track` is seen by that
+        // core's first check.
+        let advanced = self.feeds_computed.load(Ordering::SeqCst);
+        if advanced {
             advance_write_epoch();
         }
         Ok((change, advanced))
@@ -238,9 +245,13 @@ where
             current,
             version,
         };
-        let advanced = self.changes.has_subscribers();
-        if advanced {
+        if self.changes.has_subscribers() {
             self.changes.push(change.clone())?;
+        }
+        // Read under the state lock: a write racing with a new `track` is seen by that
+        // core's first check.
+        let advanced = self.feeds_computed.load(Ordering::SeqCst);
+        if advanced {
             advance_write_epoch();
         }
         Ok(Some((change, advanced)))
@@ -268,9 +279,13 @@ where
             current,
             version,
         };
-        let advanced = self.changes.has_subscribers();
-        if advanced {
+        if self.changes.has_subscribers() {
             self.changes.push(change.clone())?;
+        }
+        // Read under the state lock: a write racing with a new `track` is seen by that
+        // core's first check.
+        let advanced = self.feeds_computed.load(Ordering::SeqCst);
+        if advanced {
             advance_write_epoch();
         }
         Ok((change, advanced))
@@ -369,6 +384,7 @@ impl<T> Signal<T> {
                 state: Mutex::new(SignalState { value, version: 0 }),
                 changes: DeliveryQueue::new(),
                 refresh: OnceLock::new(),
+                feeds_computed: AtomicBool::new(false),
             }),
         }
     }
@@ -558,6 +574,12 @@ impl<T> ReadSignal<T> {
         } else {
             self.inner.lock().version
         }
+    }
+
+    /// Marks the signal as a `Computed` input, so its writes advance the write epoch. Called
+    /// before the `Computed` subscribes to it.
+    pub(crate) fn mark_computed_input(&self) {
+        self.inner.feeds_computed.store(true, Ordering::SeqCst);
     }
 
     /// Reads the value and its version under one lock acquisition.

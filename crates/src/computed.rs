@@ -417,6 +417,7 @@ fn track<S>(
 where
     S: Clone + Send + Sync + 'static,
 {
+    source.mark_computed_input();
     let on_change = Arc::clone(on_change);
     source
         .changes()

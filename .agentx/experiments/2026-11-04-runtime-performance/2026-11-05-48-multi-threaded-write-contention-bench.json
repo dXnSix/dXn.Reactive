@@ -9,11 +9,11 @@
   "path": "2026-11-05-48-multi-threaded-write-contention-bench.json",
   "createdAt": "2026-11-05T01:17:22Z",
   "startedAt": "2026-11-05T01:17:22Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:18:36Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "f162335b274ff6c4b3d0883875ac7786a639e786",
-  "resultCommit": "",
+  "resultCommit": "b61ce536c52d803e438d87f4692d21267d2735bd",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f162335b274ff6c4b3d0883875ac7786a639e786",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "f162335b274ff6c4b3d0883875ac7786a639e786",
-      "resultCommit": "",
+      "resultCommit": "b61ce536c52d803e438d87f4692d21267d2735bd",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f162335b274ff6c4b3d0883875ac7786a639e786",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "b61ce536c52d803e438d87f4692d21267d2735bd"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,37 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "contention/signal-writes/1",
+      "before": "baseline (criterion saved)",
+      "after": "62.646 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "contention/cache-writes/1",
+      "before": "baseline (criterion saved)",
+      "after": "436.33 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "contention/signal-writes/4",
+      "before": "baseline (criterion saved)",
+      "after": "400.69 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "contention/cache-writes/4",
+      "before": "baseline (criterion saved)",
+      "after": "988.28 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Multi-Threaded Write Contention Bench Finished\n\n**Index:** 48\n**Checkpoint:** f162335\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — bench builds and passes clippy/fmt. 2000 observed writes per thread: signals 62.6 us on 1 thread, 400.7 us on 4 threads; caches 436 us / 988 us. A diagnostic control with the write-epoch advance compiled out (not committed) measured signal-writes/4 at 301.7 us: the shared epoch costs ~25% under 4-thread contention.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| contention/signal-writes/1 | 62.646 µs median | n/a |\n| contention/cache-writes/1 | 436.33 µs median | n/a |\n| contention/signal-writes/4 | 400.69 µs median | n/a |\n| contention/cache-writes/4 | 988.28 µs median | n/a |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
