@@ -35,8 +35,7 @@ where
                         .iter()
                         .flat_map(|children| children.iter().cloned())
                         .collect::<Vec<_>>();
-                    self.parents
-                        .splice(parent_index..parent_index, parent_children);
+                    self.parents.insert_all(parent_index, parent_children);
                     if !children.is_empty() {
                         self.flattened
                             .splice(child_index..child_index, children.clone());
@@ -56,10 +55,10 @@ where
                         child_index,
                     );
                     if child_changes.is_empty() {
-                        self.parents[*index] = next_children;
+                        self.parents.set(*index, next_children);
                         continue;
                     }
-                    self.parents[*index] = next_children;
+                    self.parents.set(*index, next_children);
                     apply_list_changes(&mut self.flattened, &child_changes);
                     changes.extend(child_changes);
                 }
@@ -104,7 +103,7 @@ where
                     let parent_end = index.saturating_add(old.len()).min(self.parents.len());
                     let child_index = self.child_offset(*index);
                     let parent_children =
-                        self.parents.drain(*index..parent_end).collect::<Vec<_>>();
+                        self.parents.drain_range(*index..parent_end);
                     let children = parent_children.into_iter().flatten().collect::<Vec<_>>();
                     if !children.is_empty() {
                         let end = child_index.saturating_add(children.len());
@@ -128,7 +127,7 @@ where
     }
 
     fn child_offset(&self, parent_index: usize) -> usize {
-        self.parents.iter().take(parent_index).map(Vec::len).sum()
+        self.parents.children_before(parent_index)
     }
 }
 

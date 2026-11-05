@@ -9,11 +9,11 @@
   "path": "2026-11-05-43-live-list-group-keys-in-a-parallel-vector.json",
   "createdAt": "2026-11-05T01:05:28Z",
   "startedAt": "2026-11-05T01:05:28Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:07:12Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "998b822f87df41191c4db1c5c782a2c1153ce988",
-  "resultCommit": "",
+  "resultCommit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 998b822f87df41191c4db1c5c782a2c1153ce988",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "998b822f87df41191c4db1c5c782a2c1153ce988",
-      "resultCommit": "",
+      "resultCommit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 998b822f87df41191c4db1c5c782a2c1153ce988",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,79 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "list-replace/group",
+      "before": "baseline (criterion saved)",
+      "after": "1.0840 µs median",
+      "delta": "-21.144%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/transform-many",
+      "before": "baseline (criterion saved)",
+      "after": "878.11 ns median",
+      "delta": "-0.5507%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/distinct-values",
+      "before": "baseline (criterion saved)",
+      "after": "99.512 ns median",
+      "delta": "-5.0856%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "122.37 ns median",
+      "delta": "-4.3553%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.3726 µs median",
+      "delta": "+2.0826%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-sort",
+      "before": "baseline (criterion saved)",
+      "after": "662.96 ns median",
+      "delta": "-3.2778%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-dynamic",
+      "before": "baseline (criterion saved)",
+      "after": "798.60 ns median",
+      "delta": "-2.5204%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/page",
+      "before": "baseline (criterion saved)",
+      "after": "183.67 ns median",
+      "delta": "-3.0922%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/virtualize",
+      "before": "baseline (criterion saved)",
+      "after": "178.79 ns median",
+      "delta": "-5.8487%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/group-immutable",
+      "before": "baseline (criterion saved)",
+      "after": "15.220 µs median",
+      "delta": "+1.8377%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Live List Group Keys In A Parallel Vector Finished\n\n**Index:** 43\n**Checkpoint:** 998b822\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 79 focused group/index tests pass; live list group replace 1.37 -> 1.08 us (-21%); other list operators unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** parallel group-key vector for the live list group's in-group index count\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| list-replace/group | 1.0840 µs median | -21.144% |\n| list-replace/transform-many | 878.11 ns median | -0.5507% |\n| list-replace/distinct-values | 99.512 ns median | -5.0856% |\n| list-replace/transform-bind | 122.37 ns median | -4.3553% |\n| list-replace/sort | 1.3726 µs median | +2.0826% |\n| list-replace/filter-sort | 662.96 ns median | -3.2778% |\n| list-replace/filter-dynamic | 798.60 ns median | -2.5204% |\n| list-replace/page | 183.67 ns median | -3.0922% |\n| list-replace/virtualize | 178.79 ns median | -5.8487% |\n| list-replace/group-immutable | 15.220 µs median | +1.8377% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

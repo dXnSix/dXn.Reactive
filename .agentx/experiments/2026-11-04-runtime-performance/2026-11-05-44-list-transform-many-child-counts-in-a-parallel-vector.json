@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "2427683c-9a6b-457e-8a32-ddc5fbe4c110",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 44,
+  "type": "hypothesis",
+  "name": "List Transform-Many Child Counts In A Parallel Vector",
+  "slug": "list-transform-many-child-counts-in-a-parallel-vector",
+  "path": "2026-11-05-44-list-transform-many-child-counts-in-a-parallel-vector.json",
+  "createdAt": "2026-11-05T01:07:44Z",
+  "startedAt": "2026-11-05T01:07:44Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 436ee3b414d8cf4bc71a84ab083234b69c3feba2",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "436ee3b414d8cf4bc71a84ab083234b69c3feba2",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 436ee3b414d8cf4bc71a84ab083234b69c3feba2",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## List Transform-Many Child Counts In A Parallel Vector Hypothesis\n\n### Hypothesis\n\n`ListTransformManyState::child_offset` sums the child counts of every parent before a position by reading each parent's `Vec` header (24 bytes each): a replace in the middle of a 10k-parent list reads ~120 KB for that sum. Mirroring the child counts in a parallel `Vec<usize>`, kept in step with every parent insert/remove/replace, makes the sum read 8 bytes per parent, contiguously and vectorizable.\n\n### Scope Lock\n\n**Tested mechanism:** parallel child-count vector for the list transform-many child offset.\n**Allowed changes:** `ListTransformManyState` (`apply_list_changes.rs` struct, `push_child_adds.rs` impl): a parents container mirroring counts.\n**Forbidden in this experiment:** cache transform_many, async transform-many, the flattened vector.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{transforms_filters,index_contract_harness,subset_operator_indexes,snapshot_diff_indexes,list_async_transform_options}`; clippy/fmt. Bench `operator_updates` (list-replace/transform-many) vs base. Pass: >=10% faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nlist transform_many replace 15-30% faster.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

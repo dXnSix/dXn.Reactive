@@ -352,15 +352,75 @@ where
     reversed
 }
 
-struct ListTransformManyState<Child> {
+/// Each parent's children with their counts mirrored in a parallel vector, so a child
+/// offset sums one word per parent.
+struct ParentChildren<Child> {
     parents: Vec<Vec<Child>>,
+    counts: Vec<usize>,
+}
+
+impl<Child> ParentChildren<Child> {
+    fn len(&self) -> usize {
+        self.parents.len()
+    }
+
+    fn insert(&mut self, index: usize, children: Vec<Child>) {
+        self.counts.insert(index, children.len());
+        self.parents.insert(index, children);
+    }
+
+    fn insert_all(&mut self, index: usize, parents: Vec<Vec<Child>>) {
+        self.counts
+            .splice(index..index, parents.iter().map(Vec::len));
+        self.parents.splice(index..index, parents);
+    }
+
+    fn set(&mut self, index: usize, children: Vec<Child>) {
+        self.counts[index] = children.len();
+        self.parents[index] = children;
+    }
+
+    fn remove(&mut self, index: usize) -> Vec<Child> {
+        let _ = self.counts.remove(index);
+        self.parents.remove(index)
+    }
+
+    fn drain_range(&mut self, range: std::ops::Range<usize>) -> Vec<Vec<Child>> {
+        let _ = self.counts.drain(range.clone());
+        self.parents.drain(range).collect()
+    }
+
+    fn clear(&mut self) {
+        self.counts.clear();
+        self.parents.clear();
+    }
+
+    /// The number of children of the parents before `index`.
+    fn children_before(&self, index: usize) -> usize {
+        self.counts[..index.min(self.counts.len())].iter().sum()
+    }
+}
+
+impl<Child> std::ops::Index<usize> for ParentChildren<Child> {
+    type Output = Vec<Child>;
+
+    fn index(&self, index: usize) -> &Vec<Child> {
+        &self.parents[index]
+    }
+}
+
+struct ListTransformManyState<Child> {
+    parents: ParentChildren<Child>,
     flattened: Vec<Child>,
 }
 
 impl<Child> Default for ListTransformManyState<Child> {
     fn default() -> Self {
         Self {
-            parents: Vec::new(),
+            parents: ParentChildren {
+                parents: Vec::new(),
+                counts: Vec::new(),
+            },
             flattened: Vec::new(),
         }
     }
