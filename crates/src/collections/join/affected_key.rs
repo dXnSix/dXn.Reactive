@@ -101,9 +101,14 @@ where
         let mut changes = Vec::new();
         // Group membership changes as keys are updated, so the order is taken afterwards;
         // additions use the order as it was when the batch started.
-        let mut ranks = Some(order_ranks(&self.desired_order()));
+        // Left and inner outputs follow the left order, which a right batch leaves alone: it
+        // can reorder them only by adding or removing a result key. Right and full outputs
+        // also follow the group order, which a right batch can change.
+        let follows_left = matches!(self.kind, JoinManyKind::Left | JoinManyKind::Inner);
+        let mut ranks = (!follows_left).then(|| order_ranks(&self.desired_order()));
+        let mut keys_changed = false;
         for affected in affected.keys {
-            let _ = self.update_key(
+            keys_changed |= self.update_key(
                 affected.key,
                 affected.refresh,
                 selector,
@@ -111,8 +116,10 @@ where
                 &mut changes,
             );
         }
-        let desired = self.desired_order();
-        reorder_result(&mut self.result, &desired, &mut changes);
+        if !follows_left || keys_changed {
+            let desired = self.desired_order();
+            reorder_result(&mut self.result, &desired, &mut changes);
+        }
         changes
     }
 

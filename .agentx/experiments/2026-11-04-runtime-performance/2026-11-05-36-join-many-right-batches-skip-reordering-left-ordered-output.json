@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "7166c623-b4ff-4b61-b669-b98ad0c4fc83",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 36,
+  "type": "hypothesis",
+  "name": "Join-Many Right Batches Skip Reordering Left-Ordered Output",
+  "slug": "join-many-right-batches-skip-reordering-left-ordered-output",
+  "path": "2026-11-05-36-join-many-right-batches-skip-reordering-left-ordered-output.json",
+  "createdAt": "2026-11-05T00:41:27Z",
+  "startedAt": "2026-11-05T00:41:27Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Join-Many Right Batches Skip Reordering Left-Ordered Output Hypothesis\n\n### Hypothesis\n\n`JoinManyState::apply_right` builds the desired order (testing every group under its lock) before and after every right batch: 466 µs for one right-side write into a 10k-row `left_join_many`. For Left and Inner join-many kinds the desired order is the left order filtered by inclusion, and a right batch changes inclusion only by adding or removing a result key; so building the ranks only when a key is added, and reordering only when the result's key set changed, gives identical output. Right and Full kinds (whose right-only keys follow the group order) keep the current path.\n\n### Scope Lock\n\n**Tested mechanism:** lazy ranks and conditional reorder for right batches of Left/Inner join-many.\n**Allowed changes:** `JoinManyState::apply_right` in `crates/src/collections/join/affected_key.rs`.\n**Forbidden in this experiment:** Right/Full kinds, `desired_order`, group locking, left batches.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{joins,join_many_right_moves,ordered_emission_relations,relation_operator_costs,index_contract_harness,subset_operator_indexes}`; clippy/fmt. Bench `operator_updates` (right-update/*, left-join-many) and `joins` vs base. Pass: right-update/left-join-many >=10x faster; joins loads not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nRight-side writes into left_join_many from ~466 us to a few us.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
