@@ -9,11 +9,11 @@
   "path": "2026-11-05-36-join-many-right-batches-skip-reordering-left-ordered-output.json",
   "createdAt": "2026-11-05T00:41:27Z",
   "startedAt": "2026-11-05T00:41:27Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:42:46Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
-  "resultCommit": "",
+  "resultCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
-      "resultCommit": "",
+      "resultCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "4c363fb6ffd13503fa07707c5a603e45020198c5"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,79 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "joins-load/full_join/1000",
+      "before": "baseline (criterion saved)",
+      "after": "181.20 µs median",
+      "delta": "+2.0748%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/1000",
+      "before": "baseline (criterion saved)",
+      "after": "842.71 µs median",
+      "delta": "-12.394%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/full_join/4000",
+      "before": "baseline (criterion saved)",
+      "after": "711.82 µs median",
+      "delta": "+0.7026%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.4016 ms median",
+      "delta": "-13.321%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/inner-join",
+      "before": "baseline (criterion saved)",
+      "after": "248.93 ns median",
+      "delta": "+9.2227%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join",
+      "before": "baseline (criterion saved)",
+      "after": "256.19 ns median",
+      "delta": "+14.229%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/full-join",
+      "before": "baseline (criterion saved)",
+      "after": "236.12 ns median",
+      "delta": "+2.3085%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join-many",
+      "before": "baseline (criterion saved)",
+      "after": "285.04 ns median",
+      "delta": "+2.6290%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "right-update/inner-join",
+      "before": "baseline (criterion saved)",
+      "after": "201.80 ns median",
+      "delta": "-11.228%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "right-update/left-join-many",
+      "before": "baseline (criterion saved)",
+      "after": "498.19 ns median",
+      "delta": "-99.877%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Join-Many Right Batches Skip Reordering Left-Ordered Output Finished\n\n**Index:** 36\n**Checkpoint:** 50e53ef\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 52 focused join/relation/index tests pass; right-side write into left_join_many 466 us -> 0.50 us, left_join_many load -12..-13%. inner_join/left_join single updates (+9/+14%) run JoinState, which this change does not touch (noise).\n\n### Scope Lock\n\n**Tested mechanism:** lazy ranks and conditional reorder for right batches of Left/Inner join-many\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| joins-load/full_join/1000 | 181.20 µs median | +2.0748% |\n| joins-load/left_join_many/1000 | 842.71 µs median | -12.394% |\n| joins-load/full_join/4000 | 711.82 µs median | +0.7026% |\n| joins-load/left_join_many/4000 | 3.4016 ms median | -13.321% |\n| cache-update/inner-join | 248.93 ns median | +9.2227% |\n| cache-update/left-join | 256.19 ns median | +14.229% |\n| cache-update/full-join | 236.12 ns median | +2.3085% |\n| cache-update/left-join-many | 285.04 ns median | +2.6290% |\n| right-update/inner-join | 201.80 ns median | -11.228% |\n| right-update/left-join-many | 498.19 ns median | -99.877% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

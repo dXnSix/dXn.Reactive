@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a",
+  "lastStableCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "50e53ef3f590a3ca461dbc2720fcdc04b1f3ea2a"
+      "lastStableCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "7166c623-b4ff-4b61-b669-b98ad0c4fc83",
-  "nextExperimentIndex": 37,
+  "currentExperimentId": "430f9bdd-8cb2-48cd-bd65-80f4745edbb0",
+  "nextExperimentIndex": 38,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -450,6 +450,18 @@
       "name": "Join-Many Right Batches Skip Reordering Left-Ordered Output",
       "path": "2026-11-05-36-join-many-right-batches-skip-reordering-left-ordered-output.json",
       "startedAt": "2026-11-05T00:41:27Z",
+      "finishedAt": "2026-11-05T00:42:46Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "4c363fb6ffd13503fa07707c5a603e45020198c5"
+    },
+    {
+      "id": "430f9bdd-8cb2-48cd-bd65-80f4745edbb0",
+      "index": 37,
+      "type": "hypothesis",
+      "name": "List Immutable Groups Check Only Touched Groups For Emptiness",
+      "path": "2026-11-05-37-list-immutable-groups-check-only-touched-groups-for-emptiness.json",
+      "startedAt": "2026-11-05T00:43:08Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

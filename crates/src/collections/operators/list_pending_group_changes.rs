@@ -168,7 +168,7 @@ where
             }
         }
 
-        self.retain_non_empty_groups();
+        self.retain_non_empty_groups(&touched_seen);
         let changes = self.snapshot_changes(
             previous_order,
             initial,
@@ -213,7 +213,7 @@ where
             self.entries[index].group_key = next_group_key;
         }
 
-        self.retain_non_empty_groups();
+        self.retain_non_empty_groups(&touched_seen);
         let changes = self.snapshot_changes(
             previous_order,
             initial,
@@ -250,14 +250,23 @@ where
         }
     }
 
-    fn retain_non_empty_groups(&mut self) {
-        let non_empty = self
-            .entries
+    /// Drops the groups the batch emptied. Only a `touched` group can have become empty, so
+    /// the entries are scanned only until each touched group has been seen once.
+    fn retain_non_empty_groups(&mut self, touched: &HashSet<G>) {
+        let mut unseen = touched
             .iter()
-            .map(|entry| entry.group_key.clone())
+            .filter(|group_key| self.group_order.contains(group_key))
             .collect::<HashSet<_>>();
-        self.group_order
-            .retain(|group_key| non_empty.contains(group_key));
+        for entry in &self.entries {
+            if unseen.is_empty() {
+                break;
+            }
+            let _ = unseen.remove(&entry.group_key);
+        }
+        if !unseen.is_empty() {
+            self.group_order
+                .retain(|group_key| !unseen.contains(group_key));
+        }
     }
 
     fn group_snapshot(&self, group_key: &G) -> Option<ImmutableListGroup<G, T>> {
