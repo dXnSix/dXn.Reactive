@@ -263,7 +263,7 @@ where
                         }
                     }
                 }
-                ListChange::Replace { old, new, .. } => match self.remove_sorted_item(old) {
+                ListChange::Replace { old, new, .. } => match self.remove_sorted_item(old, comparer) {
                     Some((previous_index, previous)) => {
                         let current_index = self.insert_position(new, comparer);
                         self.sorted.insert(current_index, new.clone());
@@ -290,13 +290,13 @@ where
                 },
                 ListChange::Move { .. } => {}
                 ListChange::Remove { old, .. } => {
-                    if let Some((index, old)) = self.remove_sorted_item(old) {
+                    if let Some((index, old)) = self.remove_sorted_item(old, comparer) {
                         changes.push(ListChange::Remove { index, old });
                     }
                 }
                 ListChange::RemoveRange { old, .. } => {
                     for item in old {
-                        if let Some((index, old)) = self.remove_sorted_item(item) {
+                        if let Some((index, old)) = self.remove_sorted_item(item, comparer) {
                             changes.push(ListChange::Remove { index, old });
                         }
                     }
@@ -353,8 +353,23 @@ where
             .partition_point(|existing| comparer(item, existing) != Ordering::Less)
     }
 
-    fn remove_sorted_item(&mut self, item: &T) -> Option<(usize, T)> {
-        let index = self.sorted.iter().position(|existing| existing == item)?;
+    /// Removes the first sorted entry equal to `item`. An equal item sorts equal, so it is
+    /// looked for in the comparer-equal range first (a binary search), then everywhere, for an
+    /// item whose sort key changed without a refresh.
+    fn remove_sorted_item(
+        &mut self,
+        item: &T,
+        comparer: &dyn Fn(&T, &T) -> Ordering,
+    ) -> Option<(usize, T)> {
+        let start = self
+            .sorted
+            .partition_point(|existing| comparer(existing, item) == Ordering::Less);
+        let index = self.sorted[start..]
+            .iter()
+            .take_while(|existing| comparer(existing, item) == Ordering::Equal)
+            .position(|existing| existing == item)
+            .map(|offset| start + offset)
+            .or_else(|| self.sorted.iter().position(|existing| existing == item))?;
         Some((index, self.sorted.remove(index)))
     }
 

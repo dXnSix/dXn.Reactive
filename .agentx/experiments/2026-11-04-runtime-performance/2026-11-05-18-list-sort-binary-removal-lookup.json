@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "418d770e-5451-4991-b810-db19fa50eeb4",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 18,
+  "type": "hypothesis",
+  "name": "List Sort Binary Removal Lookup",
+  "slug": "list-sort-binary-removal-lookup",
+  "path": "2026-11-05-18-list-sort-binary-removal-lookup.json",
+  "createdAt": "2026-11-05T00:00:13Z",
+  "startedAt": "2026-11-05T00:00:13Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## List Sort Binary Removal Lookup Hypothesis\n\n### Hypothesis\n\n`ListSortState::remove_sorted_item` scans the whole sorted vector with `==` for the item a Remove/RemoveRange/Replace names: O(n) per removal. An item equal by `==` sorts equal, so it lies in the comparer-equal range that a binary search finds in O(log n); scanning only that range for `==` (falling back to the full scan when the item is not there, e.g. after an unannounced in-place mutation) finds it without the linear scan.\n\n### Scope Lock\n\n**Tested mechanism:** binary search to the equal range before the equality scan.\n**Allowed changes:** `remove_sorted_item` and its three call sites in `list_sort_state.rs` (to pass the comparer).\n**Forbidden in this experiment:** refresh lookup, insert path, keyed sort.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{sorting_windowing,window_responses,index_contract_harness,subset_operator_indexes,keyed_sort_positions,snapshot_diff_indexes}`; clippy/fmt. Bench `hot_paths` (list-hot/insert-remove-sort) vs base. Pass: insert-remove-sort >=20% faster than after experiment 17.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\ninsert-remove-sort drops further (removal scan gone); memmoves remain.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

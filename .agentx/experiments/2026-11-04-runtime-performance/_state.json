@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "c497f154dfb01154518e21761fe3f044ea8d84ea",
+  "lastStableCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "c497f154dfb01154518e21761fe3f044ea8d84ea"
+      "lastStableCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "10b77032-8ff0-4d59-9313-94f210609dc4",
-  "nextExperimentIndex": 18,
+  "currentExperimentId": "418d770e-5451-4991-b810-db19fa50eeb4",
+  "nextExperimentIndex": 19,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -225,6 +225,18 @@
       "name": "List Sort Binary Insert Position",
       "path": "2026-11-04-17-list-sort-binary-insert-position.json",
       "startedAt": "2026-11-04T23:58:59Z",
+      "finishedAt": "2026-11-04T23:59:52Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2"
+    },
+    {
+      "id": "418d770e-5451-4991-b810-db19fa50eeb4",
+      "index": 18,
+      "type": "hypothesis",
+      "name": "List Sort Binary Removal Lookup",
+      "path": "2026-11-05-18-list-sort-binary-removal-lookup.json",
+      "startedAt": "2026-11-05T00:00:13Z",
       "finishedAt": null,
       "state": "running",
       "status": ""
