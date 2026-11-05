@@ -338,6 +338,9 @@ struct CacheDynamicFilterState<K, T, S> {
     order: KeyOrder<K>,
     filtered: HashMap<K, T>,
     filtered_order: KeyOrder<K>,
+    /// A refilter changed `filtered` without rebuilding `filtered_order`; the next source
+    /// batch rebuilds it first.
+    filtered_order_stale: bool,
     state: Option<S>,
     version: u64,
 }
@@ -349,6 +352,7 @@ impl<K, T, S> Default for CacheDynamicFilterState<K, T, S> {
             order: KeyOrder::new(),
             filtered: HashMap::default(),
             filtered_order: KeyOrder::new(),
+            filtered_order_stale: false,
             state: None,
             version: 0,
         }

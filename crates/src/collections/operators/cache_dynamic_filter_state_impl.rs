@@ -15,6 +15,15 @@ where
             return None;
         };
 
+        if std::mem::take(&mut self.filtered_order_stale) {
+            let filtered = &self.filtered;
+            self.filtered_order.reset(
+                self.order
+                    .iter()
+                    .filter(|key| filtered.contains_key(*key))
+                    .cloned(),
+            );
+        }
         let mut changes = Vec::new();
         let added = added_key_count(&batch.changes);
         self.items.reserve(added);
@@ -408,15 +417,8 @@ where
                 (None, false) => {}
             }
         }
-        if !changes.is_empty() {
-            let filtered = &self.filtered;
-            self.filtered_order.reset(
-                self.order
-                    .iter()
-                    .filter(|key| filtered.contains_key(*key))
-                    .cloned(),
-            );
-        }
+        // Only source batches read the filtered order: rebuild it before the next one.
+        self.filtered_order_stale |= !changes.is_empty();
         if changes.is_empty() {
             None
         } else {

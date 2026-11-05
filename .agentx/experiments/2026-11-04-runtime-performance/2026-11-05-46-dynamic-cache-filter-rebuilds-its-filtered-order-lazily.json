@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "532e9d95-639c-4754-93b6-d5b675c6494e",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 46,
+  "type": "hypothesis",
+  "name": "Dynamic Cache Filter Rebuilds Its Filtered Order Lazily",
+  "slug": "dynamic-cache-filter-rebuilds-its-filtered-order-lazily",
+  "path": "2026-11-05-46-dynamic-cache-filter-rebuilds-its-filtered-order-lazily.json",
+  "createdAt": "2026-11-05T01:11:16Z",
+  "startedAt": "2026-11-05T01:11:16Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 43748d2e78b0f10cc582805a32f6409ce36d1080",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 43748d2e78b0f10cc582805a32f6409ce36d1080",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Dynamic Cache Filter Rebuilds Its Filtered Order Lazily Hypothesis\n\n### Hypothesis\n\n`CacheDynamicFilterState::refilter` (every predicate or state change of `filter_dynamic`/`filter_with_state`) emits its changes from the source order and the filtered map, then rebuilds `filtered_order` with a `KeyOrder::reset` of every included key: a third of a predicate change over 10k rows. Only source batches read `filtered_order`, so marking it stale and rebuilding it before the next source batch gives identical output, and consecutive predicate changes (typing into a search box) skip the rebuild entirely.\n\n### Scope Lock\n\n**Tested mechanism:** lazy rebuild of the filtered order after a refilter.\n**Allowed changes:** `CacheDynamicFilterState` (`cache_dynamic_filter_state.rs` struct, `cache_dynamic_filter_state_impl.rs` refilter/apply_source).\n**Forbidden in this experiment:** list filters, KeyOrder internals, refilter change computation.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{subset_operator_indexes,transforms_filters,ordered_emission_core,operator_input_interop,index_contract_harness,snapshot_diff_indexes}`; clippy/fmt. Bench `operator_updates` (cache-predicate-change, cache-update/filter-dynamic) vs base. Pass: predicate change >=20% faster; filter-dynamic update not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nPredicate changes ~30% cheaper.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

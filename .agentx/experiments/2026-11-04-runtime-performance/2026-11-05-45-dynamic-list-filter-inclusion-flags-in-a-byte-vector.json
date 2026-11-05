@@ -9,11 +9,11 @@
   "path": "2026-11-05-45-dynamic-list-filter-inclusion-flags-in-a-byte-vector.json",
   "createdAt": "2026-11-05T01:09:25Z",
   "startedAt": "2026-11-05T01:09:25Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:10:40Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
-  "resultCommit": "",
+  "resultCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
-      "resultCommit": "",
+      "resultCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard fec0ca29d7a2e70626f5afbdd210c30df0b6699d",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "43748d2e78b0f10cc582805a32f6409ce36d1080"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,58 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "85.716 ns median",
+      "delta": "-0.8591%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "263.99 ns median",
+      "delta": "+18.348%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "5.2837 µs median",
+      "delta": "-0.3484%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.1967 µs median",
+      "delta": "+7.2810%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "31.570 µs median",
+      "delta": "-3.6644%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-sort",
+      "before": "baseline (criterion saved)",
+      "after": "694.60 ns median",
+      "delta": "+5.3576%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-dynamic",
+      "before": "baseline (criterion saved)",
+      "after": "341.07 ns median",
+      "delta": "-57.241%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Dynamic List Filter Inclusion Flags In A Byte Vector Finished\n\n**Index:** 45\n**Checkpoint:** fec0ca2\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 87 focused filter/index/interop tests pass; list filter_dynamic replace 798 -> 341 ns (-57%); static-filter and other list points do not run this code (push-remove-bind +18% is the known noisy point).\n\n### Scope Lock\n\n**Tested mechanism:** parallel inclusion-flag vector for the dynamic list filter (reusing experiment 30's container)\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| list-hot/push-remove-no-subscribers | 85.716 ns median | -0.8591% |\n| list-hot/push-remove-bind | 263.99 ns median | +18.348% |\n| list-hot/insert-remove-mid-filter-transform | 5.2837 µs median | -0.3484% |\n| list-hot/insert-remove-sort | 1.1967 µs median | +7.2810% |\n| list-hot/load-filter-transform-bind/10000 | 31.570 µs median | -3.6644% |\n| list-replace/filter-sort | 694.60 ns median | +5.3576% |\n| list-replace/filter-dynamic | 341.07 ns median | -57.241% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
