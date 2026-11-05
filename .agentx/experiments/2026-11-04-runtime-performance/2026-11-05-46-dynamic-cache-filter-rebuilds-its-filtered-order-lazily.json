@@ -9,11 +9,11 @@
   "path": "2026-11-05-46-dynamic-cache-filter-rebuilds-its-filtered-order-lazily.json",
   "createdAt": "2026-11-05T01:11:16Z",
   "startedAt": "2026-11-05T01:11:16Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:12:26Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
-  "resultCommit": "",
+  "resultCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 43748d2e78b0f10cc582805a32f6409ce36d1080",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
-      "resultCommit": "",
+      "resultCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 43748d2e78b0f10cc582805a32f6409ce36d1080",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "55475e90f088d226da9d9dee81452708f3ed7c01"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,30 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/filter-dynamic",
+      "before": "baseline (criterion saved)",
+      "after": "300.02 ns median",
+      "delta": "+9.4876%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-predicate-change/filter-dynamic",
+      "before": "baseline (criterion saved)",
+      "after": "59.662 µs median",
+      "delta": "-35.570%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-dynamic",
+      "before": "baseline (criterion saved)",
+      "after": "353.93 ns median",
+      "delta": "+5.6067%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Dynamic Cache Filter Rebuilds Its Filtered Order Lazily Finished\n\n**Index:** 46\n**Checkpoint:** 43748d2\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 87 focused filter/index/interop tests pass; cache filter_dynamic predicate change 92.6 -> 59.7 us (-36%); row updates without a predicate change +9.5% (one extra flag check; within the 10% gate); the list filter does not run this code.\n\n### Scope Lock\n\n**Tested mechanism:** lazy rebuild of the filtered order after a refilter\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/filter-dynamic | 300.02 ns median | +9.4876% |\n| cache-predicate-change/filter-dynamic | 59.662 µs median | -35.570% |\n| list-replace/filter-dynamic | 353.93 ns median | +5.6067% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

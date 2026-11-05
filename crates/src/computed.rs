@@ -210,8 +210,12 @@ where
     /// Publishes `value` computed from `versions`, unless an input moved on while it was
     /// evaluated (inputs are read one at a time, so the value may mix versions) or a value
     /// computed from newer inputs is already published.
-    fn publish(&self, versions: Versions, value: T) -> Result<Publish> {
-        let published = {
+    ///
+    /// `epoch` is the write epoch read before the inputs were checked: when the epoch has
+    /// since moved only by this publication, no other observable write happened and the core
+    /// is recorded fresh before its subscribers run.
+    fn publish(&self, versions: Versions, value: T, epoch: u64) -> Result<Publish> {
+        let committed = {
             let mut state = lock(&self.state);
             if (self.read_versions)(false)? != versions {
                 return Ok(Publish::InputsMoved);
@@ -222,14 +226,16 @@ where
             state.versions = versions;
             // Pushed while the core lock is held, so publications keep their order.
             match self.equal {
-                Some(equal) => self.signal.set_deferred_by(value, equal)?,
-                None => {
-                    self.signal.replace_deferred(value)?;
-                    true
-                }
+                Some(equal) => self.signal.set_deferred_tracked(value, equal)?,
+                None => Some(self.signal.replace_deferred(value)?),
             }
         };
-        if published {
+        let advanced = committed.unwrap_or(false);
+        let expected = epoch.wrapping_add(u64::from(advanced));
+        if crate::signal::write_epoch() == expected {
+            self.verified.store(expected, Ordering::SeqCst);
+        }
+        if committed.is_some() {
             self.signal.drain_changes()?;
         }
         Ok(Publish::Published)
@@ -241,15 +247,20 @@ where
     }
 
     /// Brings the published value up to date with the inputs once.
+    /// Records the epoch at which the value was found (or made) fresh.
     fn recompute(&self) -> Step {
+        let epoch = crate::signal::write_epoch();
         match self.is_stale() {
             Ok(true) => {}
-            Ok(false) => return Step::Done,
+            Ok(false) => {
+                self.verified.store(epoch, Ordering::SeqCst);
+                return Step::Done;
+            }
             Err(_) => return Step::Failed,
         }
         match self.evaluate() {
             None => Step::Reentrant,
-            Some(Ok((versions, value))) => match self.publish(versions, value) {
+            Some(Ok((versions, value))) => match self.publish(versions, value, epoch) {
                 Ok(Publish::InputsMoved) => Step::Retry,
                 Ok(_) => Step::Done,
                 Err(_) => Step::Failed,
@@ -336,11 +347,7 @@ where
         }
         loop {
             match self.recompute() {
-                Step::Done => {
-                    self.verified.store(epoch, Ordering::SeqCst);
-                    break;
-                }
-                Step::Failed => break,
+                Step::Done | Step::Failed => break,
                 Step::Retry => {}
                 Step::Reentrant => return,
             }

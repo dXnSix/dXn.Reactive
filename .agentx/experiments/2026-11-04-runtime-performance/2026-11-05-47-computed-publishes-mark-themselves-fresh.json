@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "ada5c20e-f22c-46d4-ac4b-38490d6629ea",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 47,
+  "type": "hypothesis",
+  "name": "Computed Publishes Mark Themselves Fresh",
+  "slug": "computed-publishes-mark-themselves-fresh",
+  "path": "2026-11-05-47-computed-publishes-mark-themselves-fresh.json",
+  "createdAt": "2026-11-05T01:13:13Z",
+  "startedAt": "2026-11-05T01:13:13Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 55475e90f088d226da9d9dee81452708f3ed7c01",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 55475e90f088d226da9d9dee81452708f3ed7c01",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Computed Publishes Mark Themselves Fresh Hypothesis\n\n### Hypothesis\n\nExperiment 25's write epoch lets a `Computed` skip its freshness check only when it verified itself at the current epoch, but a core that recomputes and publishes advances the epoch itself, so the next level's input check re-verifies the whole upstream chain again: a write through an 8-deep chain still costs O(depth²) checks (1.27 µs). A core that read epoch *e* before checking its inputs and finds the epoch at exactly *e* + (1 if its own publish advanced it, else 0) after publishing knows no other observable write happened in between, so it is fresh at that epoch and can record it. The deferred signal writers report whether their commit advanced the epoch, so the core knows its own contribution exactly.\n\n### Scope Lock\n\n**Tested mechanism:** record the verified epoch after a recompute/publish when no foreign write intervened.\n**Allowed changes:** `crates/src/signal.rs` (commit helpers report the advance; tracked deferred writers), `crates/src/computed.rs` (publish result, recompute, refresh).\n**Forbidden in this experiment:** delivery, values() startup, public signal APIs.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nScalar tests (incl. computed concurrency/glitch tests) five runs, full lib + integration + doc-example tests; clippy/fmt. Bench `hot_paths` scalar-hot and `reactive_complexity` vs base, rerun borderline. Pass: computed-chain-8-set-and-get >=20% faster; signal-set/effect not slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nChain write+read closer to O(depth).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

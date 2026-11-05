@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080",
+  "lastStableCommit": "55475e90f088d226da9d9dee81452708f3ed7c01",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "43748d2e78b0f10cc582805a32f6409ce36d1080"
+      "lastStableCommit": "55475e90f088d226da9d9dee81452708f3ed7c01"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "532e9d95-639c-4754-93b6-d5b675c6494e",
-  "nextExperimentIndex": 47,
+  "currentExperimentId": "ada5c20e-f22c-46d4-ac4b-38490d6629ea",
+  "nextExperimentIndex": 48,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -568,6 +568,18 @@
       "name": "Dynamic Cache Filter Rebuilds Its Filtered Order Lazily",
       "path": "2026-11-05-46-dynamic-cache-filter-rebuilds-its-filtered-order-lazily.json",
       "startedAt": "2026-11-05T01:11:16Z",
+      "finishedAt": "2026-11-05T01:12:26Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "55475e90f088d226da9d9dee81452708f3ed7c01"
+    },
+    {
+      "id": "ada5c20e-f22c-46d4-ac4b-38490d6629ea",
+      "index": 47,
+      "type": "hypothesis",
+      "name": "Computed Publishes Mark Themselves Fresh",
+      "path": "2026-11-05-47-computed-publishes-mark-themselves-fresh.json",
+      "startedAt": "2026-11-05T01:13:13Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

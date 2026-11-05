@@ -200,7 +200,8 @@ where
 {
     /// Commits `value` and pushes the change while the state lock is held; the caller
     /// drains after releasing it, so delivery order equals commit order.
-    fn commit_replace(&self, value: T) -> Result<SignalChange<T>> {
+    /// Also returns whether the commit advanced the write epoch.
+    fn commit_replace(&self, value: T) -> Result<(SignalChange<T>, bool)> {
         let mut state = self.lock();
         let current = value.clone();
         let version = next_version(state.version);
@@ -211,18 +212,19 @@ where
             current,
             version,
         };
-        if self.changes.has_subscribers() {
+        let advanced = self.changes.has_subscribers();
+        if advanced {
             self.changes.push(change.clone())?;
             advance_write_epoch();
         }
-        Ok(change)
+        Ok((change, advanced))
     }
 
     fn commit_set(
         &self,
         value: T,
         equal: impl FnOnce(&T, &T) -> bool,
-    ) -> Result<Option<SignalChange<T>>> {
+    ) -> Result<Option<(SignalChange<T>, bool)>> {
         let mut state = self.lock();
         if equal(&state.value, &value) {
             return Ok(None);
@@ -236,14 +238,15 @@ where
             current,
             version,
         };
-        if self.changes.has_subscribers() {
+        let advanced = self.changes.has_subscribers();
+        if advanced {
             self.changes.push(change.clone())?;
             advance_write_epoch();
         }
-        Ok(Some(change))
+        Ok(Some((change, advanced)))
     }
 
-    fn commit_update(&self, update: impl FnOnce(&mut T)) -> Result<SignalChange<T>> {
+    fn commit_update(&self, update: impl FnOnce(&mut T)) -> Result<(SignalChange<T>, bool)> {
         let mut state = self.lock();
         let previous = state.value.clone();
         let outcome = catch_unwind(AssertUnwindSafe(|| {
@@ -265,11 +268,12 @@ where
             current,
             version,
         };
-        if self.changes.has_subscribers() {
+        let advanced = self.changes.has_subscribers();
+        if advanced {
             self.changes.push(change.clone())?;
             advance_write_epoch();
         }
-        Ok(change)
+        Ok((change, advanced))
     }
 }
 
@@ -426,7 +430,7 @@ where
     where
         T: Send + 'static,
     {
-        let change = self.inner.commit_replace(value)?;
+        let (change, _) = self.inner.commit_replace(value)?;
         self.inner.changes.drain()?;
         Ok(change)
     }
@@ -438,7 +442,10 @@ where
     where
         T: PartialEq + Send + 'static,
     {
-        let change = self.inner.commit_set(value, T::eq)?;
+        let change = self
+            .inner
+            .commit_set(value, T::eq)?
+            .map(|(change, _)| change);
         if change.is_some() {
             self.inner.changes.drain()?;
         }
@@ -453,17 +460,20 @@ where
     where
         T: Send + 'static,
     {
-        let change = self.inner.commit_update(update)?;
+        let (change, _) = self.inner.commit_update(update)?;
         self.inner.changes.drain()?;
         Ok(change)
     }
 
     /// Commits like `replace` but leaves delivery to [`drain_changes`](Self::drain_changes).
-    pub(crate) fn replace_deferred(&self, value: T) -> Result<()>
+    /// Returns whether the commit advanced the write epoch.
+    pub(crate) fn replace_deferred(&self, value: T) -> Result<bool>
     where
         T: Send + 'static,
     {
-        self.inner.commit_replace(value).map(drop)
+        self.inner
+            .commit_replace(value)
+            .map(|(_, advanced)| advanced)
     }
 
     /// Commits unless `equal` says the value is unchanged, leaving delivery to
@@ -472,9 +482,23 @@ where
     where
         T: Send + 'static,
     {
+        self.set_deferred_tracked(value, equal)
+            .map(|committed| committed.is_some())
+    }
+
+    /// Like [`set_deferred_by`](Self::set_deferred_by); `Some(advanced)` when it committed,
+    /// telling whether the commit advanced the write epoch.
+    pub(crate) fn set_deferred_tracked(
+        &self,
+        value: T,
+        equal: fn(&T, &T) -> bool,
+    ) -> Result<Option<bool>>
+    where
+        T: Send + 'static,
+    {
         self.inner
             .commit_set(value, equal)
-            .map(|change| change.is_some())
+            .map(|change| change.map(|(_, advanced)| advanced))
     }
 
     /// A stream of the current value followed by every later value.
