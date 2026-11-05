@@ -179,8 +179,8 @@ where
 {
     fn drop(&mut self) {
         for key in parent_cycle_keys(&self.actual_parents) {
-            if let Some(node) = self.nodes.get(&key) {
-                let _ = node.children().clear();
+            if let Some(children) = self.nodes.get(&key).and_then(TreeNode::existing_children) {
+                let _ = children.clear();
             }
         }
     }
@@ -325,9 +325,12 @@ where
 
         // Removing a child keeps its siblings in order.
         if let Some(previous_parent_key) = self.actual_parents.remove(key)
-            && let Some(parent) = self.nodes.get(&previous_parent_key)
+            && let Some(children) = self
+                .nodes
+                .get(&previous_parent_key)
+                .and_then(TreeNode::existing_children)
         {
-            let _ = parent.children().remove_key(key);
+            let _ = children.remove_key(key);
         }
 
         let direct_children = self
@@ -342,17 +345,19 @@ where
             self.sync_parent_for_child(&child_key);
         }
 
-        let child_cache = node.children();
-        for child_key in child_cache.keys().unwrap_or_default() {
-            let _ = child_cache.remove_key(&child_key);
+        if let Some(child_cache) = node.existing_children() {
+            for child_key in child_cache.keys().unwrap_or_default() {
+                let _ = child_cache.remove_key(&child_key);
+            }
         }
     }
 
     fn clear(&mut self) {
         for node in self.nodes.values() {
             node.set_parent(None);
-            let children = node.children();
-            let _ = children.clear();
+            if let Some(children) = node.existing_children() {
+                let _ = children.clear();
+            }
         }
         self.nodes.clear();
         self.order.clear();
@@ -414,9 +419,12 @@ where
 
         if previous_parent_key != next_parent_key
             && let Some(previous_parent_key) = previous_parent_key.as_ref()
-            && let Some(previous_parent) = self.nodes.get(previous_parent_key)
+            && let Some(children) = self
+                .nodes
+                .get(previous_parent_key)
+                .and_then(TreeNode::existing_children)
         {
-            let _ = previous_parent.children().remove_key(child_key);
+            let _ = children.remove_key(child_key);
         }
 
         if let Some(parent_key) = next_parent_key {

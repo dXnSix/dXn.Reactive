@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "id": "658ea7f4-23c3-4447-8c31-75f9539b1fb4",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 39,
+  "type": "hypothesis",
+  "name": "Signal Writes Claim An Idle Change Queue",
+  "slug": "signal-writes-claim-an-idle-change-queue",
+  "path": "2026-11-05-39-signal-writes-claim-an-idle-change-queue.json",
+  "createdAt": "2026-11-05T00:50:53Z",
+  "startedAt": "2026-11-05T00:50:53Z",
+  "finishedAt": "2026-11-05T00:54:50Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a36e07676f1ccde66b7babf654d95ade1a842c7c",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a36e07676f1ccde66b7babf654d95ade1a842c7c",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Signal Writes Claim An Idle Change Queue Hypothesis\n\n### Hypothesis\n\nAn observed `Signal::set`/`replace`/`update` pushes its change under the signal lock and drains afterwards: three change-queue round trips (push, claim and pop, empty check). Claiming an idle queue in the push's critical section (experiment 38's `push_or_claim`) and delivering the change after the signal lock is released saves one, with the same commit-order delivery. Deferred writers used by `Computed` keep pushing.\n\n### Scope Lock\n\n**Tested mechanism:** push-or-claim for the immediate signal writers.\n**Allowed changes:** `crates/src/signal.rs` (commit helpers and `set`/`replace`/`update`), a crate-visible re-export of `ClaimedDrain` in `crates/src/primitives/mod.rs`.\n**Forbidden in this experiment:** deferred writers, Computed, values() startup, DeliveryQueue internals.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nScalar tests and full lib + integration + doc-example tests; clippy/fmt. Bench `hot_paths` scalar-hot and `reactive_complexity` vs base, rerun borderline. Pass: signal-set-one-subscriber or effect-on-filtered-map >=8% faster; nothing slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n~3-5 ns less per observed signal write.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "scalar-hot/signal-set-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "5.1554 ns median",
+      "delta": "+3.1169%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-set-one-subscriber",
+      "before": "baseline (criterion saved)",
+      "after": "21.102 ns median",
+      "delta": "-5.8411%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/signal-get",
+      "before": "baseline (criterion saved)",
+      "after": "3.9575 ns median",
+      "delta": "+0.6590%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/computed-chain-8-set-and-get",
+      "before": "baseline (criterion saved)",
+      "after": "1.3189 µs median",
+      "delta": "+6.9719%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "scalar-hot/effect-on-filtered-map",
+      "before": "baseline (criterion saved)",
+      "after": "49.873 ns median",
+      "delta": "+116.77%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/1",
+      "before": "baseline (criterion saved)",
+      "after": "396.89 ns median",
+      "delta": "-3.3494%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/1",
+      "before": "baseline (criterion saved)",
+      "after": "922.94 ns median",
+      "delta": "+6.8434%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/32",
+      "before": "baseline (criterion saved)",
+      "after": "5.6145 µs median",
+      "delta": "-1.2043%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/32",
+      "before": "baseline (criterion saved)",
+      "after": "6.3664 µs median",
+      "delta": "+0.8980%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/signal/256",
+      "before": "baseline (criterion saved)",
+      "after": "45.238 µs median",
+      "delta": "-4.8921%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "signal-and-computed/computed/256",
+      "before": "baseline (criterion saved)",
+      "after": "48.627 µs median",
+      "delta": "-1.1101%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Signal Writes Claim An Idle Change Queue Finished\n\n**Index:** 39\n**Checkpoint:** a36e076\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure.\n\n### Scope Lock\n\n**Tested mechanism:** all tests pass, but effect-on-filtered-map regressed to 42-50 ns in three runs while a control run of the unchanged checkpoint measured 23 ns; computed chain +7% in three runs; signal-set-one-subscriber was bimodal (21/49/80 ns vs 22.7 ns control). The claimed path is slower than push+drain for signal writes.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| scalar-hot/signal-set-no-subscribers | 5.1554 ns median | +3.1169% |\n| scalar-hot/signal-set-one-subscriber | 21.102 ns median | -5.8411% |\n| scalar-hot/signal-get | 3.9575 ns median | +0.6590% |\n| scalar-hot/computed-chain-8-set-and-get | 1.3189 µs median | +6.9719% |\n| scalar-hot/effect-on-filtered-map | 49.873 ns median | +116.77% |\n| signal-and-computed/signal/1 | 396.89 ns median | -3.3494% |\n| signal-and-computed/computed/1 | 922.94 ns median | +6.8434% |\n| signal-and-computed/signal/32 | 5.6145 µs median | -1.2043% |\n| signal-and-computed/computed/32 | 6.3664 µs median | +0.8980% |\n| signal-and-computed/signal/256 | 45.238 µs median | -4.8921% |\n| signal-and-computed/computed/256 | 48.627 µs median | -1.1101% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to a36e076.\n",
+  "notes": ""
+}

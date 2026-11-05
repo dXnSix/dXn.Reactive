@@ -1,6 +1,6 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 use crate::collections::cache::SourceCache;
 
@@ -17,7 +17,8 @@ pub struct TreeNode<K, T> {
 
 struct TreeNodeInner<K, T> {
     key: K,
-    children: SourceCache<K, TreeNode<K, T>>,
+    /// Created by the first `children()` call: most nodes are leaves.
+    children: OnceLock<SourceCache<K, TreeNode<K, T>>>,
     state: Mutex<TreeNodeState<K, T>>,
 }
 
@@ -36,7 +37,7 @@ where
         Self {
             inner: Arc::new(TreeNodeInner {
                 key,
-                children: SourceCache::new(|node: &TreeNode<K, T>| node.key()),
+                children: OnceLock::new(),
                 state: Mutex::new(TreeNodeState { item, parent: None }),
             }),
         }
@@ -72,7 +73,15 @@ where
 
     /// The child nodes, in source order, as a cache that can be connected to.
     pub fn children(&self) -> SourceCache<K, TreeNode<K, T>> {
-        self.inner.children.clone()
+        self.inner
+            .children
+            .get_or_init(|| SourceCache::new(|node: &TreeNode<K, T>| node.key()))
+            .clone()
+    }
+
+    /// The children cache if one was created (a node without one has no children).
+    pub(crate) fn existing_children(&self) -> Option<SourceCache<K, TreeNode<K, T>>> {
+        self.inner.children.get().cloned()
     }
 
     /// `true` when the node has no parent.

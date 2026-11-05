@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "5cf42aa6-cd19-479a-b34a-16b11dce9e5d",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 40,
+  "type": "hypothesis",
+  "name": "Tree Nodes Create Children Caches Lazily",
+  "slug": "tree-nodes-create-children-caches-lazily",
+  "path": "2026-11-05-40-tree-nodes-create-children-caches-lazily.json",
+  "createdAt": "2026-11-05T00:55:29Z",
+  "startedAt": "2026-11-05T00:55:29Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a36e07676f1ccde66b7babf654d95ade1a842c7c",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a36e07676f1ccde66b7babf654d95ade1a842c7c",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Tree Nodes Create Children Caches Lazily Hypothesis\n\n### Hypothesis\n\n`TreeNode::new` builds a children `SourceCache` (several allocations and queues) for every node, and every update replaces the node, but most nodes of a tree are leaves whose cache is never used; the tree-load profile showed cache construction and teardown as a large share. Creating the cache on the first `children()` call (the public accessor, and `place_child` when a child is added) and letting internal clean-up touch only an existing cache gives the same observable trees with far fewer caches.\n\n### Scope Lock\n\n**Tested mechanism:** lazy children cache per tree node.\n**Allowed changes:** `crates/src/collections/tree/node.rs` (`OnceLock` field, `children`, a crate-internal existing-cache accessor) and the clean-up call sites in `tree/stream_ext.rs`.\n**Forbidden in this experiment:** refilter/diff, parent maps, SourceCache internals.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::grouping_tree_switching` and every tree test (`tree`), full lib; clippy/fmt. Bench `tree` and `operator_updates` (transform-to-tree) vs base. Pass: tree loads >=15% faster; tree update not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nTree loads 20-40% faster (bushy trees are ~90% leaves).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
