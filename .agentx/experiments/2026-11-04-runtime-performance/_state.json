@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "lastStableCommit": "6df6296ed7e3d69c7a449900deb6785fbbeba1a5",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1"
+      "lastStableCommit": "6df6296ed7e3d69c7a449900deb6785fbbeba1a5"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "7b41e535-8e52-4b4a-ae64-4856566f907e",
-  "nextExperimentIndex": 29,
+  "currentExperimentId": "2e559785-ce43-4174-b364-26e7fb2e9c56",
+  "nextExperimentIndex": 30,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -354,6 +354,18 @@
       "name": "Keyed Sort Positions In A Bulk-Built KeyOrder",
       "path": "2026-11-05-28-keyed-sort-positions-in-a-bulk-built-key-order.json",
       "startedAt": "2026-11-05T00:23:55Z",
+      "finishedAt": "2026-11-05T00:25:49Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "6df6296ed7e3d69c7a449900deb6785fbbeba1a5"
+    },
+    {
+      "id": "2e559785-ce43-4174-b364-26e7fb2e9c56",
+      "index": 29,
+      "type": "hypothesis",
+      "name": "Lock-Free Empty Drain",
+      "path": "2026-11-05-29-lock-free-empty-drain.json",
+      "startedAt": "2026-11-05T00:26:12Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

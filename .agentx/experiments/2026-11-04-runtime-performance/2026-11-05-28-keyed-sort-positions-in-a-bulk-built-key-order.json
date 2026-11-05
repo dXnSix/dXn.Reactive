@@ -9,11 +9,11 @@
   "path": "2026-11-05-28-keyed-sort-positions-in-a-bulk-built-key-order.json",
   "createdAt": "2026-11-05T00:23:55Z",
   "startedAt": "2026-11-05T00:23:55Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:25:49Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
-  "resultCommit": "",
+  "resultCommit": "6df6296ed7e3d69c7a449900deb6785fbbeba1a5",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
-      "resultCommit": "",
+      "resultCommit": "6df6296ed7e3d69c7a449900deb6785fbbeba1a5",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "6df6296ed7e3d69c7a449900deb6785fbbeba1a5"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,100 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "68.977 µs median",
+      "delta": "+0.5268%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "144.76 µs median",
+      "delta": "+1.7971%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.3326 ms median",
+      "delta": "+0.8043%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/filter-sort-bind",
+      "before": "baseline (criterion saved)",
+      "after": "3.4890 µs median",
+      "delta": "-25.020%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/page-keyed",
+      "before": "baseline (criterion saved)",
+      "after": "1.2711 µs median",
+      "delta": "-4.1307%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/top-keyed",
+      "before": "baseline (criterion saved)",
+      "after": "1.2832 µs median",
+      "delta": "-4.3784%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/sort-and-virtualize",
+      "before": "baseline (criterion saved)",
+      "after": "5.1211 µs median",
+      "delta": "-31.700%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.4013 µs median",
+      "delta": "+5.3801%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.3027 µs median",
+      "delta": "+1.7355%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "68.701 µs median",
+      "delta": "-0.1488%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.0077 µs median",
+      "delta": "-7.6595%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "749.95 µs median",
+      "delta": "+1.1486%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.4060 µs median",
+      "delta": "-1.9114%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Keyed Sort Positions In A Bulk-Built KeyOrder Finished\n\n**Index:** 28\n**Checkpoint:** dd0b712\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 636 lib tests pass (debug assertions on sorted keys and KeyOrder distinctness); sort-and-virtualize update -32%, filter-sort-bind -25%; keyed-sort and sort-and-page loads within +-2% (experiment 26's +8..+19% regression is gone).\n\n### Scope Lock\n\n**Tested mechanism:** sorted positions in a KeyOrder whose rebuild is a bulk reset\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| keyed-sort-large-add-batch/640 | 68.977 µs median | +0.5268% |\n| keyed-sort-large-add-batch/1280 | 144.76 µs median | +1.7971% |\n| keyed-sort-large-add-batch/10000 | 1.3326 ms median | +0.8043% |\n| cache-update/filter-sort-bind | 3.4890 µs median | -25.020% |\n| cache-update/page-keyed | 1.2711 µs median | -4.1307% |\n| cache-update/top-keyed | 1.2832 µs median | -4.3784% |\n| cache-update/sort-and-virtualize | 5.1211 µs median | -31.700% |\n| list-replace/sort | 1.4013 µs median | +5.3801% |\n| list-replace/filter-sort | 1.3027 µs median | +1.7355% |\n| sort-and-page/load/1000 | 68.701 µs median | -0.1488% |\n| sort-and-page/update/1000 | 1.0077 µs median | -7.6595% |\n| sort-and-page/load/10000 | 749.95 µs median | +1.1486% |\n| sort-and-page/update/10000 | 2.4060 µs median | -1.9114% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

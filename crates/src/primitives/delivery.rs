@@ -44,6 +44,9 @@ struct Shared<T> {
     /// The number of registered subscribers, mirrored from `entries` under the lock so
     /// `has_subscribers` needs no lock.
     subscribers: AtomicUsize,
+    /// The number of queued items, mirrored from `queue` under the lock so an empty `drain`
+    /// needs no lock.
+    pending: AtomicUsize,
 }
 
 /// A FIFO queue that delivers items to its subscribers one at a time.
@@ -85,6 +88,7 @@ impl<T> DeliveryQueue<T> {
                     snapshot_rebuilds: 0,
                 }),
                 subscribers: AtomicUsize::new(0),
+                pending: AtomicUsize::new(0),
             }),
         }
     }
@@ -182,7 +186,11 @@ impl<T> DeliveryQueue<T> {
     /// holds its own state lock and [`drain`](Self::drain) after releasing it; the
     /// delivery order then equals the order in which the publisher committed.
     pub fn push(&self, item: T) -> Result<()> {
-        self.lock()?.queue.push_back(item);
+        let mut state = self.lock()?;
+        state.queue.push_back(item);
+        self.shared
+            .pending
+            .store(state.queue.len(), Ordering::SeqCst);
         Ok(())
     }
 
@@ -192,6 +200,10 @@ impl<T> DeliveryQueue<T> {
     /// A subscriber panic propagates to the caller; the queue stays usable and the
     /// remaining items are delivered by the next `drain`.
     pub fn drain(&self) -> Result<()> {
+        // Nothing queued: a push racing with this check drains its own item.
+        if self.shared.pending.load(Ordering::SeqCst) == 0 {
+            return Ok(());
+        }
         // Claiming the drain and popping its first item share one critical section.
         let mut next = {
             let mut state = self.lock()?;
@@ -201,6 +213,9 @@ impl<T> DeliveryQueue<T> {
             let Some(item) = state.queue.pop_front() else {
                 return Ok(());
             };
+            self.shared
+                .pending
+                .store(state.queue.len(), Ordering::SeqCst);
             state.delivering = true;
             Some((item, state.snapshot()))
         };
@@ -221,7 +236,12 @@ impl<T> DeliveryQueue<T> {
 
             let mut state = self.lock()?;
             match state.queue.pop_front() {
-                Some(item) => next = Some((item, state.snapshot())),
+                Some(item) => {
+                    self.shared
+                        .pending
+                        .store(state.queue.len(), Ordering::SeqCst);
+                    next = Some((item, state.snapshot()));
+                }
                 None => state.delivering = false,
             }
         }
