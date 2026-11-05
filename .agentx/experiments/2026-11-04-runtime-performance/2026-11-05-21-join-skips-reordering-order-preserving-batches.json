@@ -9,11 +9,11 @@
   "path": "2026-11-05-21-join-skips-reordering-order-preserving-batches.json",
   "createdAt": "2026-11-05T00:06:37Z",
   "startedAt": "2026-11-05T00:06:37Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:08:00Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "b58735696100e82925315364edf2850aa2f77048",
-  "resultCommit": "",
+  "resultCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard b58735696100e82925315364edf2850aa2f77048",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "b58735696100e82925315364edf2850aa2f77048",
-      "resultCommit": "",
+      "resultCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard b58735696100e82925315364edf2850aa2f77048",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "2b8e9da697b9800d23850f96b28242a1c544e1f7"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,51 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "joins-load/full_join/1000",
+      "before": "baseline (criterion saved)",
+      "after": "184.52 µs median",
+      "delta": "+1.8254%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.0561 ms median",
+      "delta": "+11.635%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/full_join/4000",
+      "before": "baseline (criterion saved)",
+      "after": "717.85 µs median",
+      "delta": "-0.6377%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/4000",
+      "before": "baseline (criterion saved)",
+      "after": "4.3208 ms median",
+      "delta": "+10.260%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/inner-join",
+      "before": "baseline (criterion saved)",
+      "after": "266.72 ns median",
+      "delta": "-99.574%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join",
+      "before": "baseline (criterion saved)",
+      "after": "256.83 ns median",
+      "delta": "-99.407%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Join Skips Reordering Order-Preserving Batches Finished\n\n**Index:** 21\n**Checkpoint:** b587356\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 63 focused join/relation/index tests pass; inner_join update 63.8 us -> 267 ns, left_join update 44.2 us -> 257 ns; full_join load unchanged. left_join_many (+10..+12%) runs JoinManyState, which this change does not touch.\n\n### Scope Lock\n\n**Tested mechanism:** lazy desired order/ranks and conditional reorder for order-preserving batches\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| joins-load/full_join/1000 | 184.52 µs median | +1.8254% |\n| joins-load/left_join_many/1000 | 1.0561 ms median | +11.635% |\n| joins-load/full_join/4000 | 717.85 µs median | -0.6377% |\n| joins-load/left_join_many/4000 | 4.3208 ms median | +10.260% |\n| cache-update/inner-join | 266.72 ns median | -99.574% |\n| cache-update/left-join | 256.83 ns median | -99.407% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

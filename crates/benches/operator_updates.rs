@@ -157,6 +157,131 @@ fn cache_operators(c: &mut Criterion) {
     });
 }
 
+fn relation_and_window_operators(c: &mut Criterion) {
+    bench_cache_update(c, "cache-update/full-join", false, |source| {
+        let right = SourceCache::new(|row: &(u32, u32)| row.0);
+        right
+            .add_or_update_range((ROWS / 2..ROWS + ROWS / 2).map(|id| (id, id * 2)))
+            .expect("right");
+        let subscription = source
+            .connect()
+            .full_join(
+                right.connect(),
+                |_key, left: Option<&Row>, right: Option<&(u32, u32)>| {
+                    left.map_or(0, |left| left.value) + right.map_or(0, |right| right.1)
+                },
+            )
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("full join");
+        Subscription::many(vec![subscription, Subscription::new(move || drop(right))])
+    });
+
+    bench_cache_update(c, "cache-update/left-join-many", false, |source| {
+        let right = SourceCache::new(|row: &(u32, u32)| row.0);
+        right
+            .add_or_update_range((0..ROWS).map(|id| (1_000_000 + id, id / 2)))
+            .expect("right");
+        let subscription = source
+            .connect()
+            .left_join_many(
+                right.connect(),
+                |row: &(u32, u32)| row.1,
+                |_key, left: &Row, group: &RayCacheGroup<u32, u32, (u32, u32)>| {
+                    left.value + group.count().unwrap_or(0) as u32
+                },
+            )
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("left join many");
+        Subscription::many(vec![subscription, Subscription::new(move || drop(right))])
+    });
+
+    bench_cache_update(c, "cache-update/page-keyed", false, |source| {
+        source
+            .connect()
+            .page_keyed(PageRequest::new(0, 50))
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("page keyed")
+    });
+
+    bench_cache_update(c, "cache-update/top-keyed", false, |source| {
+        source
+            .connect()
+            .top_keyed(50)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("top keyed")
+    });
+
+    bench_cache_update(c, "cache-update/sort-and-virtualize", false, |source| {
+        source
+            .connect()
+            .sort_and_virtualize_by(
+                |left: &Row, right: &Row| left.value.cmp(&right.value),
+                VirtualRequest::new(100, 50),
+            )
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("sort and virtualize")
+    });
+
+    c.bench_function("cache-update/transform-to-tree", |b| {
+        let source = SourceCache::new(|node: &(u32, u32)| node.0);
+        source
+            .add_or_update_range(
+                (0..ROWS).map(|key| (key, if key == 0 { 0 } else { (key - 1) / 10 })),
+            )
+            .expect("load");
+        let _subscription = source
+            .connect()
+            .transform_to_tree(|node: &(u32, u32)| node.1)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("tree");
+        let mut step = 0_u32;
+        b.iter(|| {
+            step = step.wrapping_add(1);
+            // Re-parent a leaf between two parents.
+            let key = ROWS - 1 - (step % 64);
+            let parent = if step.is_multiple_of(2) {
+                (key - 1) / 10
+            } else {
+                1
+            };
+            source.add_or_update((key, parent)).expect("update");
+        });
+    });
+
+    bench_list_replace(c, "list-replace/sort", |source| {
+        source
+            .connect()
+            .sort_by(|left, right| left.value.cmp(&right.value))
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("sort")
+    });
+
+    bench_list_replace(c, "list-replace/filter-sort", |source| {
+        source
+            .connect()
+            .filter(|row| row.group % 2 == 0)
+            .sort_by(|left, right| left.value.cmp(&right.value))
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("filter sort")
+    });
+}
+
 fn loaded_list() -> SourceList<Row> {
     SourceList::new(
         (0..ROWS)
@@ -237,5 +362,10 @@ fn list_operators(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, cache_operators, list_operators);
+criterion_group!(
+    benches,
+    cache_operators,
+    list_operators,
+    relation_and_window_operators
+);
 criterion_main!(benches);

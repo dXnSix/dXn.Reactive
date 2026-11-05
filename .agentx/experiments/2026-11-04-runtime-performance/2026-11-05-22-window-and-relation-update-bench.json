@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "7c0d6f96-6876-4b51-b457-cf149608132a",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 22,
+  "type": "hypothesis",
+  "name": "Window And Relation Update Bench",
+  "slug": "window-and-relation-update-bench",
+  "path": "2026-11-05-22-window-and-relation-update-bench.json",
+  "createdAt": "2026-11-05T00:08:17Z",
+  "startedAt": "2026-11-05T00:08:17Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 2b8e9da697b9800d23850f96b28242a1c544e1f7",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 2b8e9da697b9800d23850f96b28242a1c544e1f7",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Window And Relation Update Bench Hypothesis\n\n### Hypothesis\n\nExperiment 20's bench exposed O(n) per-update joins. Extending it to the remaining relational and windowed operators (`left_join_many`, `full_join`, `transform_to_tree`, `page_keyed`, `top_keyed`, `sort_and_virtualize_by`, list `sort_by` replace, list `filter`+`sort` replace) measures whether they also pay per-update costs that scale with the collection.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement (bench functions only).\n**Allowed changes:** `crates/benches/operator_updates.rs`.\n**Forbidden in this experiment:** production source changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`cargo bench --bench operator_updates -- --save-baseline base` for the new points. Pass: compiles, clippy/fmt clean, stable medians.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nA per-update baseline for eight more operators.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
