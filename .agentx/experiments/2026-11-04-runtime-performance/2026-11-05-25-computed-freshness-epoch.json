@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "8e697428-20c6-4b92-8f2f-1723ea76c628",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 25,
+  "type": "hypothesis",
+  "name": "Computed Freshness Epoch",
+  "slug": "computed-freshness-epoch",
+  "path": "2026-11-05-25-computed-freshness-epoch.json",
+  "createdAt": "2026-11-05T00:15:11Z",
+  "startedAt": "2026-11-05T00:15:11Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f390e8bad2d8de4dc7844e9bcb28318185e851a6",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f390e8bad2d8de4dc7844e9bcb28318185e851a6",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Computed Freshness Epoch Hypothesis\n\n### Hypothesis\n\nReading a `Computed` (and every input check while one recomputes) calls its refresh hook, which re-reads every input version fresh, which refreshes every upstream `Computed` recursively: one write through an 8-deep chain costs O(depth²) refreshes (1.8 µs, `input_version` and mutexes on top). A process-wide write epoch, advanced after each committed write of a signal that has subscribers (only those can feed a `Computed`), lets a core that verified itself fresh at epoch *e* skip the check while the epoch is still *e* and it has no pending change. The epoch is advanced under the writer's lock after the version moves and read before the inputs, so a skipped check can never miss a write.\n\n### Scope Lock\n\n**Tested mechanism:** epoch-gated skip of `ComputedCore::refresh`.\n**Allowed changes:** `crates/src/signal.rs` (epoch counter, advance on observed commits), `crates/src/computed.rs` (verified epoch, refresh fast path, a failed step distinct from done).\n**Forbidden in this experiment:** delivery changes, values() startup, collection code.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nScalar tests (`tests`, `scalar_tests`, computed concurrency/glitch tests), full lib + integration + doc-example tests; clippy/fmt. Bench `hot_paths` scalar-hot and `reactive_complexity` vs base. Pass: computed-chain-8-set-and-get >=30% faster; signal-set benches not slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nComputed chain write+read from ~1.8 us to under 1 us; repeated reads of unchanged computeds O(1).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
+  "lastStableCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968"
+      "lastStableCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "25625d24-8279-4372-a141-8f89f3c1643b",
-  "nextExperimentIndex": 25,
+  "currentExperimentId": "8e697428-20c6-4b92-8f2f-1723ea76c628",
+  "nextExperimentIndex": 26,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -308,6 +308,18 @@
       "name": "Tree Roots Filter Reads The Parent Map",
       "path": "2026-11-05-24-tree-roots-filter-reads-the-parent-map.json",
       "startedAt": "2026-11-05T00:12:46Z",
+      "finishedAt": "2026-11-05T00:13:57Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6"
+    },
+    {
+      "id": "8e697428-20c6-4b92-8f2f-1723ea76c628",
+      "index": 25,
+      "type": "hypothesis",
+      "name": "Computed Freshness Epoch",
+      "path": "2026-11-05-25-computed-freshness-epoch.json",
+      "startedAt": "2026-11-05T00:15:11Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

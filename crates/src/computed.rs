@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
 use crate::primitives::{Result, ValueStream};
@@ -102,6 +103,8 @@ struct ComputedCore<T> {
     /// `Some` for distinct values: publish only when the value changed.
     equal: Option<fn(&T, &T) -> bool>,
     state: Mutex<CoreState>,
+    /// The write epoch at which a refresh last found the value fresh (`u64::MAX`: never).
+    verified: AtomicU64,
     #[cfg(test)]
     test: CoreTestHooks,
 }
@@ -239,16 +242,19 @@ where
 
     /// Brings the published value up to date with the inputs once.
     fn recompute(&self) -> Step {
-        if !matches!(self.is_stale(), Ok(true)) {
-            return Step::Done;
+        match self.is_stale() {
+            Ok(true) => {}
+            Ok(false) => return Step::Done,
+            Err(_) => return Step::Failed,
         }
         match self.evaluate() {
             None => Step::Reentrant,
             Some(Ok((versions, value))) => match self.publish(versions, value) {
                 Ok(Publish::InputsMoved) => Step::Retry,
-                _ => Step::Done,
+                Ok(_) => Step::Done,
+                Err(_) => Step::Failed,
             },
-            Some(Err(_)) => Step::Done,
+            Some(Err(_)) => Step::Failed,
         }
     }
 
@@ -283,7 +289,7 @@ where
                 state.dirty = false;
             }
             match self.recompute() {
-                Step::Done => {}
+                Step::Done | Step::Failed => {}
                 Step::Retry => lock(&self.state).dirty = true,
                 Step::Reentrant => {
                     #[cfg(test)]
@@ -310,7 +316,10 @@ enum Publish {
 }
 
 enum Step {
+    /// The value is up to date with the inputs.
     Done,
+    /// Reading or evaluating the inputs failed; the value was left as it was.
+    Failed,
     Retry,
     Reentrant,
 }
@@ -320,9 +329,18 @@ where
     T: Clone + Send + Sync + 'static,
 {
     fn refresh(&self) {
+        // Nothing observable was written since this core last found itself fresh.
+        let epoch = crate::signal::write_epoch();
+        if self.verified.load(Ordering::SeqCst) == epoch && !lock(&self.state).dirty {
+            return;
+        }
         loop {
             match self.recompute() {
-                Step::Done => break,
+                Step::Done => {
+                    self.verified.store(epoch, Ordering::SeqCst);
+                    break;
+                }
+                Step::Failed => break,
                 Step::Retry => {}
                 Step::Reentrant => return,
             }
@@ -361,6 +379,7 @@ where
             dirty: false,
             processing: false,
         }),
+        verified: AtomicU64::new(u64::MAX),
         #[cfg(test)]
         test: CoreTestHooks::default(),
     });

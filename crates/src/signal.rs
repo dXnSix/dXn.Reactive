@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, TryLockError, Weak};
 
 use crate::primitives::{DeliveryQueue, Result, ValueStream};
@@ -179,6 +180,20 @@ fn next_version(version: u64) -> u64 {
     version.wrapping_add(1).max(1)
 }
 
+/// Advanced by every committed write of a signal that has subscribers (a `Computed` input
+/// always has one), after the new version is stored and while the signal is locked.
+static WRITE_EPOCH: AtomicU64 = AtomicU64::new(0);
+
+/// The current write epoch: a `Computed` that verified itself fresh at this epoch is still
+/// fresh while it is unchanged. Read it before reading the inputs.
+pub(crate) fn write_epoch() -> u64 {
+    WRITE_EPOCH.load(Ordering::SeqCst)
+}
+
+fn advance_write_epoch() {
+    WRITE_EPOCH.fetch_add(1, Ordering::SeqCst);
+}
+
 impl<T> SignalInner<T>
 where
     T: Clone + Send + 'static,
@@ -198,6 +213,7 @@ where
         };
         if self.changes.has_subscribers() {
             self.changes.push(change.clone())?;
+            advance_write_epoch();
         }
         Ok(change)
     }
@@ -222,6 +238,7 @@ where
         };
         if self.changes.has_subscribers() {
             self.changes.push(change.clone())?;
+            advance_write_epoch();
         }
         Ok(Some(change))
     }
@@ -250,6 +267,7 @@ where
         };
         if self.changes.has_subscribers() {
             self.changes.push(change.clone())?;
+            advance_write_epoch();
         }
         Ok(change)
     }

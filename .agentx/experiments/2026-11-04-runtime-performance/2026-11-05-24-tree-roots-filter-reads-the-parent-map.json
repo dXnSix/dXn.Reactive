@@ -9,11 +9,11 @@
   "path": "2026-11-05-24-tree-roots-filter-reads-the-parent-map.json",
   "createdAt": "2026-11-05T00:12:46Z",
   "startedAt": "2026-11-05T00:12:46Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:13:57Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
-  "resultCommit": "",
+  "resultCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50aada74911ddbd0359e8dd23f8dbc5869b29968",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
-      "resultCommit": "",
+      "resultCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50aada74911ddbd0359e8dd23f8dbc5869b29968",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,44 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/transform-to-tree",
+      "before": "baseline (criterion saved)",
+      "after": "18.716 µs median",
+      "delta": "-73.596%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "500.56 µs median",
+      "delta": "+4.0488%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "549.57 µs median",
+      "delta": "+1.2037%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.9691 ms median",
+      "delta": "+0.8652%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "2.2154 ms median",
+      "delta": "-0.6457%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Tree Roots Filter Reads The Parent Map Finished\n\n**Index:** 24\n**Checkpoint:** 50aada7\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 636 lib tests pass in debug with the assertion comparing the parent map to is_root on every refilter; transform_to_tree re-parent update 70.9 -> 18.7 us (-74%); loads unchanged (+-4%).\n\n### Scope Lock\n\n**Tested mechanism:** answer the built-in roots predicate from actual_parents during refilter\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/transform-to-tree | 18.716 µs median | -73.596% |\n| transform-to-tree-load/flat/1000 | 500.56 µs median | +4.0488% |\n| transform-to-tree-load/bushy/1000 | 549.57 µs median | +1.2037% |\n| transform-to-tree-load/flat/4000 | 1.9691 ms median | +0.8652% |\n| transform-to-tree-load/bushy/4000 | 2.2154 ms median | -0.6457% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
