@@ -542,47 +542,32 @@ where
     }
 
     fn insert_sorted_entry(&mut self, index: usize, key: K, item: T) {
-        self.sorted.insert(index, (key, item));
-        self.refresh_sorted_positions_from(index);
+        self.sorted.insert(index, (key.clone(), item));
+        let _ = self.sorted_keys.insert(index, key);
     }
 
     /// Re-inserts an entry taken with [`take_sorted_key`](Self::take_sorted_key) (from
     /// `taken`, or a new one when `None`) at `index`, refreshing only the positions it shifted.
     fn insert_taken_entry(&mut self, index: usize, key: K, item: T, taken: Option<usize>) {
-        self.sorted.insert(index, (key, item));
-        let Some(taken) = taken else {
-            self.refresh_sorted_positions_from(index);
-            return;
-        };
-        for position in taken.min(index)..=taken.max(index) {
-            let key = &self.sorted[position].0;
-            match self.sorted_positions.get_mut(key) {
-                Some(slot) => *slot = position,
-                None => {
-                    let _ = self.sorted_positions.insert(key.clone(), position);
-                }
+        self.sorted.insert(index, (key.clone(), item));
+        match taken {
+            Some(taken) => {
+                let _ = self.sorted_keys.move_to(taken, index);
+            }
+            None => {
+                let _ = self.sorted_keys.insert(index, key);
             }
         }
     }
 
     fn clear_sorted(&mut self) {
         self.sorted.clear();
-        self.sorted_positions.clear();
+        self.sorted_keys.clear();
     }
 
     fn rebuild_sorted_positions(&mut self) {
-        self.sorted_positions = self
-            .sorted
-            .iter()
-            .enumerate()
-            .map(|(index, (key, _))| (key.clone(), index))
-            .collect();
-    }
-
-    fn refresh_sorted_positions_from(&mut self, start: usize) {
-        for (index, (key, _)) in self.sorted.iter().enumerate().skip(start) {
-            self.sorted_positions.insert(key.clone(), index);
-        }
+        self.sorted_keys
+            .reset(self.sorted.iter().map(|(key, _)| key.clone()));
     }
 
     fn ordered_items(&self) -> Vec<(K, T)> {
@@ -640,21 +625,19 @@ where
     /// Debug builds check that the sorted position map matches the sorted output.
     fn debug_assert_positions(&self) {
         debug_assert!(
-            self.sorted_positions.len() == self.sorted.len()
+            self.sorted_keys.len() == self.sorted.len()
                 && self
                     .sorted
                     .iter()
-                    .enumerate()
-                    .all(|(index, (key, _))| self.sorted_positions.get(key) == Some(&index)),
+                    .zip(self.sorted_keys.iter())
+                    .all(|((key, _), sorted_key)| key == sorted_key),
             "keyed sort: sorted positions out of sync with the sorted output"
         );
     }
 
     fn remove_sorted_key(&mut self, key: &K) -> Option<(usize, (K, T))> {
-        let index = self.sorted_positions.get(key).copied()?;
+        let index = self.sorted_keys.remove(key)?;
         let entry = self.sorted.remove(index);
-        self.sorted_positions.remove(key);
-        self.refresh_sorted_positions_from(index);
         Some((index, entry))
     }
 
@@ -662,7 +645,7 @@ where
     /// caller re-inserts it with [`insert_taken_entry`](Self::insert_taken_entry), which
     /// refreshes the shifted window once.
     fn take_sorted_key(&mut self, key: &K) -> Option<(usize, (K, T))> {
-        let index = self.sorted_positions.get(key).copied()?;
+        let index = self.sorted_keys.index_of(key)?;
         Some((index, self.sorted.remove(index)))
     }
 
@@ -675,9 +658,9 @@ where
     fn list_resort_moves(&self, next: &[(K, T)]) -> Option<Vec<ListChange<T>>> {
         if next.len() != self.sorted.len()
             || next.iter().any(|(key, item)| {
-                self.sorted_positions
-                    .get(key)
-                    .is_none_or(|index| self.sorted[*index].1 != *item)
+                self.sorted_keys
+                    .index_of(key)
+                    .is_none_or(|index| self.sorted[index].1 != *item)
             })
         {
             return None;
@@ -692,7 +675,7 @@ where
             minimal_moves_within(&mut working, &target, RESORT_MOVE_BUDGET)?
                 .into_iter()
                 .filter_map(|(key, from, to)| {
-                    let item = self.sorted.get(*self.sorted_positions.get(&key)?)?;
+                    let item = self.sorted.get(self.sorted_keys.index_of(&key)?)?;
                     Some(ListChange::Move {
                         from,
                         to,

@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6",
+  "lastStableCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "f390e8bad2d8de4dc7844e9bcb28318185e851a6"
+      "lastStableCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "8e697428-20c6-4b92-8f2f-1723ea76c628",
-  "nextExperimentIndex": 26,
+  "currentExperimentId": "7b41e535-8e52-4b4a-ae64-4856566f907e",
+  "nextExperimentIndex": 29,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -320,6 +320,40 @@
       "name": "Computed Freshness Epoch",
       "path": "2026-11-05-25-computed-freshness-epoch.json",
       "startedAt": "2026-11-05T00:15:11Z",
+      "finishedAt": "2026-11-05T00:17:56Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1"
+    },
+    {
+      "id": "dbf46cd9-653d-4fad-ba96-b8330d588d74",
+      "index": 26,
+      "type": "hypothesis",
+      "name": "Keyed Sort Positions In A KeyOrder",
+      "path": "2026-11-05-26-keyed-sort-positions-in-a-key-order.json",
+      "startedAt": "2026-11-05T00:18:57Z",
+      "finishedAt": "2026-11-05T00:21:38Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "4ccd580d-e920-4881-aa52-1709be46c270",
+      "index": 27,
+      "type": "hypothesis",
+      "name": "KeyOrder Bulk Reset",
+      "path": "2026-11-05-27-key-order-bulk-reset.json",
+      "startedAt": "2026-11-05T00:21:56Z",
+      "finishedAt": "2026-11-05T00:23:42Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "7b41e535-8e52-4b4a-ae64-4856566f907e",
+      "index": 28,
+      "type": "hypothesis",
+      "name": "Keyed Sort Positions In A Bulk-Built KeyOrder",
+      "path": "2026-11-05-28-keyed-sort-positions-in-a-bulk-built-key-order.json",
+      "startedAt": "2026-11-05T00:23:55Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "dbf46cd9-653d-4fad-ba96-b8330d588d74",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 26,
+  "type": "hypothesis",
+  "name": "Keyed Sort Positions In A KeyOrder",
+  "slug": "keyed-sort-positions-in-a-key-order",
+  "path": "2026-11-05-26-keyed-sort-positions-in-a-key-order.json",
+  "createdAt": "2026-11-05T00:18:57Z",
+  "startedAt": "2026-11-05T00:18:57Z",
+  "finishedAt": "2026-11-05T00:21:38Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Keyed Sort Positions In A KeyOrder Hypothesis\n\n### Hypothesis\n\n`CacheSortState` keeps each key's sorted position in a `HashMap<K, usize>` and, when an entry moves, rewrites every position in the shifted window with a hash lookup each (`insert_taken_entry` is 80% of a `sort_and_virtualize` update that moves an item far, as sort-by-last-updated does). `KeyOrder` already maps keys to positions through a ticket table, so a move shifts plain integers and never hashes the keys it passes. Keeping the sorted keys in a `KeyOrder` gives the same positions with a cheaper O(distance) move.\n\n### Scope Lock\n\n**Tested mechanism:** sorted positions tracked by a `KeyOrder` instead of a `HashMap`.\n**Allowed changes:** the `sorted_positions` field of `CacheSortState` (`list_sort_state.rs`) and its helpers/uses in `cache_sort_state_impl.rs`.\n**Forbidden in this experiment:** the sorted value vector, comparer/binary search, paging/virtual diffing.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{keyed_sort_positions,sorting_windowing,window_responses,subset_operator_indexes,index_contract_harness,snapshot_diff_indexes,operator_bookkeeping_costs}` (debug position assertion); clippy/fmt. Bench `operator_updates` (sort-and-virtualize, filter-sort-bind), `sort_and_page`, `keyed_sort` vs base. Pass: sort-and-virtualize update >=25% faster; sort loads not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nFar-moving sorted updates 2-3x cheaper.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "76.903 µs median",
+      "delta": "+11.878%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "156.99 µs median",
+      "delta": "+10.456%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.4295 ms median",
+      "delta": "+8.2349%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/filter-sort-bind",
+      "before": "baseline (criterion saved)",
+      "after": "3.4520 µs median",
+      "delta": "-25.634%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/page-keyed",
+      "before": "baseline (criterion saved)",
+      "after": "1.2782 µs median",
+      "delta": "-2.8171%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/top-keyed",
+      "before": "baseline (criterion saved)",
+      "after": "1.2810 µs median",
+      "delta": "-6.1404%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/sort-and-virtualize",
+      "before": "baseline (criterion saved)",
+      "after": "5.0635 µs median",
+      "delta": "-32.120%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.3559 µs median",
+      "delta": "+2.1152%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.2847 µs median",
+      "delta": "+0.9117%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "82.228 µs median",
+      "delta": "+20.246%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.0258 µs median",
+      "delta": "-1.3171%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "861.45 µs median",
+      "delta": "+16.576%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.4123 µs median",
+      "delta": "-3.4849%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Keyed Sort Positions In A KeyOrder Finished\n\n**Index:** 26\n**Checkpoint:** dd0b712\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure. Next: the same structure with a bulk KeyOrder construction for distinct keys.\n\n### Scope Lock\n\n**Tested mechanism:** 84 focused tests pass; sort-and-virtualize update -32%, filter-sort-bind -26%, but loads regressed reproducibly (rerun): keyed-sort +8..+12%, sort-and-page load +19%, beyond the 10% gate. KeyOrder::reset pushes key by key (lookup, ticket, table write per key), slower than collecting a HashMap.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| keyed-sort-large-add-batch/640 | 76.903 µs median | +11.878% |\n| keyed-sort-large-add-batch/1280 | 156.99 µs median | +10.456% |\n| keyed-sort-large-add-batch/10000 | 1.4295 ms median | +8.2349% |\n| cache-update/filter-sort-bind | 3.4520 µs median | -25.634% |\n| cache-update/page-keyed | 1.2782 µs median | -2.8171% |\n| cache-update/top-keyed | 1.2810 µs median | -6.1404% |\n| cache-update/sort-and-virtualize | 5.0635 µs median | -32.120% |\n| list-replace/sort | 1.3559 µs median | +2.1152% |\n| list-replace/filter-sort | 1.2847 µs median | +0.9117% |\n| sort-and-page/load/1000 | 82.228 µs median | +20.246% |\n| sort-and-page/update/1000 | 1.0258 µs median | -1.3171% |\n| sort-and-page/load/10000 | 861.45 µs median | +16.576% |\n| sort-and-page/update/10000 | 2.4123 µs median | -3.4849% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to dd0b712.\n",
+  "notes": ""
+}

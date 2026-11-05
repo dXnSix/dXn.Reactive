@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "7b41e535-8e52-4b4a-ae64-4856566f907e",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 28,
+  "type": "hypothesis",
+  "name": "Keyed Sort Positions In A Bulk-Built KeyOrder",
+  "slug": "keyed-sort-positions-in-a-bulk-built-key-order",
+  "path": "2026-11-05-28-keyed-sort-positions-in-a-bulk-built-key-order.json",
+  "createdAt": "2026-11-05T00:23:55Z",
+  "startedAt": "2026-11-05T00:23:55Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Keyed Sort Positions In A Bulk-Built KeyOrder Hypothesis\n\n### Hypothesis\n\nExperiment 26 showed that tracking the keyed sort's positions in a `KeyOrder` makes far-moving updates ~30% cheaper but slowed loads 8-19%, because rebuilding the positions after a large add batch reset the `KeyOrder` key by key. With the rebuild done in one bulk pass (tickets and positions 0..n, one sized ticket map — experiment 27's reset), the positions cost about what the `HashMap` collect did, keeping the update gain without the load regression.\n\n### Scope Lock\n\n**Tested mechanism:** sorted positions in a `KeyOrder` whose rebuild is a bulk reset.\n**Allowed changes:** `KeyOrder::reset` (bulk), the `CacheSortState` position field and its helpers/uses (as in experiment 26).\n**Forbidden in this experiment:** other KeyOrder callers' logic, sorted value vector, paging diff.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{keyed_sort_positions,sorting_windowing,window_responses,subset_operator_indexes,index_contract_harness,snapshot_diff_indexes,operator_bookkeeping_costs}` (debug position assertion); clippy/fmt. Bench `operator_updates` (sort-and-virtualize, filter-sort-bind), `sort_and_page`, `keyed_sort` vs base. Pass: sort-and-virtualize update >=25% faster; sort loads not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nsort-and-virtualize update ~30% faster with loads within 5% of the base.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

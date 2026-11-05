@@ -177,9 +177,20 @@ where
     /// Replaces the order with `keys` (which must be distinct).
     pub(crate) fn reset(&mut self, keys: impl IntoIterator<Item = K>) {
         self.clear();
-        for key in keys {
-            let _ = self.push(key);
+        // Distinct keys need no lookups: build every table in one pass.
+        self.keys.extend(keys);
+        let len = self.keys.len();
+        self.tickets.extend(0..len);
+        self.positions.extend(0..len);
+        self.ticket_of.reserve(len);
+        for (ticket, key) in self.keys.iter().enumerate() {
+            let _ = self.ticket_of.insert(key.clone(), ticket);
         }
+        debug_assert_eq!(
+            self.ticket_of.len(),
+            len,
+            "KeyOrder::reset of repeated keys"
+        );
     }
 
     /// Keeps the keys `keep` accepts, in order.

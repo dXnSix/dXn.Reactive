@@ -465,7 +465,9 @@ struct CacheSortState<K, T> {
     items: HashMap<K, T>,
     order: KeyOrder<K>,
     sorted: Vec<(K, T)>,
-    sorted_positions: HashMap<K, usize>,
+    /// The keys of `sorted`, in the same order: key-to-position lookups and moves that shift
+    /// positions without hashing.
+    sorted_keys: KeyOrder<K>,
     comparer: Option<Comparer<T>>,
     version: u64,
 }
@@ -476,7 +478,7 @@ impl<K, T> Default for CacheSortState<K, T> {
             items: HashMap::default(),
             order: KeyOrder::new(),
             sorted: Vec::new(),
-            sorted_positions: HashMap::default(),
+            sorted_keys: KeyOrder::new(),
             comparer: None,
             version: 0,
         }

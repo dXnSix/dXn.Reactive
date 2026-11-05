@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "4ccd580d-e920-4881-aa52-1709be46c270",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 27,
+  "type": "hypothesis",
+  "name": "KeyOrder Bulk Reset",
+  "slug": "key-order-bulk-reset",
+  "path": "2026-11-05-27-key-order-bulk-reset.json",
+  "createdAt": "2026-11-05T00:21:56Z",
+  "startedAt": "2026-11-05T00:21:56Z",
+  "finishedAt": "2026-11-05T00:23:42Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "dd0b712e748dcd89ae9da82882e89c6536f442e1",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dd0b712e748dcd89ae9da82882e89c6536f442e1",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## KeyOrder Bulk Reset Hypothesis\n\n### Hypothesis\n\n`KeyOrder::reset` (and `FromIterator`) take distinct keys by contract but push them one at a time: an existence lookup, a ticket, a key/ticket insert and a reindex per key, with tables growing by doubling. Building the key vector, tickets 0..n, positions 0..n and the ticket map (sized once) in one pass yields the same order. `transform_to_tree` collects one per batch for its snapshot diff, and filters, joins and retain reset through it.\n\n### Scope Lock\n\n**Tested mechanism:** bulk construction in `KeyOrder::reset`.\n**Allowed changes:** `reset` in `crates/src/collections/key_order.rs` (debug assertion that keys are distinct).\n**Forbidden in this experiment:** callers, sort positions, other KeyOrder methods.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nKeyOrder tests and full lib tests in debug (distinctness assertion); clippy/fmt. Bench `operator_updates` (transform-to-tree) and `tree` vs base. Pass: tree update >=10% faster; nothing slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nCheaper per-batch tree diffs and refilters.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "joins-load/full_join/1000",
+      "before": "baseline (criterion saved)",
+      "after": "179.72 µs median",
+      "delta": "+1.0821%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/1000",
+      "before": "baseline (criterion saved)",
+      "after": "958.69 µs median",
+      "delta": "-0.7959%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/full_join/4000",
+      "before": "baseline (criterion saved)",
+      "after": "717.51 µs median",
+      "delta": "+1.6053%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/4000",
+      "before": "baseline (criterion saved)",
+      "after": "3.9373 ms median",
+      "delta": "+0.0276%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/inner-join",
+      "before": "baseline (criterion saved)",
+      "after": "274.44 ns median",
+      "delta": "+7.2345%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join",
+      "before": "baseline (criterion saved)",
+      "after": "273.49 ns median",
+      "delta": "+16.596%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/full-join",
+      "before": "baseline (criterion saved)",
+      "after": "263.53 ns median",
+      "delta": "+12.123%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join-many",
+      "before": "baseline (criterion saved)",
+      "after": "308.68 ns median",
+      "delta": "+6.9395%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/transform-to-tree",
+      "before": "baseline (criterion saved)",
+      "after": "18.682 µs median",
+      "delta": "+0.4280%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "469.66 µs median",
+      "delta": "+4.4487%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "550.40 µs median",
+      "delta": "+0.8893%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.9596 ms median",
+      "delta": "+1.5385%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "2.2069 ms median",
+      "delta": "+0.3403%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## KeyOrder Bulk Reset Finished\n\n**Index:** 27\n**Checkpoint:** dd0b712\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure.\n\n### Scope Lock\n\n**Tested mechanism:** 636 lib tests pass, but transform-to-tree update was unchanged (+0.4%) against the >=10% target and tree/join loads moved within +-5%; join single-update points read +7..+17% though their order-preserving path never resets a KeyOrder (noise). The tree diff's KeyOrder collection is not the dominant per-batch cost.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| joins-load/full_join/1000 | 179.72 µs median | +1.0821% |\n| joins-load/left_join_many/1000 | 958.69 µs median | -0.7959% |\n| joins-load/full_join/4000 | 717.51 µs median | +1.6053% |\n| joins-load/left_join_many/4000 | 3.9373 ms median | +0.0276% |\n| cache-update/inner-join | 274.44 ns median | +7.2345% |\n| cache-update/left-join | 273.49 ns median | +16.596% |\n| cache-update/full-join | 263.53 ns median | +12.123% |\n| cache-update/left-join-many | 308.68 ns median | +6.9395% |\n| cache-update/transform-to-tree | 18.682 µs median | +0.4280% |\n| transform-to-tree-load/flat/1000 | 469.66 µs median | +4.4487% |\n| transform-to-tree-load/bushy/1000 | 550.40 µs median | +0.8893% |\n| transform-to-tree-load/flat/4000 | 1.9596 ms median | +1.5385% |\n| transform-to-tree-load/bushy/4000 | 2.2069 ms median | +0.3403% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to dd0b712.\n",
+  "notes": ""
+}
