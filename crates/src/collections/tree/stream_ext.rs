@@ -1,6 +1,6 @@
 use crate::collections::emit::OrderedEmitter;
 use crate::collections::error::CollectionError;
-use crate::collections::hash::HashMap;
+use crate::collections::hash::{HashMap, HashSet};
 use crate::collections::key_order::KeyOrder;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
@@ -145,6 +145,12 @@ where
     /// The predicate is the built-in roots filter: a node is a root when it has no actual
     /// parent.
     roots_only: bool,
+    /// Keys whose node or parent link the current batch changed.
+    touched: HashSet<K>,
+    /// Keys the current batch removed (one added again changes its position).
+    removed_in_batch: HashSet<K>,
+    /// The current batch moved an existing key in source order.
+    reordered: bool,
     version: u64,
 }
 
@@ -164,6 +170,9 @@ where
             visible_order: KeyOrder::new(),
             predicate: None,
             roots_only: false,
+            touched: HashSet::default(),
+            removed_in_batch: HashSet::default(),
+            reordered: false,
             version: 0,
         }
     }
@@ -266,8 +275,10 @@ where
                     current_index,
                     ..
                 } => {
-                    if let Some(from) = self.order.index_of(key) {
-                        let _ = self.order.move_to(from, *current_index);
+                    if let Some(from) = self.order.index_of(key)
+                        && self.order.move_to(from, *current_index) != from
+                    {
+                        self.reordered = true;
                     }
                     self.refresh_node(key, current.clone(), pivot_on);
                 }
@@ -279,6 +290,12 @@ where
                 }
             }
         }
+        let touched = std::mem::take(&mut self.touched);
+        self.removed_in_batch.clear();
+        if self.roots_only && self.predicate.is_some() && !std::mem::take(&mut self.reordered) {
+            return self.refilter_roots(touched);
+        }
+        self.reordered = false;
         self.refilter()
     }
 
@@ -291,11 +308,17 @@ where
     ) {
         let node = TreeNode::new(key.clone(), item.clone());
         self.nodes.insert(key.clone(), node);
+        self.touched.insert(key.clone());
+        if self.removed_in_batch.contains(&key) {
+            self.reordered = true;
+        }
         // Without an index an existing key keeps its position and a new key is appended.
         match (self.order.index_of(&key), current_index) {
             (Some(_), None) => {}
             (Some(from), Some(index)) => {
-                let _ = self.order.move_to(from, index);
+                if self.order.move_to(from, index) != from {
+                    self.reordered = true;
+                }
             }
             (None, index) => {
                 let _ = self.order.insert(index.unwrap_or(usize::MAX), key.clone());
@@ -310,6 +333,7 @@ where
         let Some(node) = self.nodes.get(key).cloned() else {
             return;
         };
+        self.touched.insert(key.clone());
         node.set_item(item.clone());
         self.set_desired_parent(key.clone(), pivot_on(&item));
         self.sync_parent_for_child(key);
@@ -320,6 +344,8 @@ where
         let Some(node) = self.nodes.remove(key) else {
             return;
         };
+        self.touched.insert(key.clone());
+        self.removed_in_batch.insert(key.clone());
         let _ = self.order.remove(key);
         self.remove_desired_parent(key);
 
@@ -353,6 +379,7 @@ where
     }
 
     fn clear(&mut self) {
+        self.reordered = true;
         for node in self.nodes.values() {
             node.set_parent(None);
             if let Some(children) = node.existing_children() {
@@ -409,6 +436,7 @@ where
         let Some(child) = self.nodes.get(child_key).cloned() else {
             return;
         };
+        self.touched.insert(child_key.clone());
         let next_parent_key = self
             .desired_parents
             .get(child_key)
@@ -491,6 +519,107 @@ where
         let changes = diff_tree_snapshots(&self.visible, &self.visible_order, &next, &next_order);
         self.visible = next;
         self.visible_order = next_order;
+        if changes.is_empty() {
+            None
+        } else {
+            Some(ChangeSet::new(changes, self.next_version()))
+        }
+    }
+
+    /// The roots-only refilter after a batch that reordered no existing key: only `touched`
+    /// keys can have changed whether they are a root, so their removals (by previous
+    /// position, last first), additions (by source position) and replacements are the whole
+    /// change set the full snapshot diff would produce.
+    fn refilter_roots(
+        &mut self,
+        touched: HashSet<K>,
+    ) -> Option<ChangeSet<CacheChange<K, TreeNode<K, T>>>> {
+        #[cfg(debug_assertions)]
+        let expected = {
+            let mut next = HashMap::default();
+            let mut next_order = KeyOrder::new();
+            for key in self.order.iter() {
+                if let Some(node) = self.nodes.get(key)
+                    && !self.actual_parents.contains_key(key)
+                {
+                    next.insert(key.clone(), node.clone());
+                    let _ = next_order.push(key.clone());
+                }
+            }
+            diff_tree_snapshots(&self.visible, &self.visible_order, &next, &next_order)
+        };
+
+        let mut removed = Vec::new();
+        let mut added = Vec::new();
+        let mut replaced = Vec::new();
+        for key in touched {
+            let next = self
+                .nodes
+                .get(&key)
+                .filter(|_| !self.actual_parents.contains_key(&key))
+                .cloned();
+            match (self.visible.get(&key), next) {
+                (None, None) => {}
+                (Some(_), None) => removed.push((self.visible_order.index_of(&key), key)),
+                (None, Some(node)) => {
+                    added.push((self.order.index_of(&key).unwrap_or(usize::MAX), key, node));
+                }
+                (Some(previous), Some(node)) => {
+                    if !previous.ptr_eq(&node) {
+                        replaced.push((key, node));
+                    }
+                }
+            }
+        }
+
+        let mut changes = Vec::new();
+        removed.sort_unstable_by_key(|(position, _)| std::cmp::Reverse(*position));
+        for (_, key) in removed {
+            let previous_index = self.visible_order.remove(&key);
+            if let Some(previous) = self.visible.remove(&key) {
+                changes.push(CacheChange::Remove {
+                    key,
+                    previous,
+                    previous_index,
+                });
+            }
+        }
+        added.sort_unstable_by_key(|(position, _, _)| *position);
+        for (position, key, node) in added {
+            let order = &self.order;
+            let index = self.visible_order.partition_point(|existing| {
+                order.index_of(existing).unwrap_or(usize::MAX) < position
+            });
+            let _ = self.visible_order.insert(index, key.clone());
+            self.visible.insert(key.clone(), node.clone());
+            changes.push(CacheChange::Add {
+                key,
+                current: node,
+                current_index: Some(index),
+            });
+        }
+        let mut replaced = replaced
+            .into_iter()
+            .map(|(key, node)| (self.visible_order.index_of(&key), key, node))
+            .collect::<Vec<_>>();
+        replaced.sort_unstable_by_key(|(position, _, _)| *position);
+        for (position, key, node) in replaced {
+            if let Some(previous) = self.visible.insert(key.clone(), node.clone()) {
+                changes.push(CacheChange::Update {
+                    key,
+                    current: node,
+                    previous,
+                    current_index: position,
+                    previous_index: position,
+                });
+            }
+        }
+
+        #[cfg(debug_assertions)]
+        debug_assert!(
+            changes == expected,
+            "incremental tree refilter differs from the full snapshot diff"
+        );
         if changes.is_empty() {
             None
         } else {

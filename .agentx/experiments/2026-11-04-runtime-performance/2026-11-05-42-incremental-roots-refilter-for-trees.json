@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "537f883b-1736-44bd-bd68-e00882899dda",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 42,
+  "type": "hypothesis",
+  "name": "Incremental Roots Refilter For Trees",
+  "slug": "incremental-roots-refilter-for-trees",
+  "path": "2026-11-05-42-incremental-roots-refilter-for-trees.json",
+  "createdAt": "2026-11-05T01:01:20Z",
+  "startedAt": "2026-11-05T01:01:20Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7f241196d66be6a9cdaea238c48733c80a35ae80",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7f241196d66be6a9cdaea238c48733c80a35ae80",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Incremental Roots Refilter For Trees Hypothesis\n\n### Hypothesis\n\nAfter every batch `transform_to_tree` rebuilds its whole visible map and order (O(n) hash inserts) and diffs them against the previous ones (O(n)), so one re-parent in a 10k-node tree costs 19 µs although at most a few roots change. With the built-in roots filter only nodes the batch touched (added, replaced, refreshed, removed, or whose parent link was re-synced) can change visibility; when the batch reordered no existing key, applying just those keys' removals (by previous position, descending), additions (by source position, ascending) and replacements yields the same change set as the full diff. A debug assertion compares every incremental result with the full diff.\n\n### Scope Lock\n\n**Tested mechanism:** incremental refilter of the roots-only tree view from the batch's touched keys.\n**Allowed changes:** `TreeState` in `crates/src/collections/tree/stream_ext.rs` (touched-key tracking, a reorder flag, the incremental path).\n**Forbidden in this experiment:** custom predicates (keep the full path), tree node internals, the full diff algorithm.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::grouping_tree_switching` and all tree tests, full lib in debug (assertion compares with the full diff on every batch); clippy/fmt. Bench `operator_updates` (transform-to-tree) and `tree` vs base. Pass: tree update >=4x faster; tree loads not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nTree re-parent update from ~19 us to a few us.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

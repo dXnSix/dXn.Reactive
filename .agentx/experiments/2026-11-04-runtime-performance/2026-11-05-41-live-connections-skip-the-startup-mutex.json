@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "id": "22fc9d78-aaf4-42fd-8a09-55de99c07b22",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 41,
+  "type": "hypothesis",
+  "name": "Live Connections Skip The Startup Mutex",
+  "slug": "live-connections-skip-the-startup-mutex",
+  "path": "2026-11-05-41-live-connections-skip-the-startup-mutex.json",
+  "createdAt": "2026-11-05T00:57:30Z",
+  "startedAt": "2026-11-05T00:57:30Z",
+  "finishedAt": "2026-11-05T01:00:01Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7f241196d66be6a9cdaea238c48733c80a35ae80",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7f241196d66be6a9cdaea238c48733c80a35ae80",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Live Connections Skip The Startup Mutex Hypothesis\n\n### Hypothesis\n\nEvery batch a `connect()` subscriber (and every keyed watch) receives locks its `StartupConnection` mutex to learn that startup is over and read the snapshot version, long after startup. Publishing the live snapshot version in an atomic — stored under the mutex when the connection goes live, cleared under it on disposal — lets live batches skip the mutex; buffering and draining keep the locked path, so ordering and dedup against the snapshot are unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** atomic live-version fast path in `StartupConnection::receive`.\n**Allowed changes:** `StartupConnection` in `crates/src/collections/connection.rs` (shared state struct, receive/start/disposal).\n**Forbidden in this experiment:** signal values() startup, delivery queues, source publish paths.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{connect_late_delivery,source_commit_order,suspension_versions,watch_batch_coalescing,sources,source_lock_policy}` and full lib + integration; clippy/fmt. Bench `hot_paths` and `operator_updates` vs base, rerun borderline. Pass: cache-hot/update-connect >=5% faster; connect-per-iteration benches (live group, tree loads) not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n~5-10 ns less per connected batch.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "37.639 ns median",
+      "delta": "+0.0559%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "101.44 ns median",
+      "delta": "+2.5727%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "226.05 ns median",
+      "delta": "+9.1510%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "217.32 ns median",
+      "delta": "+10.309%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "620.31 µs median",
+      "delta": "+1.5572%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "85.240 ns median",
+      "delta": "-1.2075%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "251.26 ns median",
+      "delta": "+19.038%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "5.3238 µs median",
+      "delta": "+1.1016%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.1593 µs median",
+      "delta": "+4.4514%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "31.379 µs median",
+      "delta": "-5.1075%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/1",
+      "before": "baseline (criterion saved)",
+      "after": "2.9615 µs median",
+      "delta": "+12.130%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/32",
+      "before": "baseline (criterion saved)",
+      "after": "8.0903 µs median",
+      "delta": "+6.0533%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-watch-sparse-delivery/256",
+      "before": "baseline (criterion saved)",
+      "after": "32.974 µs median",
+      "delta": "+3.6031%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/640",
+      "before": "baseline (criterion saved)",
+      "after": "86.203 µs median",
+      "delta": "+0.6555%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/1280",
+      "before": "baseline (criterion saved)",
+      "after": "163.08 µs median",
+      "delta": "+2.0367%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.2518 ms median",
+      "delta": "+1.6151%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "299.01 µs median",
+      "delta": "-8.8842%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "372.10 µs median",
+      "delta": "+2.7449%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.1301 ms median",
+      "delta": "+0.4815%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.5091 ms median",
+      "delta": "+3.0162%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Live Connections Skip The Startup Mutex Finished\n\n**Index:** 41\n**Checkpoint:** 7f24119\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure.\n\n### Scope Lock\n\n**Tested mechanism:** all tests pass, but cache-hot/update-connect did not improve (+2.6% against a -5% target); several connected paths read +9..+19% (push-remove-bind, transform-bind, keyed-watch/1). The uncontended startup mutex was not a measurable cost.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 37.639 ns median | +0.0559% |\n| cache-hot/update-connect | 101.44 ns median | +2.5727% |\n| cache-hot/update-filter-half | 226.05 ns median | +9.1510% |\n| cache-hot/update-transform-bind | 217.32 ns median | +10.309% |\n| cache-hot/load-filter-transform-bind/10000 | 620.31 µs median | +1.5572% |\n| list-hot/push-remove-no-subscribers | 85.240 ns median | -1.2075% |\n| list-hot/push-remove-bind | 251.26 ns median | +19.038% |\n| list-hot/insert-remove-mid-filter-transform | 5.3238 µs median | +1.1016% |\n| list-hot/insert-remove-sort | 1.1593 µs median | +4.4514% |\n| list-hot/load-filter-transform-bind/10000 | 31.379 µs median | -5.1075% |\n| keyed-watch-sparse-delivery/1 | 2.9615 µs median | +12.130% |\n| keyed-watch-sparse-delivery/32 | 8.0903 µs median | +6.0533% |\n| keyed-watch-sparse-delivery/256 | 32.974 µs median | +3.6031% |\n| live-group-touched-members/640 | 86.203 µs median | +0.6555% |\n| live-group-touched-members/1280 | 163.08 µs median | +2.0367% |\n| live-group-touched-members/10000 | 1.2518 ms median | +1.6151% |\n| transform-to-tree-load/flat/1000 | 299.01 µs median | -8.8842% |\n| transform-to-tree-load/bushy/1000 | 372.10 µs median | +2.7449% |\n| transform-to-tree-load/flat/4000 | 1.1301 ms median | +0.4815% |\n| transform-to-tree-load/bushy/4000 | 1.5091 ms median | +3.0162% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 7f24119.\n",
+  "notes": ""
+}

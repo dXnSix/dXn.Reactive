@@ -9,11 +9,11 @@
   "path": "2026-11-05-40-tree-nodes-create-children-caches-lazily.json",
   "createdAt": "2026-11-05T00:55:29Z",
   "startedAt": "2026-11-05T00:55:29Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:56:43Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
-  "resultCommit": "",
+  "resultCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a36e07676f1ccde66b7babf654d95ade1a842c7c",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
-      "resultCommit": "",
+      "resultCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard a36e07676f1ccde66b7babf654d95ade1a842c7c",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "7f241196d66be6a9cdaea238c48733c80a35ae80"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,44 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/transform-to-tree",
+      "before": "baseline (criterion saved)",
+      "after": "18.772 µs median",
+      "delta": "-0.7642%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "328.98 µs median",
+      "delta": "-32.162%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "369.74 µs median",
+      "delta": "-30.557%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.1297 ms median",
+      "delta": "-37.856%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.4887 ms median",
+      "delta": "-29.338%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Tree Nodes Create Children Caches Lazily Finished\n\n**Index:** 40\n**Checkpoint:** a36e076\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 636 lib + 33 integration tests pass; transform_to_tree loads -29..-38% (flat 4000: 1.82 -> 1.13 ms); re-parent update unchanged.\n\n### Scope Lock\n\n**Tested mechanism:** lazy children cache per tree node\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/transform-to-tree | 18.772 µs median | -0.7642% |\n| transform-to-tree-load/flat/1000 | 328.98 µs median | -32.162% |\n| transform-to-tree-load/bushy/1000 | 369.74 µs median | -30.557% |\n| transform-to-tree-load/flat/4000 | 1.1297 ms median | -37.856% |\n| transform-to-tree-load/bushy/4000 | 1.4887 ms median | -29.338% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

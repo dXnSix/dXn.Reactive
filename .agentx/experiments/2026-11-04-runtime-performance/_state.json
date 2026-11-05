@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c",
+  "lastStableCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "a36e07676f1ccde66b7babf654d95ade1a842c7c"
+      "lastStableCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "5cf42aa6-cd19-479a-b34a-16b11dce9e5d",
-  "nextExperimentIndex": 41,
+  "currentExperimentId": "537f883b-1736-44bd-bd68-e00882899dda",
+  "nextExperimentIndex": 43,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -497,6 +497,29 @@
       "name": "Tree Nodes Create Children Caches Lazily",
       "path": "2026-11-05-40-tree-nodes-create-children-caches-lazily.json",
       "startedAt": "2026-11-05T00:55:29Z",
+      "finishedAt": "2026-11-05T00:56:43Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80"
+    },
+    {
+      "id": "22fc9d78-aaf4-42fd-8a09-55de99c07b22",
+      "index": 41,
+      "type": "hypothesis",
+      "name": "Live Connections Skip The Startup Mutex",
+      "path": "2026-11-05-41-live-connections-skip-the-startup-mutex.json",
+      "startedAt": "2026-11-05T00:57:30Z",
+      "finishedAt": "2026-11-05T01:00:01Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "537f883b-1736-44bd-bd68-e00882899dda",
+      "index": 42,
+      "type": "hypothesis",
+      "name": "Incremental Roots Refilter For Trees",
+      "path": "2026-11-05-42-incremental-roots-refilter-for-trees.json",
+      "startedAt": "2026-11-05T01:01:20Z",
       "finishedAt": null,
       "state": "running",
       "status": ""
