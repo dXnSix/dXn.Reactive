@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "0ae52707-bd4c-41d1-be60-83d06c26ff71",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 35,
+  "type": "hypothesis",
+  "name": "Right-Side Join And List Immutable Group Bench",
+  "slug": "right-side-join-and-list-immutable-group-bench",
+  "path": "2026-11-05-35-right-side-join-and-list-immutable-group-bench.json",
+  "createdAt": "2026-11-05T00:40:37Z",
+  "startedAt": "2026-11-05T00:40:37Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "caa8d3943a4b757f88a82f8cf63d6544075558ce",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard caa8d3943a4b757f88a82f8cf63d6544075558ce",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "caa8d3943a4b757f88a82f8cf63d6544075558ce",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard caa8d3943a4b757f88a82f8cf63d6544075558ce",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Right-Side Join And List Immutable Group Bench Hypothesis\n\n### Hypothesis\n\nThe join benches only write to the left source; `left_join_many` right batches still rebuild the desired order (locking every group) on every batch, and list `group_immutable` snapshots are unmeasured. Adding steady-state points for a right-side write into `inner_join` and `left_join_many` and a list `group_immutable` replace measures them.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement (bench functions only).\n**Allowed changes:** `crates/benches/operator_updates.rs`.\n**Forbidden in this experiment:** production source changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`cargo bench --bench operator_updates -- --save-baseline base` for the new points. Pass: compiles, clippy/fmt clean, stable medians.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nPer-update baselines for right-side joins and list immutable groups.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

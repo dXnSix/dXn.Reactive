@@ -395,6 +395,71 @@ fn dynamic_operators(c: &mut Criterion) {
     });
 }
 
+fn right_side_operators(c: &mut Criterion) {
+    c.bench_function("right-update/inner-join", |b| {
+        let left = loaded_cache();
+        let right = SourceCache::new(|row: &(u32, u32)| row.0);
+        right
+            .add_or_update_range((0..ROWS).map(|id| (id, id * 2)))
+            .expect("right");
+        let _subscription = left
+            .connect()
+            .inner_join(right.connect(), |_key, left: &Row, right: &(u32, u32)| {
+                left.value + right.1
+            })
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("inner join");
+        let mut step = 0_u32;
+        b.iter(|| {
+            step = step.wrapping_add(1);
+            let id = step.wrapping_mul(7_919) % ROWS;
+            right.add_or_update((id, step)).expect("right update");
+        });
+    });
+
+    c.bench_function("right-update/left-join-many", |b| {
+        let left = loaded_cache();
+        let right = SourceCache::new(|row: &(u32, u32)| row.0);
+        right
+            .add_or_update_range((0..ROWS).map(|id| (1_000_000 + id, id / 2)))
+            .expect("right");
+        let _subscription = left
+            .connect()
+            .left_join_many(
+                right.connect(),
+                |row: &(u32, u32)| row.1,
+                |_key, left: &Row, group: &RayCacheGroup<u32, u32, (u32, u32)>| {
+                    left.value + group.count().unwrap_or(0) as u32
+                },
+            )
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("left join many");
+        let mut step = 0_u32;
+        b.iter(|| {
+            step = step.wrapping_add(1);
+            let id = step.wrapping_mul(7_919) % ROWS;
+            // Move a right row to another left key's group.
+            right
+                .add_or_update((1_000_000 + id, (id / 2 + step) % (ROWS / 2)))
+                .expect("right update");
+        });
+    });
+
+    bench_list_replace(c, "list-replace/group-immutable", |source| {
+        source
+            .connect()
+            .group_immutable(|row| row.group)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("list group immutable")
+    });
+}
+
 fn loaded_list() -> SourceList<Row> {
     SourceList::new(
         (0..ROWS)
@@ -480,6 +545,7 @@ criterion_group!(
     cache_operators,
     list_operators,
     relation_and_window_operators,
-    dynamic_operators
+    dynamic_operators,
+    right_side_operators
 );
 criterion_main!(benches);

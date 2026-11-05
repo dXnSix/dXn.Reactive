@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f",
+  "lastStableCommit": "caa8d3943a4b757f88a82f8cf63d6544075558ce",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f"
+      "lastStableCommit": "caa8d3943a4b757f88a82f8cf63d6544075558ce"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "7e970802-45ac-4b22-86b1-24249e43b152",
-  "nextExperimentIndex": 35,
+  "currentExperimentId": "0ae52707-bd4c-41d1-be60-83d06c26ff71",
+  "nextExperimentIndex": 36,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -426,6 +426,18 @@
       "name": "Source Lock Release Skips An Empty Callback Queue",
       "path": "2026-11-05-34-source-lock-release-skips-an-empty-callback-queue.json",
       "startedAt": "2026-11-05T00:37:26Z",
+      "finishedAt": "2026-11-05T00:39:46Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "caa8d3943a4b757f88a82f8cf63d6544075558ce"
+    },
+    {
+      "id": "0ae52707-bd4c-41d1-be60-83d06c26ff71",
+      "index": 35,
+      "type": "hypothesis",
+      "name": "Right-Side Join And List Immutable Group Bench",
+      "path": "2026-11-05-35-right-side-join-and-list-immutable-group-bench.json",
+      "startedAt": "2026-11-05T00:40:37Z",
       "finishedAt": null,
       "state": "running",
       "status": ""
