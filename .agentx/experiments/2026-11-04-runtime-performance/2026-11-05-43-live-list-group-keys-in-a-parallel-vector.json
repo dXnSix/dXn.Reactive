@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "d9fed84d-c508-4563-ac27-5087d2730f4e",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 43,
+  "type": "hypothesis",
+  "name": "Live List Group Keys In A Parallel Vector",
+  "slug": "live-list-group-keys-in-a-parallel-vector",
+  "path": "2026-11-05-43-live-list-group-keys-in-a-parallel-vector.json",
+  "createdAt": "2026-11-05T01:05:28Z",
+  "startedAt": "2026-11-05T01:05:28Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "998b822f87df41191c4db1c5c782a2c1153ce988",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 998b822f87df41191c4db1c5c782a2c1153ce988",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "998b822f87df41191c4db1c5c782a2c1153ce988",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 998b822f87df41191c4db1c5c782a2c1153ce988",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Live List Group Keys In A Parallel Vector Hypothesis\n\n### Hypothesis\n\n`LiveListGroupState::group_index_for_entry` finds an item's position in its group by counting the entries of that group before it, striding over `LiveListGroupEntry { item, group_key }` records: ~60% self time of a 10k-item live list group replace (1.4 µs). Mirroring the group keys in a parallel `Vec<G>`, updated with every entry insert/remove/replace/regroup, lets that count read only the keys (4x less memory for a `u32` key with a 12-byte item, and vectorizable).\n\n### Scope Lock\n\n**Tested mechanism:** parallel group-key vector for the live list group's in-group index count.\n**Allowed changes:** `LiveListGroupState` (struct in `select_unique_cache_changes.rs`, impl in `immutable_list_group_entry.rs`): an entries container mirroring keys.\n**Forbidden in this experiment:** RayListGroup, immutable list groups, cache groups.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{group_and_combiner_indexes,grouping_tree_switching,subset_operator_indexes,index_contract_harness,snapshot_diff_indexes,ordered_emission_core}`; clippy/fmt. Bench `operator_updates` (list-replace/group) vs base. Pass: list group replace >=20% faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nlist group replace 30-45% faster.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

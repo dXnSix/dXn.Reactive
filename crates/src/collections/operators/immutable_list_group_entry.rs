@@ -49,10 +49,13 @@ where
                     let previous_group_key = self.entries[index].group_key.clone();
                     let next_group_key = group_selector(new);
                     if previous_group_key == next_group_key {
-                        self.entries[index] = LiveListGroupEntry {
+                        self.entries.set(
+                        index,
+                        LiveListGroupEntry {
                             item: new.clone(),
                             group_key: next_group_key.clone(),
-                        };
+                            },
+                        );
                         if let Some(group) = self.groups.get(&next_group_key).cloned()
                             && let Some(group_index) =
                                 self.group_index_for_entry(index, &next_group_key)
@@ -63,10 +66,13 @@ where
                         }
                     } else {
                         self.remove_entry_from_group(index, &mut pending);
-                        self.entries[index] = LiveListGroupEntry {
+                        self.entries.set(
+                        index,
+                        LiveListGroupEntry {
                             item: new.clone(),
                             group_key: next_group_key.clone(),
-                        };
+                            },
+                        );
                         self.add_entry_to_group(
                             index,
                             next_group_key,
@@ -83,10 +89,13 @@ where
                     let previous_group_key = self.entries[index].group_key.clone();
                     let next_group_key = group_selector(item);
                     if previous_group_key == next_group_key {
-                        self.entries[index] = LiveListGroupEntry {
+                        self.entries.set(
+                        index,
+                        LiveListGroupEntry {
                             item: item.clone(),
                             group_key: next_group_key.clone(),
-                        };
+                            },
+                        );
                         if let Some(group) = self.groups.get(&next_group_key).cloned()
                             && let Some(group_index) =
                                 self.group_index_for_entry(index, &next_group_key)
@@ -97,10 +106,13 @@ where
                         }
                     } else {
                         self.remove_entry_from_group(index, &mut pending);
-                        self.entries[index] = LiveListGroupEntry {
+                        self.entries.set(
+                        index,
+                        LiveListGroupEntry {
                             item: item.clone(),
                             group_key: next_group_key.clone(),
-                        };
+                            },
+                        );
                         self.add_entry_to_group(
                             index,
                             next_group_key,
@@ -179,7 +191,7 @@ where
                 continue;
             }
             self.remove_entry_from_group(index, &mut pending);
-            self.entries[index].group_key = next_group_key.clone();
+            self.entries.set_group_key(index, next_group_key.clone());
             self.add_entry_to_group(index, next_group_key, &mut group_changes, &mut pending);
         }
 
@@ -302,14 +314,7 @@ where
         {
             return None;
         }
-        Some(
-            self.entries
-                .iter()
-                .take(entry_index.saturating_add(1))
-                .filter(|entry| &entry.group_key == group_key)
-                .count()
-                .saturating_sub(1),
-        )
+        Some(self.entries.count_before(entry_index, group_key))
     }
 
     fn next_version(&mut self) -> u64 {

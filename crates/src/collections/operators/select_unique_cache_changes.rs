@@ -262,8 +262,66 @@ struct LiveListGroupEntry<T, G> {
     group_key: G,
 }
 
-struct LiveListGroupState<T, G> {
+/// The live list group's entries with their group keys mirrored in a parallel vector, so
+/// counting a group's entries before a position reads only the keys.
+struct LiveListGroupEntries<T, G> {
     entries: Vec<LiveListGroupEntry<T, G>>,
+    group_keys: Vec<G>,
+}
+
+impl<T, G: Clone + PartialEq> LiveListGroupEntries<T, G> {
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn get(&self, index: usize) -> Option<&LiveListGroupEntry<T, G>> {
+        self.entries.get(index)
+    }
+
+    fn insert(&mut self, index: usize, entry: LiveListGroupEntry<T, G>) {
+        self.group_keys.insert(index, entry.group_key.clone());
+        self.entries.insert(index, entry);
+    }
+
+    fn set(&mut self, index: usize, entry: LiveListGroupEntry<T, G>) {
+        self.group_keys[index] = entry.group_key.clone();
+        self.entries[index] = entry;
+    }
+
+    fn set_group_key(&mut self, index: usize, group_key: G) {
+        self.group_keys[index] = group_key.clone();
+        self.entries[index].group_key = group_key;
+    }
+
+    fn remove(&mut self, index: usize) -> LiveListGroupEntry<T, G> {
+        let _ = self.group_keys.remove(index);
+        self.entries.remove(index)
+    }
+
+    fn clear(&mut self) {
+        self.group_keys.clear();
+        self.entries.clear();
+    }
+
+    /// The number of entries of `group_key` before `index`.
+    fn count_before(&self, index: usize, group_key: &G) -> usize {
+        self.group_keys[..index.min(self.group_keys.len())]
+            .iter()
+            .filter(|key| *key == group_key)
+            .count()
+    }
+}
+
+impl<T, G> std::ops::Index<usize> for LiveListGroupEntries<T, G> {
+    type Output = LiveListGroupEntry<T, G>;
+
+    fn index(&self, index: usize) -> &LiveListGroupEntry<T, G> {
+        &self.entries[index]
+    }
+}
+
+struct LiveListGroupState<T, G> {
+    entries: LiveListGroupEntries<T, G>,
     groups: HashMap<G, RayListGroup<G, T>>,
     group_order: KeyOrder<G>,
     empty_groups: HashSet<G>,
@@ -273,7 +331,10 @@ struct LiveListGroupState<T, G> {
 impl<T, G> Default for LiveListGroupState<T, G> {
     fn default() -> Self {
         Self {
-            entries: Vec::new(),
+            entries: LiveListGroupEntries {
+                entries: Vec::new(),
+                group_keys: Vec::new(),
+            },
             groups: HashMap::default(),
             group_order: KeyOrder::new(),
             empty_groups: HashSet::default(),

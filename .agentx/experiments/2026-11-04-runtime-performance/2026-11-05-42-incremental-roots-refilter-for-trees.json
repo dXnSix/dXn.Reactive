@@ -9,11 +9,11 @@
   "path": "2026-11-05-42-incremental-roots-refilter-for-trees.json",
   "createdAt": "2026-11-05T01:01:20Z",
   "startedAt": "2026-11-05T01:01:20Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T01:03:50Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
-  "resultCommit": "",
+  "resultCommit": "998b822f87df41191c4db1c5c782a2c1153ce988",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7f241196d66be6a9cdaea238c48733c80a35ae80",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "7f241196d66be6a9cdaea238c48733c80a35ae80",
-      "resultCommit": "",
+      "resultCommit": "998b822f87df41191c4db1c5c782a2c1153ce988",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 7f241196d66be6a9cdaea238c48733c80a35ae80",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "998b822f87df41191c4db1c5c782a2c1153ce988"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,44 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/transform-to-tree",
+      "before": "baseline (criterion saved)",
+      "after": "431.90 ns median",
+      "delta": "-97.697%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/1000",
+      "before": "baseline (criterion saved)",
+      "after": "300.74 µs median",
+      "delta": "-6.2900%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/1000",
+      "before": "baseline (criterion saved)",
+      "after": "380.77 µs median",
+      "delta": "+4.2513%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/flat/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.2025 ms median",
+      "delta": "+6.7313%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "transform-to-tree-load/bushy/4000",
+      "before": "baseline (criterion saved)",
+      "after": "1.5509 ms median",
+      "delta": "+6.3747%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Incremental Roots Refilter For Trees Finished\n\n**Index:** 42\n**Checkpoint:** 7f24119\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 636 lib + 33 integration + 135 doc-example tests pass with a debug assertion comparing every incremental change set to the full snapshot diff; transform_to_tree re-parent update 18.8 us -> 0.43 us (-97.7%); loads -6..+7% (touched-key tracking), within the 10% gate.\n\n### Scope Lock\n\n**Tested mechanism:** incremental refilter of the roots-only tree view from the batch's touched keys\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/transform-to-tree | 431.90 ns median | -97.697% |\n| transform-to-tree-load/flat/1000 | 300.74 µs median | -6.2900% |\n| transform-to-tree-load/bushy/1000 | 380.77 µs median | +4.2513% |\n| transform-to-tree-load/flat/4000 | 1.2025 ms median | +6.7313% |\n| transform-to-tree-load/bushy/4000 | 1.5509 ms median | +6.3747% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
