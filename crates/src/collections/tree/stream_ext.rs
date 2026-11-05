@@ -58,7 +58,7 @@ impl<K, T> CacheTreeExt<K, T> for ChangeStream<CacheChange<K, T>> {
             subscriber(&root_predicate);
             Ok(Subscription::empty())
         });
-        self.transform_to_tree_with_predicate::<CollectionError>(pivot_on, predicates)
+        tree_stream(self, pivot_on, predicates, true)
     }
 
     fn transform_to_tree_with_predicate<E>(
@@ -72,12 +72,35 @@ impl<K, T> CacheTreeExt<K, T> for ChangeStream<CacheChange<K, T>> {
         E: Send + Sync + 'static,
         CollectionError: From<E>,
     {
-        let predicates = predicates.err_into::<CollectionError>();
-        let source = self.clone();
+        tree_stream(
+            self,
+            pivot_on,
+            predicates.err_into::<CollectionError>(),
+            false,
+        )
+    }
+}
+
+/// The tree operator. `roots_only` marks the built-in roots predicate, which the state then
+/// answers from its own parent map instead of locking every node.
+fn tree_stream<K, T>(
+    source: &ChangeStream<CacheChange<K, T>>,
+    pivot_on: impl Fn(&T) -> K + Send + Sync + 'static,
+    predicates: ValueStream<TreePredicate<K, T>>,
+    roots_only: bool,
+) -> ChangeStream<CacheChange<K, TreeNode<K, T>>>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+{
+    {
+        let source = source.clone();
         let pivot_on = Arc::new(pivot_on);
         ChangeStream::new(move |subscriber| {
             let (emitter, delivery) = OrderedEmitter::new(move |batch| subscriber(batch))?;
-            let state = Arc::new(Mutex::new(TreeState::<K, T>::default()));
+            let mut tree = TreeState::<K, T>::default();
+            tree.roots_only = roots_only;
+            let state = Arc::new(Mutex::new(tree));
 
             let predicate_state = Arc::clone(&state);
             let predicate_emitter = emitter.clone();
@@ -119,6 +142,9 @@ where
     visible: HashMap<K, TreeNode<K, T>>,
     visible_order: KeyOrder<K>,
     predicate: Option<TreePredicate<K, T>>,
+    /// The predicate is the built-in roots filter: a node is a root when it has no actual
+    /// parent.
+    roots_only: bool,
     version: u64,
 }
 
@@ -137,6 +163,7 @@ where
             visible: HashMap::default(),
             visible_order: KeyOrder::new(),
             predicate: None,
+            roots_only: false,
             version: 0,
         }
     }
@@ -435,9 +462,18 @@ where
         let predicate = self.predicate.as_ref()?;
         let mut next = HashMap::default();
         let mut next_order = KeyOrder::new();
+        let included = |key: &K, node: &TreeNode<K, T>| {
+            if self.roots_only {
+                let root = !self.actual_parents.contains_key(key);
+                debug_assert_eq!(root, node.is_root(), "tree parent map out of sync");
+                root
+            } else {
+                predicate(node)
+            }
+        };
         for key in self.order.iter() {
             if let Some(node) = self.nodes.get(key)
-                && predicate(node)
+                && included(key, node)
             {
                 next.insert(key.clone(), node.clone());
                 let _ = next_order.push(key.clone());

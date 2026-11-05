@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "25625d24-8279-4372-a141-8f89f3c1643b",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 24,
+  "type": "hypothesis",
+  "name": "Tree Roots Filter Reads The Parent Map",
+  "slug": "tree-roots-filter-reads-the-parent-map",
+  "path": "2026-11-05-24-tree-roots-filter-reads-the-parent-map.json",
+  "createdAt": "2026-11-05T00:12:46Z",
+  "startedAt": "2026-11-05T00:12:46Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50aada74911ddbd0359e8dd23f8dbc5869b29968",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 50aada74911ddbd0359e8dd23f8dbc5869b29968",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Tree Roots Filter Reads The Parent Map Hypothesis\n\n### Hypothesis\n\n`transform_to_tree` re-evaluates its predicate for every node on every batch; the built-in roots predicate calls `TreeNode::is_root`, which locks the node's mutex and upgrades its parent `Weak`, so one re-parent in a 10k-node tree costs 72 µs, ~82% of it in `is_root` and mutex calls. The tree state's own `actual_parents` map records exactly which nodes have a parent, so the roots-only filter can answer from it without touching node locks (a debug assertion checks it agrees with `is_root`).\n\n### Scope Lock\n\n**Tested mechanism:** answer the built-in roots predicate from `actual_parents` during refilter.\n**Allowed changes:** `crates/src/collections/tree/stream_ext.rs` (a `roots_only` flag threaded from `transform_to_tree`, the refilter predicate evaluation).\n**Forbidden in this experiment:** incremental refiltering, snapshot diff, custom predicates.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::grouping_tree_switching` and tree tests (`tree`), full lib in debug (the assertion compares with is_root); clippy/fmt. Bench `operator_updates` (transform-to-tree) and `tree` vs base. Pass: tree update >=2x faster; tree loads not slower.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nTree re-parent update from ~72 us to ~15-20 us (snapshot rebuild and diff remain O(n)).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

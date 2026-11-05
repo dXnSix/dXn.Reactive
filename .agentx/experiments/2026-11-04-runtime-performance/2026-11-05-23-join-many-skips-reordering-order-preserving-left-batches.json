@@ -9,11 +9,11 @@
   "path": "2026-11-05-23-join-many-skips-reordering-order-preserving-left-batches.json",
   "createdAt": "2026-11-05T00:09:57Z",
   "startedAt": "2026-11-05T00:09:57Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:11:31Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
-  "resultCommit": "",
+  "resultCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 00cf7e388394aecb8562c456db4684ab3e4badba",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
-      "resultCommit": "",
+      "resultCommit": "50aada74911ddbd0359e8dd23f8dbc5869b29968",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 00cf7e388394aecb8562c456db4684ab3e4badba",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "50aada74911ddbd0359e8dd23f8dbc5869b29968"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,65 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "joins-load/full_join/1000",
+      "before": "baseline (criterion saved)",
+      "after": "178.22 µs median",
+      "delta": "-2.3945%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/1000",
+      "before": "baseline (criterion saved)",
+      "after": "966.24 µs median",
+      "delta": "-7.1448%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/full_join/4000",
+      "before": "baseline (criterion saved)",
+      "after": "707.24 µs median",
+      "delta": "-0.0518%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "joins-load/left_join_many/4000",
+      "before": "baseline (criterion saved)",
+      "after": "4.0218 ms median",
+      "delta": "-4.1870%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/inner-join",
+      "before": "baseline (criterion saved)",
+      "after": "257.29 ns median",
+      "delta": "-3.8111%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join",
+      "before": "baseline (criterion saved)",
+      "after": "238.55 ns median",
+      "delta": "-7.1185%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/full-join",
+      "before": "baseline (criterion saved)",
+      "after": "234.36 ns median",
+      "delta": "+0.9652%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join-many",
+      "before": "baseline (criterion saved)",
+      "after": "302.87 ns median",
+      "delta": "-99.944%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Join-Many Skips Reordering Order-Preserving Left Batches Finished\n\n**Index:** 23\n**Checkpoint:** 00cf7e3\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 52 focused join/relation/index tests pass; left_join_many update 550 us -> 303 ns (-99.9%); join loads unchanged or slightly faster.\n\n### Scope Lock\n\n**Tested mechanism:** lazy ranks and conditional reorder for order-preserving left batches of join-many\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| joins-load/full_join/1000 | 178.22 µs median | -2.3945% |\n| joins-load/left_join_many/1000 | 966.24 µs median | -7.1448% |\n| joins-load/full_join/4000 | 707.24 µs median | -0.0518% |\n| joins-load/left_join_many/4000 | 4.0218 ms median | -4.1870% |\n| cache-update/inner-join | 257.29 ns median | -3.8111% |\n| cache-update/left-join | 238.55 ns median | -7.1185% |\n| cache-update/full-join | 234.36 ns median | +0.9652% |\n| cache-update/left-join-many | 302.87 ns median | -99.944% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }
