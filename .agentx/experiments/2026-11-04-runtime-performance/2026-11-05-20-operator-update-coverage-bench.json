@@ -9,11 +9,11 @@
   "path": "2026-11-05-20-operator-update-coverage-bench.json",
   "createdAt": "2026-11-05T00:04:10Z",
   "startedAt": "2026-11-05T00:04:10Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:05:38Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
-  "resultCommit": "",
+  "resultCommit": "b58735696100e82925315364edf2850aa2f77048",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 73280dda074b3f059f68c841a01ae0cc483a4379",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
-      "resultCommit": "",
+      "resultCommit": "b58735696100e82925315364edf2850aa2f77048",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 73280dda074b3f059f68c841a01ae0cc483a4379",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "b58735696100e82925315364edf2850aa2f77048"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,86 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/group",
+      "before": "baseline (criterion saved)",
+      "after": "840.29 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/inner-join",
+      "before": "baseline (criterion saved)",
+      "after": "63.812 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join",
+      "before": "baseline (criterion saved)",
+      "after": "44.194 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/transform-many",
+      "before": "baseline (criterion saved)",
+      "after": "406.33 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/transform-inline",
+      "before": "baseline (criterion saved)",
+      "after": "189.35 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/sum-and-count",
+      "before": "baseline (criterion saved)",
+      "after": "152.08 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/filter-sort-bind",
+      "before": "baseline (criterion saved)",
+      "after": "4.8943 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/group",
+      "before": "baseline (criterion saved)",
+      "after": "1.5893 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/transform-many",
+      "before": "baseline (criterion saved)",
+      "after": "928.96 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/distinct-values",
+      "before": "baseline (criterion saved)",
+      "after": "126.82 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "155.51 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Operator Update Coverage Bench Finished\n\n**Index:** 20\n**Checkpoint:** 73280dd\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — new bench builds, passes clippy/fmt and reports stable medians. Findings: inner_join update 63.8 us and left_join update 44.2 us at 10k rows (O(n) per update); cache filter+sort+bind 4.9 us; list group replace 1.6 us; the rest under 1 us.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/group | 840.29 ns median | n/a |\n| cache-update/inner-join | 63.812 µs median | n/a |\n| cache-update/left-join | 44.194 µs median | n/a |\n| cache-update/transform-many | 406.33 ns median | n/a |\n| cache-update/transform-inline | 189.35 ns median | n/a |\n| cache-update/sum-and-count | 152.08 ns median | n/a |\n| cache-update/filter-sort-bind | 4.8943 µs median | n/a |\n| list-replace/group | 1.5893 µs median | n/a |\n| list-replace/transform-many | 928.96 ns median | n/a |\n| list-replace/distinct-values | 126.82 ns median | n/a |\n| list-replace/transform-bind | 155.51 ns median | n/a |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

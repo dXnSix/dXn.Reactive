@@ -64,6 +64,26 @@ where
     }
 }
 
+/// Whether applying `changes` to `target` leaves its key order as it is: every change
+/// updates or refreshes a present key without moving it.
+fn keeps_key_order<K, T>(target: &OrderedCache<K, T>, changes: &[CacheChange<K, T>]) -> bool
+where
+    K: Clone + Eq + Hash,
+{
+    changes.iter().all(|change| match change {
+        CacheChange::Update {
+            key, current_index, ..
+        }
+        | CacheChange::Refresh {
+            key, current_index, ..
+        } => target
+            .order
+            .index_of(key)
+            .is_some_and(|index| current_index.is_none_or(|target| target == index)),
+        _ => false,
+    })
+}
+
 /// Places `key` at `index` (the end without one), moving it when present.
 fn insert_key<K: Clone + Eq + Hash>(order: &mut KeyOrder<K>, key: K, index: Option<usize>) {
     let _ = order.insert(index.unwrap_or(usize::MAX), key);

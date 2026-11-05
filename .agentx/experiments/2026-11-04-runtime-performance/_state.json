@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
+  "lastStableCommit": "b58735696100e82925315364edf2850aa2f77048",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "73280dda074b3f059f68c841a01ae0cc483a4379"
+      "lastStableCommit": "b58735696100e82925315364edf2850aa2f77048"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "650f58fd-b123-44d4-b94d-6695b47780e7",
-  "nextExperimentIndex": 21,
+  "currentExperimentId": "fe9c0ce4-0a1a-45fe-bc90-21b71b5dbdb9",
+  "nextExperimentIndex": 22,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -260,6 +260,18 @@
       "name": "Operator Update Coverage Bench",
       "path": "2026-11-05-20-operator-update-coverage-bench.json",
       "startedAt": "2026-11-05T00:04:10Z",
+      "finishedAt": "2026-11-05T00:05:38Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "b58735696100e82925315364edf2850aa2f77048"
+    },
+    {
+      "id": "fe9c0ce4-0a1a-45fe-bc90-21b71b5dbdb9",
+      "index": 21,
+      "type": "hypothesis",
+      "name": "Join Skips Reordering Order-Preserving Batches",
+      "path": "2026-11-05-21-join-skips-reordering-order-preserving-batches.json",
+      "startedAt": "2026-11-05T00:06:37Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

@@ -40,8 +40,9 @@ where
         }
 
         let affected = affected_cache_keys(&self.left, &batch.changes);
+        let keeps_order = keeps_key_order(&self.left, &batch.changes);
         apply_cache_changes(&mut self.left, &batch.changes);
-        self.update_affected(affected, selector)
+        self.update_affected(affected, selector, keeps_order)
     }
 
     fn apply_right(
@@ -54,38 +55,52 @@ where
         }
 
         let affected = affected_cache_keys(&self.right, &batch.changes);
+        let keeps_order = keeps_key_order(&self.right, &batch.changes);
         apply_cache_changes(&mut self.right, &batch.changes);
-        self.update_affected(affected, selector)
+        self.update_affected(affected, selector, keeps_order)
     }
 
+    /// Applies the affected keys, then moves the result into the desired order. The desired
+    /// order and its ranks are built only when needed: when a batch kept both sides' key order
+    /// (`keeps_order`) and the result neither gained nor lost a key, the result is already in
+    /// order and nothing O(n) runs.
     fn update_affected(
         &mut self,
         affected: Vec<AffectedKey<K>>,
         selector: &JoinSelector<K, L, R, U>,
+        keeps_order: bool,
     ) -> Vec<CacheChange<K, U>> {
         let mut changes = Vec::new();
-        let desired = self.desired_order();
-        let ranks = order_ranks(&desired);
+        let mut ordering = None;
+        let mut keys_changed = false;
         for affected in affected {
-            self.update_key(affected, selector, &ranks, &mut changes);
+            keys_changed |= self.update_key(affected, selector, &mut ordering, &mut changes);
         }
-        reorder_result(&mut self.result, &desired, &mut changes);
+        if !keeps_order || keys_changed {
+            let desired = match ordering {
+                Some((desired, _)) => desired,
+                None => self.desired_order(),
+            };
+            reorder_result(&mut self.result, &desired, &mut changes);
+        }
         changes
     }
 
+    /// Applies one affected key; returns whether the result gained or lost it. `ordering`
+    /// caches the desired order and its ranks once a new key needs them.
     fn update_key(
         &mut self,
         affected: AffectedKey<K>,
         selector: &JoinSelector<K, L, R, U>,
-        ranks: &HashMap<K, usize>,
+        ordering: &mut Option<(Vec<K>, HashMap<K, usize>)>,
         changes: &mut Vec<CacheChange<K, U>>,
-    ) {
+    ) -> bool {
         let key = affected.key;
         let previous = self.result.items.get(&key).cloned();
         let desired = selector(&key, self.left.items.get(&key), self.right.items.get(&key));
 
         match (previous, desired) {
-            (None, None) => {}
+            (None, None) => false,
             (Some(previous), None) => {
                 let previous_index = self.result.order.remove(&key);
                 let _ = self.result.items.remove(&key);
@@ -94,8 +109,14 @@ where
                     previous,
                     previous_index,
                 });
+                true
             }
             (None, Some(current)) => {
+                let (_, ranks) = ordering.get_or_insert_with(|| {
+                    let desired = self.desired_order();
+                    let ranks = order_ranks(&desired);
+                    (desired, ranks)
+                });
                 let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
                 let _ = self.result.order.insert(index, key.clone());
@@ -104,6 +125,7 @@ where
                     current,
                     current_index: Some(index),
                 });
+                true
             }
             (Some(previous), Some(current)) => {
                 // Updated in place; the batch's final reorder moves it if its position changed.
@@ -125,6 +147,7 @@ where
                         current_index,
                     });
                 }
+                false
             }
         }
     }

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "fe9c0ce4-0a1a-45fe-bc90-21b71b5dbdb9",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 21,
+  "type": "hypothesis",
+  "name": "Join Skips Reordering Order-Preserving Batches",
+  "slug": "join-skips-reordering-order-preserving-batches",
+  "path": "2026-11-05-21-join-skips-reordering-order-preserving-batches.json",
+  "createdAt": "2026-11-05T00:06:37Z",
+  "startedAt": "2026-11-05T00:06:37Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "b58735696100e82925315364edf2850aa2f77048",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard b58735696100e82925315364edf2850aa2f77048",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "b58735696100e82925315364edf2850aa2f77048",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard b58735696100e82925315364edf2850aa2f77048",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Join Skips Reordering Order-Preserving Batches Hypothesis\n\n### Hypothesis\n\n`JoinState::update_affected` rebuilds the desired output order (O(n)), a rank `HashMap` of every key (O(n)), and a filtered target order compared with the result order (O(n)) on every batch, so one left update into a 10k-row inner join costs 64 µs. When a batch only updates or refreshes keys that keep their position, neither side's key order changes; if the result also gains or loses no key, its order is already the desired one. Computing the desired order and ranks lazily (only when a result key is added) and reordering only when a side's order or the result's key set changed gives identical output in O(batch).\n\n### Scope Lock\n\n**Tested mechanism:** lazy desired order/ranks and conditional reorder for order-preserving batches.\n**Allowed changes:** `JoinState` (`apply_left`, `apply_right`, `update_affected`, `update_key`) in `crates/src/collections/join/join_state.rs`, plus an order-preservation check helper.\n**Forbidden in this experiment:** `JoinManyState` (`affected_key.rs`), reorder algorithm, apply_cache_changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{joins,join_many_right_moves,ordered_emission_relations,relation_operator_costs,index_contract_harness,subset_operator_indexes,snapshot_diff_indexes}`; clippy/fmt. Bench `operator_updates` (inner/left join) and `joins` vs base. Pass: inner-join and left-join updates >=5x faster; join loads not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\ninner/left join update from 44-64 us to ~1 us.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
