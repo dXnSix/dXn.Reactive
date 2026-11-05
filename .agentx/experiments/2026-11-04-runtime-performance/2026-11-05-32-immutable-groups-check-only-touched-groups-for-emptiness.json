@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "4fc3f80b-53a1-4ab6-8614-507a1b3b70f9",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 32,
+  "type": "hypothesis",
+  "name": "Immutable Groups Check Only Touched Groups For Emptiness",
+  "slug": "immutable-groups-check-only-touched-groups-for-emptiness",
+  "path": "2026-11-05-32-immutable-groups-check-only-touched-groups-for-emptiness.json",
+  "createdAt": "2026-11-05T00:33:43Z",
+  "startedAt": "2026-11-05T00:33:43Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "eacb085de5087a67947b47e6ecd893cd009c4857",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard eacb085de5087a67947b47e6ecd893cd009c4857",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "eacb085de5087a67947b47e6ecd893cd009c4857",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard eacb085de5087a67947b47e6ecd893cd009c4857",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Immutable Groups Check Only Touched Groups For Emptiness Hypothesis\n\n### Hypothesis\n\n`ImmutableCacheGroupState::retain_non_empty_groups` collects the group key of every entry into a `HashSet` (cloning and hashing n keys) on every batch to drop emptied groups. Only a group the batch touched can have become empty (every insert, removal, regroup or clear captures its group), so scanning the entries only until each touched group has been seen once — usually a handful of entries — finds the emptied groups with the same result.\n\n### Scope Lock\n\n**Tested mechanism:** emptiness check restricted to touched groups, with an early-exit scan.\n**Allowed changes:** `retain_non_empty_groups` and its two call sites in `crates/src/collections/operators/ungrouped_cache_state.rs` (cache immutable groups).\n**Forbidden in this experiment:** group snapshots, per-group member indexes, the list immutable group.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{group_and_combiner_indexes,grouping_tree_switching,subset_operator_indexes,index_contract_harness,keyed_state_operators}`; clippy/fmt. Bench `operator_updates` (group-immutable) vs base. Pass: group-immutable update >=10% faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n~15-25% off immutable group updates (four O(n) snapshot scans remain).\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
