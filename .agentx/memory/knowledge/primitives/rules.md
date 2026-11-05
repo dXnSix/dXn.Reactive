@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/primitives
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-23T22:00:00+02:00
+  updated: 2026-11-05T12:00:00+01:00
   topics:
     - crate-boundaries
     - delivery-queue
@@ -21,3 +21,4 @@ agentx:
 - Time-based operators (scalar and collection) tell time and wait only through `primitives::Scheduler`: add a `*_with_scheduler(…, Arc<dyn Scheduler>)` variant and let the plain method use `default_scheduler()`. Only `ThreadScheduler` may spawn threads or read the clock (`Instant`); never `thread::spawn`/`sleep` in an operator.
 - Keep one timer per operator subscription in `primitives::timer::OperatorTimer`: arm under the state lock, schedule after unlocking with `schedule_timer` (it stores the handle only while that generation is still armed), check `fire(generation)` under the lock in the task, and `close()` on disposal, dropping the returned `ScheduledTask` after unlocking. Disposal cancels; it never joins or waits for a running task.
 - Test time-based behavior on `ManualScheduler` (`advance_by`, `run_due`, `pending()`), never with fixed sleeps; real-thread stress tests use generous deadlines and bounded iterations.
+- Every change to a `DeliveryQueue`'s `entries` or `queue` updates the mirrored atomic (`subscribers`, `pending`) under the same lock; lock-free readers rely on it.

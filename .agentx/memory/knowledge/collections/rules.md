@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/collections
   status: current
   created: 2026-06-24T14:10:00+02:00
-  updated: 2026-10-23T22:00:00+02:00
+  updated: 2026-11-05T12:00:00+01:00
   topics:
     - observable-collections
     - crate-boundaries
@@ -30,3 +30,4 @@ agentx:
 - Materializers that write a stream into a destination source (`populate_*`, the `to_*_change_set*` adapters, `from_stream` views, source size limits) go through `materialize::OrderedWriter`: a `Contended`/`NestedUpdate` batch is kept in order and retried on the destination's next lock release (`on_next_release`), other failures are reported and dropped, and every failure reaches the `_with_errors` callback or `errors()` stream. Never drop a failed batch silently or retry it from a timer.
 - Recomputable writes (size-limit evictions) use a latest-wins writer and verify their targets inside the edit; a stale eviction is skipped and recomputed from the next batch, and only removed items are emitted.
 - Shared or switched streams (`ref_count`, `switch`) register a subscriber and take its snapshot under one lock, buffer live batches until the snapshot is delivered, reject callbacks of released or superseded upstreams by epoch/generation, and deliver output through a per-subscription `DeliveryQueue`, never concurrently.
+- Internal hash tables use `crate::collections::hash::{HashMap, HashSet}` built with `default()`/`with_capacity_and_hasher`, never std `RandomState` ([hasher decision](../../decisions/collections/2026-11-05-collections-seeded-fast-hasher.md)); public signatures never expose them.

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "7dba94d1-ae2e-4c7b-ab6b-fb9e3df5aafd",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 51,
+  "type": "hypothesis",
+  "name": "Known-New Keys Skip Existence Lookups (Retry)",
+  "slug": "known-new-keys-skip-existence-lookups-retry",
+  "path": "2026-11-05-51-known-new-keys-skip-existence-lookups-retry.json",
+  "createdAt": "2026-11-05T01:26:00Z",
+  "startedAt": "2026-11-05T01:26:00Z",
+  "finishedAt": "2026-11-05T01:28:05Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Known-New Keys Skip Existence Lookups (Retry) Hypothesis\n\n### Hypothesis\n\nRetry of experiment 6 against today's costs. A new key still pays repeated existence lookups: `CacheUpdater` and `insert_cache_key` check `index_of` and then `KeyOrder::insert` checks again, and the remove-key bridge (experiment 4) now looks a new key up three times (`index_of`, `remove`, then `insert`'s own check) before inserting it. With hashing no longer dominant, these lookups are ~12% of a pipeline load's samples. An `insert_new`/`push_new` entry point for keys the caller proved absent, and a bridge path that branches on one lookup, remove the redundant probes.\n\n### Scope Lock\n\n**Tested mechanism:** skip existence lookups for keys known to be absent.\n**Allowed changes:** `KeyOrder` (`insert_new`, `push_new`), `CacheUpdater::add_or_update_key_at`, `insert_cache_key`, `CacheRemoveKeyState` (`insert`, the Add/Update arm), the cache filter's appended path.\n**Forbidden in this experiment:** capacity, hashing, KeyOrder storage.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFull lib tests (debug assertion that insert_new keys are absent), integration tests; clippy/fmt. Bench `hot_paths` cache-hot, `keyed_sort`, `sort_and_page`, `live_group` vs base. Pass: cache-hot/load-filter-transform-bind >=5% faster; single-update benches not slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n5-10% faster cache loads.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "37.375 ns median",
+      "delta": "+0.4048%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "108.74 ns median",
+      "delta": "+10.109%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "212.02 ns median",
+      "delta": "+2.0476%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "205.47 ns median",
+      "delta": "+4.3145%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "605.71 µs median",
+      "delta": "-2.5392%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "66.610 µs median",
+      "delta": "-2.5326%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "137.60 µs median",
+      "delta": "-4.8300%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.2903 ms median",
+      "delta": "+0.7715%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/640",
+      "before": "baseline (criterion saved)",
+      "after": "85.947 µs median",
+      "delta": "+1.5783%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/1280",
+      "before": "baseline (criterion saved)",
+      "after": "160.10 µs median",
+      "delta": "-0.1199%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.2500 ms median",
+      "delta": "+1.8931%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "67.653 µs median",
+      "delta": "+1.4493%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "742.08 µs median",
+      "delta": "+0.7425%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Known-New Keys Skip Existence Lookups (Retry) Finished\n\n**Index:** 51\n**Checkpoint:** 1cf6ec3\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure.\n\n### Scope Lock\n\n**Tested mechanism:** 636 lib + integration tests pass (debug assertion on insert_new), but cache-hot/load-filter-transform-bind improved only 2.5% against the 5% gate; keyed-sort, sort-and-page and live-group loads moved within +-5%. Confirms experiment 6: the redundant probes are not a material cost.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 37.375 ns median | +0.4048% |\n| cache-hot/update-connect | 108.74 ns median | +10.109% |\n| cache-hot/update-filter-half | 212.02 ns median | +2.0476% |\n| cache-hot/update-transform-bind | 205.47 ns median | +4.3145% |\n| cache-hot/load-filter-transform-bind/10000 | 605.71 µs median | -2.5392% |\n| keyed-sort-large-add-batch/640 | 66.610 µs median | -2.5326% |\n| keyed-sort-large-add-batch/1280 | 137.60 µs median | -4.8300% |\n| keyed-sort-large-add-batch/10000 | 1.2903 ms median | +0.7715% |\n| live-group-touched-members/640 | 85.947 µs median | +1.5783% |\n| live-group-touched-members/1280 | 160.10 µs median | -0.1199% |\n| live-group-touched-members/10000 | 1.2500 ms median | +1.8931% |\n| sort-and-page/load/1000 | 67.653 µs median | +1.4493% |\n| sort-and-page/load/10000 | 742.08 µs median | +0.7425% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 1cf6ec3.\n",
+  "notes": ""
+}

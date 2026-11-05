@@ -37,6 +37,8 @@ Sources push `preview`, `changes` and `(version, count)` items while holding the
 
 `ObservableList<T>`/`ObservableCache<K, T>` are read-only facades over sources or materialized streams. `as_observable_list()` on a keyed cache stream routes through the ordered cache-to-list bridge, so sorted keyed streams keep row order.
 
+Hot-path shape (runtime-performance loop, 2026-11): internal tables use `collections::hash` ([hasher decision](../../../decisions/collections/2026-11-05-collections-seeded-fast-hasher.md)). A `SourceCache` creates its keyed-watch hub and bridge on the first watch. Edits skip cloning and publishing the shared batch when neither `preview` nor `changes` has a subscriber (a later `connect` snapshots under the lock). A range load into an empty cache reserves its tables from the size hint. `SourceLock` release skips the callback queue unless `callbacks_pending` is set.
+
 ## Backlinks
 
 - [SourceCache](../../../../../crates/src/collections/cache/source_cache_impl.rs)

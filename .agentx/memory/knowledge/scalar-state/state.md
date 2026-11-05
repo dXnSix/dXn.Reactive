@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/scalar-state
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-23T22:00:00+02:00
+  updated: 2026-11-05T12:00:00+01:00
   topics:
     - signals
     - computed
@@ -31,6 +31,8 @@ A signal commits state under its mutex and pushes its `SignalChange` before rele
 `Command`/`AsyncCommand` share an `Execution` (state, `is_executing` signal, in-flight count, latest generation, publish mutex used with deferred signal writes); an `ExecutionTicket` publishes the terminal state only for the latest generation and `Cancelled` from its drop guard. `ViewModelActivator` runs callbacks outside its state lock, uses generation IDs so a stale token cannot dispose a later activation, tracks an `Activating/Active/Ended` phase shared with tokens, abandons a generation on callback error or panic, and runs live/scoped registrations against a child bag that is disposed on failure.
 
 GPUI bindings are not in this crate: RayX owns `ReactiveContextExt`/`GpuiBinding` (including the payload-free `notify_on`) in `../../RayX/RayX.Old/crates/rayx/src/reactive_gpui.rs`, re-exported as `rayx::reactive`. RayX's Test Suite page `apps/test_suite/src/pages/reactive_state.rs` with `tools-node/test_suite/rayx-reactive-state.spec.ts` is the headed WASM/WebGPU proof of the public scalar API (ordered values, computed updates, events, activation disposal).
+
+Freshness: `Computed` cores skip their recursive input check while the process-wide write epoch equals their `verified` epoch ([write-epoch decision](../../decisions/scalar-state/2026-11-05-scalar-state-computed-write-epoch.md)). Only signals tracked by a `Computed` (`feeds_computed`) advance the epoch.
 
 ## Backlinks
 

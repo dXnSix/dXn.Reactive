@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "04ba25cc-8fa3-4a31-a327-25a294f045cb",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 50,
+  "type": "hypothesis",
+  "name": "Cache Updater Borrows The Key Selector",
+  "slug": "cache-updater-borrows-the-key-selector",
+  "path": "2026-11-05-50-cache-updater-borrows-the-key-selector.json",
+  "createdAt": "2026-11-05T01:23:02Z",
+  "startedAt": "2026-11-05T01:23:02Z",
+  "finishedAt": "2026-11-05T01:25:38Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 1cf6ec34cd8e858069a85a6d97af42e46c1caece",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Cache Updater Borrows The Key Selector Hypothesis\n\n### Hypothesis\n\n`SourceCache::edit_at_version` clones the key selector's `Arc` into every `CacheUpdater` and drops it at the end of the edit: two atomic read-modify-writes on a shared counter per edit, on the hot path of every cache write (about 38 ns unobserved). The updater lives only for the edit, so it can borrow the selector for that lifetime instead, with identical behavior.\n\n### Scope Lock\n\n**Tested mechanism:** borrowed key selector in `CacheUpdater`.\n**Allowed changes:** the `CacheUpdater` field (`cache_notification_suspension.rs`) and its two constructions in `source_cache_impl.rs`.\n**Forbidden in this experiment:** other edit-path changes, list updater, KeyOrder.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{sources,source_read_api,source_commit_order,source_lock_policy,source_bookkeeping_costs}` and public API tests; clippy/fmt. Bench `hot_paths` cache-hot and contention/cache-writes vs base, rerun borderline. Pass: cache-hot/update-no-subscribers >=5% faster or contention/cache-writes/4 >=5% faster; nothing slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nA few ns less per cache edit; less shared-counter traffic between threads editing one cache.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "37.306 ns median",
+      "delta": "+1.2245%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "127.54 ns median",
+      "delta": "+28.738%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "255.08 ns median",
+      "delta": "+22.751%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "251.09 ns median",
+      "delta": "+27.825%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "contention/cache-writes/1",
+      "before": "baseline (criterion saved)",
+      "after": "472.92 µs median",
+      "delta": "+4.1930%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "contention/cache-writes/4",
+      "before": "baseline (criterion saved)",
+      "after": "884.29 µs median",
+      "delta": "-7.0145%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Cache Updater Borrows The Key Selector Finished\n\n**Index:** 50\n**Checkpoint:** 1cf6ec3\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure.\n\n### Scope Lock\n\n**Tested mechanism:** tests pass, but update-no-subscribers did not move (+1.2%, -0.6%) and contention/cache-writes/4 (884/877 us) was not better than a control run of the unchanged checkpoint (832 us); update-connect measured 128/121 ns against 105 ns in the control (a code-generation side effect), failing the regression gate.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 37.306 ns median | +1.2245% |\n| cache-hot/update-connect | 127.54 ns median | +28.738% |\n| cache-hot/update-filter-half | 255.08 ns median | +22.751% |\n| cache-hot/update-transform-bind | 251.09 ns median | +27.825% |\n| contention/cache-writes/1 | 472.92 µs median | +4.1930% |\n| contention/cache-writes/4 | 884.29 µs median | -7.0145% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 1cf6ec3.\n",
+  "notes": ""
+}

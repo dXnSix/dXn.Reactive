@@ -4,7 +4,7 @@ agentx:
   scope: decisions
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-23T22:00:00+02:00
+  updated: 2026-11-05T12:00:00+01:00
   topics:
     - decisions
     - dxn_reactive
@@ -20,6 +20,7 @@ Durable architecture choices for `dxn_reactive`. Current source remains the firs
 
 - collections
   - [AD-008 Observable collections replace DynamicData semantics](collections/2026-06-24-collections-observable-collections.md)
+  - [Seeded folded-multiply hasher for collection tables](collections/2026-11-05-collections-seeded-fast-hasher.md)
   - sources
     - [History-free targeted collection delivery](collections/sources/2026-07-27-collections-sources-history-free-targeted-delivery.md)
     - [Owner-tracked source lock](collections/sources/2026-10-11-collections-sources-owner-tracked-source-lock.md)
@@ -35,4 +36,6 @@ Durable architecture choices for `dxn_reactive`. Current source remains the firs
   - [Taxonomy transplanted from RayX](repository/2026-10-05-repository-agentx-memory-taxonomy-transplant.md)
   - [Reactive crate split](repository/2026-06-28-repository-reactive-crate-split.md) (superseded)
   - [RayX Reactive Collections crate](repository/2026-06-27-repository-rayx-reactive-collections-crate.md) (superseded)
-- scalar-state, primitives: no decisions yet; the single-crate decision sets their module boundaries.
+- scalar-state
+  - [Computed freshness gated by a write epoch of computed inputs](scalar-state/2026-11-05-scalar-state-computed-write-epoch.md)
+- primitives: no decisions yet; the single-crate decision sets its module boundaries.

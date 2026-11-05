@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "currentLoopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "currentLoopId": null,
   "loops": [
     {
       "id": "0c77e965-3766-4092-9d9f-e4e1eb890427",
       "name": "Runtime Performance",
       "path": "2026-11-04-runtime-performance/",
       "createdAt": "2026-11-04T23:00:25Z",
-      "finishedAt": null,
-      "state": "running",
-      "status": ""
+      "finishedAt": "2026-11-05T01:28:05Z",
+      "state": "done",
+      "status": "stopped"
     }
   ]
 }

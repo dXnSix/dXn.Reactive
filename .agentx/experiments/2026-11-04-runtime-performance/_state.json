@@ -7,17 +7,17 @@
   "target": "",
   "maxIterations": 50,
   "maxExperiments": 50,
-  "state": "running",
-  "status": "",
+  "state": "done",
+  "status": "stopped",
   "createdAt": "2026-11-04T23:00:25Z",
-  "finishedAt": null,
-  "lastStableCommit": "b61ce536c52d803e438d87f4692d21267d2735bd",
+  "finishedAt": "2026-11-05T01:28:05Z",
+  "lastStableCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "b61ce536c52d803e438d87f4692d21267d2735bd"
+      "lastStableCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "8a85047f-8470-449f-9b2a-d523ee6c4992",
-  "nextExperimentIndex": 50,
+  "currentExperimentId": null,
+  "nextExperimentIndex": 52,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -604,9 +604,32 @@
       "name": "Write Epoch Only For Computed Inputs",
       "path": "2026-11-05-49-write-epoch-only-for-computed-inputs.json",
       "startedAt": "2026-11-05T01:19:07Z",
-      "finishedAt": null,
-      "state": "running",
-      "status": ""
+      "finishedAt": "2026-11-05T01:22:39Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "1cf6ec34cd8e858069a85a6d97af42e46c1caece"
+    },
+    {
+      "id": "04ba25cc-8fa3-4a31-a327-25a294f045cb",
+      "index": 50,
+      "type": "hypothesis",
+      "name": "Cache Updater Borrows The Key Selector",
+      "path": "2026-11-05-50-cache-updater-borrows-the-key-selector.json",
+      "startedAt": "2026-11-05T01:23:02Z",
+      "finishedAt": "2026-11-05T01:25:38Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "7dba94d1-ae2e-4c7b-ab6b-fb9e3df5aafd",
+      "index": 51,
+      "type": "hypothesis",
+      "name": "Known-New Keys Skip Existence Lookups (Retry)",
+      "path": "2026-11-05-51-known-new-keys-skip-existence-lookups-retry.json",
+      "startedAt": "2026-11-05T01:26:00Z",
+      "finishedAt": "2026-11-05T01:28:05Z",
+      "state": "done",
+      "status": "failure"
     }
   ]
 }

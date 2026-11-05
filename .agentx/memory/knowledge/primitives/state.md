@@ -4,7 +4,7 @@ agentx:
   scope: knowledge/primitives
   status: current
   created: 2026-10-05T23:30:00+02:00
-  updated: 2026-10-23T22:00:00+02:00
+  updated: 2026-11-05T12:00:00+01:00
   topics:
     - value-stream
     - delivery-queue
@@ -31,6 +31,8 @@ Publication is split into `push` (queue lock only, safe under the publisher's ow
 `ValueStream<T, E>` converts setup errors with `map_err`/`err_into`; `ReactiveError` has `Poisoned` and `External(Arc<dyn Error + Send + Sync>)` (equality by identity or display text). `ReactiveValueStreamExt<T, E = ReactiveError>` (crate root `stream_ext.rs`) is implemented for every error type and holds the combinators; `combine_latest` orders pairs through a per-subscription `DeliveryQueue`, and `share`/`share_replay` use connection generations, a replay buffer handshake, a connect Condvar and an unwind guard. `start_with` emits its initial value through a thread-aware gate (other threads wait; same-thread nested values pass).
 
 `scheduler.rs` defines `Scheduler` (`now() -> Duration` since the scheduler's origin, `schedule(delay, ScheduledWork) -> ScheduledTask`, cancel on drop or `cancel()`, `detach()` to keep it), `ThreadScheduler` (all timers of an instance on one lazily started thread with condvar waits and a 500 ms idle re-check; the thread ends after the instance is dropped; a panicking task is isolated), the process-wide `default_scheduler()`, and `ManualScheduler` (virtual clock; `advance_by` runs due tasks on the calling thread in due-time order, including tasks scheduled by tasks). The crate-internal `timer.rs` (`OperatorTimer`, `schedule_timer`) is shared by the collection timed operators and `stream_ext`'s `debounce` (restart on each value) / `sample` (lazy tick on the subscription's grid) / `throttle` (leading edge via `now()`, no timer); `debounce` and `sample` deliver through a per-subscription `DeliveryQueue`.
+
+Hot-path shape (runtime-performance loop, 2026-11): the queue's mutex and two atomics share one allocation: `subscribers` (mirrored from `entries` under the lock, read lock-free by `has_subscribers`) and `pending` (mirrored queue length, so an empty `drain` returns without locking). A drain claims and pops its first item in one critical section. `push_or_claim` (crate-internal) claims an idle queue in the push's critical section and returns a `ClaimedDrain` the caller delivers after releasing its own lock; `OrderedEmitter::update` uses it. Using it for `Signal` writes measured slower and was reverted.
 
 ## Backlinks
 

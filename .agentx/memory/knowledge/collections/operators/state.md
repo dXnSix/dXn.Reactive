@@ -31,6 +31,8 @@ Keyed operators mirror order with `KeyOrder` (`collections/key_order.rs`), so lo
 
 Page and window requests are zero-based (`PageRequest::default()` is `(0, 25)`), unlike DynamicData's one-based default.
 
+Per-update costs (runtime-performance loop, 2026-11; `crates/benches/hot_paths.rs`, `operator_updates.rs`): the cache filter binary-searches its filtered order for a visible index and rebuilds that order lazily after a refilter; static and dynamic list filters count visible items from a mirrored `Vec<bool>`; keyed sort positions live in a `KeyOrder` (bulk `reset`, shifted-window moves); `CacheRemoveKeyState` keeps unmoved keys in place and `apply_list_changes` applies an adjacent Remove+Add at one index in place; joins and Left/Inner join-many build desired order/ranks lazily and reorder only when a side's order or the result's key set changed; immutable cache groups index members per group in source order and check only touched groups for emptiness (list immutable groups too); the live list group and list transform_many mirror group keys / child counts in parallel vectors; `transform_to_tree` answers the roots filter from `actual_parents`, refilters incrementally from touched keys when a batch reordered nothing (debug-asserted against the full diff), and creates node children caches lazily. Operator mirrors reserve capacity for a batch's `Add` count.
+
 ## Backlinks
 
 - [Operators module](../../../../../crates/src/collections/operators/mod.rs)
