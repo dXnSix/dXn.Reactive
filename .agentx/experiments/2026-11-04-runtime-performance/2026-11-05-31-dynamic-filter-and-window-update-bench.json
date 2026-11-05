@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "696fc70a-6b59-48f4-8e4d-5d776cb2c76b",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 31,
+  "type": "hypothesis",
+  "name": "Dynamic Filter And Window Update Bench",
+  "slug": "dynamic-filter-and-window-update-bench",
+  "path": "2026-11-05-31-dynamic-filter-and-window-update-bench.json",
+  "createdAt": "2026-11-05T00:31:47Z",
+  "startedAt": "2026-11-05T00:31:47Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "e99c311c107525d98618d2a6c2d112b85693ea1e",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard e99c311c107525d98618d2a6c2d112b85693ea1e",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "e99c311c107525d98618d2a6c2d112b85693ea1e",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard e99c311c107525d98618d2a6c2d112b85693ea1e",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Dynamic Filter And Window Update Bench Hypothesis\n\n### Hypothesis\n\nThe remaining uncovered hot paths are dynamic filters (per-item update and predicate change), list paging/virtualization, immutable cache groups and `auto_refresh`. Adding steady-state update points for them shows whether they also pay costs that scale with the collection.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement (bench functions only).\n**Allowed changes:** `crates/benches/operator_updates.rs`.\n**Forbidden in this experiment:** production source changes.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`cargo bench --bench operator_updates -- --save-baseline base` for the new points. Pass: compiles, clippy/fmt clean, stable medians.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nA per-update baseline for seven more operator paths.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

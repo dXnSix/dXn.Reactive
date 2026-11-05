@@ -9,11 +9,11 @@
   "path": "2026-11-05-30-list-filter-inclusion-flags-in-a-byte-vector.json",
   "createdAt": "2026-11-05T00:30:03Z",
   "startedAt": "2026-11-05T00:30:03Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:31:22Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "f16d03bbf9da322c99f66c2c279b8a8522d3c024",
-  "resultCommit": "",
+  "resultCommit": "e99c311c107525d98618d2a6c2d112b85693ea1e",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f16d03bbf9da322c99f66c2c279b8a8522d3c024",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "f16d03bbf9da322c99f66c2c279b8a8522d3c024",
-      "resultCommit": "",
+      "resultCommit": "e99c311c107525d98618d2a6c2d112b85693ea1e",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f16d03bbf9da322c99f66c2c279b8a8522d3c024",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "e99c311c107525d98618d2a6c2d112b85693ea1e"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,44 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "98.245 ns median",
+      "delta": "+5.8316%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "277.58 ns median",
+      "delta": "+1.0508%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "5.3075 µs median",
+      "delta": "-18.879%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.1470 µs median",
+      "delta": "+1.2749%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "32.837 µs median",
+      "delta": "+4.9279%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## List Filter Inclusion Flags In A Byte Vector Finished\n\n**Index:** 30\n**Checkpoint:** f16d03b\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 80 focused filter/index tests pass; insert-remove-mid-filter-transform 6.54 -> 5.31 us (-19%); list load +4.9% (within the 10% gate).\n\n### Scope Lock\n\n**Tested mechanism:** parallel inclusion-flag vector for the static list filter's visible-index count\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| list-hot/push-remove-no-subscribers | 98.245 ns median | +5.8316% |\n| list-hot/push-remove-bind | 277.58 ns median | +1.0508% |\n| list-hot/insert-remove-mid-filter-transform | 5.3075 µs median | -18.879% |\n| list-hot/insert-remove-sort | 1.1470 µs median | +1.2749% |\n| list-hot/load-filter-transform-bind/10000 | 32.837 µs median | +4.9279% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

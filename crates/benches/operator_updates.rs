@@ -4,6 +4,7 @@
 //! cost a UI pays for each live update.
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use dxn_reactive::Signal;
 use dxn_reactive::collections::prelude::*;
 use std::sync::{Arc, Mutex};
 
@@ -282,6 +283,118 @@ fn relation_and_window_operators(c: &mut Criterion) {
     });
 }
 
+fn dynamic_operators(c: &mut Criterion) {
+    bench_cache_update(c, "cache-update/filter-dynamic", false, |source| {
+        let threshold = Signal::new(2_u32);
+        let predicates = threshold
+            .values()
+            .map(|threshold| {
+                let threshold = *threshold;
+                let predicate: Predicate<Row> =
+                    Arc::new(move |row: &Row| row.value.is_multiple_of(threshold));
+                predicate
+            })
+            .err_into::<CollectionError>();
+        source
+            .connect()
+            .filter_dynamic(predicates)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("cache filter dynamic")
+    });
+
+    c.bench_function("cache-predicate-change/filter-dynamic", |b| {
+        let source = loaded_cache();
+        let threshold = Signal::new(2_u32);
+        let predicates = threshold
+            .values()
+            .map(|threshold| {
+                let threshold = *threshold;
+                let predicate: Predicate<Row> =
+                    Arc::new(move |row: &Row| row.value.is_multiple_of(threshold));
+                predicate
+            })
+            .err_into::<CollectionError>();
+        let _subscription = source
+            .connect()
+            .filter_dynamic(predicates)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("cache filter dynamic");
+        let mut step = 0_u32;
+        b.iter(|| {
+            step = step.wrapping_add(1);
+            threshold.set(2 + step % 2).expect("threshold");
+        });
+    });
+
+    bench_cache_update(c, "cache-update/group-immutable", true, |source| {
+        source
+            .connect()
+            .group_immutable(|row| row.group)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("group immutable")
+    });
+
+    bench_cache_update(c, "cache-update/auto-refresh", false, |source| {
+        source
+            .connect()
+            .auto_refresh(|_row: &Row, _key: &u32| {
+                dxn_reactive::primitives::ValueStream::<(), CollectionError>::new(|_| {
+                    Ok(Subscription::empty())
+                })
+            })
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("auto refresh")
+    });
+
+    bench_list_replace(c, "list-replace/filter-dynamic", |source| {
+        let threshold = Signal::new(2_u32);
+        let predicates = threshold
+            .values()
+            .map(|threshold| {
+                let threshold = *threshold;
+                let predicate: Predicate<Row> =
+                    Arc::new(move |row: &Row| row.value.is_multiple_of(threshold));
+                predicate
+            })
+            .err_into::<CollectionError>();
+        source
+            .connect()
+            .filter_dynamic(predicates)
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("list filter dynamic")
+    });
+
+    bench_list_replace(c, "list-replace/page", |source| {
+        source
+            .connect()
+            .page(PageRequest::new(2, 50))
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("page")
+    });
+
+    bench_list_replace(c, "list-replace/virtualize", |source| {
+        source
+            .connect()
+            .virtualize(VirtualRequest::new(100, 50))
+            .subscribe(|batch| {
+                black_box(batch.changes.len());
+            })
+            .expect("virtualize")
+    });
+}
+
 fn loaded_list() -> SourceList<Row> {
     SourceList::new(
         (0..ROWS)
@@ -366,6 +479,7 @@ criterion_group!(
     benches,
     cache_operators,
     list_operators,
-    relation_and_window_operators
+    relation_and_window_operators,
+    dynamic_operators
 );
 criterion_main!(benches);
