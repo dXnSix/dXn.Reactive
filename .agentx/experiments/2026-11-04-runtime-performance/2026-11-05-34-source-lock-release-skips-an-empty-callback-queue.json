@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "7e970802-45ac-4b22-86b1-24249e43b152",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 34,
+  "type": "hypothesis",
+  "name": "Source Lock Release Skips An Empty Callback Queue",
+  "slug": "source-lock-release-skips-an-empty-callback-queue",
+  "path": "2026-11-05-34-source-lock-release-skips-an-empty-callback-queue.json",
+  "createdAt": "2026-11-05T00:37:26Z",
+  "startedAt": "2026-11-05T00:37:26Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard d1d7e2c129e24f77db41097d32e73a859ae6a74f",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard d1d7e2c129e24f77db41097d32e73a859ae6a74f",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Source Lock Release Skips An Empty Callback Queue Hypothesis\n\n### Hypothesis\n\nReleasing a `SourceLock` (every source edit and read, and every live-group member operation) always locks the `release_callbacks` mutex to take an almost always empty queue. An atomic flag set after a callback is queued and swapped off before the queue is taken lets a release skip that lock; `on_next_release` already takes the lock afterwards when it is free, so a callback queued while another thread releases is still run by a later release.\n\n### Scope Lock\n\n**Tested mechanism:** atomic pending flag in front of the release-callback queue.\n**Allowed changes:** `crates/src/collections/source_lock.rs` (`on_next_release`, `run_release_callbacks`, the struct).\n**Forbidden in this experiment:** HELD tracking, release hook, fences elsewhere.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{source_lock_policy,source_commit_order,suspension_versions,connect_late_delivery,sources,grouping_tree_switching}` and full lib; clippy/fmt. Bench `hot_paths` cache/list updates, `live_group`, `operator_updates` (group), `tree` vs base. Pass: live-group load or cache-hot/update-* >=5% faster; nothing slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nOne mutex round trip less per source lock release.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

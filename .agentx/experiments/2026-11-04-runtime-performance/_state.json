@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "192180549f6fb40572c62c992ff1836285a0895a",
+  "lastStableCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "192180549f6fb40572c62c992ff1836285a0895a"
+      "lastStableCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "c5dd9007-eeea-46a4-9431-c2733c742807",
-  "nextExperimentIndex": 34,
+  "currentExperimentId": "7e970802-45ac-4b22-86b1-24249e43b152",
+  "nextExperimentIndex": 35,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -414,6 +414,18 @@
       "name": "Immutable Group Member Index",
       "path": "2026-11-05-33-immutable-group-member-index.json",
       "startedAt": "2026-11-05T00:35:06Z",
+      "finishedAt": "2026-11-05T00:36:51Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "d1d7e2c129e24f77db41097d32e73a859ae6a74f"
+    },
+    {
+      "id": "7e970802-45ac-4b22-86b1-24249e43b152",
+      "index": 34,
+      "type": "hypothesis",
+      "name": "Source Lock Release Skips An Empty Callback Queue",
+      "path": "2026-11-05-34-source-lock-release-skips-an-empty-callback-queue.json",
+      "startedAt": "2026-11-05T00:37:26Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

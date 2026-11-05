@@ -55,6 +55,8 @@ pub(crate) struct SourceLock<S> {
     release_hook: OnceLock<ReleaseHook>,
     /// One-shot work queued with [`on_next_release`](SourceLock::on_next_release).
     release_callbacks: Mutex<Vec<ReleaseCallback>>,
+    /// Set after a callback is queued, so a release skips the empty queue without locking it.
+    callbacks_pending: AtomicBool,
 }
 
 impl<S> SourceLock<S> {
@@ -64,6 +66,7 @@ impl<S> SourceLock<S> {
             release_requested: AtomicBool::new(false),
             release_hook: OnceLock::new(),
             release_callbacks: Mutex::new(Vec::new()),
+            callbacks_pending: AtomicBool::new(false),
         }
     }
 
@@ -86,6 +89,7 @@ impl<S> SourceLock<S> {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .push(callback);
+        self.callbacks_pending.store(true, Ordering::SeqCst);
         std::sync::atomic::fence(Ordering::SeqCst);
         // If the holder released before the callback was queued, nobody would run it: take
         // the lock now (only if free) so its release runs the queue.
@@ -93,6 +97,13 @@ impl<S> SourceLock<S> {
     }
 
     fn run_release_callbacks(&self) {
+        // Cleared before taking the queue: a callback queued after this takes the lock itself
+        // when it is free, or sets the flag again for the next release.
+        if !self.callbacks_pending.load(Ordering::SeqCst)
+            || !self.callbacks_pending.swap(false, Ordering::SeqCst)
+        {
+            return;
+        }
         let callbacks = std::mem::take(
             &mut *self
                 .release_callbacks
