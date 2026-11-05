@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
+  "lastStableCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7"
+      "lastStableCommit": "00cf7e388394aecb8562c456db4684ab3e4badba"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "7c0d6f96-6876-4b51-b457-cf149608132a",
-  "nextExperimentIndex": 23,
+  "currentExperimentId": "9dc277f4-4f05-491d-8c70-c28ccf0ae705",
+  "nextExperimentIndex": 24,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -284,6 +284,18 @@
       "name": "Window And Relation Update Bench",
       "path": "2026-11-05-22-window-and-relation-update-bench.json",
       "startedAt": "2026-11-05T00:08:17Z",
+      "finishedAt": "2026-11-05T00:09:27Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "00cf7e388394aecb8562c456db4684ab3e4badba"
+    },
+    {
+      "id": "9dc277f4-4f05-491d-8c70-c28ccf0ae705",
+      "index": 23,
+      "type": "hypothesis",
+      "name": "Join-Many Skips Reordering Order-Preserving Left Batches",
+      "path": "2026-11-05-23-join-many-skips-reordering-order-preserving-left-batches.json",
+      "startedAt": "2026-11-05T00:09:57Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

@@ -47,6 +47,8 @@ where
         }
 
         let affected = affected_cache_keys(&self.left, &batch.changes);
+        // In-place updates keep the left order and create or free no group.
+        let keeps_order = keeps_key_order(&self.left, &batch.changes);
         apply_cache_changes(&mut self.left, &batch.changes);
         let keys = affected
             .iter()
@@ -55,14 +57,16 @@ where
 
         let mut changes = Vec::new();
         // Group membership changes as keys are updated, so the order is taken afterwards;
-        // additions use the order as it was when the batch started.
-        let ranks = order_ranks(&self.desired_order());
+        // additions use the order as it was when the batch started. An order-preserving
+        // batch builds it only if a key is added.
+        let mut ranks = (!keeps_order).then(|| order_ranks(&self.desired_order()));
+        let mut keys_changed = false;
         for affected in affected {
-            self.update_key(
+            keys_changed |= self.update_key(
                 affected.key,
                 affected.refresh,
                 selector,
-                &ranks,
+                &mut ranks,
                 &mut changes,
             );
         }
@@ -72,8 +76,10 @@ where
                 self.cleanup_group_if_unused(key);
             }
         }
-        let desired = self.desired_order();
-        reorder_result(&mut self.result, &desired, &mut changes);
+        if !keeps_order || keys_changed {
+            let desired = self.desired_order();
+            reorder_result(&mut self.result, &desired, &mut changes);
+        }
         changes
     }
 
@@ -95,13 +101,13 @@ where
         let mut changes = Vec::new();
         // Group membership changes as keys are updated, so the order is taken afterwards;
         // additions use the order as it was when the batch started.
-        let ranks = order_ranks(&self.desired_order());
+        let mut ranks = Some(order_ranks(&self.desired_order()));
         for affected in affected.keys {
-            self.update_key(
+            let _ = self.update_key(
                 affected.key,
                 affected.refresh,
                 selector,
-                &ranks,
+                &mut ranks,
                 &mut changes,
             );
         }
@@ -273,14 +279,14 @@ where
         key: K,
         refresh: bool,
         selector: &JoinManySelector<K, L, RK, R, U>,
-        ranks: &HashMap<K, usize>,
+        ranks: &mut Option<HashMap<K, usize>>,
         changes: &mut Vec<CacheChange<K, U>>,
-    ) {
+    ) -> bool {
         let previous = self.result.items.get(&key).cloned();
         let desired = self.desired_value(&key, selector);
 
         match (previous, desired) {
-            (None, None) => {}
+            (None, None) => false,
             (Some(previous), None) => {
                 let previous_index = self.result_index(&key);
                 let _ = self.result.items.remove(&key);
@@ -290,8 +296,10 @@ where
                     previous,
                     previous_index,
                 });
+                true
             }
             (None, Some(current)) => {
+                let ranks = ranks.get_or_insert_with(|| order_ranks(&self.desired_order()));
                 let index = provisional_index(&self.result.order, ranks, &key);
                 self.result.items.insert(key.clone(), current.clone());
                 let _ = self.result.order.insert(index, key.clone());
@@ -300,6 +308,7 @@ where
                     current,
                     current_index: Some(index),
                 });
+                true
             }
             (Some(previous), Some(current)) => {
                 // Updated in place; the batch's final reorder moves it if its position changed.
@@ -321,6 +330,7 @@ where
                         current_index,
                     });
                 }
+                false
             }
         }
     }

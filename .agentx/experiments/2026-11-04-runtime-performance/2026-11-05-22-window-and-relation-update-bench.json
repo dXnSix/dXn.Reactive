@@ -9,11 +9,11 @@
   "path": "2026-11-05-22-window-and-relation-update-bench.json",
   "createdAt": "2026-11-05T00:08:17Z",
   "startedAt": "2026-11-05T00:08:17Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:09:27Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
-  "resultCommit": "",
+  "resultCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 2b8e9da697b9800d23850f96b28242a1c544e1f7",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "2b8e9da697b9800d23850f96b28242a1c544e1f7",
-      "resultCommit": "",
+      "resultCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 2b8e9da697b9800d23850f96b28242a1c544e1f7",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "00cf7e388394aecb8562c456db4684ab3e4badba"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,72 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "cache-update/filter-sort-bind",
+      "before": "baseline (criterion saved)",
+      "after": "4.8937 µs median",
+      "delta": "+3.4689%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/full-join",
+      "before": "baseline (criterion saved)",
+      "after": "234.16 ns median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/left-join-many",
+      "before": "baseline (criterion saved)",
+      "after": "550.37 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/page-keyed",
+      "before": "baseline (criterion saved)",
+      "after": "1.3471 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/top-keyed",
+      "before": "baseline (criterion saved)",
+      "after": "1.3656 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/sort-and-virtualize",
+      "before": "baseline (criterion saved)",
+      "after": "8.0895 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-update/transform-to-tree",
+      "before": "baseline (criterion saved)",
+      "after": "71.785 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.3339 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-replace/filter-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.2864 µs median",
+      "delta": "n/a",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## Window And Relation Update Bench Finished\n\n**Index:** 22\n**Checkpoint:** 2b8e9da\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — bench builds and passes clippy/fmt. Findings at 10k rows: left_join_many update 550 us, transform_to_tree re-parent 72 us, sort_and_virtualize update 8.1 us, cache filter+sort+bind 4.9 us; full_join 0.23 us, page/top keyed 1.35 us, list sort replace 1.3 us.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-update/filter-sort-bind | 4.8937 µs median | +3.4689% |\n| cache-update/full-join | 234.16 ns median | n/a |\n| cache-update/left-join-many | 550.37 µs median | n/a |\n| cache-update/page-keyed | 1.3471 µs median | n/a |\n| cache-update/top-keyed | 1.3656 µs median | n/a |\n| cache-update/sort-and-virtualize | 8.0895 µs median | n/a |\n| cache-update/transform-to-tree | 71.785 µs median | n/a |\n| list-replace/sort | 1.3339 µs median | n/a |\n| list-replace/filter-sort | 1.2864 µs median | n/a |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

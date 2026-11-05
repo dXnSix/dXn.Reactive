@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "9dc277f4-4f05-491d-8c70-c28ccf0ae705",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 23,
+  "type": "hypothesis",
+  "name": "Join-Many Skips Reordering Order-Preserving Left Batches",
+  "slug": "join-many-skips-reordering-order-preserving-left-batches",
+  "path": "2026-11-05-23-join-many-skips-reordering-order-preserving-left-batches.json",
+  "createdAt": "2026-11-05T00:09:57Z",
+  "startedAt": "2026-11-05T00:09:57Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 00cf7e388394aecb8562c456db4684ab3e4badba",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "00cf7e388394aecb8562c456db4684ab3e4badba",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 00cf7e388394aecb8562c456db4684ab3e4badba",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Join-Many Skips Reordering Order-Preserving Left Batches Hypothesis\n\n### Hypothesis\n\n`JoinManyState::apply_left` builds the desired order twice per batch (ranks before the updates, the reorder target after); each build tests every group for emptiness under its lock, so one left update into a 10k-row `left_join_many` costs 550 µs. A left batch that only updates or refreshes keys in place keeps the left order, creates no group and removes no key; if the result also gains or loses no key, its order is already the desired one. Building the ranks only when a result key is added and reordering only when the left order or the result's key set changed gives identical output in O(batch).\n\n### Scope Lock\n\n**Tested mechanism:** lazy ranks and conditional reorder for order-preserving left batches of join-many.\n**Allowed changes:** `JoinManyState::apply_left`, `apply_right` (call shape only) and `update_key` in `crates/src/collections/join/affected_key.rs`.\n**Forbidden in this experiment:** right-batch skipping, `desired_order` itself, group locking.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{joins,join_many_right_moves,ordered_emission_relations,relation_operator_costs,index_contract_harness,subset_operator_indexes}`; clippy/fmt. Bench `operator_updates` (left-join-many) and `joins` vs base. Pass: left-join-many update >=10x faster; join loads not slower >10% on rerun.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nleft_join_many update from 550 us to a few us.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
