@@ -9,11 +9,11 @@
   "path": "2026-11-05-18-list-sort-binary-removal-lookup.json",
   "createdAt": "2026-11-05T00:00:13Z",
   "startedAt": "2026-11-05T00:00:13Z",
-  "finishedAt": null,
-  "state": "running",
-  "status": "",
+  "finishedAt": "2026-11-05T00:01:06Z",
+  "state": "done",
+  "status": "success",
   "checkpointCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
-  "resultCommit": "",
+  "resultCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
   "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
   "repositories": [
     {
@@ -21,12 +21,19 @@
       "path": ".",
       "role": "main",
       "checkpointCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
-      "resultCommit": "",
+      "resultCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
       "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
-      "status": ""
+      "status": "success"
     }
   ],
-  "repositoryCommits": [],
+  "repositoryCommits": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "commit": "73280dda074b3f059f68c841a01ae0cc483a4379"
+    }
+  ],
   "atomicDiscipline": {
     "oneHypothesisOnly": true,
     "singleImplementationAttempt": true,
@@ -45,8 +52,44 @@
     "counters": [],
     "artifacts": []
   },
-  "measurements": [],
-  "reportMarkdown": "",
-  "decisionMarkdown": "",
+  "measurements": [
+    {
+      "metric": "list-hot/push-remove-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "107.41 ns median",
+      "delta": "-7.4163%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/push-remove-bind",
+      "before": "baseline (criterion saved)",
+      "after": "257.48 ns median",
+      "delta": "-20.425%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-mid-filter-transform",
+      "before": "baseline (criterion saved)",
+      "after": "6.6218 µs median",
+      "delta": "+1.0601%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/insert-remove-sort",
+      "before": "baseline (criterion saved)",
+      "after": "1.1442 µs median",
+      "delta": "-49.692%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "list-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "31.886 µs median",
+      "delta": "+7.5278%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## List Sort Binary Removal Lookup Finished\n\n**Index:** 18\n**Checkpoint:** dfa16b1\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: true — 75 focused tests pass; insert-remove-sort 2.33 -> 1.14 us (-50%); other list benches do not reach the sort (noise).\n\n### Scope Lock\n\n**Tested mechanism:** binary search to the comparer-equal range before the equality scan\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| list-hot/push-remove-no-subscribers | 107.41 ns median | -7.4163% |\n| list-hot/push-remove-bind | 257.48 ns median | -20.425% |\n| list-hot/insert-remove-mid-filter-transform | 6.6218 µs median | +1.0601% |\n| list-hot/insert-remove-sort | 1.1442 µs median | -49.692% |\n| list-hot/load-filter-transform-bind/10000 | 31.886 µs median | +7.5278% |\n",
+  "decisionMarkdown": "### Decision\n\nCommitted success.\n",
   "notes": ""
 }

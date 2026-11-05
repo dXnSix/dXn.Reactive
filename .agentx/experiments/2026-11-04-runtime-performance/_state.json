@@ -11,13 +11,13 @@
   "status": "",
   "createdAt": "2026-11-04T23:00:25Z",
   "finishedAt": null,
-  "lastStableCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2",
+  "lastStableCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
   "repositories": [
     {
       "name": "main",
       "path": ".",
       "role": "main",
-      "lastStableCommit": "dfa16b1f61dcfcf7a3c641866d2a59871a79c6b2"
+      "lastStableCommit": "73280dda074b3f059f68c841a01ae0cc483a4379"
     }
   ],
   "atomicDiscipline": {
@@ -28,8 +28,8 @@
     "successfulAttemptRequiresCommitBeforeNextExperiment": true,
     "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
   },
-  "currentExperimentId": "418d770e-5451-4991-b810-db19fa50eeb4",
-  "nextExperimentIndex": 19,
+  "currentExperimentId": "650f58fd-b123-44d4-b94d-6695b47780e7",
+  "nextExperimentIndex": 21,
   "experiments": [
     {
       "id": "fcfa2952-67ff-4eb0-bb41-d6497f62a0cc",
@@ -237,6 +237,29 @@
       "name": "List Sort Binary Removal Lookup",
       "path": "2026-11-05-18-list-sort-binary-removal-lookup.json",
       "startedAt": "2026-11-05T00:00:13Z",
+      "finishedAt": "2026-11-05T00:01:06Z",
+      "state": "done",
+      "status": "success",
+      "resultCommit": "73280dda074b3f059f68c841a01ae0cc483a4379"
+    },
+    {
+      "id": "f73b1756-14ad-43cb-abe3-22113ea0ba92",
+      "index": 19,
+      "type": "hypothesis",
+      "name": "KeyOrder Settle Fast Path",
+      "path": "2026-11-05-19-key-order-settle-fast-path.json",
+      "startedAt": "2026-11-05T00:02:07Z",
+      "finishedAt": "2026-11-05T00:03:45Z",
+      "state": "done",
+      "status": "failure"
+    },
+    {
+      "id": "650f58fd-b123-44d4-b94d-6695b47780e7",
+      "index": 20,
+      "type": "hypothesis",
+      "name": "Operator Update Coverage Bench",
+      "path": "2026-11-05-20-operator-update-coverage-bench.json",
+      "startedAt": "2026-11-05T00:04:10Z",
       "finishedAt": null,
       "state": "running",
       "status": ""

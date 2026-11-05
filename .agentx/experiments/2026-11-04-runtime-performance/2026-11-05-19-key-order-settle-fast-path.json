@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "id": "f73b1756-14ad-43cb-abe3-22113ea0ba92",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 19,
+  "type": "hypothesis",
+  "name": "KeyOrder Settle Fast Path",
+  "slug": "key-order-settle-fast-path",
+  "path": "2026-11-05-19-key-order-settle-fast-path.json",
+  "createdAt": "2026-11-05T00:02:07Z",
+  "startedAt": "2026-11-05T00:02:07Z",
+  "finishedAt": "2026-11-05T00:03:45Z",
+  "state": "done",
+  "status": "failure",
+  "checkpointCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 73280dda074b3f059f68c841a01ae0cc483a4379",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 73280dda074b3f059f68c841a01ae0cc483a4379",
+      "status": "failure"
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## KeyOrder Settle Fast Path Hypothesis\n\n### Hypothesis\n\n`KeyOrder::settle` runs before every insertion and move. It always calls `reclaim`, which drains `..head` from the key and ticket vectors even when `head == 0`, and the post-hasher profile of a 10k-row cache pipeline load attributes ~10% of samples to `settle`. Returning early when there are no removed head slots and no pending removals makes the common append path skip that work.\n\n### Scope Lock\n\n**Tested mechanism:** early return in `settle`/`reclaim` when nothing is pending.\n**Allowed changes:** `crates/src/collections/key_order.rs` (`settle`, `reclaim`).\n**Forbidden in this experiment:** insert lookup changes, reindex changes, callers.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nKeyOrder unit tests and full lib tests (KeyOrder is shared); clippy/fmt. Bench `hot_paths` cache-hot, `keyed_sort`, `sort_and_page`, `live_group` vs base. Pass: cache-hot/load >=5% faster.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\n5-10% faster keyed loads.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [
+    {
+      "metric": "cache-hot/update-no-subscribers",
+      "before": "baseline (criterion saved)",
+      "after": "58.623 ns median",
+      "delta": "+10.902%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-connect",
+      "before": "baseline (criterion saved)",
+      "after": "124.96 ns median",
+      "delta": "-3.4005%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-filter-half",
+      "before": "baseline (criterion saved)",
+      "after": "235.35 ns median",
+      "delta": "+6.1409%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/update-transform-bind",
+      "before": "baseline (criterion saved)",
+      "after": "235.09 ns median",
+      "delta": "+2.5843%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "cache-hot/load-filter-transform-bind/10000",
+      "before": "baseline (criterion saved)",
+      "after": "605.03 µs median",
+      "delta": "-4.5171%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/640",
+      "before": "baseline (criterion saved)",
+      "after": "66.007 µs median",
+      "delta": "-3.1722%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/1280",
+      "before": "baseline (criterion saved)",
+      "after": "138.51 µs median",
+      "delta": "-1.8062%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "keyed-sort-large-add-batch/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.3013 ms median",
+      "delta": "-1.5647%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/640",
+      "before": "baseline (criterion saved)",
+      "after": "88.799 µs median",
+      "delta": "-0.4428%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/1280",
+      "before": "baseline (criterion saved)",
+      "after": "167.62 µs median",
+      "delta": "-0.9589%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "live-group-touched-members/10000",
+      "before": "baseline (criterion saved)",
+      "after": "1.2855 ms median",
+      "delta": "-1.1520%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/1000",
+      "before": "baseline (criterion saved)",
+      "after": "66.783 µs median",
+      "delta": "-2.2387%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/1000",
+      "before": "baseline (criterion saved)",
+      "after": "1.0453 µs median",
+      "delta": "-4.2038%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/load/10000",
+      "before": "baseline (criterion saved)",
+      "after": "729.68 µs median",
+      "delta": "-1.3384%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    },
+    {
+      "metric": "sort-and-page/update/10000",
+      "before": "baseline (criterion saved)",
+      "after": "2.5284 µs median",
+      "delta": "+10.138%",
+      "source": "cargo bench --bench <name> -- --baseline <prev>"
+    }
+  ],
+  "reportMarkdown": "## KeyOrder Settle Fast Path Finished\n\n**Index:** 19\n**Checkpoint:** 73280dd\n**Attempt Count:** 1\n\n### Report\n\n**Passed Status**: false — Reverted failure.\n\n### Scope Lock\n\n**Tested mechanism:** 636 lib tests pass, but cache-hot/load-filter-transform-bind improved only 4.5% against the >=5% gate; keyed sort/group/page loads moved 1-3%. Most of the samples attributed to settle were inlined insert/reindex work, not the empty drains.\n**Out-of-scope changes:** none.\n\n### Measurements\n\n| Metric | After (median) | Change vs previous baseline |\n| --- | ---: | ---: |\n| cache-hot/update-no-subscribers | 58.623 ns median | +10.902% |\n| cache-hot/update-connect | 124.96 ns median | -3.4005% |\n| cache-hot/update-filter-half | 235.35 ns median | +6.1409% |\n| cache-hot/update-transform-bind | 235.09 ns median | +2.5843% |\n| cache-hot/load-filter-transform-bind/10000 | 605.03 µs median | -4.5171% |\n| keyed-sort-large-add-batch/640 | 66.007 µs median | -3.1722% |\n| keyed-sort-large-add-batch/1280 | 138.51 µs median | -1.8062% |\n| keyed-sort-large-add-batch/10000 | 1.3013 ms median | -1.5647% |\n| live-group-touched-members/640 | 88.799 µs median | -0.4428% |\n| live-group-touched-members/1280 | 167.62 µs median | -0.9589% |\n| live-group-touched-members/10000 | 1.2855 ms median | -1.1520% |\n| sort-and-page/load/1000 | 66.783 µs median | -2.2387% |\n| sort-and-page/update/1000 | 1.0453 µs median | -4.2038% |\n| sort-and-page/load/10000 | 729.68 µs median | -1.3384% |\n| sort-and-page/update/10000 | 2.5284 µs median | +10.138% |\n",
+  "decisionMarkdown": "### Decision\n\nReverted to 73280dd.\n",
+  "notes": ""
+}

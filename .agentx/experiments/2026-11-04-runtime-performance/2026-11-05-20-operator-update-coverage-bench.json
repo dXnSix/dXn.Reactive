@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "650f58fd-b123-44d4-b94d-6695b47780e7",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 20,
+  "type": "hypothesis",
+  "name": "Operator Update Coverage Bench",
+  "slug": "operator-update-coverage-bench",
+  "path": "2026-11-05-20-operator-update-coverage-bench.json",
+  "createdAt": "2026-11-05T00:04:10Z",
+  "startedAt": "2026-11-05T00:04:10Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 73280dda074b3f059f68c841a01ae0cc483a4379",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "73280dda074b3f059f68c841a01ae0cc483a4379",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard 73280dda074b3f059f68c841a01ae0cc483a4379",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## Operator Update Coverage Bench Hypothesis\n\n### Hypothesis\n\nThe per-update O(n) hotspots found so far (filter index, sort positions, bridge reinsert) were invisible until a steady-state bench measured them. A second bench measuring one source write into a 10k-row pipeline for further operators (cache group, inner/left join, transform_many, inline transform, sum/count aggregates, list group, list transform_many, list distinct_values, cache filter+sort+bind) will expose the remaining ones.\n\n### Scope Lock\n\n**Tested mechanism:** measurement enablement (new bench target only).\n**Allowed changes:** `crates/benches/operator_updates.rs`, its `[[bench]]` entry.\n**Forbidden in this experiment:** any production source change.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\n`cargo bench --bench operator_updates -- --save-baseline base`. Pass: compiles, clippy/fmt clean, stable medians.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nA per-update baseline for ten more operators; points far above ~1 us at 10k rows are O(n) candidates.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}
