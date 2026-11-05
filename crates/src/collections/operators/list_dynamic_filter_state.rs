@@ -47,7 +47,7 @@ where
                         .filter(|entry| entry.included)
                         .map(|entry| entry.item.clone())
                         .collect::<Vec<_>>();
-                    self.entries.splice(index..index, entries);
+                    self.entries.insert_all(index, entries);
                     if !visible_items.is_empty() {
                         changes.push(ListChange::AddRange {
                             index: visible_index,
@@ -64,10 +64,13 @@ where
                     let previous = self.entries[index].item.clone();
                     let was_included = self.entries[index].included;
                     let is_included = predicate(new);
-                    self.entries[index] = ListFilterEntry {
+                    self.entries.set(
+                    index,
+                    ListFilterEntry {
                         item: new.clone(),
                         included: is_included,
-                    };
+                        },
+                    );
                     match (was_included, is_included) {
                         (true, true) => changes.push(ListChange::Replace {
                             index: visible_index,
@@ -94,10 +97,13 @@ where
                     let previous = self.entries[index].item.clone();
                     let was_included = self.entries[index].included;
                     let is_included = predicate(item);
-                    self.entries[index] = ListFilterEntry {
+                    self.entries.set(
+                    index,
+                    ListFilterEntry {
                         item: item.clone(),
                         included: is_included,
-                    };
+                        },
+                    );
                     match (was_included, is_included) {
                         (true, true) => changes.push(ListChange::Refresh {
                             index: visible_index,
@@ -187,11 +193,7 @@ where
     }
 
     fn visible_index_for_source_index(&self, index: usize) -> usize {
-        self.entries
-            .iter()
-            .take(index.min(self.entries.len()))
-            .filter(|entry| entry.included)
-            .count()
+        self.entries.included_before(index)
     }
 
     fn emit(

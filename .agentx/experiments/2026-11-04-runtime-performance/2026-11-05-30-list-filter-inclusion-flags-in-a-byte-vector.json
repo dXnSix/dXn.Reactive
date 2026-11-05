@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "ccee544a-d343-47a7-ba6a-03ecacb28959",
+  "loopId": "0c77e965-3766-4092-9d9f-e4e1eb890427",
+  "index": 30,
+  "type": "hypothesis",
+  "name": "List Filter Inclusion Flags In A Byte Vector",
+  "slug": "list-filter-inclusion-flags-in-a-byte-vector",
+  "path": "2026-11-05-30-list-filter-inclusion-flags-in-a-byte-vector.json",
+  "createdAt": "2026-11-05T00:30:03Z",
+  "startedAt": "2026-11-05T00:30:03Z",
+  "finishedAt": null,
+  "state": "running",
+  "status": "",
+  "checkpointCommit": "f16d03bbf9da322c99f66c2c279b8a8522d3c024",
+  "resultCommit": "",
+  "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f16d03bbf9da322c99f66c2c279b8a8522d3c024",
+  "repositories": [
+    {
+      "name": "main",
+      "path": ".",
+      "role": "main",
+      "checkpointCommit": "f16d03bbf9da322c99f66c2c279b8a8522d3c024",
+      "resultCommit": "",
+      "rollbackCommand": "git -C \"/Users/dinko/work-private/projects/dXn/dXn.Reactive\" reset --hard f16d03bbf9da322c99f66c2c279b8a8522d3c024",
+      "status": ""
+    }
+  ],
+  "repositoryCommits": [],
+  "atomicDiscipline": {
+    "oneHypothesisOnly": true,
+    "singleImplementationAttempt": true,
+    "noUnplannedFixesInsideExperiment": true,
+    "failedAttemptRequiresImmediateRevert": true,
+    "successfulAttemptRequiresCommitBeforeNextExperiment": true,
+    "rule": "Run exactly the printed hypothesis. If the attempted change fails, degrades, or suggests a different fix, revert to the checkpoint and finish this experiment as failure. Start a new experiment for the next idea."
+  },
+  "primaryTarget": "native release build, criterion benches (macOS arm64)",
+  "hypothesisMarkdown": "## List Filter Inclusion Flags In A Byte Vector Hypothesis\n\n### Hypothesis\n\n`ListFilterState::visible_index_for_source_index` counts the included entries before a source position by striding over `ListFilterEntry { item, included }` records; on a 10k-item list an edit in the middle reads ~80 KB for that count (~25% self time of `insert-remove-mid-filter-transform`). Keeping the inclusion flags in a parallel `Vec<bool>`, updated with every entry insert/remove/replace, makes the same count read 1 byte per entry, which the compiler vectorizes.\n\n### Scope Lock\n\n**Tested mechanism:** parallel inclusion-flag vector for the static list filter's visible-index count.\n**Allowed changes:** `ListFilterState` (`keyed_cache_page_state.rs` struct, `list_dynamic_filter_state.rs` impl): a small entries container mirroring flags.\n**Forbidden in this experiment:** `ListDynamicFilterState`, Fenwick/indexed counting, other operators.\n",
+  "measurementPlanMarkdown": "### Measurement Plan\n\nFocused tests: `collections::tests::{subset_operator_indexes,index_contract_harness,ordered_emission_core,transforms_filters,snapshot_diff_indexes}`; clippy/fmt. Bench `hot_paths` list-hot vs base. Pass: insert-remove-mid-filter-transform >=10% faster, list load not slower >10%.\n",
+  "expectedOutcomeMarkdown": "### Expected Outcome\n\nMid-list filtered edits 15-25% faster.\n",
+  "diagnostics": {
+    "playwright": [],
+    "rayx": [],
+    "counters": [],
+    "artifacts": []
+  },
+  "measurements": [],
+  "reportMarkdown": "",
+  "decisionMarkdown": "",
+  "notes": ""
+}

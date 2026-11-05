@@ -227,15 +227,80 @@ struct ListFilterEntry<T> {
     included: bool,
 }
 
-struct ListFilterState<T> {
+/// The static list filter's entries with their inclusion flags mirrored in a byte vector, so
+/// counting the included entries before a position reads one byte per entry.
+struct ListFilterEntries<T> {
     entries: Vec<ListFilterEntry<T>>,
+    included: Vec<bool>,
+}
+
+impl<T> ListFilterEntries<T> {
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    fn insert(&mut self, index: usize, entry: ListFilterEntry<T>) {
+        self.included.insert(index, entry.included);
+        self.entries.insert(index, entry);
+    }
+
+    fn insert_all(&mut self, index: usize, entries: Vec<ListFilterEntry<T>>) {
+        self.included
+            .splice(index..index, entries.iter().map(|entry| entry.included));
+        self.entries.splice(index..index, entries);
+    }
+
+    fn set(&mut self, index: usize, entry: ListFilterEntry<T>) {
+        self.included[index] = entry.included;
+        self.entries[index] = entry;
+    }
+
+    fn remove(&mut self, index: usize) -> ListFilterEntry<T> {
+        let _ = self.included.remove(index);
+        self.entries.remove(index)
+    }
+
+    fn drain(
+        &mut self,
+        range: impl std::ops::RangeBounds<usize> + Clone,
+    ) -> std::vec::Drain<'_, ListFilterEntry<T>> {
+        let _ = self.included.drain(range.clone());
+        self.entries.drain(range)
+    }
+
+    /// The number of included entries before `index`.
+    fn included_before(&self, index: usize) -> usize {
+        self.included[..index.min(self.included.len())]
+            .iter()
+            .filter(|included| **included)
+            .count()
+    }
+}
+
+impl<T> std::ops::Index<usize> for ListFilterEntries<T> {
+    type Output = ListFilterEntry<T>;
+
+    fn index(&self, index: usize) -> &ListFilterEntry<T> {
+        &self.entries[index]
+    }
+}
+
+struct ListFilterState<T> {
+    entries: ListFilterEntries<T>,
     version: u64,
 }
 
 impl<T> Default for ListFilterState<T> {
     fn default() -> Self {
         Self {
-            entries: Vec::new(),
+            entries: ListFilterEntries {
+                entries: Vec::new(),
+                included: Vec::new(),
+            },
             version: 0,
         }
     }
