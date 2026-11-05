@@ -5,6 +5,61 @@ All notable changes to `dxn_reactive` are documented in this file. The format fo
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). It is generated from
 Conventional Commits by release-plz.
 
+## [1.1.1] - 2026-11-05
+
+### Build and CI
+- *(toolchain)* require Rust 1.97
+
+### Documentation
+- *(website)* add the documentation site and GitHub Pages workflow
+
+### Performance
+- *(collections)* binary search the cache filter's visible index
+- *(collections)* keep unmoved keys in place in the remove-key bridge
+- *(collections)* apply a remove and re-add at one index in place
+- *(collections)* reserve table capacity once per add-heavy batch
+- *(collections)* refresh only the shifted window when a keyed sort moves an entry
+- *(collections)* create a cache's keyed-watch hub on the first watch
+- *(primitives)* answer DeliveryQueue::has_subscribers without locking
+- *(collections)* skip publishing edits that nobody observes
+- *(primitives)* claim a delivery drain and pop its first item under one lock
+- *(collections)* hash internal tables with a seeded folded-multiply hasher
+- *(collections)* binary search the list sort's insert position
+- *(collections)* find a list sort's removed item by binary search
+- *(collections)* skip a join's reorder when a batch keeps every key in place
+- *(collections)* skip a join-many reorder when a left batch keeps keys in place
+- *(collections)* answer transform_to_tree's roots filter from its parent map
+- skip a computed's freshness check when nothing was written since
+- *(collections)* track keyed sort positions in a KeyOrder
+- *(primitives)* return from an empty DeliveryQueue drain without locking
+- *(collections)* count a list filter's visible items from a flag vector
+- *(collections)* check only touched immutable groups for emptiness
+- *(collections)* index immutable cache group members in source order
+- *(collections)* skip the empty release-callback queue when a source unlocks
+- *(collections)* skip a left-ordered join-many reorder on right batches
+- *(collections)* check only touched list immutable groups for emptiness
+- *(collections)* claim an idle emitter queue in the push's critical section
+- *(collections)* create a tree node's children cache on first use
+- *(collections)* refilter a roots-only tree from the nodes a batch touched
+- *(collections)* count a live list group's positions from a key vector
+- *(collections)* sum a list transform_many's child offset from a count vector
+- *(collections)* count a dynamic list filter's visible items from a flag vector
+- *(collections)* rebuild a dynamic cache filter's order index lazily
+- *(computed)* let a computed that just published record itself fresh
+- *(signal)* advance the write epoch only for signals a computed tracks
+
+### Tests
+- *(collections)* count key work instead of timing linear-scaling tests
+- *(bench)* add steady-state hot-path benchmarks
+- *(bench)* add per-operator steady-state update benchmarks
+- *(bench)* cover relation and window operators in the update benchmarks
+- *(bench)* cover dynamic filters, immutable groups and list windows
+- *(bench)* cover right-side join writes and list immutable groups
+- *(bench)* measure observed writes from several threads at once
+
+### Style
+- *(collections)* split hasher input with as_chunks
+
 ## [1.1.0] - 2026-10-23
 
 ### Features
